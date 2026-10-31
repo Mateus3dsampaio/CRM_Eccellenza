@@ -8,6 +8,9 @@ import { lerLista } from "@/lib/json";
 import { DIA, HORA } from "@/regras/tempo";
 import { janelaDeAgendamento } from "@/regras/agenda";
 import { agendarVisita, criarBloqueio, horariosLivresParaLead } from "@/servicos/agenda";
+import { AVISO_ALMOCO } from "@/regras/almoco";
+import { definirModoDistribuicao } from "@/servicos/configuracoes";
+import { definirStatusConsultor, distribuirFila, escolherProximoConsultor } from "@/servicos/distribuicao";
 import { arquivarLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
@@ -170,5 +173,56 @@ describe("funil e arquivamento (MET-02, AGENDA-02)", () => {
     await arquivarLeads([l1.id], "teste");
     expect(await db.visita.count({ where: { leadId: l1.id, status: "agendada" } })).toBe(0);
     await expect(agendarVisita({ leadId: l2.id, inicio: vaga.inicio, autor: "teste" })).resolves.toBeTruthy();
+  });
+});
+
+describe("rodízio de leads e almoço (etapas H e I)", () => {
+  it("rodízio alterna entre os consultores e pula quem está em almoço", async () => {
+    const [a, b] = await criarConsultores();
+    await definirModoDistribuicao("rodizio");
+    expect(await escolherProximoConsultor()).toBe(a.id);
+    expect(await escolherProximoConsultor()).toBe(b.id);
+    expect(await escolherProximoConsultor()).toBe(a.id);
+
+    await definirStatusConsultor(b.id, "almoco");
+    expect(await escolherProximoConsultor()).toBe(a.id);
+    expect(await escolherProximoConsultor()).toBe(a.id);
+
+    await definirStatusConsultor(b.id, "online");
+    expect(await escolherProximoConsultor()).toBe(b.id);
+  });
+
+  it("sem ninguém online o lead fica na fila e o primeiro que volta recebe", async () => {
+    const [a, b] = await criarConsultores();
+    await definirStatusConsultor(a.id, "almoco");
+    await definirStatusConsultor(b.id, "almoco");
+    expect(await escolherProximoConsultor()).toBeNull();
+
+    const lead = await obterOuCriarLead("+5588900007777", "Cliente Fila");
+    await db.lead.update({ where: { id: lead.id }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId: null } });
+    expect(await distribuirFila()).toBe(0);
+
+    await definirStatusConsultor(b.id, "online");
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).consultorId).toBe(b.id);
+  });
+
+  it("cliente que escreve no almoço recebe o aviso uma vez por almoço; o lead continua com o consultor", async () => {
+    const [a] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900008888", "Cliente Almoço");
+    await db.lead.update({ where: { id: lead.id }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId: a.id } });
+
+    await registrarMensagemCliente(lead.id, "Oi, tudo bem?");
+    expect(await db.mensagem.count({ where: { leadId: lead.id, texto: AVISO_ALMOCO } })).toBe(0);
+
+    await definirStatusConsultor(a.id, "almoco");
+    await registrarMensagemCliente(lead.id, "Cadê o consultor?");
+    await registrarMensagemCliente(lead.id, "Alô?");
+    expect(await db.mensagem.count({ where: { leadId: lead.id, texto: AVISO_ALMOCO } })).toBe(1);
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).consultorId).toBe(a.id);
+
+    await definirStatusConsultor(a.id, "online");
+    await definirStatusConsultor(a.id, "almoco");
+    await registrarMensagemCliente(lead.id, "Voltou?");
+    expect(await db.mensagem.count({ where: { leadId: lead.id, texto: AVISO_ALMOCO } })).toBe(2);
   });
 });

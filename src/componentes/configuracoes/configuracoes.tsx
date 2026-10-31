@@ -1,22 +1,32 @@
 "use client";
 
 import { LayoutDashboard, Shuffle, UtensilsCrossed, Users } from "lucide-react";
-import { useDados } from "../dados";
-import { Carregando, EstadoErro } from "../ui";
+import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
+import { chamarApi, useAviso, useDados } from "../dados";
+import { juntar } from "../estilos";
+import { Botao, Carregando, EstadoErro } from "../ui";
 
 interface Dados {
-  equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean }[];
+  equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
+  distribuicao: ModoDistribuicao;
+  naFila: number;
 }
 
-// Próximas opções do painel (etapas combinadas com o Mateus). Entram aqui conforme forem prontas.
-const EM_BREVE: { titulo: string; texto: string; icone: typeof Shuffle; pronto?: boolean }[] = [
-  { titulo: "Distribuição de leads", texto: "Rodízio: o primeiro lead vai para o vendedor 1, o segundo para o vendedor 2, e assim por diante.", icone: Shuffle },
-  { titulo: "Horário de almoço", texto: "Quem sai para o almoço deixa de receber leads novos até voltar.", icone: UtensilsCrossed },
-  { titulo: "Layout da ficha do lead", texto: "Pronto: abra qualquer lead e use \"Personalizar layout\". O que você salvar vale para todos.", icone: LayoutDashboard, pronto: true },
-];
-
 export function Configuracoes() {
+  const avisar = useAviso();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
+
+  async function chamar(url: string, metodo: string, json: object, sucesso: string) {
+    try {
+      await chamarApi(url, { method: metodo, json });
+      avisar(sucesso);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível salvar.", "erro");
+    } finally {
+      await recarregar();
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 p-4">
       <div>
@@ -24,42 +34,89 @@ export function Configuracoes() {
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
-        <h2 className="mb-3 flex items-center gap-2 font-semibold">
-          <Users className="size-4 text-texto-suave" aria-hidden /> Equipe
-        </h2>
-        {carregando && !dados ? (
-          <Carregando linhas={3} />
-        ) : erro && !dados ? (
-          <EstadoErro texto={erro} aoTentar={recarregar} />
-        ) : (
-          <ul className="divide-y divide-borda">
-            {dados?.equipe.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                <div>
-                  <p className="font-medium">{u.nome}</p>
-                  <p className="text-xs text-texto-fraco">Login: {u.login}</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca">{u.perfil === "admin" ? "Administrador" : "Consultor"}</span>
-                  {!u.ativo && <span className="rounded-pilula bg-superficie-suave px-2.5 py-1 text-texto-suave">Inativo</span>}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {carregando && !dados ? (
+        <Carregando linhas={4} />
+      ) : erro && !dados ? (
+        <EstadoErro texto={erro} aoTentar={recarregar} />
+      ) : (
+        dados && (
+          <>
+            <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+              <h2 className="mb-1 flex items-center gap-2 font-semibold">
+                <Shuffle className="size-4 text-texto-suave" aria-hidden /> Distribuição de leads
+              </h2>
+              <p className="mb-3 text-sm text-texto-suave">Vale quando o bot passa o lead (ou agenda a visita) e ele ainda não tem consultor. Quem está em almoço não recebe.</p>
+              <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Modo de distribuição">
+                {MODOS_DISTRIBUICAO.map((m) => {
+                  const ativo = dados.distribuicao === m.codigo;
+                  return (
+                    <button
+                      key={m.codigo}
+                      role="radio"
+                      aria-checked={ativo}
+                      onClick={() => !ativo && chamar("/api/configuracoes/distribuicao", "PUT", { modo: m.codigo }, `Distribuição: ${m.nome}.`)}
+                      className={juntar("rounded-controle border p-3 text-left transition", ativo ? "border-marca bg-marca-suave" : "border-borda hover:border-borda-forte")}
+                    >
+                      <p className={juntar("text-sm font-semibold", ativo && "text-marca")}>{m.nome}</p>
+                      <p className="mt-1 text-xs text-texto-suave">{m.descricao}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {dados.naFila > 0 && (
+                <p className="mt-3 rounded-controle bg-aviso-suave px-3 py-2 text-sm text-aviso">
+                  {dados.naFila} {dados.naFila === 1 ? "lead está" : "leads estão"} na fila, sem consultor, porque ninguém estava online. O primeiro consultor que voltar recebe.
+                </p>
+              )}
+            </section>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {EM_BREVE.map(({ titulo, texto, icone: Icone, pronto }) => (
-          <section key={titulo} className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
-            <Icone className="mb-2 size-5 text-texto-suave" aria-hidden />
-            <h2 className="text-sm font-semibold">{titulo}</h2>
-            <p className="mt-1 text-xs text-texto-suave">{texto}</p>
-            <p className="mt-2 text-xs font-medium text-texto-fraco">{pronto ? "Disponível" : "Em breve"}</p>
-          </section>
-        ))}
-      </div>
+            <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+              <h2 className="mb-1 flex items-center gap-2 font-semibold">
+                <Users className="size-4 text-texto-suave" aria-hidden /> Equipe e almoço
+              </h2>
+              <p className="mb-3 text-sm text-texto-suave">
+                <UtensilsCrossed className="mr-1 inline size-3.5" aria-hidden />
+                Em almoço, o consultor não recebe leads novos. Os leads que ele já tem continuam com ele. O consultor também liga e desliga o próprio almoço no topo da tela.
+              </p>
+              <ul className="divide-y divide-borda">
+                {dados.equipe.map((u) => (
+                  <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <div>
+                      <p className="font-medium">{u.nome}</p>
+                      <p className="text-xs text-texto-fraco">Login: {u.login}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca">{u.perfil === "admin" ? "Administrador" : "Consultor"}</span>
+                      {!u.ativo && <span className="rounded-pilula bg-superficie-suave px-2.5 py-1 text-texto-suave">Inativo</span>}
+                      {u.perfil === "consultor" && u.ativo && (
+                        <>
+                          <span className={juntar("rounded-pilula px-2.5 py-1 font-medium", u.status === "almoco" ? "bg-aviso-suave text-aviso" : "bg-sucesso-suave text-sucesso")}>
+                            {u.status === "almoco" ? "Em almoço" : "Online"}
+                          </span>
+                          <Botao
+                            variante="fantasma"
+                            onClick={() =>
+                              chamar("/api/equipe/status", "POST", { usuarioId: u.id, status: u.status === "almoco" ? "online" : "almoco" }, u.status === "almoco" ? `${u.nome} voltou.` : `${u.nome} saiu para o almoço.`)
+                            }
+                          >
+                            {u.status === "almoco" ? "Voltou do almoço" : "Mandar almoçar"}
+                          </Botao>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
+              <LayoutDashboard className="mb-2 size-5 text-texto-suave" aria-hidden />
+              <h2 className="text-sm font-semibold">Layout da ficha do lead</h2>
+              <p className="mt-1 text-xs text-texto-suave">Abra qualquer lead e use &quot;Personalizar layout&quot;. O que você salvar vale para todos.</p>
+            </section>
+          </>
+        )
+      )}
     </div>
   );
 }

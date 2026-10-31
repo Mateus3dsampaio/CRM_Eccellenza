@@ -33,3 +33,10 @@ O bot não guarda nada sozinho: ele chama ferramentas, e o sistema grava. Nomes 
 - **Instrução 05** ("Não sugira nem confirme datas ou horários"; "o consultor vai entrar em contato para confirmar"): no CRM, o bot agenda sozinho usando `ver_horarios_livres` e `agendar_visita`. O restante da 05 (texto do convite, "sem custo" só aqui, não insistir se recusar) continua valendo.
 - **Instrução 06 (b)** (outra cidade vai direto ao consultor): continua valendo como está. O CRM só adiciona a etiqueta "Outra cidade" ao card. Critério por valor e distância ainda não foi definido pelo Mateus.
 - **Instrução 01** (responder uma vez a "ok"/"obrigado" depois do aceite da visita e responder sempre a pergunta nova): no CRM, depois de `passar_para_consultor` o bot fica em **pausa total** nessa conversa e não responde mais nada; o card fica com o sino "aguardando humano" e o consultor responde. Decisão do Mateus em 31/10/2026, provisória: nas próximas etapas ele define se o bot volta a responder dúvidas simples.
+
+## Distribuição de leads e almoço do consultor
+- O consultor do lead é escolhido quando o bot agenda a visita ou passa o lead (o que vier primeiro), só entre consultores **online**. Regra de escolha (Configurações, só admin): **rodízio** (1º lead para o consultor 1, 2º para o 2, e assim por diante) ou **quem tem menos leads**.
+- Consultor em **almoço** não recebe lead novo. Os leads que ele já tem continuam com ele. Ao voltar, entra de novo no rodízio e recebe os leads que ficaram na fila.
+- Sem nenhum consultor online: o bot atende até onde der e passa o lead normalmente; o lead fica **sem consultor, na fila**, e vai para o primeiro que voltar. O admin vê a fila em Configurações.
+- Lead já passado ao consultor que escreve durante o almoço dele: o sistema (não o bot) envia **uma vez por almoço** o aviso abaixo e o bot continua em pausa.
+  - Texto (aprovado pelo Mateus em 31/10/2026): "Oi! Nosso consultor está em horário de almoço e já retorna. Assim que ele voltar, ele continua o seu atendimento por aqui."

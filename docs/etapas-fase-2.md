@@ -68,8 +68,8 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 | E. Kanban | Feita (zoom 60–125% e filtro do admin); testar arrastar card com zoom diferente de 100% |
 | F. Configurações | Feita (só admin; equipe + cartões "Em breve") |
 | G. Layout da ficha | Feita (grade arrastável/redimensionável, salvar padrão para todos); sem teste de tela |
-| **H. Rodízio de leads** | **NÃO FEITA** |
-| **I. Horário de almoço** | **NÃO FEITA** (depende da H) |
+| H. Rodízio de leads | Feita no código e testada (testes automáticos); sem teste de tela |
+| I. Horário de almoço | Feita no código e testada (testes automáticos); sem teste de tela |
 
 ### O que falta fazer
 1. **Etapa H:** opção em Configurações para ligar o rodízio; guardar quem recebeu o último lead; pular vendedor offline; lead sem ninguém online fica na fila para o primeiro que voltar e aparece para o admin. Hoje a distribuição é por "consultor com menos leads" (`consultorComMenosLeads` em `src/servicos/leads.ts`, marcada PROVISÓRIA).
@@ -84,3 +84,10 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 - Coluna nova `tipo` na tabela `Visita` (já aplicada no `crm.db` local com `prisma db push`). Em outro computador, rodar `npm run seed` ou `npx prisma db push`.
 - Dependência nova: `react-grid-layout`.
 - Zoom do kanban usa a propriedade CSS `zoom`; se arrastar card ficar torto fora de 100%, trocar por largura de coluna.
+
+### Etapas H e I (feitas depois do commit anterior)
+- Configurações: escolha entre rodízio e "quem tem menos leads" (padrão continua "menos leads" até o admin ligar o rodízio); equipe com status e botão "Mandar almoçar / Voltou do almoço" para o admin; aviso de leads na fila.
+- Consultor: botão "Almoço" no topo da tela.
+- Rodízio: ordem da equipe = ordem de criação dos usuários; pula quem está em almoço; vale quando o bot agenda a visita ou passa o lead e o lead ainda não tem consultor.
+- Aviso ao cliente no almoço: uma vez por almoço, enviado pelo sistema, só quando o lead já foi passado ao consultor que está em almoço. Regra registrada em `agente/complemento-crm.md`.
+- O item 1 e 2 da lista "O que falta fazer" acima estão concluídos.

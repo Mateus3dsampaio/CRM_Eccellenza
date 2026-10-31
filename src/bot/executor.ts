@@ -6,7 +6,8 @@ import { ETIQUETA_DA_CLASSIFICACAO, type Classificacao } from "@/regras/etapas";
 import { formatarVisitaCurta, lerChaveDia, partesLocais } from "@/regras/tempo";
 import { agendarVisita, ErroAgenda, horariosLivresParaLead } from "@/servicos/agenda";
 import { registrarAlteracao } from "@/servicos/historico";
-import { alterarEtiqueta, atualizarCampos, atualizarResumo, consultorComMenosLeads, moverEtapa } from "@/servicos/leads";
+import { escolherProximoConsultor } from "@/servicos/distribuicao";
+import { alterarEtiqueta, atualizarCampos, atualizarResumo, moverEtapa } from "@/servicos/leads";
 import { registrarUmaVez } from "@/servicos/metricas";
 import { esquemaAgendar, esquemaCampos, esquemaClassificar, esquemaHorarios, esquemaMedidas, esquemaPassar } from "./ferramentas";
 
@@ -85,6 +86,9 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         const { inicio } = esquemaAgendar.parse(entrada);
         const data = new Date(inicio);
         if (Number.isNaN(data.getTime())) return { conteudo: "Data inválida. Use o campo inicio de ver_horarios_livres.", erro: true };
+        // Quem recebe o lead segue a regra de distribuição (rodízio ou menos leads) e só entre os consultores online.
+        const dono = await db.lead.findUniqueOrThrow({ where: { id: leadId }, select: { consultorId: true } });
+        if (!dono.consultorId) await db.lead.update({ where: { id: leadId }, data: { consultorId: await escolherProximoConsultor() } });
         const visita = await agendarVisita({ leadId, inicio: data, autor: "bot", validarJanelaDoBot: true });
         return { conteudo: `Visita agendada: ${formatarVisitaCurta(visita.inicio)}, com o consultor ${visita.consultor.nome}.` };
       }
@@ -92,7 +96,7 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
       case "passar_para_consultor": {
         const { motivo } = esquemaPassar.parse(entrada ?? {});
         const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
-        const consultorId = lead.consultorId ?? (await consultorComMenosLeads());
+        const consultorId = lead.consultorId ?? (await escolherProximoConsultor());
         await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId } });
         if (lead.etapa === "novo") await moverEtapa(leadId, "pronto", "bot");
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);

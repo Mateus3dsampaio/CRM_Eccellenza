@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { horariosLivres, horarioDentroDaRegra, janelaDeAgendamento } from "@/regras/agenda";
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
+import { escolherConsultor } from "@/regras/distribuicao";
 import { LAYOUT_PADRAO_FICHA, layoutValido } from "@/regras/layout-ficha";
 import { pode, podeEditarAgendaDe } from "@/regras/permissoes";
 import { avaliarRetomada } from "@/regras/retomada";
@@ -175,5 +176,21 @@ describe("layout da ficha", () => {
     expect(layoutValido(LAYOUT_PADRAO_FICHA.map((l, n) => (n === 0 ? { ...l, x: 8 } : l)))).toBe(false);
     expect(layoutValido("qualquer coisa")).toBe(false);
     expect(layoutValido(null)).toBe(false);
+  });
+});
+
+describe("escolha do consultor (rodízio e menos leads)", () => {
+  const equipe = (online: boolean[], leads = [0, 0, 0]) => online.map((o, n) => ({ id: `c${n + 1}`, online: o, leadsEmAndamento: leads[n] }));
+  it("rodízio segue a ordem e volta ao início", () => {
+    expect(escolherConsultor("rodizio", equipe([true, true]), null)).toBe("c1");
+    expect(escolherConsultor("rodizio", equipe([true, true]), "c1")).toBe("c2");
+    expect(escolherConsultor("rodizio", equipe([true, true]), "c2")).toBe("c1");
+  });
+  it("rodízio pula quem está offline e devolve null se ninguém está online", () => {
+    expect(escolherConsultor("rodizio", equipe([true, false, true]), "c1")).toBe("c3");
+    expect(escolherConsultor("rodizio", equipe([false, false]), "c1")).toBeNull();
+  });
+  it("menos leads escolhe só entre os online", () => {
+    expect(escolherConsultor("menos_leads", equipe([true, false, true], [5, 0, 2]), null)).toBe("c3");
   });
 });

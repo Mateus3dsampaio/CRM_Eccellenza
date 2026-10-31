@@ -204,17 +204,3 @@ export function etapaOuErro(codigo: string): CodigoEtapa {
   if (!etapaValida(codigo)) throw new Error("Etapa inválida.");
   return codigo;
 }
-
-/**
- * Consultor ativo com menos leads em andamento (para distribuir quando o bot passa o lead).
- * PROVISÓRIO: regra de distribuição ainda não definida pelo Mateus (rodízio, por cidade, manual...).
- */
-export async function consultorComMenosLeads(): Promise<string | null> {
-  const consultores = await db.usuario.findMany({
-    where: { perfil: "consultor", ativo: true },
-    select: { id: true, _count: { select: { leads: { where: { arquivadoEm: null, etapa: { notIn: ["fechado", "perdido"] } } } } } },
-    orderBy: { nome: "asc" },
-  });
-  if (!consultores.length) return null;
-  return consultores.reduce((a, b) => (b._count.leads < a._count.leads ? b : a)).id;
-}

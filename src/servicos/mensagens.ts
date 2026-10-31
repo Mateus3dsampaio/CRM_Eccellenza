@@ -4,6 +4,7 @@ import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
+import { AVISO_ALMOCO } from "@/regras/almoco";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, moverEtapa, etapaOuErro } from "./leads";
@@ -70,8 +71,22 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
       await moverEtapa(leadId, etapaOuErro(lead.etapaAnterior), "sistema");
     }
   }
+  await avisarAlmocoSeNecessario(leadId);
   await marcarMudanca();
   return mensagem;
+}
+
+/**
+ * Cliente já passado ao consultor escreve enquanto ele está em almoço: avisa que ele retorna já.
+ * Uma vez por almoço (o contador de almoços do consultor controla), nunca a cada mensagem.
+ */
+async function avisarAlmocoSeNecessario(leadId: string) {
+  const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, include: { consultor: { select: { status: true, almocoSeq: true } } } });
+  if (lead.modoAtendimento === "bot" || !lead.consultor || lead.consultor.status !== "almoco") return;
+  if (lead.avisoAlmocoSeq === lead.consultor.almocoSeq) return;
+  await db.lead.update({ where: { id: leadId }, data: { avisoAlmocoSeq: lead.consultor.almocoSeq } });
+  await enviarMensagemLoja({ leadId, autor: "sistema", texto: AVISO_ALMOCO });
+  await registrarAlteracao(leadId, "sistema", "Aviso de horário de almoço enviado ao cliente");
 }
 
 /** Mensagem enviada pela loja (bot, consultor ou rotina). Respeita a regra das 24h (MSG-02). */

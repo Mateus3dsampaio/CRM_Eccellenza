@@ -7,6 +7,7 @@ import { Archive, BarChart3, CalendarDays, Clock, KanbanSquare, LogOut, MessageS
 import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { juntar } from "./estilos";
+import { BotaoAlmoco } from "./almoco";
 import { NovaMensagem } from "./nova-mensagem";
 import { BotaoTema } from "./tema";
 import { usePode, useUsuario } from "./usuario";
@@ -66,6 +67,7 @@ export function Cabecalho() {
                 {formatarDataHora(new Date(agora))}
               </Link>
             )}
+            {usuario.perfil === "consultor" && <BotaoAlmoco />}
             <button
               onClick={() => setNovaAberta(true)}
               className="inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle bg-marca px-3 text-sm font-medium text-sobre-marca shadow-card transition hover:bg-marca-forte active:scale-[0.97] sm:px-4"

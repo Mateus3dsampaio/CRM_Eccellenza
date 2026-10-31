@@ -16,6 +16,10 @@ model Usuario {
   perfil    String // "admin" | "consultor"
   ativo     Boolean  @default(true)
   criadoEm  DateTime @default(now())
+  // Disponibilidade para receber leads novos: online | almoco. Quem está em almoço não recebe lead novo.
+  status    String   @default("online")
+  // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
+  almocoSeq Int      @default(0)
 
   leads     Lead[]     @relation("consultorLead")
   visitas   Visita[]
@@ -58,6 +62,7 @@ model Lead {
   ultimaMsgClienteEm    DateTime?
   ultimaMsgLojaEm       DateTime? // bot, consultor ou sistema
   retomadaEnviadaEm     DateTime?
+  avisoAlmocoSeq        Int? // almoço do consultor em que o aviso ao cliente já foi enviado
   semRespostaEm         DateTime?
 
   // Marcas para contar cada evento de métrica só uma vez por lead.
