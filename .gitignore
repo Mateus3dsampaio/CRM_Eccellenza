@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+uploads/
+midias/
+test-results/
+playwright-report/
+docs/rodadas/evidencias/
+
+# Arquivos com chave fora do .env (nunca versionar)
+CHAVE*.txt
+*.key
+*.tsbuildinfo

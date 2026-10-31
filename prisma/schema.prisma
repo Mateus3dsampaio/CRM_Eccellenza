@@ -1,0 +1,181 @@
+// Banco do simulador (SQLite). Só dados fictícios.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./crm.db"
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  login     String   @unique
+  senhaHash String
+  perfil    String // "admin" | "consultor"
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  leads     Lead[]     @relation("consultorLead")
+  visitas   Visita[]
+  bloqueios Bloqueio[]
+}
+
+model Lead {
+  id       String @id @default(cuid())
+  telefone String @unique // E.164, ex.: +5588900000001
+  nomePerfil String? // nome que aparece no perfil do WhatsApp
+  nome     String?
+  avatarCor Int    @default(0)
+
+  cidade         String?
+  endereco       String?
+  ambientes      String @default("[]") // JSON string[]
+  exigencias     String @default("[]") // JSON string[]
+  situacaoImovel String?
+  prazo          String?
+  investimento   String?
+  pedidosTecnicos String @default("[]") // JSON string[] (literais)
+  observacoes    String?
+  classificacao  String? // qualificado | curioso | outra_cidade | parceiro | pos_venda | ja_atendido
+  resumo         String?
+
+  etapa          String  @default("novo")
+  etapaAnterior  String? // usada pela retomada (RET-02)
+  ordem          Float   @default(0)
+  etiquetas      String  @default("[]") // JSON string[] de códigos
+
+  consultorId    String?
+  consultor      Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
+
+  modoAtendimento   String  @default("bot") // bot | humano | pausado
+  aguardandoHumano  Boolean @default(false)
+  erroBot           String?
+
+  ultimaMensagemEm      DateTime?
+  ultimaMensagemPrevia  String?
+  ultimaMsgClienteEm    DateTime?
+  ultimaMsgLojaEm       DateTime? // bot, consultor ou sistema
+  retomadaEnviadaEm     DateTime?
+  semRespostaEm         DateTime?
+
+  // Marcas para contar cada evento de métrica só uma vez por lead.
+  marcasMetricas String @default("[]")
+
+  arquivadoEm   DateTime?
+  criadoEm      DateTime
+  atualizadoEm  DateTime @updatedAt
+
+  mensagens  Mensagem[]
+  medidas    Medida[]
+  notas      Nota[]
+  historico  Alteracao[]
+  visitas    Visita[]
+  conversaApi ConversaApi?
+}
+
+model Mensagem {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autor     String // cliente | bot | consultor | sistema
+  autorNome String?
+  texto     String?
+  midiaArquivo String? // nome do arquivo em midias/ (fora da pasta pública)
+  midiaTipo    String?
+  modelo    String? // código do modelo aprovado usado (MSG-02)
+  status    String   @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
+  enviadaEm DateTime
+  entregueEm DateTime?
+  lidaEm    DateTime?
+  // Já foi passada ao bot (o progresso é por mensagem, não por horário: o relógio simulado pode mudar).
+  processadaPeloBot Boolean @default(false)
+
+  @@index([leadId, enviadaEm])
+}
+
+// Histórico da conversa no formato da API do Claude. Só cresce (nunca editado).
+model ConversaApi {
+  leadId   String @id
+  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  mensagens String @default("[]")
+}
+
+model Medida {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ambiente    String
+  descricao   String
+  fonte       String // texto | foto | planta | audio
+  origem      String   @default("informada pelo cliente")
+  confirmada  Boolean  @default(false)
+  criadoEm    DateTime
+}
+
+model Nota {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autorNome String
+  texto     String
+  criadoEm  DateTime
+}
+
+// Registro de quem mudou o quê (FICHA-03).
+model Alteracao {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autor     String // bot | sistema | nome do usuário
+  descricao String
+  criadoEm  DateTime
+}
+
+model Visita {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  consultorId String
+  consultor   Usuario  @relation(fields: [consultorId], references: [id])
+  inicio      DateTime
+  fim         DateTime
+  status      String   @default("agendada") // agendada | cancelada
+  // Preenchida só enquanto a visita está ativa: impede duas visitas no mesmo horário da loja (regras/agenda.ts).
+  vagaChave   String?  @unique
+  criadoPor   String
+  criadoEm    DateTime
+}
+
+model Bloqueio {
+  id          String   @id @default(cuid())
+  consultorId String
+  consultor   Usuario  @relation(fields: [consultorId], references: [id])
+  inicio      DateTime
+  fim         DateTime
+  motivo      String?
+  criadoEm    DateTime
+}
+
+// Contadores anônimos (MET-03): sem nome, telefone ou texto. Não são apagados com o lead.
+model EventoMetrica {
+  id          String   @id @default(cuid())
+  tipo        String
+  consultorId String?
+  ocorridoEm  DateTime
+
+  @@index([tipo, ocorridoEm])
+}
+
+model Configuracao {
+  chave String @id
+  valor String
+}
+
+// Registro do relógio simulado e das rotinas (RET-04).
+model RegistroRotina {
+  id       String   @id @default(cuid())
+  texto    String
+  criadoEm DateTime
+}

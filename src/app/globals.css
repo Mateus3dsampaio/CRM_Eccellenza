@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+html,
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visível no teclado em tudo que é interativo. */
+:focus-visible {
+  outline: 2px solid var(--color-marca);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Rolagem fina nas colunas. */
+.rolagem-fina {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-borda-forte) transparent;
+}

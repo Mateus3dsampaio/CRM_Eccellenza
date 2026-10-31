@@ -1,0 +1,105 @@
+/*
+ * Tokens de design – arquivo ÚNICO de cores, sombras, raios, espaçamentos e fontes (docs/design.md, parte 1).
+ * Os componentes usam só estas classes/variáveis (ex.: bg-superficie, text-texto-suave, shadow-card).
+ */
+@theme {
+  /* Fonte */
+  --font-sans: var(--fonte-inter), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+
+  /* Superfícies */
+  --color-fundo: #eef2f8;
+  --color-coluna: #f6f8fb;
+  --color-superficie: #ffffff;
+  --color-superficie-suave: #f3f5f9;
+  --color-borda: #e2e7ef;
+  --color-borda-forte: #c9d1de;
+
+  /* Texto (contraste AA ≥ 4,5 sobre branco, colunas, fundo e bolhas do chat) */
+  --color-texto: #1b2433;
+  --color-texto-suave: #4a5466;
+  --color-texto-fraco: #5b6578;
+
+  /* Marca (sóbria, para móveis de alto padrão) */
+  --color-marca: #22406b;
+  --color-marca-forte: #182f50;
+  --color-marca-suave: #e6edf7;
+  --color-sobre-marca: #ffffff;
+
+  /* Destaques */
+  --color-whatsapp: #1fa855;
+  --color-whatsapp-suave: #dcf8e6;
+  --color-whatsapp-escuro: #0f6e36; /* cabeçalho do chat: texto branco com contraste AA */
+  --color-check-lido: #2b8fd6;
+  --color-alerta: #b42318;
+  --color-alerta-suave: #fdecea;
+  --color-aviso: #a35f00;
+  --color-aviso-suave: #fff4e0;
+  --color-sucesso: #187a3f;
+  --color-sucesso-suave: #e3f5ea;
+
+  /* Barras das colunas do kanban */
+  --color-etapa-novo: #3d6fe0;
+  --color-etapa-pronto: #f0a020;
+  --color-etapa-visita: #2fae5a;
+  --color-etapa-orcamento: #8c5ad6;
+  --color-etapa-negociacao: #e0742f;
+  --color-etapa-fechado: #138a72;
+  --color-etapa-perdido: #8a94a6;
+  --color-etapa-sem-resposta: #c9464a;
+
+  /* Etiquetas (fundo + texto) */
+  --color-etiqueta-cidade: #fde3e1;
+  --color-etiqueta-cidade-texto: #a12a22;
+  --color-etiqueta-parceiro: #ece3fb;
+  --color-etiqueta-parceiro-texto: #5b2fa6;
+  --color-etiqueta-posvenda: #dff0fb;
+  --color-etiqueta-posvenda-texto: #135c8c;
+  --color-etiqueta-atendido: #e4f4e9;
+  --color-etiqueta-atendido-texto: #1d6b3a;
+  --color-etiqueta-retomada: #fff0d6;
+  --color-etiqueta-retomada-texto: #8a4b00;
+
+  /* Avatares (iniciais brancas com contraste AA) */
+  --color-avatar-0: #3d6fe0;
+  --color-avatar-1: #187a3f;
+  --color-avatar-2: #7a4cc4;
+  --color-avatar-3: #b8561a;
+  --color-avatar-4: #11806a;
+  --color-avatar-5: #b8393d;
+
+  /* Chat */
+  --color-chat-fundo: #efeae2;
+  --color-chat-cliente: #ffffff;
+  --color-chat-loja: #d9fdd3;
+  --color-chat-sistema: #fff7d6;
+
+  /* Raios */
+  --radius-card: 14px;
+  --radius-painel: 16px;
+  --radius-controle: 10px;
+  --radius-pilula: 999px;
+
+  /* Sombras (suaves, em camadas) */
+  --shadow-card: 0 1px 2px rgb(27 36 51 / 0.06), 0 2px 8px rgb(27 36 51 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(27 36 51 / 0.07), 0 8px 20px rgb(27 36 51 / 0.1);
+  --shadow-flutuante: 0 4px 8px rgb(27 36 51 / 0.08), 0 16px 40px rgb(27 36 51 / 0.16);
+  --shadow-painel: 0 1px 2px rgb(27 36 51 / 0.04), 0 4px 16px rgb(27 36 51 / 0.05);
+
+  /* Espaçamentos nomeados */
+  --spacing-toque: 44px;
+  --spacing-coluna: 300px;
+  --spacing-topo: 64px;
+
+  /* Animações curtas (etapa 1) */
+  --animate-surgir: surgir 160ms ease-out;
+  --animate-brilho: brilho 1.4s ease-in-out infinite;
+
+  @keyframes surgir {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes brilho {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
