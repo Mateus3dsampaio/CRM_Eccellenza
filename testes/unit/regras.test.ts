@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { horariosLivres, horarioDentroDaRegra, janelaDeAgendamento } from "@/regras/agenda";
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
-import { pode } from "@/regras/permissoes";
+import { LAYOUT_PADRAO_FICHA, layoutValido } from "@/regras/layout-ficha";
+import { pode, podeEditarAgendaDe } from "@/regras/permissoes";
 import { avaliarRetomada } from "@/regras/retomada";
 import { gerarResumo } from "@/servicos/resumo";
 import { limparResposta, respostaDescartada } from "@/bot/saida";
@@ -143,5 +144,36 @@ describe("resposta descartada pelo filtro", () => {
     expect(respostaDescartada("Segunda insistência: x", "")).toBe(true);
     expect(respostaDescartada("[SEM RESPOSTA]", "")).toBe(false);
     expect(respostaDescartada("Certo!", "Certo!")).toBe(false);
+  });
+});
+
+describe("permissões da fase 2 (consultor x admin)", () => {
+  it("só o admin exclui lead e remove medida; o consultor edita notas e arquiva", () => {
+    expect(pode("consultor", "excluir_lead")).toBe(false);
+    expect(pode("consultor", "remover_medida")).toBe(false);
+    expect(pode("consultor", "editar_lead")).toBe(true);
+    expect(pode("admin", "excluir_lead")).toBe(true);
+    expect(pode("admin", "remover_medida")).toBe(true);
+    expect(pode("admin", "configurar")).toBe(true);
+    expect(pode("consultor", "configurar")).toBe(false);
+  });
+  it("agenda: consultor altera só a própria; admin altera todas", () => {
+    const rafael = { id: "r", perfil: "consultor" };
+    expect(podeEditarAgendaDe(rafael, "r")).toBe(true);
+    expect(podeEditarAgendaDe(rafael, "b")).toBe(false);
+    expect(podeEditarAgendaDe({ id: "m", perfil: "admin" }, "b")).toBe(true);
+  });
+});
+
+describe("layout da ficha", () => {
+  it("o layout padrão é válido", () => {
+    expect(layoutValido(LAYOUT_PADRAO_FICHA)).toBe(true);
+  });
+  it("recusa bloco repetido, faltando, fora da grade ou lixo", () => {
+    expect(layoutValido(LAYOUT_PADRAO_FICHA.slice(1))).toBe(false);
+    expect(layoutValido([...LAYOUT_PADRAO_FICHA.slice(1), LAYOUT_PADRAO_FICHA[1]])).toBe(false);
+    expect(layoutValido(LAYOUT_PADRAO_FICHA.map((l, n) => (n === 0 ? { ...l, x: 8 } : l)))).toBe(false);
+    expect(layoutValido("qualquer coisa")).toBe(false);
+    expect(layoutValido(null)).toBe(false);
   });
 });

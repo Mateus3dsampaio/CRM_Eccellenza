@@ -7,6 +7,7 @@ import { chamarApi, useAviso, useDados } from "../dados";
 import { primeiraMaiuscula } from "../texto";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoVazio, Modal } from "../ui";
+import { useUsuario } from "../usuario";
 
 interface DadosLivres {
   consultores: { id: string; nome: string }[];
@@ -14,8 +15,10 @@ interface DadosLivres {
 }
 
 // Agendar ou remarcar pela ficha (AGENDA-03). Só mostra horários livres.
-export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar }: { leadId: string; aberto: boolean; aoFechar: () => void; aoAgendar: () => void }) {
+export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "visita" }: { leadId: string; aberto: boolean; aoFechar: () => void; aoAgendar: () => void; tipo?: "visita" | "apresentacao" }) {
+  const apresentacao = tipo === "apresentacao";
   const avisar = useAviso();
+  const usuario = useUsuario();
   const { dados, carregando } = useDados<DadosLivres>(aberto ? `/api/agenda?visao=dia&livresPara=${leadId}` : null);
   const [escolhido, setEscolhido] = useState<{ inicio: string; consultorId: string } | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -23,11 +26,13 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar }: { leadId:
   const porDia = useMemo(() => {
     const mapa = new Map<string, { inicio: string; consultorId: string }[]>();
     dados?.livres?.forEach((l) => {
+      // Consultor só agenda na própria agenda; o admin agenda em qualquer uma.
+      if (usuario.perfil !== "admin" && l.consultorId !== usuario.id) return;
       const dia = chaveDia(new Date(l.inicio));
       mapa.set(dia, [...(mapa.get(dia) ?? []), l]);
     });
     return [...mapa];
-  }, [dados]);
+  }, [dados, usuario]);
 
   const nomeConsultor = (id: string) => dados?.consultores.find((c) => c.id === id)?.nome ?? "";
 
@@ -38,9 +43,9 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar }: { leadId:
     try {
       await chamarApi("/api/agenda", {
         method: "POST",
-        json: { acao: "agendar", leadId, quando: { dia: chaveDia(d), hora: partesLocais(d).hora }, consultorId: escolhido.consultorId },
+        json: { acao: "agendar", leadId, quando: { dia: chaveDia(d), hora: partesLocais(d).hora }, consultorId: escolhido.consultorId, tipo },
       });
-      avisar("Visita agendada.");
+      avisar(apresentacao ? "Apresentação agendada." : "Visita agendada.");
       aoAgendar();
       aoFechar();
       setEscolhido(null);
@@ -52,7 +57,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar }: { leadId:
   }
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Agendar visita" largura="max-w-2xl">
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo={apresentacao ? "Agendar apresentação na loja" : "Agendar visita"} largura="max-w-2xl">
       {carregando && !dados ? (
         <Carregando linhas={2} />
       ) : !porDia.length ? (
@@ -90,7 +95,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar }: { leadId:
               Cancelar
             </Botao>
             <Botao variante="primario" disabled={!escolhido} carregando={salvando} onClick={confirmar}>
-              Confirmar visita
+              {apresentacao ? "Confirmar apresentação" : "Confirmar visita"}
             </Botao>
           </div>
         </div>

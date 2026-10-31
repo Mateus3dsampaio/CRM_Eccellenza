@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Archive, ArchiveRestore, ArrowLeft, Trash2 } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+import { Archive, ArchiveRestore, ArrowLeft, GripHorizontal, LayoutDashboard, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { nomeEtapa } from "@/regras/etapas";
+import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, NOMES_BLOCOS, limparLayout, type BlocoFicha, type ItemLayout } from "@/regras/layout-ficha";
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -12,20 +16,41 @@ import { COR_ETAPA, juntar } from "../estilos";
 import { Avatar, Botao, Carregando, EstadoErro, Modal, Sino, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
 import { ConversaConsultor } from "./conversa";
-import { DadosLead, Painel } from "./dados-lead";
+import { Painel, useBlocosDadosLead } from "./dados-lead";
 
 type Aba = "conversa" | "ficha" | "notas";
 
+function assinarTela(aviso: () => void) {
+  const mq = window.matchMedia("(min-width: 1024px)");
+  mq.addEventListener("change", aviso);
+  return () => mq.removeEventListener("change", aviso);
+}
+/** Grade arrastável só no computador/tablet largo; no celular ficam as abas. */
+function useTelaGrande() {
+  return useSyncExternalStore(assinarTela, () => window.matchMedia("(min-width: 1024px)").matches, () => true);
+}
+
 export function Ficha({ id }: { id: string }) {
   const { dados: ficha, erro, carregando, recarregar } = useDados<FichaLead>(`/api/leads/${id}`);
+  if (carregando && !ficha) return <div className="mx-auto w-full max-w-6xl p-4"><Carregando linhas={4} /></div>;
+  if (!ficha) return <div className="mx-auto w-full max-w-6xl p-4"><EstadoErro texto={erro ?? "Lead não encontrado. Ele pode ter sido excluído."} aoTentar={recarregar} /></div>;
+  return <FichaCarregada ficha={ficha} id={id} recarregar={recarregar} />;
+}
+
+function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: string; recarregar: () => void | Promise<void> }) {
   const router = useRouter();
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
+  const podeConfigurar = usePode("configurar");
   const [aba, setAba] = useState<Aba>("conversa");
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
-
-  if (carregando && !ficha) return <div className="mx-auto w-full max-w-6xl p-4"><Carregando linhas={4} /></div>;
-  if (!ficha) return <div className="mx-auto w-full max-w-6xl p-4"><EstadoErro texto={erro ?? "Lead não encontrado. Ele pode ter sido excluído."} aoTentar={recarregar} /></div>;
+  const { dados: layoutSalvo, recarregar: recarregarLayout } = useDados<{ layout: ItemLayout[]; personalizado: boolean }>("/api/configuracoes/layout-ficha");
+  // Rascunho do admin enquanto personaliza (null = não está personalizando).
+  const [rascunho, setRascunho] = useState<ItemLayout[] | null>(null);
+  const [salvandoLayout, setSalvandoLayout] = useState(false);
+  const { width, containerRef, mounted } = useContainerWidth();
+  const telaGrande = useTelaGrande();
+  const { blocos: blocosDados, janelas } = useBlocosDadosLead(ficha, recarregar);
 
   async function acao(corpo: object, sucesso: string, depois?: () => void) {
     try {
@@ -50,14 +75,54 @@ export function Ficha({ id }: { id: string }) {
     }
   }
 
+  async function salvarLayout() {
+    if (!rascunho) return;
+    setSalvandoLayout(true);
+    try {
+      await chamarApi("/api/configuracoes/layout-ficha", { method: "PUT", json: { layout: limparLayout(rascunho) } });
+      avisar("Layout salvo como padrão de todos.");
+      setRascunho(null);
+      await recarregarLayout();
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível salvar o layout.", "erro");
+    } finally {
+      setSalvandoLayout(false);
+    }
+  }
+
+  async function voltarLayoutOriginal() {
+    try {
+      await chamarApi("/api/configuracoes/layout-ficha", { method: "DELETE" });
+      avisar("Layout original restaurado para todos.");
+      setRascunho(null);
+      await recarregarLayout();
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível restaurar.", "erro");
+    }
+  }
+
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "conversa", rotulo: "Conversa" },
     { id: "ficha", rotulo: "Ficha" },
     { id: "notas", rotulo: "Notas" },
   ];
 
+  const blocos: Record<BlocoFicha, React.ReactNode> = {
+    conversa: (
+      <div className="flex h-full min-h-0 flex-col">
+        <ConversaConsultor ficha={ficha} aoMudar={recarregar} />
+      </div>
+    ),
+    ...blocosDados,
+    notas: <Notas ficha={ficha} aoMudar={recarregar} />,
+    historico: <Historico ficha={ficha} />,
+  };
+
+  const editando = rascunho !== null;
+  const layoutAtual = rascunho ?? layoutSalvo?.layout ?? LAYOUT_PADRAO_FICHA;
+
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-3">
         <Link href="/" className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie" aria-label="Voltar ao kanban">
           <ArrowLeft className="size-5" aria-hidden />
@@ -77,7 +142,12 @@ export function Ficha({ id }: { id: string }) {
             {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
           </p>
         </div>
-        <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+        <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
+          {podeConfigurar && telaGrande && !editando && (
+            <Botao onClick={() => setRascunho(layoutAtual.map((l) => ({ ...l })))} icone={<LayoutDashboard className="size-4" aria-hidden />}>
+              Personalizar layout
+            </Botao>
+          )}
           {ficha.arquivado ? (
             <Botao onClick={restaurar} icone={<ArchiveRestore className="size-4" aria-hidden />}>Restaurar</Botao>
           ) : (
@@ -94,35 +164,84 @@ export function Ficha({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Celular: abas */}
-      <div className="flex gap-1 rounded-controle bg-superficie p-1 shadow-card lg:hidden" role="tablist">
-        {abas.map((a) => (
-          <button
-            key={a.id}
-            role="tab"
-            aria-selected={aba === a.id}
-            onClick={() => setAba(a.id)}
-            className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca text-sobre-marca" : "text-texto-suave")}
-          >
-            {a.rotulo}
-          </button>
-        ))}
-      </div>
+      {editando && (
+        <div className="flex flex-wrap items-center gap-2 rounded-card border border-marca/30 bg-marca-suave p-2 pl-4 text-sm">
+          <span className="font-medium text-marca">Personalizando o layout</span>
+          <span className="text-texto-suave">· arraste pela barra de cada quadro e redimensione pelo canto. Vale para todos.</span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Botao variante="fantasma" onClick={voltarLayoutOriginal} icone={<RotateCcw className="size-4" aria-hidden />}>
+              Voltar ao original
+            </Botao>
+            <Botao variante="fantasma" onClick={() => setRascunho(null)} icone={<X className="size-4" aria-hidden />}>
+              Cancelar
+            </Botao>
+            <Botao variante="primario" carregando={salvandoLayout} onClick={salvarLayout} icone={<Save className="size-4" aria-hidden />}>
+              Salvar para todos
+            </Botao>
+          </div>
+        </div>
+      )}
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <div className={juntar("min-w-0 space-y-4", aba !== "ficha" && "hidden lg:block")}>
-          <DadosLead ficha={ficha} aoMudar={recarregar} />
+      {telaGrande ? (
+        <div ref={containerRef}>
+          {mounted && (
+            <ReactGridLayout
+              width={width}
+              layout={layoutAtual}
+              gridConfig={{ cols: COLUNAS_FICHA, rowHeight: ALTURA_LINHA_FICHA, margin: [12, 12], containerPadding: [0, 0] }}
+              dragConfig={{ enabled: editando, handle: ".alca-bloco" }}
+              resizeConfig={{ enabled: editando }}
+              compactor={verticalCompactor}
+              onLayoutChange={(novo) => {
+                if (editando) setRascunho(novo.map(({ i, x, y, w, h }) => ({ i: i as BlocoFicha, x, y, w, h })));
+              }}
+            >
+              {BLOCOS_FICHA.map((b) => (
+                <div key={b} className={juntar("relative min-h-0", editando && "rounded-painel outline-2 outline-dashed outline-marca/50")}>
+                  {editando && (
+                    <div className="alca-bloco absolute inset-x-0 top-0 z-10 flex h-7 cursor-grab items-center justify-center gap-1.5 rounded-t-painel bg-marca text-xs font-medium text-sobre-marca active:cursor-grabbing">
+                      <GripHorizontal className="size-4" aria-hidden /> {NOMES_BLOCOS[b]}
+                    </div>
+                  )}
+                  <div className={juntar("h-full min-h-0", editando && "pointer-events-none pt-7")}>{blocos[b]}</div>
+                </div>
+              ))}
+            </ReactGridLayout>
+          )}
         </div>
-        <div className={juntar("flex min-h-0 min-w-0 flex-col gap-4", aba === "ficha" && "hidden lg:flex")}>
-          <div className={juntar("flex min-h-[28rem] flex-col lg:h-[calc(100dvh-12rem)]", aba !== "conversa" && "hidden lg:flex")}>
-            <ConversaConsultor ficha={ficha} aoMudar={recarregar} />
+      ) : (
+        <>
+          {/* Celular: abas */}
+          <div className="flex gap-1 rounded-controle bg-superficie p-1 shadow-card" role="tablist">
+            {abas.map((a) => (
+              <button
+                key={a.id}
+                role="tab"
+                aria-selected={aba === a.id}
+                onClick={() => setAba(a.id)}
+                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca text-sobre-marca" : "text-texto-suave")}
+              >
+                {a.rotulo}
+              </button>
+            ))}
           </div>
-          <div className={juntar(aba !== "notas" && "hidden lg:block", "space-y-4")}>
-            <Notas ficha={ficha} aoMudar={recarregar} />
-            <Historico ficha={ficha} />
-          </div>
-        </div>
-      </div>
+          {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{blocos.conversa}</div>}
+          {aba === "ficha" && (
+            <div className="space-y-4">
+              {(["resumo", "etapa", "visita", "apresentacao", "dados", "medidas"] as const).map((b) => (
+                <div key={b}>{blocos[b]}</div>
+              ))}
+            </div>
+          )}
+          {aba === "notas" && (
+            <div className="space-y-4">
+              {blocos.notas}
+              {blocos.historico}
+            </div>
+          )}
+        </>
+      )}
+      {janelas}
 
       <Modal aberto={confirmarExclusao} aoFechar={() => setConfirmarExclusao(false)} titulo="Excluir de vez" largura="max-w-md">
         <p className="text-sm text-texto-suave">Excluir 1 lead? Mensagens, fotos e plantas também serão apagadas. Não dá para desfazer.</p>
@@ -168,9 +287,27 @@ function Notas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
         {ficha.notas.map((n) => (
           <li key={n.id} className="rounded-controle bg-superficie-suave p-3 text-sm">
             <p className="whitespace-pre-wrap">{n.texto}</p>
-            <p className="mt-1 text-xs text-texto-fraco">
-              {n.autorNome} · {formatarDataHora(new Date(n.criadoEm))}
-            </p>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="text-xs text-texto-fraco">
+                {n.autorNome} · {formatarDataHora(new Date(n.criadoEm))}
+              </p>
+              <button
+                onClick={async () => {
+                  try {
+                    await chamarApi(`/api/leads/${ficha.id}/notas`, { method: "DELETE", json: { notaId: n.id } });
+                    avisar("Nota excluída.");
+                  } catch (erro) {
+                    avisar(erro instanceof Error ? erro.message : "Não foi possível excluir.", "erro");
+                  } finally {
+                    aoMudar();
+                  }
+                }}
+                className="inline-flex size-9 items-center justify-center rounded-controle text-texto-fraco hover:bg-alerta-suave hover:text-alerta"
+                aria-label="Excluir nota"
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </button>
+            </div>
           </li>
         ))}
       </ul>

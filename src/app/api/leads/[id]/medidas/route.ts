@@ -37,6 +37,7 @@ export const POST = rota(async (req: Request, { params }: Contexto) => {
       await db.medida.update({ where: { id: medida.id }, data: { descricao: corpo.descricao, confirmada: corpo.confirmada } });
       await registrarAlteracao(id, usuario.nome, `Corrigiu medida de ${medida.ambiente}: ${medida.descricao} → ${corpo.descricao}`);
     } else {
+      await exigirUsuario("remover_medida");
       await db.medida.delete({ where: { id: medida.id } });
       await registrarAlteracao(id, usuario.nome, `Removeu medida de ${medida.ambiente}: ${medida.descricao}`);
     }

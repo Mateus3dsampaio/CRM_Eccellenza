@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Archive, BarChart3, CalendarDays, Clock, KanbanSquare, LogOut, MessageSquarePlus, Smartphone } from "lucide-react";
+import { Archive, BarChart3, CalendarDays, Clock, KanbanSquare, LogOut, MessageSquarePlus, Settings, Smartphone } from "lucide-react";
 import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { juntar } from "./estilos";
 import { NovaMensagem } from "./nova-mensagem";
-import { useUsuario } from "./usuario";
+import { BotaoTema } from "./tema";
+import { usePode, useUsuario } from "./usuario";
 
 const LINKS = [
   { href: "/", rotulo: "Kanban", icone: KanbanSquare },
@@ -17,6 +18,7 @@ const LINKS = [
   { href: "/simulador", rotulo: "Simulador", icone: Smartphone },
   { href: "/arquivados", rotulo: "Arquivados", icone: Archive },
 ];
+const LINK_CONFIG = { href: "/configuracoes", rotulo: "Configurações", icone: Settings };
 
 export function Cabecalho() {
   const caminho = usePathname();
@@ -24,6 +26,7 @@ export function Cabecalho() {
   const usuario = useUsuario();
   const { agora } = useVersao();
   const [novaAberta, setNovaAberta] = useState(false);
+  const links = usePode("configurar") ? [...LINKS, LINK_CONFIG] : LINKS;
 
   const ativo = (href: string) => (href === "/" ? caminho === "/" || caminho.startsWith("/lead") : caminho.startsWith(href));
 
@@ -41,7 +44,7 @@ export function Cabecalho() {
             <span className="hidden sm:inline">Eccellenza</span>
           </Link>
           <nav className="ml-2 hidden min-w-0 items-center gap-1 md:flex lg:ml-4" aria-label="Principal">
-            {LINKS.map(({ href, rotulo, icone: Icone }) => (
+            {links.map(({ href, rotulo, icone: Icone }) => (
               <Link
                 key={href}
                 href={href}
@@ -82,6 +85,7 @@ export function Cabecalho() {
               <p className="text-sm font-medium">{usuario.nome}</p>
               <p className="text-xs text-texto-fraco">{usuario.perfil === "admin" ? "Administrador" : "Consultor"}</p>
             </div>
+            <BotaoTema />
             <button onClick={sair} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Sair" title="Sair">
               <LogOut className="size-5" aria-hidden />
             </button>
@@ -90,8 +94,8 @@ export function Cabecalho() {
       </header>
 
       {/* Navegação inferior no celular */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-borda bg-superficie md:hidden" aria-label="Principal (celular)">
-        {LINKS.map(({ href, rotulo, icone: Icone }) => (
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid border-t border-borda bg-superficie md:hidden" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }} aria-label="Principal (celular)">
+        {links.map(({ href, rotulo, icone: Icone }) => (
           <Link
             key={href}
             href={href}

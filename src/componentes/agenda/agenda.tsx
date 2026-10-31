@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Lock, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Plus, Presentation } from "lucide-react";
 import { DESCRICAO_REGRAS_AGENDA, horasDeInicio } from "@/regras/agenda";
 import { DIA, chaveDia, formatarData, formatarDiaLongo, formatarDiaSemana, formatarHora, lerChaveDia, partesLocais, somarDias } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -10,16 +10,21 @@ import { primeiraMaiuscula } from "../texto";
 import { COR_AVATAR, juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
 import { AgendarVisita } from "../ficha/agendar";
+import { useUsuario } from "../usuario";
 
-interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null }
+interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: "visita" | "apresentacao" }
 interface Bloqueio { id: string; consultorId: string; inicio: string; fim: string; motivo: string | null }
 interface DadosAgenda { visao: "dia" | "semana"; de: string; ate: string; agora: string; consultores: { id: string; nome: string }[]; visitas: Visita[]; bloqueios: Bloqueio[] }
 
-const HORAS = Array.from({ length: 10 }, (_, i) => 8 + i); // 8h às 17h (início das visitas)
+// Grade de 8h às 20h (último quadro 19h–20h). Fora do horário da loja o quadro fica cinza e não aceita visita.
+const HORAS = Array.from({ length: 12 }, (_, i) => 8 + i);
 
 // Agenda própria (AGENDA-01/03): visão de dia e de semana, visitas e bloqueios por consultor.
 export function Agenda() {
   const avisar = useAviso();
+  const usuario = useUsuario();
+  // Consultor vê todas as agendas, mas só altera a própria; o admin altera todas.
+  const minha = (consultorId: string) => usuario.perfil === "admin" || usuario.id === consultorId;
   const [visao, setVisao] = useState<"dia" | "semana">("semana");
   // No celular a agenda abre na visão de dia.
   useEffect(() => {
@@ -29,9 +34,11 @@ export function Agenda() {
   const [data, setData] = useState<string | null>(null);
   const { dados, erro, carregando, recarregar } = useDados<DadosAgenda>(`/api/agenda?visao=${visao}${data ? `&data=${data}` : ""}`);
   const [visitaAberta, setVisitaAberta] = useState<Visita | null>(null);
-  const [remarcar, setRemarcar] = useState<string | null>(null);
+  const [remarcar, setRemarcar] = useState<{ leadId: string; tipo: "visita" | "apresentacao" } | null>(null);
   const [bloqueio, setBloqueio] = useState<{ dia: string; hora: number; consultorId: string; horas: number; motivo: string } | null>(null);
   const [bloqueioAberto, setBloqueioAberto] = useState<Bloqueio | null>(null);
+  // Filtro por consultor (só o admin vê os botões); null = todos.
+  const [filtro, setFiltro] = useState<string | null>(null);
 
   const base = dados ? new Date(dados.de) : null;
   const dias = base ? Array.from({ length: visao === "dia" ? 1 : 7 }, (_, i) => somarDias(base, i)).filter((d) => visao === "dia" || partesLocais(d).diaSemana !== 0) : [];
@@ -64,13 +71,18 @@ export function Agenda() {
     };
     const slot = lerChaveDia(chaveDia(dia))!.getTime() + hora * 3600_000;
     const cobre = (b: Bloqueio) => new Date(b.inicio).getTime() <= slot && slot < new Date(b.fim).getTime();
-    return { visitas: dados?.visitas.filter((v) => mesmo(v.inicio)) ?? [], bloqueios: dados?.bloqueios.filter(cobre) ?? [] };
+    const doFiltro = (consultorId: string) => !filtro || consultorId === filtro;
+    return {
+      visitas: dados?.visitas.filter((v) => mesmo(v.inicio) && doFiltro(v.consultorId)) ?? [],
+      bloqueios: dados?.bloqueios.filter((b) => cobre(b) && doFiltro(b.consultorId)) ?? [],
+    };
   }
 
   const titulo = base ? (visao === "dia" ? formatarDiaLongo(base) : `Semana de ${formatarData(base)}`) : "";
 
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
+    // No computador a agenda ocupa exatamente a altura da tela (a rolagem, se precisar, é só dentro da grade).
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-2 text-xl font-semibold tracking-tight">Agenda</h1>
         <div className="flex rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Visão">
@@ -90,28 +102,44 @@ export function Agenda() {
           </button>
         </div>
         <p className="font-medium text-texto-suave">{primeiraMaiuscula(titulo)}</p>
-        <div className="ml-auto flex flex-wrap gap-3 text-xs">
-          {dados?.consultores.map((c) => (
-            <span key={c.id} className="inline-flex items-center gap-1.5">
-              <span className={juntar("size-3 rounded-full", corConsultor(c.id))} aria-hidden /> {c.nome}
-            </span>
-          ))}
-        </div>
+        {usuario.perfil === "admin" ? (
+          <div className="ml-auto flex flex-wrap items-center gap-1 rounded-controle bg-superficie p-1 shadow-card" role="group" aria-label="Filtrar por consultor">
+            {[{ id: null, nome: "Todos" }, ...(dados?.consultores ?? [])].map((c) => (
+              <button
+                key={c.id ?? "todos"}
+                onClick={() => setFiltro(c.id)}
+                aria-pressed={filtro === c.id}
+                className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium", filtro === c.id ? "bg-marca text-sobre-marca" : "text-texto-suave hover:bg-superficie-suave")}
+              >
+                {c.id && <span className={juntar("size-2.5 rounded-full", corConsultor(c.id))} aria-hidden />}
+                {c.nome}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="ml-auto flex flex-wrap gap-3 text-xs">
+            {dados?.consultores.map((c) => (
+              <span key={c.id} className="inline-flex items-center gap-1.5">
+                <span className={juntar("size-3 rounded-full", corConsultor(c.id))} aria-hidden /> {c.nome}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      <p className="text-xs text-texto-fraco">Regras PROVISÓRIAS (a confirmar com o Mateus): {DESCRICAO_REGRAS_AGENDA}. Clique no + de um horário para bloquear a agenda de um consultor.</p>
+      <p className="truncate text-xs text-texto-fraco" title={DESCRICAO_REGRAS_AGENDA}>Regras PROVISÓRIAS (a confirmar com o Mateus): {DESCRICAO_REGRAS_AGENDA}. Clique no + de um horário para bloquear a agenda de um consultor.</p>
 
       {carregando && !dados ? (
         <Carregando linhas={4} />
       ) : erro && !dados ? (
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : (
-        <div className="overflow-x-auto rounded-painel border border-borda bg-superficie shadow-painel">
-          <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
+        <div className="min-h-0 flex-1 overflow-auto rounded-painel border border-borda bg-superficie shadow-painel">
+          <table className="h-full w-full min-w-[640px] table-fixed border-collapse text-sm">
             <thead>
               <tr>
-                <th className="w-16 border-b border-borda p-2 text-left text-xs font-medium text-texto-fraco">Hora</th>
+                <th className="sticky top-0 z-10 w-16 border-b border-borda bg-superficie p-2 text-left text-xs font-medium text-texto-fraco">Hora</th>
                 {dias.map((d) => (
-                  <th key={d.toISOString()} className="border-b border-l border-borda p-2 text-left font-semibold">
+                  <th key={d.toISOString()} className="sticky top-0 z-10 border-b border-l border-borda bg-superficie p-2 text-left font-semibold">
                     <span className="capitalize">{formatarDiaSemana(d)}</span> <span className="font-normal text-texto-suave">{formatarData(d).slice(0, 5)}</span>
                   </th>
                 ))}
@@ -125,25 +153,25 @@ export function Agenda() {
                     const aberto = horasDeInicio(partesLocais(d).diaSemana).includes(hora);
                     const { visitas, bloqueios } = itensNoHorario(d, hora);
                     return (
-                      <td key={d.toISOString()} className={juntar("h-16 border-b border-l border-borda p-1 align-top", !aberto && "bg-superficie-suave")}>
+                      <td key={d.toISOString()} className={juntar("h-9 overflow-hidden border-b border-l border-borda p-0.5 align-top", !aberto && "bg-superficie-suave")}>
                         {aberto && (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex h-full gap-0.5">
                             {visitas.map((v) => (
-                              <button key={v.id} onClick={() => setVisitaAberta(v)} className="flex min-h-9 items-center gap-1.5 rounded-controle bg-sucesso-suave px-2 py-1 text-left text-xs font-medium text-sucesso hover:brightness-95">
-                                <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />
+                              <button key={v.id} title={`${v.tipo === "apresentacao" ? "Apresentação na loja: " : ""}${v.leadNome} · ${nomeConsultor(v.consultorId)}`} onClick={() => setVisitaAberta(v)} className={v.tipo === "apresentacao" ? "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle border border-alerta bg-alerta px-2 text-left text-xs font-semibold text-sobre-marca shadow-card hover:brightness-95" : "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-sucesso-suave px-2 text-left text-xs font-medium text-sucesso hover:brightness-95"}>
+                                {v.tipo === "apresentacao" ? <Presentation className="size-3.5 shrink-0" aria-hidden /> : <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />}
                                 <span className="truncate">{v.leadNome}</span>
                               </button>
                             ))}
                             {bloqueios.map((b) => (
-                              <button key={b.id} onClick={() => setBloqueioAberto(b)} className="flex min-h-9 items-center gap-1.5 rounded-controle bg-superficie-suave px-2 py-1 text-left text-xs text-texto-suave hover:bg-borda">
+                              <button key={b.id} title={`${nomeConsultor(b.consultorId)}: ${b.motivo ?? "bloqueado"}`} onClick={() => setBloqueioAberto(b)} className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-superficie-suave px-2 text-left text-xs text-texto-suave hover:bg-borda">
                                 <Lock className="size-3 shrink-0" aria-hidden />
                                 <span className="truncate">{nomeConsultor(b.consultorId)}: {b.motivo ?? "bloqueado"}</span>
                               </button>
                             ))}
                             {visitas.length === 0 && (
                             <button
-                              onClick={() => setBloqueio({ dia: chaveDia(d), hora, consultorId: dados?.consultores[0]?.id ?? "", horas: 1, motivo: "" })}
-                              className="flex min-h-toque items-center justify-center rounded-controle text-texto-fraco opacity-60 hover:bg-superficie-suave hover:opacity-100"
+                              onClick={() => setBloqueio({ dia: chaveDia(d), hora, consultorId: usuario.perfil === "admin" ? (filtro ?? dados?.consultores[0]?.id ?? "") : usuario.id, horas: 1, motivo: "" })}
+                              className={juntar("flex h-7 items-center justify-center rounded-controle text-texto-fraco opacity-60 hover:bg-superficie-suave hover:opacity-100", bloqueios.length ? "w-7 shrink-0" : "w-full")}
                               aria-label={`Bloquear ${formatarDiaSemana(d)} ${hora}h`}
                             >
                               <Plus className="size-3.5" aria-hidden />
@@ -161,7 +189,7 @@ export function Agenda() {
         </div>
       )}
 
-      <Modal aberto={!!visitaAberta} aoFechar={() => setVisitaAberta(null)} titulo="Visita agendada" largura="max-w-md">
+      <Modal aberto={!!visitaAberta} aoFechar={() => setVisitaAberta(null)} titulo={visitaAberta?.tipo === "apresentacao" ? "Apresentação na loja" : "Visita agendada"} largura="max-w-md">
         {visitaAberta && (
           <div className="space-y-4">
             <div className="text-sm">
@@ -173,14 +201,20 @@ export function Agenda() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href={`/lead/${visitaAberta.leadId}`} className="inline-flex min-h-toque items-center rounded-controle border border-borda px-4 text-sm font-medium hover:bg-superficie-suave">Abrir ficha</Link>
-              <Botao onClick={() => { setRemarcar(visitaAberta.leadId); setVisitaAberta(null); }}>Remarcar</Botao>
-              <Botao variante="perigo" onClick={async () => (await post({ acao: "cancelar", visitaId: visitaAberta.id }, "Visita cancelada.")) && setVisitaAberta(null)}>Cancelar visita</Botao>
+              {minha(visitaAberta.consultorId) ? (
+                <>
+                  <Botao onClick={() => { setRemarcar({ leadId: visitaAberta.leadId, tipo: visitaAberta.tipo }); setVisitaAberta(null); }}>Remarcar</Botao>
+                  <Botao variante="perigo" onClick={async () => (await post({ acao: "cancelar", visitaId: visitaAberta.id }, "Cancelado.")) && setVisitaAberta(null)}>{visitaAberta.tipo === "apresentacao" ? "Cancelar apresentação" : "Cancelar visita"}</Botao>
+                </>
+              ) : (
+                <p className="self-center text-xs text-texto-fraco">Agenda de outro consultor: só visualização.</p>
+              )}
             </div>
           </div>
         )}
       </Modal>
 
-      {remarcar && <AgendarVisita leadId={remarcar} aberto aoFechar={() => setRemarcar(null)} aoAgendar={recarregar} />}
+      {remarcar && <AgendarVisita leadId={remarcar.leadId} tipo={remarcar.tipo} aberto aoFechar={() => setRemarcar(null)} aoAgendar={recarregar} />}
 
       <Modal aberto={!!bloqueio} aoFechar={() => setBloqueio(null)} titulo="Bloquear horário" largura="max-w-md">
         {bloqueio && (
@@ -197,7 +231,7 @@ export function Agenda() {
             </p>
             <Campo rotulo="Consultor">
               <select className={classeEntrada} value={bloqueio.consultorId} onChange={(e) => setBloqueio({ ...bloqueio, consultorId: e.target.value })}>
-                {dados?.consultores.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                {dados?.consultores.filter((c) => minha(c.id)).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </Campo>
             <Campo rotulo="Duração (horas)">
@@ -218,9 +252,13 @@ export function Agenda() {
               {nomeConsultor(bloqueioAberto.consultorId)} · {formatarHora(new Date(bloqueioAberto.inicio))} às {formatarHora(new Date(bloqueioAberto.fim))}
               {bloqueioAberto.motivo && ` · ${bloqueioAberto.motivo}`}
             </p>
-            <Botao variante="perigo" onClick={async () => (await post({ acao: "desbloquear", bloqueioId: bloqueioAberto.id }, "Bloqueio removido.")) && setBloqueioAberto(null)}>
-              Remover bloqueio
-            </Botao>
+            {minha(bloqueioAberto.consultorId) ? (
+              <Botao variante="perigo" onClick={async () => (await post({ acao: "desbloquear", bloqueioId: bloqueioAberto.id }, "Bloqueio removido.")) && setBloqueioAberto(null)}>
+                Remover bloqueio
+              </Botao>
+            ) : (
+              <p className="text-xs text-texto-fraco">Agenda de outro consultor: só visualização.</p>
+            )}
           </div>
         )}
       </Modal>

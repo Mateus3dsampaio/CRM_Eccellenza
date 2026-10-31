@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
 import { CLASSIFICACOES, ETAPAS, ETIQUETAS, type Classificacao } from "@/regras/etapas";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Campo, Etiqueta, classeEntrada } from "../ui";
+import { usePode } from "../usuario";
 import { AgendarVisita } from "./agendar";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
@@ -21,23 +22,24 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 }
 
 export function Painel({ titulo, acao, children }: { titulo: string; acao?: React.ReactNode; children: React.ReactNode }) {
+  // Dentro da grade da ficha o quadro tem altura própria: o conteúdo rola dentro dele.
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
-      <div className="mb-2 flex min-h-9 items-center justify-between gap-2">
+    <section className="flex h-full min-h-0 flex-col rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+      <div className="mb-2 flex min-h-9 shrink-0 items-center justify-between gap-2">
         <h2 className="font-semibold">{titulo}</h2>
         {acao}
       </div>
-      {children}
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
     </section>
   );
 }
 
-// Ficha pronta para o consultor (FICHA-01), resumo (FICHA-02) e edição (FICHA-04).
-export function DadosLead({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
+// Blocos da ficha (FICHA-01/02/04). Cada bloco é um quadro da grade; o estado compartilhado fica neste hook.
+export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const avisar = useAviso();
   const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
   const [editando, setEditando] = useState(false);
-  const [agendar, setAgendar] = useState(false);
+  const [agendar, setAgendar] = useState<"visita" | "apresentacao" | null>(null);
 
   async function salvar(corpo: object, sucesso = "Ficha atualizada.") {
     try {
@@ -66,7 +68,7 @@ export function DadosLead({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () =>
   async function cancelarVisita(visitaId: string) {
     try {
       await chamarApi("/api/agenda", { method: "POST", json: { acao: "cancelar", visitaId } });
-      avisar("Visita cancelada.");
+      avisar("Cancelado.");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "Não foi possível cancelar.", "erro");
     } finally {
@@ -74,145 +76,171 @@ export function DadosLead({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () =>
     }
   }
 
-  const visitaAtiva = ficha.visitas.find((v) => v.status === "agendada");
+  const visitaAtiva = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === "visita");
+  const apresentacaoAtiva = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === "apresentacao");
 
-  return (
-    <div className="space-y-4">
-      <Painel
-        titulo="Resumo para o consultor"
-        acao={
-          <Botao
-            variante="fantasma"
-            icone={<ClipboardCopy className="size-4" aria-hidden />}
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(ficha.resumo ?? "");
-                avisar("Resumo copiado.");
-              } catch {
-                avisar("Não foi possível copiar. Selecione o texto e copie.", "erro");
-              }
-            }}
-          >
-            Copiar
-          </Botao>
-        }
-      >
-        <pre className="whitespace-pre-wrap rounded-controle bg-superficie-suave p-3 font-sans text-sm leading-relaxed text-texto">{ficha.resumo || "O resumo aparece quando o bot ou o consultor preencher a ficha."}</pre>
-      </Painel>
-
-      <Painel titulo="Etapa e responsável">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Campo rotulo="Etapa">
-            <select className={classeEntrada} value={ficha.etapa} onChange={(e) => acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada.")}>
-              {ETAPAS.map((e) => (
-                <option key={e.codigo} value={e.codigo}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo rotulo="Consultor responsável">
-            <select className={classeEntrada} value={ficha.consultor?.id ?? ""} onChange={(e) => salvar({ consultorId: e.target.value || null })}>
-              <option value="">Sem consultor</option>
-              {agenda?.consultores.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo rotulo="Classificação">
-            <select className={classeEntrada} value={ficha.classificacao ?? ""} onChange={(e) => salvar({ classificacao: e.target.value || null })}>
-              <option value="">Sem classificação</option>
-              {(Object.keys(CLASSIFICACOES) as Classificacao[]).map((c) => (
-                <option key={c} value={c}>
-                  {CLASSIFICACOES[c]}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium">Etiquetas</span>
-            <div className="flex flex-wrap gap-1.5">
-              {ficha.etiquetas.map((e) => (
-                <Etiqueta key={e} codigo={e} aoRemover={() => acaoLead({ acao: "etiqueta", etiqueta: e, ativa: false }, "Etiqueta removida.")} />
-              ))}
-              <select
-                className="min-h-toque rounded-controle border border-dashed border-borda-forte bg-superficie px-3 text-sm text-texto-suave"
-                value=""
-                onChange={(e) => e.target.value && acaoLead({ acao: "etiqueta", etiqueta: e.target.value, ativa: true }, "Etiqueta adicionada.")}
-                aria-label="Adicionar etiqueta"
-              >
-                <option value="">+ etiqueta</option>
-                {ETIQUETAS.filter((e) => !ficha.etiquetas.includes(e.codigo)).map((e) => (
+  const blocos = {
+    resumo: (
+        <Painel
+          titulo="Resumo para o consultor"
+          acao={
+            <Botao
+              variante="fantasma"
+              icone={<ClipboardCopy className="size-4" aria-hidden />}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(ficha.resumo ?? "");
+                  avisar("Resumo copiado.");
+                } catch {
+                  avisar("Não foi possível copiar. Selecione o texto e copie.", "erro");
+                }
+              }}
+            >
+              Copiar
+            </Botao>
+          }
+        >
+          <pre className="whitespace-pre-wrap rounded-controle bg-superficie-suave p-3 font-sans text-sm leading-relaxed text-texto">{ficha.resumo || "O resumo aparece quando o bot ou o consultor preencher a ficha."}</pre>
+        </Painel>
+    ),
+    etapa: (
+        <Painel titulo="Etapa e responsável">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo rotulo="Etapa">
+              <select className={classeEntrada} value={ficha.etapa} onChange={(e) => acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada.")}>
+                {ETAPAS.map((e) => (
                   <option key={e.codigo} value={e.codigo}>
                     {e.nome}
                   </option>
                 ))}
               </select>
+            </Campo>
+            <Campo rotulo="Consultor responsável">
+              <select className={classeEntrada} value={ficha.consultor?.id ?? ""} onChange={(e) => salvar({ consultorId: e.target.value || null })}>
+                <option value="">Sem consultor</option>
+                {agenda?.consultores.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo rotulo="Classificação">
+              <select className={classeEntrada} value={ficha.classificacao ?? ""} onChange={(e) => salvar({ classificacao: e.target.value || null })}>
+                <option value="">Sem classificação</option>
+                {(Object.keys(CLASSIFICACOES) as Classificacao[]).map((c) => (
+                  <option key={c} value={c}>
+                    {CLASSIFICACOES[c]}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium">Etiquetas</span>
+              <div className="flex flex-wrap gap-1.5">
+                {ficha.etiquetas.map((e) => (
+                  <Etiqueta key={e} codigo={e} aoRemover={() => acaoLead({ acao: "etiqueta", etiqueta: e, ativa: false }, "Etiqueta removida.")} />
+                ))}
+                <select
+                  className="min-h-toque rounded-controle border border-dashed border-borda-forte bg-superficie px-3 text-sm text-texto-suave"
+                  value=""
+                  onChange={(e) => e.target.value && acaoLead({ acao: "etiqueta", etiqueta: e.target.value, ativa: true }, "Etiqueta adicionada.")}
+                  aria-label="Adicionar etiqueta"
+                >
+                  <option value="">+ etiqueta</option>
+                  {ETIQUETAS.filter((e) => !ficha.etiquetas.includes(e.codigo)).map((e) => (
+                    <option key={e.codigo} value={e.codigo}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-      </Painel>
-
-      <Painel
-        titulo="Visita"
-        acao={
-          <Botao variante="fantasma" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={() => setAgendar(true)}>
-            {visitaAtiva ? "Remarcar" : "Agendar"}
-          </Botao>
-        }
-      >
-        {visitaAtiva ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-controle bg-sucesso-suave p-3">
-            <p className="text-sm font-medium text-sucesso">
-              {visitaAtiva.rotulo} com {visitaAtiva.consultor}
-            </p>
-            <Botao variante="fantasma" onClick={() => cancelarVisita(visitaAtiva.id)}>
-              Cancelar visita
-            </Botao>
-          </div>
-        ) : (
-          <p className="text-sm text-texto-suave">Nenhuma visita agendada.</p>
-        )}
-        {ficha.visitas.some((v) => v.status === "cancelada") && (
-          <p className="mt-2 text-xs text-texto-fraco">
-            Canceladas: {ficha.visitas.filter((v) => v.status === "cancelada").map((v) => v.rotulo).join(", ")}
-          </p>
-        )}
-      </Painel>
-      <AgendarVisita leadId={ficha.id} aberto={agendar} aoFechar={() => setAgendar(false)} aoAgendar={aoMudar} />
-
-      {editando ? (
-        <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await salvar(corpo)) && setEditando(false)} />
-      ) : (
+        </Painel>
+    ),
+    visita: (
         <Painel
-          titulo="Dados do lead"
+          titulo="Visita"
           acao={
-            <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={() => setEditando(true)}>
-              Editar
+            <Botao variante="fantasma" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={() => setAgendar("visita")}>
+              {visitaAtiva ? "Remarcar" : "Agendar"}
             </Botao>
           }
         >
-          <dl className="divide-y divide-borda">
-            <Linha rotulo="Nome" valor={ficha.nome ?? ficha.nomePerfil} />
-            <Linha rotulo="Telefone" valor={ficha.telefone} />
-            <Linha rotulo="Cidade" valor={ficha.cidade} />
-            <Linha rotulo="Endereço" valor={ficha.endereco} />
-            <Linha rotulo="Ambientes" valor={ficha.ambientes.join(", ")} />
-            <Linha rotulo="Situação do imóvel" valor={ficha.situacaoImovel} />
-            <Linha rotulo="Prazo" valor={ficha.prazo} />
-            <Linha rotulo="Investimento" valor={ficha.investimento} />
-            <Linha rotulo="Exigências" valor={ficha.exigencias.join("; ")} />
-            <Linha rotulo="Pedidos técnicos" valor={ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null} />
-            <Linha rotulo="Observações" valor={ficha.observacoes} />
-          </dl>
+          {visitaAtiva ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-controle bg-sucesso-suave p-3">
+              <p className="text-sm font-medium text-sucesso">
+                {visitaAtiva.rotulo} com {visitaAtiva.consultor}
+              </p>
+              <Botao variante="fantasma" onClick={() => cancelarVisita(visitaAtiva.id)}>
+                Cancelar visita
+              </Botao>
+            </div>
+          ) : (
+            <p className="text-sm text-texto-suave">Nenhuma visita agendada.</p>
+          )}
+          {ficha.visitas.some((v) => v.status === "cancelada") && (
+            <p className="mt-2 text-xs text-texto-fraco">
+              Canceladas: {ficha.visitas.filter((v) => v.status === "cancelada" && v.tipo === "visita").map((v) => v.rotulo).join(", ")}
+            </p>
+          )}
         </Painel>
-      )}
-
-      <Medidas ficha={ficha} aoMudar={aoMudar} />
-    </div>
-  );
+    ),
+    apresentacao: (
+        <Painel
+          titulo="Apresentação na loja"
+          acao={
+            <Botao variante="fantasma" icone={<Presentation className="size-4" aria-hidden />} onClick={() => setAgendar("apresentacao")}>
+              {apresentacaoAtiva ? "Remarcar" : "Agendar"}
+            </Botao>
+          }
+        >
+          {apresentacaoAtiva ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-controle bg-alerta-suave p-3">
+              <p className="text-sm font-medium text-alerta">
+                {apresentacaoAtiva.rotulo} com {apresentacaoAtiva.consultor}
+              </p>
+              <Botao variante="fantasma" onClick={() => cancelarVisita(apresentacaoAtiva.id)}>
+                Cancelar apresentação
+              </Botao>
+            </div>
+          ) : (
+            <p className="text-sm text-texto-suave">Nenhuma apresentação agendada.</p>
+          )}
+        </Painel>
+    ),
+    dados: editando ? (
+          <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await salvar(corpo)) && setEditando(false)} />
+        ) : (
+          <Painel
+            titulo="Dados do lead"
+            acao={
+              <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={() => setEditando(true)}>
+                Editar
+              </Botao>
+            }
+          >
+            <dl className="divide-y divide-borda">
+              <Linha rotulo="Nome" valor={ficha.nome ?? ficha.nomePerfil} />
+              <Linha rotulo="Telefone" valor={ficha.telefone} />
+              <Linha rotulo="Cidade" valor={ficha.cidade} />
+              <Linha rotulo="Endereço" valor={ficha.endereco} />
+              <Linha rotulo="Ambientes" valor={ficha.ambientes.join(", ")} />
+              <Linha rotulo="Situação do imóvel" valor={ficha.situacaoImovel} />
+              <Linha rotulo="Prazo" valor={ficha.prazo} />
+              <Linha rotulo="Investimento" valor={ficha.investimento} />
+              <Linha rotulo="Exigências" valor={ficha.exigencias.join("; ")} />
+              <Linha rotulo="Pedidos técnicos" valor={ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null} />
+              <Linha rotulo="Observações" valor={ficha.observacoes} />
+            </dl>
+          </Painel>
+        ),
+    medidas: <Medidas ficha={ficha} aoMudar={aoMudar} />,
+  };
+  // Janela de agendar visita/apresentação: fica fora da grade.
+  const janelas = <AgendarVisita leadId={ficha.id} tipo={agendar ?? "visita"} aberto={agendar !== null} aoFechar={() => setAgendar(null)} aoAgendar={aoMudar} />;
+  return { blocos, janelas };
 }
 
 function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; aoCancelar: () => void; aoSalvar: (corpo: object) => void }) {
@@ -271,6 +299,7 @@ function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; ao
 }
 
 function Medidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
+  const podeRemover = usePode("remover_medida");
   const avisar = useAviso();
   const [nova, setNova] = useState<{ ambiente: string; descricao: string } | null>(null);
   const [editando, setEditando] = useState<{ id: string; descricao: string; confirmada: boolean } | null>(null);
@@ -330,9 +359,11 @@ function Medidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) 
                   <button onClick={() => setEditando({ id: m.id, descricao: m.descricao, confirmada: m.confirmada })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Corrigir medida">
                     <Pencil className="size-4" aria-hidden />
                   </button>
-                  <button onClick={() => enviar({ acao: "remover", medidaId: m.id }, "Medida removida.")} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-alerta-suave hover:text-alerta" aria-label="Remover medida">
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
+                  {podeRemover && (
+                    <button onClick={() => enviar({ acao: "remover", medidaId: m.id }, "Medida removida.")} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-alerta-suave hover:text-alerta" aria-label="Remover medida">
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                  )}
                 </div>
               </div>
             )}

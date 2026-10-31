@@ -19,7 +19,7 @@ export async function cardsDoKanban() {
     orderBy: { ordem: "asc" },
     include: {
       consultor: { select: { id: true, nome: true } },
-      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, take: 1 },
+      visitas: { where: { status: "agendada", tipo: "visita" }, orderBy: { inicio: "asc" }, take: 1 },
       notas: { select: { texto: true } },
     },
   });
@@ -111,7 +111,7 @@ export async function fichaDoLead(id: string) {
     medidas: lead.medidas.map((m) => ({ id: m.id, ambiente: m.ambiente, descricao: m.descricao, fonte: m.fonte, origem: m.origem, confirmada: m.confirmada })),
     notas: lead.notas.map((n) => ({ id: n.id, autorNome: n.autorNome, texto: n.texto, criadoEm: n.criadoEm.toISOString() })),
     historico: lead.historico.map((h) => ({ id: h.id, autor: h.autor, descricao: h.descricao, criadoEm: h.criadoEm.toISOString() })),
-    visitas: lead.visitas.map((v) => ({ id: v.id, inicio: v.inicio.toISOString(), rotulo: formatarVisitaCurta(v.inicio), status: v.status, consultor: v.consultor.nome })),
+    visitas: lead.visitas.map((v) => ({ id: v.id, inicio: v.inicio.toISOString(), rotulo: formatarVisitaCurta(v.inicio), status: v.status, tipo: v.tipo, consultor: v.consultor.nome })),
   };
 }
 
@@ -137,6 +137,7 @@ export async function dadosDaAgenda(de: Date, ate: Date) {
       leadId: v.lead.id,
       leadNome: nomeExibicao(v.lead),
       cidade: v.lead.cidade,
+      tipo: v.tipo,
     })),
     bloqueios: bloqueios.map((b) => ({ id: b.id, consultorId: b.consultorId, inicio: b.inicio.toISOString(), fim: b.fim.toISOString(), motivo: b.motivo })),
   };

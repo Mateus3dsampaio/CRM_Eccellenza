@@ -71,7 +71,7 @@ export async function alterarEtiqueta(leadId: string, codigo: string, ativa: boo
 /** Visita ativa mais próxima do lead (a partir de agora). */
 export async function proximaVisita(leadId: string) {
   return db.visita.findFirst({
-    where: { leadId, status: "agendada" },
+    where: { leadId, status: "agendada", tipo: "visita" },
     orderBy: { inicio: "asc" },
     include: { consultor: { select: { nome: true } } },
   });

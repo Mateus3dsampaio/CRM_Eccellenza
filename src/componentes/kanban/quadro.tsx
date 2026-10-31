@@ -13,13 +13,14 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CheckSquare, Filter, Search, Trash2, Archive, X } from "lucide-react";
+import { CheckSquare, Filter, Minus, Plus, Search, Trash2, Archive, X } from "lucide-react";
 import { CODIGOS_ETAPA, ETAPAS, ETAPAS_LIMPAVEIS, ETIQUETAS, nomeEtapa } from "@/regras/etapas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
-import { usePode } from "../usuario";
+import { usePode, useUsuario } from "../usuario";
+import { NIVEIS_ZOOM, definirZoom, useZoomKanban } from "./zoom";
 import { Card, CardFlutuante, type AcoesCard } from "./card";
 
 function contagem(n: number) {
@@ -29,9 +30,12 @@ function contagem(n: number) {
 type Confirmacao = { titulo: string; texto: string; botao: string; perigo: boolean; executar: () => Promise<void> } | null;
 
 export function Quadro() {
-  const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[] }>("/api/kanban");
+  const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
+  const ehAdmin = useUsuario().perfil === "admin";
+  const zoom = useZoomKanban();
+  const indiceZoom = (NIVEIS_ZOOM as readonly number[]).indexOf(zoom);
 
   const [busca, setBusca] = useState("");
   const [etiqueta, setEtiqueta] = useState("");
@@ -78,7 +82,7 @@ export function Quadro() {
     return mapa;
   }, [filtrados]);
 
-  const filtrosAtivos = [etiqueta, consultor, cidade].filter(Boolean).length;
+  const filtrosAtivos = [etiqueta, ehAdmin ? "" : consultor, cidade].filter(Boolean).length;
 
   async function acao(corpo: object, sucesso?: string) {
     try {
@@ -93,7 +97,7 @@ export function Quadro() {
 
   function mover(id: string, etapa: string) {
     // Atualiza na tela na hora; o servidor confirma em seguida.
-    setDados((d) => (d ? { cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
+    setDados((d) => (d ? { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
     void acao({ acao: "mover", ids: [id], etapa }, `Movido para "${nomeEtapa(etapa)}".`);
   }
 
@@ -159,7 +163,8 @@ export function Quadro() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    // No computador o quadro ocupa a altura da tela; só a lista de cada coluna rola.
+    <div className="flex min-h-0 flex-1 flex-col md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none">
       {/* Barra de busca e filtros */}
       <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -175,6 +180,29 @@ export function Quadro() {
               className={juntar(classeEntrada, "pl-9")}
             />
           </div>
+          <div className="hidden items-center rounded-controle bg-superficie shadow-card md:flex" role="group" aria-label="Zoom do quadro">
+            <button
+              onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
+              disabled={indiceZoom <= 0}
+              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              aria-label="Diminuir zoom (mostrar mais cards)"
+              title="Mostrar mais cards"
+            >
+              <Minus className="size-4" aria-hidden />
+            </button>
+            <button onClick={() => definirZoom(1)} className="min-w-12 px-1 text-center text-sm font-medium tabular-nums" aria-label="Voltar o zoom para 100%" title="Voltar para 100%">
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              onClick={() => definirZoom(NIVEIS_ZOOM[Math.min(NIVEIS_ZOOM.length - 1, indiceZoom + 1)])}
+              disabled={indiceZoom >= NIVEIS_ZOOM.length - 1}
+              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              aria-label="Aumentar zoom (mostrar menos cards)"
+              title="Mostrar menos cards"
+            >
+              <Plus className="size-4" aria-hidden />
+            </button>
+          </div>
           <Botao onClick={() => setFiltrosAbertos((f) => !f)} aria-expanded={filtrosAbertos} icone={<Filter className="size-4" aria-hidden />}>
             Filtros{filtrosAtivos ? ` (${filtrosAtivos})` : ""}
           </Botao>
@@ -188,6 +216,20 @@ export function Quadro() {
             </Botao>
           )}
         </div>
+        {ehAdmin && (
+          <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por consultor">
+            {[{ id: "", nome: "Todos" }, ...(dados?.consultores ?? [])].map((c) => (
+              <button
+                key={c.id || "todos"}
+                onClick={() => setConsultor(c.id)}
+                aria-pressed={consultor === c.id}
+                className={juntar("inline-flex min-h-toque items-center rounded-controle px-3 text-sm font-medium shadow-card", consultor === c.id ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+              >
+                {c.nome}
+              </button>
+            ))}
+          </div>
+        )}
         {filtrosAbertos && (
           <div className="grid animate-surgir gap-2 rounded-card border border-borda bg-superficie p-3 shadow-painel sm:grid-cols-4">
             <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">
@@ -198,6 +240,7 @@ export function Quadro() {
                 </option>
               ))}
             </select>
+            {!ehAdmin && (
             <select className={classeEntrada} value={consultor} onChange={(e) => setConsultor(e.target.value)} aria-label="Filtrar por consultor">
               <option value="">Todos os consultores</option>
               {consultores.map(([id, nome]) => (
@@ -206,6 +249,7 @@ export function Quadro() {
                 </option>
               ))}
             </select>
+            )}
             <select className={classeEntrada} value={cidade} onChange={(e) => setCidade(e.target.value)} aria-label="Filtrar por cidade">
               <option value="">Todas as cidades</option>
               {cidades.map((c) => (
@@ -269,7 +313,8 @@ export function Quadro() {
             ))}
           </div>
 
-          <div className="rolagem-fina mx-auto flex w-full max-w-[1800px] flex-1 gap-4 overflow-x-auto p-4 md:items-start">
+          <div className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
+            <div className="flex gap-4 p-4 md:h-full md:items-stretch md:[zoom:var(--zoom-kanban)]" style={{ "--zoom-kanban": zoom } as React.CSSProperties}>
             {ETAPAS.map((e) => (
               <Coluna
                 key={e.codigo}
@@ -286,8 +331,15 @@ export function Quadro() {
                 aoLimpar={limparColuna}
               />
             ))}
+            </div>
           </div>
-          <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>{arrastado ? <CardFlutuante card={arrastado} /> : null}</DragOverlay>
+          <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+            {arrastado ? (
+              <div className="md:[zoom:var(--zoom-kanban)]" style={{ "--zoom-kanban": zoom } as React.CSSProperties}>
+                <CardFlutuante card={arrastado} />
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
 
@@ -358,7 +410,7 @@ function Coluna(props: {
       ref={setNodeRef}
       aria-label={nome}
       className={juntar(
-        "w-full shrink-0 flex-col rounded-painel bg-coluna p-3 shadow-painel transition md:flex md:w-coluna",
+        "w-full shrink-0 flex-col rounded-painel bg-coluna p-3 shadow-painel transition md:flex md:max-h-full md:w-coluna",
         props.visivelCelular ? "flex" : "hidden",
         isOver && "bg-marca-suave ring-2 ring-marca/40",
       )}
@@ -387,7 +439,7 @@ function Coluna(props: {
           </div>
         )}
       </header>
-      <div className="rolagem-fina flex flex-col gap-3 md:max-h-[calc(100dvh-15rem)] md:overflow-y-auto md:p-0.5">
+      <div className="rolagem-fina flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:p-0.5">
         {cards.length === 0 ? (
           <EstadoVazio titulo="Nenhum lead nesta etapa" />
         ) : (

@@ -144,13 +144,19 @@ export function EstadoErro({ texto, aoTentar }: { texto: string; aoTentar?: () =
 
 export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg" }: { aberto: boolean; aoFechar: () => void; titulo: string; children: ReactNode; largura?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  // aoFechar costuma ser uma função nova a cada render; guardada em ref para o efeito
+  // não rodar de novo (e devolver o foco ao primeiro campo) a cada tecla digitada.
+  const refFechar = useRef(aoFechar);
+  useEffect(() => {
+    refFechar.current = aoFechar;
+  });
   useEffect(() => {
     if (!aberto) return;
-    const tecla = (e: KeyboardEvent) => e.key === "Escape" && aoFechar();
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && refFechar.current();
     document.addEventListener("keydown", tecla);
     ref.current?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
     return () => document.removeEventListener("keydown", tecla);
-  }, [aberto, aoFechar]);
+  }, [aberto]);
   if (!aberto) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-texto/40 p-0 sm:items-center sm:p-4" onMouseDown={aoFechar}>

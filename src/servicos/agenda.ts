@@ -48,8 +48,10 @@ export async function horariosLivresParaLead(leadId: string, limite = 3, aPartir
  * Marca a visita. A checagem e a gravação acontecem juntas; a chave única da vaga
  * garante que dois agendamentos simultâneos no mesmo horário da loja não passem.
  */
-export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; validarJanelaDoBot?: boolean }) {
+export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; validarJanelaDoBot?: boolean; tipo?: "visita" | "apresentacao" }) {
   const quando = await agora();
+  const tipo = params.tipo ?? "visita";
+  const nomeTipo = tipo === "apresentacao" ? "apresentação" : "visita";
   const { inicio } = params;
   if (!horarioDentroDaRegra(inicio)) throw new ErroAgenda("Horário fora do funcionamento da loja.");
   if (inicio.getTime() <= quando.getTime()) throw new ErroAgenda("Horário já passou.");
@@ -71,15 +73,15 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   const consultorId = lista.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupado));
   if (!consultorId) throw new ErroAgenda("Esse horário não está mais livre.");
 
-  // Uma visita ativa por lead: a anterior é cancelada (remarcação).
-  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada" } });
+  // Um compromisso ativo de cada tipo por lead: o anterior do mesmo tipo é cancelado (remarcação).
+  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo } });
 
   let visita;
   try {
     visita = await db.$transaction(async (tx) => {
       for (const v of anteriores) await tx.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
       return tx.visita.create({
-        data: { leadId: lead.id, consultorId, inicio, fim, vagaChave: chaveVaga(consultorId, inicio), criadoPor: params.autor, criadoEm: quando },
+        data: { leadId: lead.id, consultorId, inicio, fim, tipo, vagaChave: chaveVaga(consultorId, inicio), criadoPor: params.autor, criadoEm: quando },
         include: { consultor: { select: { nome: true } } },
       });
     });
@@ -89,11 +91,11 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   }
 
   await db.lead.update({ where: { id: lead.id }, data: { consultorId } });
-  // Conta uma visita por lead: remarcar não soma no painel.
-  await registrarUmaVez(lead.id, "visita_agendada", consultorId);
-  await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} visita: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
+  // Conta uma visita por lead: remarcar não soma no painel. Apresentação na loja não entra nessa conta.
+  if (tipo === "visita") await registrarUmaVez(lead.id, "visita_agendada", consultorId);
+  await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} ${nomeTipo}: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
   // AGENDA-04: visita agendada move o card (sem voltar etapas mais avançadas).
-  if (["novo", "pronto", "sem_resposta"].includes(lead.etapa)) await moverEtapa(lead.id, "visita", params.autor);
+  if (tipo === "visita" && ["novo", "pronto", "sem_resposta"].includes(lead.etapa)) await moverEtapa(lead.id, "visita", params.autor);
   await atualizarResumo(lead.id);
   await marcarMudanca();
   return visita;
@@ -102,10 +104,10 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
 export async function cancelarVisita(visitaId: string, autor: string) {
   if (!(await db.visita.findUnique({ where: { id: visitaId }, select: { id: true } }))) throw new ErroAgenda("Visita não encontrada.");
   const visita = await db.visita.update({ where: { id: visitaId }, data: { status: "cancelada", vagaChave: null } });
-  await registrarAlteracao(visita.leadId, autor, `Cancelou a visita de ${formatarVisitaCurta(visita.inicio)}`);
+  await registrarAlteracao(visita.leadId, autor, `Cancelou ${visita.tipo === "apresentacao" ? "a apresentação" : "a visita"} de ${formatarVisitaCurta(visita.inicio)}`);
   const lead = await db.lead.findUniqueOrThrow({ where: { id: visita.leadId } });
-  const outra = await db.visita.count({ where: { leadId: lead.id, status: "agendada" } });
-  if (!outra && lead.etapa === "visita") await moverEtapa(lead.id, "pronto", autor);
+  const outra = await db.visita.count({ where: { leadId: lead.id, status: "agendada", tipo: "visita" } });
+  if (visita.tipo === "visita" && !outra && lead.etapa === "visita") await moverEtapa(lead.id, "pronto", autor);
   await atualizarResumo(lead.id);
   await marcarMudanca();
 }

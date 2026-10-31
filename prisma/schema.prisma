@@ -142,6 +142,7 @@ model Visita {
   inicio      DateTime
   fim         DateTime
   status      String   @default("agendada") // agendada | cancelada
+  tipo        String   @default("visita") // visita | apresentacao (apresentação na loja, geralmente tentativa de venda)
   // Preenchida só enquanto a visita está ativa: impede duas visitas no mesmo horário da loja (regras/agenda.ts).
   vagaChave   String?  @unique
   criadoPor   String

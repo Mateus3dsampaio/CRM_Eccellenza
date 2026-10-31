@@ -31,12 +31,17 @@ export function Simulador() {
   const [imagem, setImagem] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [pendente, setPendente] = useState<MensagemChat | null>(null);
+  const [baseIguais, setBaseIguais] = useState(0);
   const [criar, setCriar] = useState(false);
   const [formNovo, setFormNovo] = useState({ nome: "", telefone: telefoneAleatorio() });
   const refArquivo = useRef<HTMLInputElement>(null);
 
   const conversa = dados?.conversa;
-  const mensagens = [...(conversa?.mensagens ?? []), ...(pendente ? [pendente] : [])];
+  // A mensagem já pode estar salva (recarga automática) enquanto o bot ainda responde:
+  // nesse caso a pendente some, para não aparecer duas vezes.
+  const iguaisSalvas = pendente ? (conversa?.mensagens ?? []).filter((m) => m.autor === "cliente" && m.texto === pendente.texto).length : 0;
+  const jaSalva = pendente !== null && iguaisSalvas > baseIguais;
+  const mensagens = [...(conversa?.mensagens ?? []), ...(pendente && !jaSalva ? [pendente] : [])];
 
   async function enviar(e?: React.FormEvent) {
     e?.preventDefault();
@@ -46,7 +51,9 @@ export function Simulador() {
     if (nomeNovo) form.set("nome", nomeNovo);
     form.set("texto", texto);
     if (imagem) form.set("imagem", imagem);
-    setPendente({ id: "pendente", autor: "cliente", texto: texto || (imagem ? "📷 Imagem" : ""), midia: null, enviadaEm: new Date().toISOString(), status: null });
+    const textoPendente = texto || (imagem ? "📷 Imagem" : "");
+    setBaseIguais((conversa?.mensagens ?? []).filter((m) => m.autor === "cliente" && m.texto === textoPendente).length);
+    setPendente({ id: "pendente", autor: "cliente", texto: textoPendente, midia: null, enviadaEm: new Date().toISOString(), status: null });
     setTexto("");
     setImagem(null);
     setEnviando(true);

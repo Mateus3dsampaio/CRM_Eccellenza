@@ -103,3 +103,67 @@
     50% { opacity: 0.55; }
   }
 }
+
+/*
+ * Tema escuro: só troca os valores das mesmas variáveis (nenhum componente tem cor própria).
+ * Ativado por <html data-tema="escuro">. Em fundo escuro a marca clareia e o "sobre-marca" escurece,
+ * para botões e textos manterem contraste AA.
+ */
+html[data-tema="escuro"] {
+  color-scheme: dark;
+
+  --color-fundo: #0a0f18;
+  --color-coluna: #101724;
+  --color-superficie: #161f31;
+  --color-superficie-suave: #1e293f;
+  --color-borda: #2a3750;
+  --color-borda-forte: #3e4e6b;
+
+  --color-texto: #e9eef7;
+  --color-texto-suave: #b9c4d6;
+  --color-texto-fraco: #97a4ba;
+
+  --color-marca: #6d9ae6;
+  --color-marca-forte: #8db1f0;
+  --color-marca-suave: #1e3257;
+  --color-sobre-marca: #0a1222;
+
+  --color-whatsapp: #3fcf7e;
+  --color-whatsapp-suave: #17382a;
+  --color-whatsapp-escuro: #3fcf7e;
+  --color-check-lido: #5bb4f0;
+  --color-alerta: #f2766f;
+  --color-alerta-suave: #3b1c1f;
+  --color-aviso: #f0b04a;
+  --color-aviso-suave: #3a2c12;
+  --color-sucesso: #4fd184;
+  --color-sucesso-suave: #14341f;
+
+  --color-etiqueta-cidade: #44211f;
+  --color-etiqueta-cidade-texto: #f4a29b;
+  --color-etiqueta-parceiro: #2e2147;
+  --color-etiqueta-parceiro-texto: #c7aef2;
+  --color-etiqueta-posvenda: #172f45;
+  --color-etiqueta-posvenda-texto: #8cc6ee;
+  --color-etiqueta-atendido: #17331f;
+  --color-etiqueta-atendido-texto: #86d5a2;
+  --color-etiqueta-retomada: #3b2a0e;
+  --color-etiqueta-retomada-texto: #f1be70;
+
+  --color-avatar-0: #7ba3f0;
+  --color-avatar-1: #4fd184;
+  --color-avatar-2: #b697ee;
+  --color-avatar-3: #f0a06a;
+  --color-avatar-4: #4cc9ae;
+  --color-avatar-5: #f08a8d;
+
+  --color-chat-fundo: #0d141f;
+  --color-chat-cliente: #1d2839;
+  --color-chat-loja: #1c4a38;
+  --color-chat-sistema: #3d3516;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 8px 20px rgb(0 0 0 / 0.45);
+  --shadow-flutuante: 0 4px 8px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.6);
+  --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.35);
+}
