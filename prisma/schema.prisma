@@ -185,3 +185,18 @@ model RegistroRotina {
   texto    String
   criadoEm DateTime
 }
+
+// Instruções de atendimento do bot (o CRM é a fonte; só o admin edita).
+// Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior".
+model Instrucao {
+  id             String    @id @default(cuid())
+  titulo         String
+  texto          String
+  ordem          Int
+  ativa          Boolean   @default(true)
+  anteriorTitulo String?
+  anteriorTexto  String?
+  anteriorEm     DateTime?
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @default(now())
+}

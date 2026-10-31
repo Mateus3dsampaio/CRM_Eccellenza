@@ -8,6 +8,7 @@ export async function limparBanco() {
   await db.usuario.deleteMany();
   await db.registroRotina.deleteMany();
   await db.configuracao.deleteMany();
+  await db.instrucao.deleteMany();
 }
 
 export async function criarConsultores() {

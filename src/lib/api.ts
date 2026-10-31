@@ -11,6 +11,7 @@ export function rota<A extends unknown[]>(fn: (...args: A) => Promise<unknown>) 
       return NextResponse.json(resultado ?? { ok: true });
     } catch (erro) {
       if (erro instanceof ErroHttp) return NextResponse.json({ erro: erro.message }, { status: erro.status });
+      if (erro instanceof SyntaxError) return NextResponse.json({ erro: "Dados inválidos." }, { status: 400 });
       if (erro instanceof ZodError) {
         return NextResponse.json({ erro: "Dados inválidos.", detalhes: erro.issues.map((i) => i.message) }, { status: 400 });
       }

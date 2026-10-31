@@ -1,10 +1,12 @@
 "use client";
 
 import { LayoutDashboard, Shuffle, UtensilsCrossed, Users } from "lucide-react";
+import { useState } from "react";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro } from "../ui";
+import { InstrucoesAtendimento } from "./instrucoes";
 
 interface Dados {
   equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
@@ -15,6 +17,7 @@ interface Dados {
 export function Configuracoes() {
   const avisar = useAviso();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
+  const [aba, setAba] = useState<"geral" | "instrucoes">("geral");
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
     try {
@@ -34,7 +37,28 @@ export function Configuracoes() {
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
-      {carregando && !dados ? (
+      <div role="tablist" aria-label="Seções das configurações" className="flex gap-1 border-b border-borda">
+        {(
+          [
+            ["geral", "Geral"],
+            ["instrucoes", "Instruções de atendimento"],
+          ] as const
+        ).map(([codigo, rotulo]) => (
+          <button
+            key={codigo}
+            role="tab"
+            aria-selected={aba === codigo}
+            onClick={() => setAba(codigo)}
+            className={juntar("-mb-px min-h-toque border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca" : "border-transparent text-texto-suave hover:text-texto")}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+
+      {aba === "instrucoes" ? (
+        <InstrucoesAtendimento />
+      ) : carregando && !dados ? (
         <Carregando linhas={4} />
       ) : erro && !dados ? (
         <EstadoErro texto={erro} aoTentar={recarregar} />

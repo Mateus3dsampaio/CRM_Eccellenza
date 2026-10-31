@@ -4,7 +4,7 @@ Cada requisito tem um ID. Os revisores citam o ID ao apontar problemas. **E1** =
 Um requisito só está "atendido" se o critério de aceite puder ser demonstrado no sistema rodando.
 
 ## BOT – atendimento
-- **BOT-01 (E1)** O prompt do bot é montado a partir de `agente/instrucoes/*.txt` + `agente/loja.md` + `agente/complemento-crm.md`, lidos dos arquivos (não copiados à mão para dentro do código).
+- **BOT-01 (E1)** O prompt do bot é montado a cada conversa a partir das instruções de atendimento (banco do CRM, ver INST-01 a INST-06) + `agente/loja.md` + `agente/complemento-crm.md`, lidos em tempo de execução (não copiados à mão para dentro do código).
   - Aceite: alterar uma instrução no arquivo muda o comportamento do bot sem mexer no código.
 - **BOT-02 (E1)** O bot segue as instruções: uma pergunta por mensagem, roteiro da 02, faixa de valor só para cozinha (03), nunca preço fechado ou desconto, casos da 06 direto ao consultor.
   - Aceite: os cenários de `testes/cenarios.md` passam com o agente `cliente-simulado`.
@@ -98,3 +98,12 @@ A etapa 1 termina quando:
 3. `npm test` passa.
 4. Nenhum apontamento bloqueante aberto dos quatro revisores.
 5. O relatório final em `docs/rodadas/` explica ao Mateus como rodar e testar, o que ficou pendente e o que foi marcado como PROVISÓRIO.
+
+## Instruções de atendimento editáveis (pedido do Mateus, 31/10/2026)
+- **INST-01** O CRM é a fonte principal das instruções: as 13 originais entram no banco na primeira vez (carga inicial de `agente/instrucoes/`) e o bot passa a ler do banco.
+- **INST-02** Só o admin vê e edita (tela e API conferem a permissão `configurar`).
+- **INST-03** Aba "Instruções de atendimento" em Configurações: criar, editar título e texto, reordenar e ativar/desativar.
+- **INST-04** Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior"; botão "Voltar para a anterior" troca as duas.
+- **INST-05** Exportar: janela com seleção por instrução e "selecionar todas"; saída em .txt único ou .zip com um .txt por instrução.
+- **INST-06** Aviso de confirmação ao salvar e atalho "Testar no simulador".
+- **INST-07** O admin pode excluir uma instrução de vez, com confirmação clara de que não dá para desfazer. Não pode excluir a última instrução ativa.

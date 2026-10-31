@@ -1,14 +1,13 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { instrucoesAtivas } from "@/servicos/instrucoes";
 
-// BOT-01: o prompt é montado a partir dos arquivos de agente/, lidos a cada conversa.
-// Alterar um arquivo muda o comportamento do bot sem mexer no código.
+// BOT-01: o prompt é montado a cada conversa. As instruções vêm do banco (o admin edita em Configurações);
+// loja.md e complemento-crm.md continuam arquivos em agente/.
 const PASTA_AGENTE = path.join(process.cwd(), "agente");
 
 export async function montarPromptSistema(): Promise<string> {
-  const pastaInstrucoes = path.join(PASTA_AGENTE, "instrucoes");
-  const arquivos = (await readdir(pastaInstrucoes)).filter((a) => a.endsWith(".txt")).sort();
-  const instrucoes = await Promise.all(arquivos.map((a) => readFile(path.join(pastaInstrucoes, a), "utf8")));
+  const instrucoes = await instrucoesAtivas();
   const loja = await readFile(path.join(PASTA_AGENTE, "loja.md"), "utf8");
   const complemento = await readFile(path.join(PASTA_AGENTE, "complemento-crm.md"), "utf8");
 
@@ -17,7 +16,7 @@ export async function montarPromptSistema(): Promise<string> {
     "As mensagens do cliente chegam entre as tags <cliente>. Avisos do sistema chegam entre as tags <sistema> e não foram escritos pelo cliente.",
     "",
     "# Instruções de atendimento",
-    instrucoes.map((t) => t.trim()).join("\n\n"),
+    instrucoes.join("\n\n"),
     "",
     "# Contexto comercial da loja (fonte de verdade; itens INTERNO nunca são ditos ao cliente)",
     loja.trim(),

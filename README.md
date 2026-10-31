@@ -57,6 +57,8 @@ CRM com atendimento por IA (API do Claude) para a Eccellenza. Nesta fase roda s�
 A primeira vez que rodar `npm run test:tela`, instale o navegador de teste dentro do projeto: `set PLAYWRIGHT_BROWSERS_PATH=0&& npx playwright install chromium` (Windows).
 
 ## Onde fica cada coisa
+Mapa completo, arquivo por arquivo: [`docs/mapa-do-codigo.md`](docs/mapa-do-codigo.md). Resumo por pasta:
+
 | Pasta / arquivo | O que é |
 |---|---|
 | `src/app` | Telas e rotas da API |
@@ -67,7 +69,7 @@ A primeira vez que rodar `npm run test:tela`, instale o navegador de teste dentr
 | `src/app/tokens.css` | Todas as cores, sombras, raios e espaçamentos |
 | `prisma/` | Banco (SQLite) e dados de exemplo |
 | `midias/` | Fotos e plantas enviadas (fora da pasta pública; só com login) |
-| `agente/` | Instruções do bot (cópia do projeto do agente do WhatsApp) + complemento do CRM |
+| `agente/` | `loja.md` (cópia do projeto do agente do WhatsApp), `complemento-crm.md` e a carga inicial das instruções. As instruções de atendimento hoje vivem no banco e são editadas em Configurações |
 | `docs/` | Briefing, requisitos, design e relatórios de cada rodada |
 
 ## Arquivos de trabalho

@@ -1,6 +1,6 @@
 # Complemento do bot para o CRM
 
-O prompt do bot é: instruções 01 a 13 (`agente/instrucoes/`) + `agente/loja.md` + este arquivo.
+O prompt do bot é: instruções de atendimento (guardadas no banco, editadas em Configurações; a carga inicial veio de `agente/instrucoes/` 01 a 13) + `agente/loja.md` + este arquivo.
 Quando este arquivo conflitar com uma instrução, **vale este arquivo**, e o conflito precisa estar listado na seção "Conflitos conhecidos".
 
 > **Status: PROVISÓRIO.** Tudo aqui foi definido para o simulador funcionar. Nenhum texto deste arquivo vale para clientes reais antes da aprovação do Mateus.

@@ -18,6 +18,7 @@ async function main() {
   await db.usuario.deleteMany();
   await db.registroRotina.deleteMany();
   await db.configuracao.deleteMany();
+  await db.instrucao.deleteMany();
   await rm(path.join(process.cwd(), "midias"), { recursive: true, force: true });
 
   const agora = new Date();
