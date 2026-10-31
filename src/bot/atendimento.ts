@@ -149,8 +149,10 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
           output_config: { effort: "medium" },
-          cache_control: { type: "ephemeral" },
-          system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral" } }],
+          // Cache de 1 hora (o máximo da API): cada uso renova o prazo, então com clientes escrevendo ao longo
+          // do dia o prompt é gravado poucas vezes. Os dois pontos de cache usam o mesmo prazo.
+          cache_control: { type: "ephemeral", ttl: "1h" },
+          system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral", ttl: "1h" } }],
           tools: FERRAMENTAS,
           messages: historico,
         });
