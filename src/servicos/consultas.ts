@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
-import { formatarHorarioCard, formatarVisitaCurta, inicioDaSemanaLocal, inicioDoMesLocal, somarDias } from "@/regras/tempo";
+import { formatarHorarioCard, formatarVisitaCurta } from "@/regras/tempo";
 import { formatarTelefone } from "@/regras/telefone";
 import { statusEfetivo } from "./mensagens";
 
@@ -140,48 +140,6 @@ export async function dadosDaAgenda(de: Date, ate: Date) {
       tipo: v.tipo,
     })),
     bloqueios: bloqueios.map((b) => ({ id: b.id, consultorId: b.consultorId, inicio: b.inicio.toISOString(), fim: b.fim.toISOString(), motivo: b.motivo })),
-  };
-}
-
-const TIPOS_PAINEL = [
-  ["lead_novo", "Leads novos"],
-  ["qualificado", "Qualificados"],
-  ["curioso", "Curiosos"],
-  ["outra_cidade", "Outras cidades"],
-  ["parceiro", "Arquitetos/parceiros"],
-  ["sem_resposta", "Sem resposta"],
-  ["retomada_voltou", "Retomadas que voltaram"],
-  ["visita_agendada", "Visitas agendadas"],
-] as const;
-
-const FUNIL = [
-  ["etapa_novo", "Novo"],
-  ["etapa_pronto", "Pronto para o consultor"],
-  ["etapa_visita", "Visita agendada"],
-  ["etapa_orcamento", "Orçamento apresentado"],
-  ["etapa_fechado", "Fechado"],
-] as const;
-
-/** Painel (MET-01/02), calculado só com os contadores anônimos. */
-export async function dadosDoPainel(periodo: "semana" | "mes") {
-  const quando = await agora();
-  const de = periodo === "semana" ? inicioDaSemanaLocal(quando) : inicioDoMesLocal(quando);
-  const anteriorDe = periodo === "semana" ? somarDias(de, -7) : inicioDoMesLocal(somarDias(de, -1));
-  const eventos = await db.eventoMetrica.findMany({ where: { ocorridoEm: { gte: anteriorDe } } });
-  const consultores = await db.usuario.findMany({ where: { perfil: "consultor" }, select: { id: true, nome: true }, orderBy: { nome: "asc" } });
-
-  const contar = (tipo: string, desde: Date, ate?: Date) =>
-    eventos.filter((e) => e.tipo === tipo && e.ocorridoEm >= desde && (!ate || e.ocorridoEm < ate)).length;
-
-  return {
-    periodo,
-    inicio: de.toISOString(),
-    indicadores: TIPOS_PAINEL.map(([tipo, nome]) => ({ tipo, nome, atual: contar(tipo, de), anterior: contar(tipo, anteriorDe, de) })),
-    funil: FUNIL.map(([tipo, nome]) => ({ tipo, nome, total: contar(tipo, de) })),
-    visitasPorConsultor: consultores.map((c) => ({
-      nome: c.nome,
-      total: eventos.filter((e) => e.tipo === "visita_agendada" && e.consultorId === c.id && e.ocorridoEm >= de).length,
-    })),
   };
 }
 

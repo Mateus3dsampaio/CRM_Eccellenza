@@ -30,6 +30,7 @@ export async function obterOuCriarLead(telefone: string, nomePerfil?: string | n
   await registrarUmaVez(lead.id, "lead_novo");
   await registrarUmaVez(lead.id, "etapa_novo");
   await registrarAlteracao(lead.id, "sistema", "Lead criado");
+  await db.mudancaEtapa.create({ data: { leadId: lead.id, de: null, para: lead.etapa, autor: "sistema", criadoEm: quando } });
   await marcarMudanca();
   return lead;
 }
@@ -53,6 +54,7 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
   for (const passou of ETAPAS_FUNIL.slice(0, posicao + 1)) await registrarUmaVez(leadId, `etapa_${passou}`, lead.consultorId);
   if (etapa === "sem_resposta") await registrarUmaVez(leadId, "sem_resposta");
   await registrarAlteracao(leadId, autor, `Moveu de "${nomeEtapa(lead.etapa)}" para "${nomeEtapa(etapa)}"`);
+  await db.mudancaEtapa.create({ data: { leadId, de: lead.etapa, para: etapa, autor, criadoEm: quando } });
   await marcarMudanca();
   return atualizado;
 }

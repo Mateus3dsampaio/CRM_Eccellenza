@@ -29,16 +29,18 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
+| O que a exportação de desempenho leva | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
 | Tabelas do banco | `prisma/schema.prisma` (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
 
 ## Banco (`prisma/schema.prisma`)
 | Tabela | Guarda |
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço) |
-| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano) |
+| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
+| `MudancaEtapa` | Cada mudança de etapa do lead (de, para, quem, quando). Gravada em `moverEtapa` e na criação do lead. Alimenta a exportação de desempenho |
 | `Visita`, `Bloqueio` | Agenda: visitas e bloqueios de horário |
 | `EventoMetrica` | Contadores anônimos do painel |
 | `Configuracao` | Pares chave/valor (modo de distribuição, layout da ficha, versão dos dados, segredo da sessão) |
@@ -74,14 +76,15 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/leads/acoes/route.ts` | Mover, arquivar, excluir em lote | `leads` |
 | `src/app/api/arquivados/route.ts` | Lista de arquivados | `consultas`, `rotinas` |
 | `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios | `agenda`, `consultas` |
-| `src/app/api/painel/route.ts` | Métricas | `consultas` |
+| `src/app/api/painel/route.ts` | Métricas (atalho ou datas, vendedor só para admin) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG) | `conversa`, `leads`, `consultas` |
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício | `conversa`, `mensagens`, `consultas` |
 | `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
 | `src/app/api/equipe/status/route.ts` | Consultor online/almoço | `distribuicao` |
 | `src/app/api/midias/[nome]/route.ts` | Serve fotos/plantas (só logado) | `lib/midias` |
-| `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações | `configuracoes`, `distribuicao` |
+| `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
+| `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
 | `src/app/api/configuracoes/layout-ficha/route.ts` | Layout padrão da ficha (chave `layout_ficha` em `Configuracao`) | `regras/layout-ficha` |
 | `src/app/api/configuracoes/instrucoes/route.ts` | Listar e criar instruções | `instrucoes` |
@@ -100,7 +103,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço |
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
-| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, painel, arquivados) |
+| `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
+| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados) |
+| `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil e tempo de resposta (bot e consultor) |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
@@ -120,6 +125,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead |
 | `src/regras/limites.ts` | Limites usados na tela e no servidor (tamanho máximo de imagem) |
 | `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) |
+| `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
+| `src/regras/tempo-resposta.ts` | Tempo de resposta: por turno do cliente (bot ou consultor primeiro), do consultor em toda resposta (ignora o bot), 1ª resposta do consultor depois do repasse do bot; média/mediana e formatar duração. Usado pelo Painel e pela exportação |
+| `src/regras/painel.ts` | Período do Painel: atalhos (hoje, 7 dias, 30 dias, semana, mês), datas livres, período anterior do mesmo tamanho |
 | `src/regras/telefone.ts` | Telefone E.164 |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
 
@@ -155,10 +163,11 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar pela ficha |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda |
-| `src/componentes/painel/painel.tsx` | Painel de métricas |
+| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), tempo médio de resposta, funil |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral e Instruções) |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Instruções e Exportar desempenho) |
+| `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
@@ -172,7 +181,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/lib/versao.ts` | Contador de mudanças (`marcarMudanca`) |
 | `src/lib/midias.ts` | Fotos e plantas fora da pasta pública |
 | `src/lib/json.ts` | `lerLista`/`gravarLista`: listas guardadas como JSON em texto (SQLite) |
-| `src/lib/zip.ts` | Gerador de .zip simples (exportar instruções) |
+| `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
 | `prisma/seed.ts` | Dados fictícios (apaga tudo e recria) |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
 | `scripts/gerar-planta.ts` | Gera a planta fictícia de teste |
@@ -183,6 +192,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/regras.test.ts` | Regras puras (24h, retomada, agenda, permissões) |
 | `testes/unit/fluxos.test.ts` | Fluxos com banco: retomada, distribuição, agenda, mensagens |
 | `testes/unit/instrucoes.test.ts` | Instruções: carga, edição, versão anterior, exclusão, zip |
+| `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
+| `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |

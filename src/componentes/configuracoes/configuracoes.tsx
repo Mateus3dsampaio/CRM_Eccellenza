@@ -6,18 +6,20 @@ import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro } from "../ui";
+import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 
 interface Dados {
   equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
   distribuicao: ModoDistribuicao;
   naFila: number;
+  periodoExportacao: { de: string; ate: string };
 }
 
 export function Configuracoes() {
   const avisar = useAviso();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
-  const [aba, setAba] = useState<"geral" | "instrucoes">("geral");
+  const [aba, setAba] = useState<"geral" | "instrucoes" | "exportar">("geral");
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
     try {
@@ -42,6 +44,7 @@ export function Configuracoes() {
           [
             ["geral", "Geral"],
             ["instrucoes", "Instruções de atendimento"],
+            ["exportar", "Exportar desempenho"],
           ] as const
         ).map(([codigo, rotulo]) => (
           <button
@@ -58,6 +61,8 @@ export function Configuracoes() {
 
       {aba === "instrucoes" ? (
         <InstrucoesAtendimento />
+      ) : aba === "exportar" ? (
+        dados ? <ExportarDesempenho equipe={dados.equipe} periodoPadrao={dados.periodoExportacao} /> : <Carregando linhas={2} />
       ) : carregando && !dados ? (
         <Carregando linhas={4} />
       ) : erro && !dados ? (

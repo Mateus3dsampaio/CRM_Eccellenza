@@ -55,6 +55,7 @@ model Lead {
 
   modoAtendimento   String  @default("bot") // bot | humano | pausado
   aguardandoHumano  Boolean @default(false)
+  repassadoEm       DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
   erroBot           String?
 
   ultimaMensagemEm      DateTime?
@@ -76,8 +77,23 @@ model Lead {
   medidas    Medida[]
   notas      Nota[]
   historico  Alteracao[]
+  mudancasEtapa MudancaEtapa[]
   visitas    Visita[]
   conversaApi ConversaApi?
+}
+
+// Cada mudança de etapa do lead (de onde veio, para onde foi, quem moveu). Alimenta a exportação de desempenho.
+// A primeira linha de cada lead tem "de" vazio (criação).
+model MudancaEtapa {
+  id       String   @id @default(cuid())
+  leadId   String
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  de       String?
+  para     String
+  autor    String // bot | sistema | nome do usuário
+  criadoEm DateTime
+
+  @@index([leadId, criadoEm])
 }
 
 model Mensagem {

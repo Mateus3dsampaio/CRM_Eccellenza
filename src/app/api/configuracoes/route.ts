@@ -1,6 +1,8 @@
 import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
+import { agora } from "@/lib/relogio";
 import { exigirUsuario } from "@/lib/sessao";
+import { periodoPadrao } from "@/regras/exportacao";
 import { modoDistribuicao } from "@/servicos/configuracoes";
 import { leadsNaFila } from "@/servicos/distribuicao";
 
@@ -13,5 +15,10 @@ export const GET = rota(async () => {
     orderBy: [{ perfil: "asc" }, { criadoEm: "asc" }, { nome: "asc" }],
     select: { id: true, nome: true, login: true, perfil: true, ativo: true, status: true },
   });
-  return { equipe, distribuicao: await modoDistribuicao(), naFila: (await leadsNaFila()).length };
+  return {
+    equipe,
+    distribuicao: await modoDistribuicao(),
+    naFila: (await leadsNaFila()).length,
+    periodoExportacao: periodoPadrao(await agora()),
+  };
 });

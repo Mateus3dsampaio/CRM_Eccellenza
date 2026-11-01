@@ -96,6 +96,7 @@ async function main() {
         situacaoImovel: e.situacao, prazo: e.prazo, classificacao: e.classificacao, etapa: e.etapa, etiquetas: JSON.stringify(e.etiquetas ?? []),
         consultorId: e.consultor, modoAtendimento: e.modo ?? "bot", aguardandoHumano: e.aguardando ?? false, resumo,
         etapaAnterior: e.etapa === "sem_resposta" ? "novo" : null,
+        repassadoEm: e.consultor && e.etapa !== "novo" ? new Date(Math.min(agora.getTime(), criadoEm.getTime() + 30 * 60_000)) : null,
         retomadaEnviadaEm: e.etiquetas?.includes("retomada") ? new Date(agora.getTime() - 8640 * 60_000) : null,
         ultimaMensagemEm: ultimaEm, ultimaMensagemPrevia: ultima[1].slice(0, 140),
         ultimaMsgClienteEm: ultimaCliente ? new Date(agora.getTime() - ultimaCliente[2] * 60_000) : null,
@@ -126,6 +127,12 @@ async function main() {
     for (const tipo of eventos) await db.eventoMetrica.create({ data: { tipo, ocorridoEm: criadoEm } });
     if (e.visita && e.consultor) await db.eventoMetrica.create({ data: { tipo: "visita_agendada", consultorId: e.consultor, ocorridoEm: criadoEm } });
     await db.lead.update({ where: { id: lead.id }, data: { marcasMetricas: JSON.stringify(eventos) } });
+    // Histórico de etapas de exemplo: nasce em "novo" e anda pelo funil até a etapa atual (usado pela exportação e pelo Painel por vendedor).
+    const caminho = ["novo", ...(alcance >= 0 ? ordemFunil.slice(0, alcance + 1) : e.etapa === "perdido" || e.etapa === "sem_resposta" ? [e.etapa] : [])];
+    for (const [k, para] of caminho.entries()) {
+      const quando = new Date(Math.min(agora.getTime(), criadoEm.getTime() + k * 30 * 60_000));
+      await db.mudancaEtapa.create({ data: { leadId: lead.id, de: k ? caminho[k - 1] : null, para, autor: k ? "bot" : "sistema", criadoEm: quando } });
+    }
     i++;
   }
 

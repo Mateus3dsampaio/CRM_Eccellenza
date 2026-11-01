@@ -97,7 +97,7 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         const { motivo } = esquemaPassar.parse(entrada ?? {});
         const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
         const consultorId = lead.consultorId ?? (await escolherProximoConsultor());
-        await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId } });
+        await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId, repassadoEm: lead.aguardandoHumano && lead.repassadoEm ? lead.repassadoEm : await agora() } });
         if (lead.etapa === "novo") await moverEtapa(leadId, "pronto", "bot");
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);
         await atualizarResumo(leadId);

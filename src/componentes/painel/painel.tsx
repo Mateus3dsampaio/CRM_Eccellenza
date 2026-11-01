@@ -2,17 +2,31 @@
 
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
-import { formatarData } from "@/regras/tempo";
+import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
+import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
 import { useDados } from "../dados";
 import { juntar } from "../estilos";
-import { Carregando, EstadoErro } from "../ui";
+import { Carregando, EstadoErro, classeEntrada } from "../ui";
+import { useUsuario } from "../usuario";
 
 interface DadosPainel {
-  periodo: "semana" | "mes";
-  inicio: string;
+  de: string;
+  ate: string;
+  dias: number;
+  vendedores: { id: string; nome: string }[];
+  vendedorId: string | null;
+  vendedorNome: string | null;
   indicadores: { tipo: string; nome: string; atual: number; anterior: number }[];
   funil: { tipo: string; nome: string; total: number }[];
+  tempos: { geral: EstatisticaTempo; consultor: EstatisticaTempo; primeiraResposta: EstatisticaTempo & { aguardando: number }; bot: EstatisticaTempo; semResposta: number };
   visitasPorConsultor: { nome: string; total: number }[];
+}
+
+interface Filtro {
+  atalho: AtalhoPainel | null;
+  de: string;
+  ate: string;
+  vendedorId: string;
 }
 
 function taxa(a: number, b: number) {
@@ -20,26 +34,59 @@ function taxa(a: number, b: number) {
   return `${Math.round((a / b) * 100).toLocaleString("pt-BR")}%`;
 }
 
-// Painel de métricas (MET-01/02), feito só com contadores anônimos (MET-03).
+// Painel de métricas (MET-01/02). Sem vendedor: contadores anônimos (MET-03). Com vendedor (só admin): leads dele.
 export function Painel() {
-  const [periodo, setPeriodo] = useState<"semana" | "mes">("semana");
-  const { dados, erro, carregando, recarregar } = useDados<DadosPainel>(`/api/painel?periodo=${periodo}`);
+  const admin = useUsuario().perfil === "admin";
+  const [filtro, setFiltro] = useState<Filtro>({ atalho: "semana", de: "", ate: "", vendedorId: "" });
+  const consulta = new URLSearchParams(filtro.atalho ? { atalho: filtro.atalho } : { de: filtro.de, ate: filtro.ate });
+  if (filtro.vendedorId) consulta.set("vendedor", filtro.vendedorId);
+  const { dados, erro, carregando, recarregar } = useDados<DadosPainel>(`/api/painel?${consulta}`);
+  const de = filtro.atalho ? (dados?.de ?? "") : filtro.de;
+  const ate = filtro.atalho ? (dados?.ate ?? "") : filtro.ate;
+  const mudarData = (campo: "de" | "ate", valor: string) => setFiltro({ ...filtro, atalho: null, de, ate, [campo]: valor });
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
   const maiorConsultor = Math.max(1, ...(dados?.visitasPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Painel</h1>
-        <div className="flex rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Período">
-          {(["semana", "mes"] as const).map((p) => (
-            <button key={p} role="tab" aria-selected={periodo === p} onClick={() => setPeriodo(p)} className={juntar("min-h-toque rounded-controle px-4 text-sm font-medium", periodo === p ? "bg-marca text-sobre-marca" : "text-texto-suave")}>
-              {p === "semana" ? "Esta semana" : "Este mês"}
+      <div className="flex flex-wrap items-end gap-3">
+        <h1 className="mr-1 text-xl font-semibold tracking-tight">Painel</h1>
+        <div className="flex flex-wrap rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Atalhos de período">
+          {ATALHOS_PAINEL.map((a) => (
+            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca text-sobre-marca" : "text-texto-suave")}>
+              {a.nome}
             </button>
           ))}
         </div>
-        {dados && <p className="text-sm text-texto-suave">desde {formatarData(new Date(dados.inicio))} · comparação com o período anterior</p>}
+        <label className="space-y-1 text-xs text-texto-suave">
+          De
+          <input type="date" className={juntar(classeEntrada, "w-auto")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />
+        </label>
+        <label className="space-y-1 text-xs text-texto-suave">
+          Até
+          <input type="date" className={juntar(classeEntrada, "w-auto")} value={ate} min={de || undefined} onChange={(e) => mudarData("ate", e.target.value)} />
+        </label>
+        {admin && dados && (
+          <label className="space-y-1 text-xs text-texto-suave">
+            Vendedor
+            <select className={juntar(classeEntrada, "w-auto")} value={filtro.vendedorId} onChange={(e) => setFiltro({ ...filtro, vendedorId: e.target.value })}>
+              <option value="">Todos</option>
+              {dados.vendedores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
+      {dados && (
+        <p className="text-sm text-texto-suave">
+          {dados.dias} {dados.dias === 1 ? "dia" : "dias"} · comparação com os {dados.dias} {dados.dias === 1 ? "dia" : "dias"} anteriores
+          {dados.vendedorNome && <> · números dos leads de <strong className="text-texto">{dados.vendedorNome}</strong></>}
+        </p>
+      )}
+      {erro && dados && <p className="rounded-controle bg-alerta-suave px-3 py-2 text-sm text-alerta">{erro}</p>}
 
       {carregando && !dados ? (
         <Carregando linhas={3} />
@@ -62,6 +109,31 @@ export function Painel() {
               );
             })}
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                ["Tempo médio de resposta", dados.tempos.geral, "bot ou consultor, o que responder primeiro"],
+                ["Resposta do consultor", dados.tempos.consultor, "toda mensagem do cliente respondida pelo consultor, ignorando o bot"],
+                ["1ª resposta após o repasse", dados.tempos.primeiraResposta, dados.tempos.primeiraResposta.aguardando ? `${dados.tempos.primeiraResposta.aguardando} ${dados.tempos.primeiraResposta.aguardando === 1 ? "lead aguarda" : "leads aguardam"} o consultor agora` : "da hora em que o bot passou o lead até a 1ª mensagem do consultor"],
+                ["Resposta do bot", dados.tempos.bot, "só quando o bot respondeu primeiro"],
+              ] as const
+            ).map(([titulo, t, dica]) => (
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <p className="text-sm text-texto-suave">{titulo}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarDuracao(t.mediaSegundos)}</p>
+                <p className="mt-1 text-xs text-texto-fraco">
+                  {t.quantidade ? `mediana ${formatarDuracao(t.medianaSegundos)} · ${t.quantidade.toLocaleString("pt-BR")} ${t.quantidade === 1 ? "resposta" : "respostas"}` : "sem respostas no período"}
+                </p>
+                <p className="text-xs text-texto-fraco">{dica}</p>
+              </div>
+            ))}
+          </div>
+          {dados.tempos.semResposta > 0 && (
+            <p className="text-xs text-texto-suave">
+              {dados.tempos.semResposta.toLocaleString("pt-BR")} {dados.tempos.semResposta === 1 ? "vez em que o cliente escreveu e ninguém respondeu" : "vezes em que o cliente escreveu e ninguém respondeu"} (não entram na média). O tempo corre o dia todo, inclusive à noite e aos domingos.
+            </p>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
@@ -99,7 +171,9 @@ export function Painel() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-xs text-texto-fraco">Os números são contadores anônimos gravados na hora de cada evento: excluir leads não muda o painel.</p>
+              <p className="mt-4 text-xs text-texto-fraco">{dados.vendedorId
+                  ? "Com vendedor escolhido, os números vêm dos leads que são dele hoje (leads excluídos não contam). A etapa de cada lead só é registrada desde que esse histórico foi ativado."
+                  : "Os números são contadores anônimos gravados na hora de cada evento: excluir leads não muda o painel. O tempo de resposta vem das conversas."}</p>
             </section>
           </div>
         </>

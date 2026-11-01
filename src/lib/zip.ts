@@ -1,13 +1,13 @@
 import { crc32 } from "node:zlib";
 
-// ZIP mínimo (sem compressão), nomes e conteúdo em UTF-8. Suficiente para exportar textos.
-export function montarZip(arquivos: { nome: string; conteudo: string }[]): Buffer {
+// ZIP mínimo (sem compressão), nomes em UTF-8. Conteúdo: texto (UTF-8) ou Buffer (ex.: imagens).
+export function montarZip(arquivos: { nome: string; conteudo: string | Buffer }[]): Buffer {
   const partes: Buffer[] = [];
   const central: Buffer[] = [];
   let deslocamento = 0;
   for (const a of arquivos) {
     const nome = Buffer.from(a.nome, "utf8");
-    const dados = Buffer.from(a.conteudo, "utf8");
+    const dados = typeof a.conteudo === "string" ? Buffer.from(a.conteudo, "utf8") : a.conteudo;
     const crc = crc32(dados);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0);
