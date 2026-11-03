@@ -99,7 +99,7 @@ export function ProvedorAvisos({ children }: { children: ReactNode }) {
             role={a.tipo === "erro" ? "alert" : "status"}
             className={juntar(
               "pointer-events-auto flex max-w-md animate-surgir items-center gap-2 rounded-controle px-4 py-3 text-sm font-medium shadow-flutuante",
-              a.tipo === "erro" ? "bg-alerta text-sobre-marca" : "bg-texto text-sobre-marca",
+              a.tipo === "erro" ? "bg-alerta text-sobre-cor" : "bg-texto text-sobre-cor",
             )}
           >
             {a.tipo === "erro" ? <AlertTriangle className="size-4 shrink-0" aria-hidden /> : <CheckCircle2 className="size-4 shrink-0" aria-hidden />}

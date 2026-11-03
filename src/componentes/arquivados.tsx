@@ -38,7 +38,7 @@ export function Arquivados() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Arquivados</h1>
+        <h1 className="sr-only">Arquivados</h1>
         <p className="text-sm text-texto-suave">Leads arquivados saem do kanban e são excluídos de vez {DIAS_ARQUIVADO_ATE_EXCLUIR} dias depois, com mensagens e mídias.</p>
       </div>
       {carregando && !dados ? (

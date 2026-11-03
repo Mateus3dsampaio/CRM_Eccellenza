@@ -112,11 +112,11 @@ export function Simulador() {
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-3 bg-whatsapp-escuro px-3 py-2 text-sobre-marca">
+            <header className="flex items-center gap-3 bg-whatsapp-escuro px-3 py-2 text-sobre-cor">
               <button onClick={() => setTelefone(null)} className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle lg:hidden" aria-label="Voltar para a lista">
                 <X className="size-5" aria-hidden />
               </button>
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-sobre-marca/20 text-sm font-bold">E</span>
+              <span className="inline-flex size-9 items-center justify-center rounded-full bg-sobre-cor/15 text-sm font-bold">E</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">Eccellenza Planejados</p>
                 <p className="truncate text-xs">
@@ -124,7 +124,7 @@ export function Simulador() {
                 </p>
               </div>
               {conversa && (
-                <Link href={`/lead/${conversa.leadId}`} className="ml-auto inline-flex min-h-toque shrink-0 items-center whitespace-nowrap rounded-controle bg-sobre-marca/15 px-3 text-xs font-medium hover:bg-sobre-marca/25">
+                <Link href={`/lead/${conversa.leadId}`} className="ml-auto inline-flex min-h-toque shrink-0 items-center whitespace-nowrap rounded-controle bg-sobre-cor/15 px-3 text-xs font-medium hover:bg-sobre-cor/25">
                   Ver ficha
                 </Link>
               )}
@@ -168,7 +168,7 @@ export function Simulador() {
                   <Mic className="size-5" aria-hidden />
                 </button>
                 <input className={juntar(classeEntrada, "rounded-pilula")} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Mensagem" aria-label="Mensagem do cliente" disabled={enviando} />
-                <button type="submit" disabled={enviando || (!texto.trim() && !imagem)} className="inline-flex size-toque shrink-0 items-center justify-center rounded-full bg-whatsapp text-sobre-marca transition active:scale-95 disabled:opacity-50" aria-label="Enviar">
+                <button type="submit" disabled={enviando || (!texto.trim() && !imagem)} className="inline-flex size-toque shrink-0 items-center justify-center rounded-full bg-whatsapp text-sobre-cor transition active:scale-95 disabled:opacity-50" aria-label="Enviar">
                   <Send className="size-5" aria-hidden />
                 </button>
               </div>

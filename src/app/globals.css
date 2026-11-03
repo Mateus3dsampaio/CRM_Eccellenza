@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
+html {
+  color-scheme: dark; /* o sistema é só escuro */
+}
+
 html,
 body {
   background: var(--color-fundo);
@@ -11,7 +15,7 @@ body {
 
 /* Foco visível no teclado em tudo que é interativo. */
 :focus-visible {
-  outline: 2px solid var(--color-marca);
+  outline: 2px solid var(--color-marca-texto);
   outline-offset: 2px;
 }
 
@@ -28,4 +32,50 @@ body {
 .rolagem-fina {
   scrollbar-width: thin;
   scrollbar-color: var(--color-borda-forte) transparent;
+}
+
+/*
+ * "Tecla" mecânica (botões do modelo aprovado): face em gradiente, lateral sólida e sombra ambiente.
+ * Ao clicar, a tecla afunda (desce e perde a lateral) em 90 ms.
+ */
+@layer components {
+  .tecla,
+  .tecla-pri,
+  .tecla-perigo {
+    border: 1px solid var(--color-borda-forte);
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out, filter 150ms ease-out;
+  }
+  .tecla {
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--color-superficie-suave) 96%, #fff), var(--color-superficie-suave));
+    box-shadow: var(--shadow-tecla);
+  }
+  .tecla-pri {
+    border-color: color-mix(in srgb, var(--color-marca) 70%, #000);
+    background: linear-gradient(to bottom, var(--color-marca-forte), var(--color-marca));
+    text-shadow: 0 1px 1px rgb(0 0 0 / 0.4);
+    box-shadow: var(--shadow-tecla-pri);
+  }
+  .tecla-perigo {
+    border-color: color-mix(in srgb, var(--color-perigo) 70%, #000);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--color-perigo) 82%, #fff), var(--color-perigo));
+    text-shadow: 0 1px 1px rgb(0 0 0 / 0.4);
+    box-shadow: var(--shadow-tecla-perigo);
+  }
+  .tecla:hover:not(:disabled),
+  .tecla-pri:hover:not(:disabled),
+  .tecla-perigo:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .tecla:active:not(:disabled),
+  .tecla-pri:active:not(:disabled),
+  .tecla-perigo:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: var(--shadow-tecla-afundada);
+  }
+  /* Selecionado/"ligado": baixo relevo na cor da marca (menu, abas e filtros). */
+  .afundado {
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--color-marca) 78%, #000), var(--color-marca) 55%);
+    box-shadow: var(--shadow-afundado);
+    color: var(--color-sobre-marca);
+  }
 }

@@ -7,11 +7,12 @@ import { COR_AVATAR, COR_ETIQUETA, juntar } from "./estilos";
 
 type Variante = "primario" | "secundario" | "fantasma" | "perigo";
 
+// Primário, secundário e perigo são "teclas" (classes em globals.css): lateral sólida que afunda ao clicar.
 const VARIANTES: Record<Variante, string> = {
-  primario: "bg-marca text-sobre-marca hover:bg-marca-forte shadow-card",
-  secundario: "bg-superficie text-texto border border-borda hover:border-borda-forte hover:bg-superficie-suave shadow-card",
-  fantasma: "text-texto-suave hover:bg-superficie-suave hover:text-texto",
-  perigo: "bg-alerta text-sobre-marca hover:brightness-95 shadow-card",
+  primario: "tecla-pri text-sobre-marca",
+  secundario: "tecla text-texto",
+  fantasma: "text-texto-suave hover:bg-superficie-suave hover:text-texto active:scale-[0.97]",
+  perigo: "tecla-perigo text-sobre-marca",
 };
 
 export function Botao({
@@ -27,7 +28,7 @@ export function Botao({
       {...props}
       disabled={props.disabled || carregando}
       className={juntar(
-        "inline-flex min-h-toque items-center justify-center gap-2 rounded-controle px-4 text-sm font-medium transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex min-h-toque items-center justify-center gap-2 rounded-controle px-4 text-sm font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-55",
         VARIANTES[variante],
         className,
       )}
@@ -47,7 +48,7 @@ export function iniciais(nome: string): string {
 export function Avatar({ nome, cor, tamanho = "md" }: { nome: string; cor: number; tamanho?: "sm" | "md" | "lg" }) {
   const t = tamanho === "sm" ? "size-8 text-xs" : tamanho === "lg" ? "size-14 text-lg" : "size-10 text-sm";
   return (
-    <span aria-hidden className={juntar("inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-sobre-marca", t, COR_AVATAR[cor % COR_AVATAR.length])}>
+    <span aria-hidden className={juntar("inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-sobre-cor", t, COR_AVATAR[cor % COR_AVATAR.length])}>
       {iniciais(nome)}
     </span>
   );
@@ -183,7 +184,7 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg"
 export function Campo({ rotulo, children, dica }: { rotulo: string; children: ReactNode; dica?: string }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm font-medium text-texto">{rotulo}</span>
+      <span className="block text-sm font-medium text-texto">{rotulo}</span>
       {children}
       {dica && <span className="block text-xs text-texto-fraco">{dica}</span>}
     </label>
@@ -191,4 +192,4 @@ export function Campo({ rotulo, children, dica }: { rotulo: string; children: Re
 }
 
 export const classeEntrada =
-  "w-full min-h-toque rounded-controle border border-borda bg-superficie px-3 py-2 text-sm text-texto placeholder:text-texto-fraco focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/20";
+  "w-full min-h-toque rounded-controle border border-borda bg-superficie px-3 py-2 text-sm text-texto placeholder:text-texto-fraco focus:border-marca focus:outline-none focus-visible:outline-none focus:ring-3 focus:ring-marca/25";

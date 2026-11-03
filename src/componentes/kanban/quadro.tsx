@@ -200,7 +200,7 @@ export function Quadro() {
           <button
             onClick={() => setSoEsperando((v) => !v)}
             aria-pressed={soEsperando}
-            className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soEsperando ? "bg-alerta text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+            className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soEsperando ? "bg-alerta text-sobre-cor" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
           >
             <Clock className="size-4" aria-hidden />
             Esperando resposta
@@ -307,7 +307,7 @@ export function Quadro() {
         )}
         {selecionando && (
           <div className="flex flex-wrap items-center gap-2 rounded-card bg-marca-suave p-2 pl-4 text-sm">
-            <span className="font-medium text-marca">{selecionados.size} selecionado(s)</span>
+            <span className="font-medium text-marca-texto">{selecionados.size} selecionado(s)</span>
             <span className="text-texto-suave">· toque nos cards para marcar</span>
             <div className="ml-auto flex flex-wrap gap-2">
               <Botao

@@ -38,7 +38,7 @@ export function Configuracoes() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Configurações</h1>
+        <h1 className="sr-only">Configurações</h1>
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
@@ -56,7 +56,7 @@ export function Configuracoes() {
             role="tab"
             aria-selected={aba === codigo}
             onClick={() => setAba(codigo)}
-            className={juntar("-mb-px min-h-toque shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca" : "border-transparent text-texto-suave hover:text-texto")}
+            className={juntar("-mb-px min-h-toque shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca-texto" : "border-transparent text-texto-suave hover:text-texto")}
           >
             {rotulo}
           </button>
@@ -92,7 +92,7 @@ export function Configuracoes() {
                       onClick={() => !ativo && chamar("/api/configuracoes/distribuicao", "PUT", { modo: m.codigo }, `Distribuição: ${m.nome}.`)}
                       className={juntar("rounded-controle border p-3 text-left transition", ativo ? "border-marca bg-marca-suave" : "border-borda hover:border-borda-forte")}
                     >
-                      <p className={juntar("text-sm font-semibold", ativo && "text-marca")}>{m.nome}</p>
+                      <p className={juntar("text-sm font-semibold", ativo && "text-marca-texto")}>{m.nome}</p>
                       <p className="mt-1 text-xs text-texto-suave">{m.descricao}</p>
                     </button>
                   );
@@ -123,7 +123,7 @@ export function Configuracoes() {
                       <p className="text-xs text-texto-fraco">Login: {u.login}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca">{u.perfil === "admin" ? "Administrador" : "Consultor"}</span>
+                      <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca-texto">{u.perfil === "admin" ? "Administrador" : "Consultor"}</span>
                       {!u.ativo && <span className="rounded-pilula bg-superficie-suave px-2.5 py-1 text-texto-suave">Inativo</span>}
                       {u.perfil === "consultor" && u.ativo && (
                         <>

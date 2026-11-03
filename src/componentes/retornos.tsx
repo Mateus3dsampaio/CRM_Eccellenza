@@ -64,7 +64,7 @@ export const CLASSE_CARD_RETORNO: Record<SituacaoRetorno, string> = {
 export const CLASSE_TEXTO_RETORNO: Record<SituacaoRetorno, string> = {
   sem_data: "text-aviso",
   futuro: "text-texto-suave",
-  hoje: "text-marca",
+  hoje: "text-marca-texto",
   atrasado: "text-alerta",
 };
 

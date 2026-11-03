@@ -180,7 +180,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
 
       {editando && (
         <div className="flex flex-wrap items-center gap-2 rounded-card border border-marca/30 bg-marca-suave p-2 pl-4 text-sm">
-          <span className="font-medium text-marca">Personalizando o layout</span>
+          <span className="font-medium text-marca-texto">Personalizando o layout</span>
           <span className="text-texto-suave">· arraste pela barra de cada quadro e redimensione pelo canto. Vale para todos.</span>
           <div className="ml-auto flex flex-wrap gap-2">
             <Botao variante="fantasma" onClick={voltarLayoutOriginal} icone={<RotateCcw className="size-4" aria-hidden />}>
@@ -233,7 +233,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
                 role="tab"
                 aria-selected={aba === a.id}
                 onClick={() => setAba(a.id)}
-                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca-suave text-marca" : "text-texto-suave")}
+                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca-suave text-marca-texto" : "text-texto-suave")}
               >
                 {a.rotulo}
               </button>

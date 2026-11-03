@@ -57,9 +57,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Telas (`src/app/(app)`)
 | Arquivo | Tela |
 |---|---|
-| `src/app/layout.tsx` | Layout raiz (fonte, tema) |
-| `src/app/globals.css` | Estilos globais |
-| `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços (claro e escuro) |
+| `src/app/layout.tsx` | Layout raiz (fonte). O sistema é só escuro |
+| `src/app/globals.css` | Estilos globais e as classes de "tecla" dos botões (`tecla`, `tecla-pri`, `tecla-perigo`) e `afundado` (selecionado) |
+| `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços. Paleta azul-ardósia do modelo do Mateus; sistema só escuro |
 | `src/app/login/page.tsx` | Login |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
 | `src/app/(app)/page.tsx` | Kanban |
@@ -163,7 +163,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Menu superior (inclui "Retornos de hoje" e o contador "X aguardando você"; no celular tem que caber em 375px sem rolar para o lado). Em telas médias só o item ativo mostra o nome; os demais têm tooltip |
+| `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, sair). No celular tem que caber em 375px sem rolar para o lado |
+| `src/componentes/menu-lateral.tsx` | Menu lateral (computador) com indicador que desliza e opção de encolher (guarda a escolha); no celular vira a barra de baixo |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
@@ -173,8 +174,6 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (próximo contato + valor do orçamento, valor fechado, motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
-| `src/componentes/tema.tsx` | Tema claro/escuro |
-| `src/componentes/tema-script.ts` | Script do tema (lido pelo layout do servidor) |
 | `src/componentes/texto.ts` | Formatação de texto |
 | `src/componentes/chat.tsx` | Bolhas de conversa |
 | `src/componentes/almoco.tsx` | Botão de almoço do consultor |

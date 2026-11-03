@@ -133,7 +133,7 @@ export function InstrucoesAtendimento() {
           {instrucoes.map((i, n) => (
             <li key={i.id} className={juntar("rounded-painel border bg-superficie p-4 shadow-card transition", i.ativa ? "border-borda" : "border-dashed border-borda-forte opacity-70")}>
               <div className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-pilula bg-marca-suave text-sm font-semibold text-marca">{n + 1}</span>
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-pilula bg-marca-suave text-sm font-semibold text-marca-texto">{n + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {i.titulo}

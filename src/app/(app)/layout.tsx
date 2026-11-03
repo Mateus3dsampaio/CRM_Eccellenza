@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/sessao";
 import { Cabecalho } from "@/componentes/cabecalho";
+import { MenuLateral } from "@/componentes/menu-lateral";
 import { ProvedorAvisos, ProvedorVersao } from "@/componentes/dados";
 import { ProvedorAlertas } from "@/componentes/alertas/provedor";
 import { ProvedorEspera } from "@/componentes/espera";
@@ -21,9 +22,12 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
             <ProvedorVendas>
               <ProvedorRetornos>
                 <ProvedorAlertas>
-                  <div className="flex min-h-dvh flex-col">
-                    <Cabecalho />
-                    <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
+                  <div className="flex min-h-dvh">
+                    <MenuLateral />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <Cabecalho />
+                      <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
+                    </div>
                   </div>
                 </ProvedorAlertas>
               </ProvedorRetornos>

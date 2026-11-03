@@ -3,36 +3,33 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Archive, BarChart3, CalendarDays, Clock, KanbanSquare, LogOut, MessageSquarePlus, Settings, Smartphone } from "lucide-react";
+import { Clock, LogOut, MessageSquarePlus } from "lucide-react";
 import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
-import { juntar } from "./estilos";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
 import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotaoAlmoco } from "./almoco";
 import { NovaMensagem } from "./nova-mensagem";
-import { BotaoTema } from "./tema";
-import { usePode, useUsuario } from "./usuario";
+import { useUsuario } from "./usuario";
 
-const LINKS = [
-  { href: "/", rotulo: "Kanban", icone: KanbanSquare },
-  { href: "/agenda", rotulo: "Agenda", icone: CalendarDays },
-  { href: "/painel", rotulo: "Painel", icone: BarChart3 },
-  { href: "/simulador", rotulo: "Simulador", icone: Smartphone },
-  { href: "/arquivados", rotulo: "Arquivados", icone: Archive },
+const TITULOS: [string, string][] = [
+  ["/agenda", "Agenda"],
+  ["/painel", "Painel"],
+  ["/simulador", "Simulador"],
+  ["/arquivados", "Arquivados"],
+  ["/configuracoes", "Configurações"],
+  ["/lead", "Ficha do lead"],
 ];
-const LINK_CONFIG = { href: "/configuracoes", rotulo: "Configurações", icone: Settings };
 
+/** Barra de cima: título da tela e ações do dia a dia. A navegação fica no menu lateral. */
 export function Cabecalho() {
   const caminho = usePathname();
   const router = useRouter();
   const usuario = useUsuario();
   const { agora } = useVersao();
   const [novaAberta, setNovaAberta] = useState(false);
-  const links = usePode("configurar") ? [...LINKS, LINK_CONFIG] : LINKS;
-
-  const ativo = (href: string) => (href === "/" ? caminho === "/" || caminho.startsWith("/lead") : caminho.startsWith(href));
+  const titulo = TITULOS.find(([prefixo]) => caminho.startsWith(prefixo))?.[1] ?? "Atendimentos";
 
   async function sair() {
     await chamarApi("/api/login", { method: "DELETE" }).catch(() => undefined);
@@ -41,30 +38,15 @@ export function Cabecalho() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-borda bg-superficie/95 backdrop-blur">
-        <div className="mx-auto flex h-topo max-w-[1800px] items-center gap-2 px-3 sm:gap-3 sm:px-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight text-marca">
-            <span className="inline-flex size-toque items-center justify-center rounded-controle bg-marca text-sm font-bold text-sobre-marca">E</span>
-            <span className="hidden sm:inline">Eccellenza</span>
+      <header className="sticky top-0 z-30 border-b border-borda bg-fundo/90 backdrop-blur">
+        <div className="flex h-topo items-center gap-2 px-3 sm:gap-3 sm:px-4">
+          {/* No celular não há menu lateral: o logo leva ao kanban. */}
+          <Link href="/" className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca md:hidden" aria-label="Eccellenza – início">
+            E
           </Link>
-          <nav className="ml-2 hidden min-w-0 items-center gap-1 md:flex lg:ml-4" aria-label="Principal">
-            {links.map(({ href, rotulo, icone: Icone }) => (
-              <Link
-                key={href}
-                href={href}
-                aria-current={ativo(href) ? "page" : undefined}
-                title={rotulo}
-                className={juntar(
-                  "inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium transition",
-                  ativo(href) ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave hover:text-texto",
-                )}
-              >
-                <Icone className="size-4" aria-hidden />
-                {/* Telas médias: só o item ativo mostra o nome (o resto fica sem espaço); os demais têm o nome no tooltip. */}
-                <span className={juntar("sr-only min-[1400px]:not-sr-only", ativo(href) && "min-[1100px]:not-sr-only")}>{rotulo}</span>
-              </Link>
-            ))}
-          </nav>
+          <p className="truncate text-lg font-semibold tracking-tight" data-titulo-tela>
+            {titulo}
+          </p>
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             {agora && (
               <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave 2xl:inline-flex">
@@ -77,14 +59,14 @@ export function Cabecalho() {
             {usuario.perfil === "consultor" && <BotaoAlmoco />}
             <button
               onClick={() => setNovaAberta(true)}
-              className="inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle bg-marca px-3 text-sm font-medium text-sobre-marca shadow-card transition hover:bg-marca-forte active:scale-[0.97] sm:px-4"
+              className="tecla-pri inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle px-3 text-sm font-semibold text-sobre-marca sm:px-4"
             >
               <MessageSquarePlus className="size-4" aria-hidden />
               <span className="hidden whitespace-nowrap sm:inline">Nova mensagem</span>
               <span className="sr-only sm:hidden">Nova mensagem</span>
             </button>
             <span
-              className="hidden size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca sm:inline-flex 2xl:hidden"
+              className="hidden size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca-texto sm:inline-flex 2xl:hidden"
               title={`${usuario.nome} (${usuario.perfil === "admin" ? "Administrador" : "Consultor"})`}
             >
               {usuario.nome.slice(0, 1)}
@@ -95,28 +77,12 @@ export function Cabecalho() {
               <p className="text-xs text-texto-fraco">{usuario.perfil === "admin" ? "Administrador" : "Consultor"}</p>
             </div>
             <BotaoAvisos />
-            <BotaoTema />
             <button onClick={sair} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Sair" title="Sair">
               <LogOut className="size-5" aria-hidden />
             </button>
           </div>
         </div>
       </header>
-
-      {/* Navegação inferior no celular */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid border-t border-borda bg-superficie md:hidden" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }} aria-label="Principal (celular)">
-        {links.map(({ href, rotulo, icone: Icone }) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={ativo(href) ? "page" : undefined}
-            className={juntar("flex min-h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium", ativo(href) ? "text-marca" : "text-texto-suave")}
-          >
-            <Icone className="size-5" aria-hidden />
-            {rotulo}
-          </Link>
-        ))}
-      </nav>
 
       <NovaMensagem aberta={novaAberta} aoFechar={() => setNovaAberta(false)} />
     </>

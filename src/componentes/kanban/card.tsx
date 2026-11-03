@@ -107,7 +107,7 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
           </span>
         )}
         {card.modo === "humano" && (
-          <span className="inline-flex items-center gap-1 text-marca">
+          <span className="inline-flex items-center gap-1 text-marca-texto">
             <Headset className="size-3.5" aria-hidden />
             Consultor na conversa
           </span>

@@ -87,10 +87,10 @@ export function Agenda() {
     // No computador a agenda ocupa exatamente a altura da tela (a rolagem, se precisar, é só dentro da grade).
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-2 text-xl font-semibold tracking-tight">Agenda</h1>
+        <h1 className="sr-only">Agenda</h1>
         <div className="flex rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Visão">
           {(["dia", "semana"] as const).map((v) => (
-            <button key={v} role="tab" aria-selected={visao === v} onClick={() => setVisao(v)} className={juntar("min-h-toque rounded-controle px-4 text-sm font-medium", visao === v ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave")}>
+            <button key={v} role="tab" aria-selected={visao === v} onClick={() => setVisao(v)} className={juntar("min-h-toque rounded-controle px-4 text-sm font-medium", visao === v ? "bg-marca-suave text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}>
               {v === "dia" ? "Dia" : "Semana"}
             </button>
           ))}
@@ -144,7 +144,7 @@ export function Agenda() {
                 {dias.map((d) => {
                   const ehHoje = chaveDia(d) === hojeChave;
                   return (
-                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "bg-marca-suave text-marca" : "bg-superficie")}>
+                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "bg-marca-suave text-marca-texto" : "bg-superficie")}>
                       <span className="capitalize">{formatarDiaSemana(d)}</span> <span className={ehHoje ? "font-semibold" : "font-normal text-texto-suave"}>{formatarData(d).slice(0, 5)}</span>
                       {ehHoje && <span className="ml-1.5 rounded-pilula bg-marca px-2 py-0.5 text-[11px] font-medium text-sobre-marca">Hoje</span>}
                     </th>
@@ -164,7 +164,7 @@ export function Agenda() {
                         {aberto && (
                           <div className="flex h-full gap-0.5">
                             {visitas.map((v) => (
-                              <button key={v.id} title={`${v.tipo === "apresentacao" ? "Apresentação na loja: " : ""}${v.leadNome} · ${nomeConsultor(v.consultorId)}`} onClick={() => setVisitaAberta(v)} className={v.tipo === "apresentacao" ? "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle border border-alerta bg-alerta px-2 text-left text-xs font-semibold text-sobre-marca shadow-card hover:brightness-95" : "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-sucesso-suave px-2 text-left text-xs font-medium text-sucesso hover:brightness-95"}>
+                              <button key={v.id} title={`${v.tipo === "apresentacao" ? "Apresentação na loja: " : ""}${v.leadNome} · ${nomeConsultor(v.consultorId)}`} onClick={() => setVisitaAberta(v)} className={v.tipo === "apresentacao" ? "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle border border-alerta bg-alerta px-2 text-left text-xs font-semibold text-sobre-cor shadow-card hover:brightness-95" : "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-sucesso-suave px-2 text-left text-xs font-medium text-sucesso hover:brightness-95"}>
                                 {v.tipo === "apresentacao" ? <Presentation className="size-3.5 shrink-0" aria-hidden /> : <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />}
                                 <span className="truncate">{v.leadNome}</span>
                               </button>

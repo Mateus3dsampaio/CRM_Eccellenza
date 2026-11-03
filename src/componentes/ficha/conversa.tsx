@@ -47,7 +47,7 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-painel border border-borda bg-chat-fundo shadow-painel">
       <div className="flex flex-wrap items-center gap-2 border-b border-borda bg-superficie px-4 py-2">
-        <span className={juntar("inline-flex items-center gap-1.5 text-sm font-medium", ficha.modo === "bot" ? "text-sucesso" : "text-marca")}>
+        <span className={juntar("inline-flex items-center gap-1.5 text-sm font-medium", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
           {ficha.modo === "bot" ? <Bot className="size-4" aria-hidden /> : <Headset className="size-4" aria-hidden />}
           {modoTexto}
         </span>

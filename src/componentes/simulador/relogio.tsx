@@ -43,11 +43,11 @@ export function Relogio() {
   return (
     <aside className="flex flex-col gap-3 rounded-painel border border-borda bg-superficie p-4 shadow-painel">
       <h2 className="flex items-center gap-2 font-semibold">
-        <Clock className="size-4 text-marca" aria-hidden />
+        <Clock className="size-4 text-marca-texto" aria-hidden />
         Relógio do simulador
       </h2>
       <div className="rounded-controle bg-marca-suave p-3">
-        <p className="text-2xl font-semibold tabular-nums text-marca">{agora ? formatarDataHora(agora) : "--"}</p>
+        <p className="text-2xl font-semibold tabular-nums text-marca-texto">{agora ? formatarDataHora(agora) : "--"}</p>
         <p className="text-xs text-texto-suave">
           {agora && `${formatarDiaSemana(agora)} · `}
           {dados?.deslocamentoHoras ? `${dados.deslocamentoHoras} h à frente do horário real` : "horário real"}

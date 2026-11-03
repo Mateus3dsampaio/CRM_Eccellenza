@@ -5,7 +5,7 @@ export function BolinhaNaoLidas({ total }: { total: number }) {
   return (
     <span
       title={texto}
-      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sucesso px-1.5 text-xs font-semibold tabular-nums text-sobre-marca"
+      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sucesso px-1.5 text-xs font-semibold tabular-nums text-sobre-cor"
     >
       <span aria-hidden>{total > 99 ? "99+" : total}</span>
       <span className="sr-only">{texto}</span>

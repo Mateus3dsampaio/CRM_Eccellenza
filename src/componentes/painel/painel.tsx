@@ -72,10 +72,10 @@ export function Painel() {
   return (
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <h1 className="mr-1 text-xl font-semibold tracking-tight">Painel</h1>
+        <h1 className="sr-only">Painel</h1>
         <div className="flex flex-wrap rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Atalhos de período">
           {ATALHOS_PAINEL.map((a) => (
-            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave")}>
+            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca-suave text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}>
               {a.nome}
             </button>
           ))}
