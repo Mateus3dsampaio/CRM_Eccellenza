@@ -4,6 +4,7 @@ import { Cabecalho } from "@/componentes/cabecalho";
 import { ProvedorAvisos, ProvedorVersao } from "@/componentes/dados";
 import { ProvedorAlertas } from "@/componentes/alertas/provedor";
 import { ProvedorEspera } from "@/componentes/espera";
+import { ProvedorRetornos } from "@/componentes/retornos";
 import { ProvedorUsuario } from "@/componentes/usuario";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,14 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
       <ProvedorVersao>
         <ProvedorAvisos>
           <ProvedorEspera>
-            <ProvedorAlertas>
-              <div className="flex min-h-dvh flex-col">
-                <Cabecalho />
-                <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
-              </div>
-            </ProvedorAlertas>
+            <ProvedorRetornos>
+              <ProvedorAlertas>
+                <div className="flex min-h-dvh flex-col">
+                  <Cabecalho />
+                  <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
+                </div>
+              </ProvedorAlertas>
+            </ProvedorRetornos>
           </ProvedorEspera>
         </ProvedorAvisos>
       </ProvedorVersao>

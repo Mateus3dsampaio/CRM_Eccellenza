@@ -1,7 +1,7 @@
 // Acompanhamento de vendas: o que cada etapa exige, motivos de perda e dinheiro.
 // Dinheiro é sempre guardado em centavos (inteiro) para não ter erro de arredondamento.
 import type { CodigoEtapa } from "./etapas";
-import { dataLocal, partesLocais } from "./tempo";
+import { DIA, dataLocal, inicioDoDiaLocal, partesLocais } from "./tempo";
 
 export const MOTIVOS_PERDA = [
   { codigo: "preco", nome: "Preço" },
@@ -92,4 +92,18 @@ export function partirDataHoraLocal(quando: Date | string | null | undefined): {
   const p = partesLocais(new Date(quando));
   const dois = (n: number) => String(n).padStart(2, "0");
   return { data: `${p.ano}-${dois(p.mes)}-${dois(p.dia)}`, hora: `${dois(p.hora)}:${dois(p.minuto)}` };
+}
+
+export type SituacaoRetorno = "sem_data" | "futuro" | "hoje" | "atrasado";
+
+/**
+ * Onde o retorno marcado está em relação a hoje (dia de Fortaleza): "hoje" vale o dia todo, mesmo antes da hora;
+ * "atrasado" é de um dia anterior que ninguém cumpriu; "sem_data" são os leads antigos sem retorno marcado.
+ */
+export function situacaoDoRetorno(proximoContatoEm: Date | string | null | undefined, agora: Date): SituacaoRetorno {
+  if (!proximoContatoEm) return "sem_data";
+  const inicioHoje = inicioDoDiaLocal(agora).getTime();
+  const quando = new Date(proximoContatoEm).getTime();
+  if (quando < inicioHoje) return "atrasado";
+  return quando < inicioHoje + DIA ? "hoje" : "futuro";
 }

@@ -8,6 +8,7 @@ import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { juntar } from "./estilos";
 import { BotaoAguardando } from "./aguardando";
+import { BotaoRetornos } from "./retornos";
 import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotaoAlmoco } from "./almoco";
 import { NovaMensagem } from "./nova-mensagem";
@@ -69,6 +70,7 @@ export function Cabecalho() {
                 {formatarDataHora(new Date(agora))}
               </Link>
             )}
+            <BotaoRetornos />
             <BotaoAguardando />
             {usuario.perfil === "consultor" && <BotaoAlmoco />}
             <button

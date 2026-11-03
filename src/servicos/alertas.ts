@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { DIAS_ALERTA_GUARDADO, type TipoAlerta } from "@/regras/alertas";
+import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
+import { formatarHora } from "@/regras/tempo";
 import { esperaDoLead, faixaDeEspera, minutosEsperando, textoDeEspera } from "@/regras/espera";
 import { nomeExibicao } from "@/regras/telefone";
 import { DIA } from "@/regras/tempo";
@@ -82,6 +84,33 @@ export async function avisarPrazosVermelhos(): Promise<number> {
     });
     if (!reservado.count) continue;
     await registrarAlerta({ tipo: "prazo_vermelho", leadId: lead.id, texto: textoDeEspera(minutosEsperando(desde, quando)) });
+    avisados++;
+  }
+  if (avisados) await marcarMudanca();
+  return avisados;
+}
+
+/**
+ * Avisa o vendedor na hora do próximo contato (RET-01): som, notificação e aviso na tela, uma vez por data marcada.
+ * Quem chega depois do horário (ex.: o relógio andou) também é avisado. Trocar a data marca um novo aviso.
+ */
+export async function avisarRetornos(): Promise<number> {
+  const quando = await agora();
+  const leads = await db.lead.findMany({
+    where: { arquivadoEm: null, etapa: { in: ETAPAS_COM_RETORNO }, proximoContatoEm: { not: null, lte: quando } },
+    select: { id: true, proximoContatoEm: true, alertaContatoPara: true },
+  });
+  let avisados = 0;
+  for (const lead of leads) {
+    const marcado = lead.proximoContatoEm as Date;
+    if (lead.alertaContatoPara?.getTime() === marcado.getTime()) continue;
+    // Reserva o aviso: só quem conseguir atualizar a linha cria o aviso (duas telas ao mesmo tempo não duplicam).
+    const reservado = await db.lead.updateMany({
+      where: { id: lead.id, proximoContatoEm: marcado, OR: [{ alertaContatoPara: null }, { alertaContatoPara: { not: marcado } }] },
+      data: { alertaContatoPara: marcado },
+    });
+    if (!reservado.count) continue;
+    await registrarAlerta({ tipo: "retorno", leadId: lead.id, texto: formatarHora(marcado) });
     avisados++;
   }
   if (avisados) await marcarMudanca();

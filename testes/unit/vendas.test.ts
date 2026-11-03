@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { faltaParaMover, formatarReais, lerDataHoraLocal, lerReais, partirDataHoraLocal } from "@/regras/vendas";
+import { avancarRelogio, agora } from "@/lib/relogio";
+import { DIA } from "@/regras/tempo";
+import { faltaParaMover, formatarReais, lerDataHoraLocal, lerReais, partirDataHoraLocal, situacaoDoRetorno } from "@/regras/vendas";
+import { alertasDesde, avisarRetornos } from "@/servicos/alertas";
+import { retornosDeHoje } from "@/servicos/consultas";
 import { conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
-import { limparBanco } from "./ajuda";
+import { criarConsultores, limparBanco } from "./ajuda";
 
 const retorno = new Date("2026-11-10T14:00:00Z");
 
@@ -96,5 +100,79 @@ describe("mover etapa com dados de venda (Bloco 2)", () => {
     const a = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect(a.proximoContatoEm?.toISOString()).toBe(nova.toISOString());
     expect(a.valorOrcamento).toBe(250000);
+  });
+});
+
+describe("retornos e avisos (Bloco 2, tarefa 7)", () => {
+  beforeEach(limparBanco);
+  const admin = { id: "admin", perfil: "admin" };
+  const MIN = 60_000;
+
+  it("situação do retorno em relação a hoje", () => {
+    const hoje = new Date("2026-11-10T15:00:00Z"); // 12h em Fortaleza
+    expect(situacaoDoRetorno(null, hoje)).toBe("sem_data");
+    expect(situacaoDoRetorno(new Date("2026-11-10T03:00:00Z"), hoje)).toBe("hoje"); // 00h local
+    expect(situacaoDoRetorno(new Date("2026-11-10T02:59:00Z"), hoje)).toBe("atrasado"); // 23h59 de ontem
+    expect(situacaoDoRetorno(new Date("2026-11-10T20:00:00Z"), hoje)).toBe("hoje"); // hora ainda não chegou, mas é hoje
+    expect(situacaoDoRetorno(new Date("2026-11-11T03:00:00Z"), hoje)).toBe("futuro");
+  });
+
+  async function leadComRetorno(telefone: string, dono: string | null, emMin: number) {
+    const lead = await obterOuCriarLead(telefone, "Cliente " + telefone.slice(-2));
+    await db.lead.update({ where: { id: lead.id }, data: { consultorId: dono } });
+    const quando = new Date((await agora()).getTime() + emMin * MIN);
+    await moverEtapa(lead.id, "orcamento", "teste", { dados: { proximoContatoEm: quando } });
+    return lead.id;
+  }
+
+  it("avisa só na hora marcada, uma vez por data, o dono e o admin; trocar a data avisa de novo", async () => {
+    const [a, b] = await criarConsultores();
+    const id = await leadComRetorno("+5588900000201", a.id, 30);
+    const { ultimoId } = await alertasDesde(admin);
+
+    expect(await avisarRetornos()).toBe(0); // ainda falta
+    await avancarRelogio(31 * MIN);
+    expect(await avisarRetornos()).toBe(1);
+    expect(await avisarRetornos()).toBe(0); // não repete
+
+    const doAdmin = await alertasDesde(admin, ultimoId);
+    expect(doAdmin.eventos).toHaveLength(1);
+    expect(doAdmin.eventos[0]).toMatchObject({ tipo: "retorno", leadId: id });
+    expect((await alertasDesde({ id: a.id, perfil: "consultor" }, ultimoId)).eventos).toHaveLength(1);
+    expect((await alertasDesde({ id: b.id, perfil: "consultor" }, ultimoId)).eventos).toHaveLength(0);
+
+    // Marcou outra data: novo aviso quando chegar.
+    const nova = new Date((await agora()).getTime() + 10 * MIN);
+    await moverEtapa(id, "orcamento", "teste", { dados: { proximoContatoEm: nova } });
+    expect(await avisarRetornos()).toBe(0);
+    await avancarRelogio(11 * MIN);
+    expect(await avisarRetornos()).toBe(1);
+  });
+
+  it("não avisa lead arquivado nem fora de Orçamento/Negociação", async () => {
+    const [a] = await criarConsultores();
+    const id = await leadComRetorno("+5588900000202", a.id, -5);
+    await db.lead.update({ where: { id }, data: { arquivadoEm: await agora() } });
+    expect(await avisarRetornos()).toBe(0);
+    await db.lead.update({ where: { id }, data: { arquivadoEm: null } });
+    await moverEtapa(id, "perdido", "teste", { dados: { motivoPerda: "preco" } });
+    expect(await avisarRetornos()).toBe(0);
+  });
+
+  it("lista Retornos de hoje: atrasados primeiro, sem data por último, consultor vê só os seus", async () => {
+    const [a, b] = await criarConsultores();
+    const hoje = await leadComRetorno("+5588900000203", a.id, 0);
+    const atrasado = await leadComRetorno("+5588900000204", a.id, 0);
+    await db.lead.update({ where: { id: atrasado }, data: { proximoContatoEm: new Date((await agora()).getTime() - 2 * DIA) } });
+    const futuro = await leadComRetorno("+5588900000205", a.id, 3 * 24 * 60);
+    const semData = await obterOuCriarLead("+5588900000206");
+    await db.lead.update({ where: { id: semData.id }, data: { etapa: "negociacao", consultorId: a.id } });
+    const doOutro = await leadComRetorno("+5588900000207", b.id, 0);
+
+    const lista = await retornosDeHoje({ id: a.id, perfil: "consultor" });
+    expect(lista.map((l) => l.id)).toEqual([atrasado, hoje, semData.id]);
+    expect(lista.map((l) => l.situacao)).toEqual(["atrasado", "hoje", "sem_data"]);
+    expect(lista.map((l) => l.id)).not.toContain(futuro);
+    expect((await retornosDeHoje(admin)).map((l) => l.id)).toContain(doOutro);
   });
 });

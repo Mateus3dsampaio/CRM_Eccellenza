@@ -51,6 +51,16 @@ test("menu Mover para... move o card", async ({ page }, info) => {
   await page.getByRole("menuitem", { name: "Novo / bot atendendo" }).click();
 });
 
+test("Retornos de hoje: lista no topo e card atrasado destacado", async ({ page }, info) => {
+  await entrar(page);
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Negociação/ }).click();
+  await expect(page.getByRole("group", { name: "Diego Nascimento" }).getByText(/Retorno atrasado desde/)).toBeVisible();
+  await page.getByRole("button", { name: /retornos? de hoje/ }).click();
+  const lista = page.getByRole("dialog", { name: "Retornos de hoje" });
+  await expect(lista.getByText("Diego Nascimento")).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-retornos.png` });
+});
+
 test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info) => {
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();

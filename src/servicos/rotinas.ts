@@ -4,7 +4,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { deveExcluirArquivado, DIAS_ARQUIVADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
 import { formatarDataHora } from "@/regras/tempo";
-import { avisarPrazosVermelhos } from "./alertas";
+import { avisarPrazosVermelhos, avisarRetornos } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
@@ -60,6 +60,7 @@ async function executar(): Promise<ResultadoRotinas> {
 
   // O relógio simulado pode ter andado: confere os prazos de espera.
   await avisarPrazosVermelhos();
+  await avisarRetornos();
 
   const partes: string[] = [];
   if (resultado.retomadas) partes.push(`${resultado.retomadas} retomada(s) enviada(s) após ${DIAS_PARA_RETOMADA} dias sem resposta`);

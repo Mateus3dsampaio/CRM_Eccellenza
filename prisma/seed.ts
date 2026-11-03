@@ -41,6 +41,8 @@ async function main() {
     tel: string; nome: string; etapa: string; cidade?: string; ambientes?: string[]; investimento?: string; situacao?: string; prazo?: string;
     exigencias?: string[]; pedidos?: string[]; etiquetas?: string[]; classificacao?: string; consultor?: string; aguardando?: boolean; modo?: string;
     msgs: Msg[]; visita?: Date; criadoDiasAtras: number;
+    // Vendas (centavos). retornoEmMin: minutos a partir de agora (negativo = já passou).
+    retornoEmMin?: number; valorOrcamento?: number; valorFechado?: number; motivoPerda?: string; concorrente?: string;
   }[] = [
     { tel: "+5588900000101", nome: "Ana Souza", etapa: "novo", criadoDiasAtras: 0, ambientes: ["cozinha"],
       msgs: [["cliente", "Oi, quero fazer minha cozinha", 40], ["bot", "Oi, Ana, tudo bem? 😊 Qual ambiente você tem interesse em fazer?", 39], ["cliente", "cozinha", 30], ["bot", "Certo! E o projeto será em qual cidade?", 29]] },
@@ -61,13 +63,13 @@ async function main() {
       msgs: [["cliente", "Pode ser nesse horário", 3000], ["bot", "Certo! Sua visita está agendada. O consultor vai te receber na loja. 😊", 2999]] },
     { tel: "+5588900000107", nome: "Marcos Tavares", etapa: "visita", cidade: "Juazeiro do Norte", ambientes: ["closet"], classificacao: "qualificado", consultor: rafael.id, modo: "pausado",
       visita: proximoDiaUtil(3, 15), criadoDiasAtras: 4, msgs: [["cliente", "Combinado, até lá", 4000], ["bot", "Certo! Até lá. 😊", 3999]] },
-    { tel: "+5588900000108", nome: "Luciana Ribeiro", etapa: "orcamento", cidade: "Crato", ambientes: ["cozinha", "lavanderia"], investimento: "R$ 35 mil", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 8,
+    { tel: "+5588900000108", nome: "Luciana Ribeiro", etapa: "orcamento", cidade: "Crato", ambientes: ["cozinha", "lavanderia"], investimento: "R$ 35 mil", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 8, retornoEmMin: 120, valorOrcamento: 3_500_000,
       msgs: [["consultor", "Luciana, obrigado pela visita! Qualquer dúvida sobre o orçamento estou por aqui.", 6000], ["cliente", "Obrigada! Vou conversar com meu marido.", 5900]] },
-    { tel: "+5588900000109", nome: "Diego Nascimento", etapa: "negociacao", cidade: "Juazeiro do Norte", ambientes: ["home office", "quarto de solteiro"], consultor: rafael.id, modo: "humano", aguardando: true, criadoDiasAtras: 10,
+    { tel: "+5588900000109", nome: "Diego Nascimento", etapa: "negociacao", cidade: "Juazeiro do Norte", ambientes: ["home office", "quarto de solteiro"], consultor: rafael.id, modo: "humano", aguardando: true, criadoDiasAtras: 10, retornoEmMin: -3 * 24 * 60, valorOrcamento: 1_621_000,
       msgs: [["cliente", "Consegue ver uma condição melhor no cartão?", 60]] },
-    { tel: "+5588900000110", nome: "Sofia Martins", etapa: "fechado", cidade: "Barbalha", ambientes: ["cozinha"], consultor: beatriz.id, modo: "humano", criadoDiasAtras: 20,
+    { tel: "+5588900000110", nome: "Sofia Martins", etapa: "fechado", cidade: "Barbalha", ambientes: ["cozinha"], consultor: beatriz.id, modo: "humano", criadoDiasAtras: 20, valorOrcamento: 1_800_000, valorFechado: 1_650_000,
       msgs: [["cliente", "Fechado! Obrigada pelo atendimento.", 9000]] },
-    { tel: "+5588900000111", nome: "Henrique Castro", etapa: "perdido", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 15,
+    { tel: "+5588900000111", nome: "Henrique Castro", etapa: "perdido", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 15, motivoPerda: "concorrente", concorrente: "Concorrente de exemplo",
       msgs: [["cliente", "Vou deixar para o ano que vem.", 12000]] },
     { tel: "+5588900000112", nome: "Vera Lúcia", etapa: "sem_resposta", ambientes: ["quarto de casal"], etiquetas: ["retomada"], criadoDiasAtras: 9,
       msgs: [["cliente", "Quero um guarda-roupa", 12960], ["bot", "Certo! E o projeto será em qual cidade?", 12959], ["bot", "Oi! Passando para saber se você ainda tem interesse no seu projeto de móveis planejados. Se quiser, é só responder por aqui que seguimos com o atendimento. 😊", 8640]] },
@@ -97,6 +99,10 @@ async function main() {
         situacaoImovel: e.situacao, prazo: e.prazo, classificacao: e.classificacao, etapa: e.etapa, etiquetas: JSON.stringify(e.etiquetas ?? []),
         consultorId: e.consultor, modoAtendimento: e.modo ?? "bot", aguardandoHumano: e.aguardando ?? false, resumo,
         etapaAnterior: e.etapa === "sem_resposta" ? "novo" : null,
+        proximoContatoEm: e.retornoEmMin !== undefined ? new Date(agora.getTime() + e.retornoEmMin * 60_000) : null,
+        // Retorno que já passou no seed não gera aviso ao abrir o CRM; só aparece como atrasado.
+        alertaContatoPara: e.retornoEmMin !== undefined && e.retornoEmMin < 0 ? new Date(agora.getTime() + e.retornoEmMin * 60_000) : null,
+        valorOrcamento: e.valorOrcamento, valorFechado: e.valorFechado, motivoPerda: e.motivoPerda, concorrente: e.concorrente,
         repassadoEm: e.consultor && e.etapa !== "novo" ? new Date(Math.min(agora.getTime(), criadoEm.getTime() + 30 * 60_000)) : null,
         retomadaEnviadaEm: e.etiquetas?.includes("retomada") ? new Date(agora.getTime() - 8640 * 60_000) : null,
         ultimaMensagemEm: ultimaEm, ultimaMensagemPrevia: ultima[1].slice(0, 140),

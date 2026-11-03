@@ -3,7 +3,8 @@ import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
 import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
-import { formatarHorarioCard, formatarVisitaCurta } from "@/regras/tempo";
+import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
+import { ETAPAS_COM_RETORNO, situacaoDoRetorno } from "@/regras/vendas";
 import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
 import { statusEfetivo } from "./mensagens";
 
@@ -31,6 +32,37 @@ export async function leadsAguardando(usuario: { id: string; perfil: string }) {
     ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
   }));
   return ordenarParaColuna(lista);
+}
+
+const PESO_RETORNO = { atrasado: 0, hoje: 1, sem_data: 2, futuro: 3 } as const;
+
+/**
+ * "Retornos de hoje": leads em Orçamento/Negociação com retorno hoje ou atrasado, mais os que ainda não têm retorno marcado
+ * (dados antigos). O consultor vê os seus; o admin vê todos. Atrasados primeiro, depois por hora.
+ */
+export async function retornosDeHoje(usuario: { id: string; perfil: string }) {
+  const quando = await agora();
+  const fimDoDia = new Date(inicioDoDiaLocal(quando).getTime() + DIA);
+  const leads = await db.lead.findMany({
+    where: {
+      arquivadoEm: null,
+      etapa: { in: ETAPAS_COM_RETORNO },
+      OR: [{ proximoContatoEm: null }, { proximoContatoEm: { lt: fimDoDia } }],
+      ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }),
+    },
+    include: { consultor: { select: { id: true, nome: true } } },
+  });
+  return leads
+    .map((l) => ({
+      id: l.id,
+      nome: nomeExibicao(l),
+      etapa: l.etapa,
+      proximoContatoEm: l.proximoContatoEm?.toISOString() ?? null,
+      situacao: situacaoDoRetorno(l.proximoContatoEm, quando),
+      valorOrcamento: l.valorOrcamento,
+      consultor: l.consultor,
+    }))
+    .sort((a, b) => PESO_RETORNO[a.situacao] - PESO_RETORNO[b.situacao] || (a.proximoContatoEm ?? "").localeCompare(b.proximoContatoEm ?? ""));
 }
 
 export async function cardsDoKanban() {

@@ -119,7 +119,7 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
       // Quem já está com a conversa daquele lead aberta não precisa de aviso dele.
       const relevantes = novos.filter((a) => !(olhando && atual.caminho === `/lead/${a.leadId}`));
       if (!relevantes.length) return;
-      if (atual.preferencias.som && relevantes.some((a) => a.tipo === "mensagem")) tocarSom();
+      if (atual.preferencias.som && relevantes.some((a) => a.tipo === "mensagem" || a.tipo === "retorno")) tocarSom();
       relevantes.slice(0, MAXIMO_NOTIFICACOES).forEach((a) => mostrar(a, olhando));
       const sobra = relevantes.length - MAXIMO_NOTIFICACOES;
       if (sobra > 0 && olhando) avisarNaTela(`E mais ${sobra} ${sobra === 1 ? "aviso" : "avisos"}.`);

@@ -56,6 +56,7 @@ model Lead {
   valorFechado     Int?
   motivoPerda      String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
   concorrente      String? // nome, quando o motivo é "concorrente"
+  alertaContatoPara DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
 
   consultorId    String?
   consultor      Usuario? @relation("consultorLead", fields: [consultorId], references: [id])

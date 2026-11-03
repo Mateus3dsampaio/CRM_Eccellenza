@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, CalendarCheck, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CalendarClock, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
 import { ETAPAS } from "@/regras/etapas";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
 import { Avatar, Etiqueta, Sino } from "../ui";
+import { CLASSE_CARD_RETORNO, CLASSE_TEXTO_RETORNO, useSituacaoRetorno } from "../retornos";
 import { CLASSE_CARD_ESPERA, CLASSE_TEXTO_ESPERA, useSituacaoEspera } from "../espera";
 import { BolinhaNaoLidas } from "./bolinha";
 
@@ -23,6 +24,7 @@ export interface AcoesCard {
 /** Informações do card (KAN-02). */
 export function ConteudoCard({ card }: { card: CardKanban }) {
   const espera = useSituacaoEspera(card.esperandoDesde);
+  const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   return (
     <>
       <div className="flex items-start gap-3 pr-8">
@@ -55,6 +57,12 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
         <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_ESPERA[espera.faixa])}>
           <Clock className="size-3.5 shrink-0" aria-hidden />
           esperando há {espera.texto}
+        </p>
+      )}
+      {retorno && (
+        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_RETORNO[retorno.situacao])}>
+          <CalendarClock className="size-3.5 shrink-0" aria-hidden />
+          Retorno {retorno.texto}
         </p>
       )}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-10 text-xs text-texto-suave">
@@ -136,6 +144,7 @@ export function Card({
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
+  const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
   const refBotao = useRef<HTMLButtonElement>(null);
@@ -198,6 +207,7 @@ export function Card({
       className={juntar(
         "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
         CLASSE_CARD_ESPERA[faixa],
+        retorno && CLASSE_CARD_RETORNO[retorno.situacao],
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
       )}
