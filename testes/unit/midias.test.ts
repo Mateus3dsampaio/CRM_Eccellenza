@@ -38,8 +38,8 @@ afterEach(async () => {
 describe("regras de mídia", () => {
   it("aceita imagem, vídeo MP4/3GP e PDF; recusa o resto", () => {
     for (const t of ["image/png", "image/jpeg", "video/mp4", "video/3gpp", "application/pdf", "Application/PDF; x=1"]) expect(tipoMidiaAceito(t)).toBe(true);
-    for (const t of [DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad"]) expect(tipoMidiaAceito(t)).toBe(true);
-    for (const t of ["application/zip", "text/html", "video/x-msvideo", "application/vnd.ms-powerpoint", ""]) expect(tipoMidiaAceito(t)).toBe(false);
+    for (const t of [DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad", "application/zip", "application/x-zip-compressed"]) expect(tipoMidiaAceito(t)).toBe(true);
+    for (const t of ["application/x-rar-compressed", "text/html", "video/x-msvideo", "application/vnd.ms-powerpoint", ""]) expect(tipoMidiaAceito(t)).toBe(false);
   });
   it("nome de arquivo: sem pasta, sem caracteres perigosos, com limite", () => {
     expect(nomeSeguroDeArquivo("../../etc/passwd")).toBe("passwd");
@@ -73,6 +73,10 @@ describe("regras de mídia", () => {
     expect(tipoDoArquivo("tabela.xlsx", "application/zip")).toBe(XLSX);
     expect(tipoDoArquivo("a.xls", "application/vnd.ms-excel")).toBe("application/vnd.ms-excel");
     expect(tipoDoArquivo("x.png", "image/png")).toBe("image/png");
+    expect(tipoDoArquivo("projeto.zip", "application/x-zip-compressed")).toBe("application/zip");
+    expect(tipoDoArquivo("projeto.zip", "")).toBe("application/zip");
+    expect(tipoDoArquivo("medidas.docx", "application/zip")).toBe(DOCX); // docx é ZIP por dentro: o nome decide
+    expect(rotuloDoTipo("application/zip")).toBe("ZIP");
     expect(tipoDoArquivo("virus.exe", "application/octet-stream")).toBeNull();
     expect(tipoDoArquivo("foto.png", "")).toBeNull(); // extensão de imagem não vale sozinha
     expect(tipoDoArquivo(null, "")).toBeNull();
@@ -80,9 +84,9 @@ describe("regras de mídia", () => {
     expect(rotuloDoTipo("application/acad")).toBe("DWG");
     expect(previaDaMidia(XLSX)).toBe("📄 Excel");
   });
-  it("o vendedor só envia JPG, PNG, MP4, PDF, Word, Excel e DWG (WEBP, GIF e 3GP só se recebem)", () => {
-    for (const ok of ["image/jpeg", "image/png", "video/mp4", "application/pdf", DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad"]) expect(tipoPodeEnviar(ok)).toBe(true);
-    for (const nao of ["image/webp", "image/gif", "video/3gpp", "application/zip"]) expect(tipoPodeEnviar(nao)).toBe(false);
+  it("o vendedor só envia JPG, PNG, MP4, PDF, Word, Excel, DWG e ZIP (WEBP, GIF e 3GP só se recebem)", () => {
+    for (const ok of ["image/jpeg", "image/png", "video/mp4", "application/pdf", DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad", "application/zip"]) expect(tipoPodeEnviar(ok)).toBe(true);
+    for (const nao of ["image/webp", "image/gif", "video/3gpp", "application/x-rar-compressed"]) expect(tipoPodeEnviar(nao)).toBe(false);
   });
   it("só o admin apaga arquivo", () => {
     expect(pode("admin", "apagar_midia")).toBe(true);
@@ -105,7 +109,9 @@ describe("guardar arquivos", () => {
     const doc = await guardar(ole(), "application/msword");
     const xls = await guardar(ole(), "application/vnd.ms-excel");
     const d = await guardar(dwg(), "application/acad");
-    expect([docx, xlsx, doc, xls, d].map((n) => n.split(".").pop())).toEqual(["docx", "xlsx", "doc", "xls", "dwg"]);
+    const z = await guardar(zip(), "application/x-zip-compressed");
+    expect([docx, xlsx, doc, xls, d, z].map((n) => n.split(".").pop())).toEqual(["docx", "xlsx", "doc", "xls", "dwg", "zip"]);
+    await expect(salvarMidia(Buffer.from("MZ programa disfarçado de zip"), "application/zip")).rejects.toThrow(/não parece/);
     await expect(salvarMidia(Buffer.from("isto é um executável, não um Word"), DOCX)).rejects.toThrow(/não parece/);
     await expect(salvarMidia(zip(), "application/msword")).rejects.toThrow(/não parece/); // ZIP não é .doc antigo
     await expect(salvarMidia(ole(), XLSX)).rejects.toThrow(/não parece/);
@@ -118,7 +124,7 @@ describe("guardar arquivos", () => {
     await expect(salvarMidia(Buffer.alloc(0), "application/pdf")).rejects.toThrow(/vazio/);
     await expect(salvarMidia(Buffer.concat([pdf(), Buffer.alloc(LIMITES_BYTES.documento)]), "application/pdf")).rejects.toThrow(/maior que/);
     await expect(salvarMidia(Buffer.concat([mp4(), Buffer.alloc(LIMITES_BYTES.video)]), "video/mp4")).rejects.toThrow(/maior que/);
-    await expect(salvarMidia(Buffer.from("PK"), "application/zip")).rejects.toThrow(/não aceito/);
+    await expect(salvarMidia(Buffer.from("PK"), "application/x-rar-compressed")).rejects.toThrow(/não aceito/);
   });
 });
 

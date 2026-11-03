@@ -18,7 +18,7 @@ export const POST = rota(async (req: Request, { params }: { params: Promise<{ id
   if (!(arquivo instanceof File) || arquivo.size === 0) throw new ErroHttp(400, "Escolha um arquivo.");
   // O navegador não conhece o tipo do DWG (e às vezes de Word e Excel): vale também a extensão do nome.
   const tipo = tipoDoArquivo(arquivo.name, arquivo.type) ?? "";
-  if (!tipoPodeEnviar(tipo)) throw new ErroHttp(400, "Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel ou DWG.");
+  if (!tipoPodeEnviar(tipo)) throw new ErroHttp(400, "Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel, DWG ou ZIP.");
   if (arquivo.size > limiteDoTipo(tipo)) throw new ErroHttp(400, `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipo))}.`);
   const legenda = String(form.get("legenda") ?? "").slice(0, 1000);
   try {

@@ -146,7 +146,7 @@ export function Simulador() {
                 <input
                   ref={refArquivo}
                   type="file"
-                  accept="image/png,image/jpeg,image/webp,video/mp4,application/pdf,.doc,.docx,.xls,.xlsx,.dwg"
+                  accept="image/png,image/jpeg,image/webp,video/mp4,application/pdf,.doc,.docx,.xls,.xlsx,.dwg,.zip"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];

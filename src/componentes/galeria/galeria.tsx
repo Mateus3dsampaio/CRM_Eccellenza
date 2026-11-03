@@ -18,7 +18,7 @@ const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
   { codigo: "documento", nome: "Documentos" },
 ];
 
-/** Galeria do vendedor: imagens, vídeos e documentos (PDF, Word, Excel, DWG) dos leads dele (o admin vê todos). Fica no sistema; dá para baixar cada arquivo. */
+/** Galeria do vendedor: imagens, vídeos e documentos (PDF, Word, Excel, DWG, ZIP) dos leads dele (o admin vê todos). Fica no sistema; dá para baixar cada arquivo. */
 export function Galeria() {
   const avisar = useAviso();
   const podeApagar = usePode("apagar_midia");
@@ -86,7 +86,7 @@ export function Galeria() {
       ) : erro && !dados ? (
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : dados && dados.itens.length === 0 ? (
-        <EstadoVazio titulo="Nenhum arquivo ainda" texto="Imagens, vídeos e documentos (PDF, Word, Excel, DWG) que você e os clientes trocarem aparecem aqui." />
+        <EstadoVazio titulo="Nenhum arquivo ainda" texto="Imagens, vídeos e documentos (PDF, Word, Excel, DWG, ZIP) que você e os clientes trocarem aparecem aqui." />
       ) : (
         dados && (
           <>

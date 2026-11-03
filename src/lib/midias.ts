@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { TAMANHO_MAXIMO_IMAGEM } from "@/regras/limites";
-import { extensaoDoTipo, formatarTamanho, limiteDoTipo, tipoMidiaAceito } from "@/regras/midia";
+import { extensaoDoTipo, formatarTamanho, limiteDoTipo, tipoCanonico, tipoMidiaAceito } from "@/regras/midia";
 
 // Mídias ficam fora da pasta pública (SEG-03) e só são servidas por rota com login.
 // No Railway, MIDIAS_DIR aponta para o volume (disco que não some a cada deploy), ex.: /data/midias.
@@ -24,6 +24,8 @@ export function conferirAssinatura(dados: Buffer, tipo: string): boolean {
   if (tipo === "application/pdf") return h.subarray(0, 5).toString("ascii") === "%PDF-";
   // Word e Excel novos (docx, xlsx) são ZIP; os antigos (doc, xls) são o formato "OLE" da Microsoft.
   if (tipo.includes("openxmlformats")) return h[0] === 0x50 && h[1] === 0x4b && h[2] === 0x03 && h[3] === 0x04;
+  // ZIP: começa com "PK" e a marca de arquivo (03 04), ou de ZIP vazio (05 06).
+  if (tipo === "application/zip") return h[0] === 0x50 && h[1] === 0x4b && ((h[2] === 0x03 && h[3] === 0x04) || (h[2] === 0x05 && h[3] === 0x06));
   if (tipo === "application/msword" || tipo === "application/vnd.ms-excel") return h[0] === 0xd0 && h[1] === 0xcf && h[2] === 0x11 && h[3] === 0xe0 && h[4] === 0xa1 && h[5] === 0xb1;
   // DWG começa com a versão do AutoCAD: "AC1015", "AC1032"... (as muito antigas, "AC1.50", "AC2.10", "MC0.0").
   if (tipo === "application/acad") return (h[0] === 0x41 && h[1] === 0x43 && h[2] >= 0x31 && h[2] <= 0x39) || h.subarray(0, 2).toString("ascii") === "MC";
@@ -34,8 +36,8 @@ export function conferirAssinatura(dados: Buffer, tipo: string): boolean {
 
 /** Confere tipo, tamanho e o começo do arquivo. Devolve o motivo da recusa, ou null se está tudo certo. */
 export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string): string | null {
-  const tipoLimpo = tipo.split(";")[0].trim().toLowerCase();
-  if (!tipoMidiaAceito(tipoLimpo) || !extensaoDoTipo(tipoLimpo)) return "Tipo de arquivo não aceito. Use imagem, vídeo (MP4), PDF, Word, Excel ou DWG.";
+  const tipoLimpo = tipoCanonico(tipo);
+  if (!tipoMidiaAceito(tipoLimpo) || !extensaoDoTipo(tipoLimpo)) return "Tipo de arquivo não aceito. Use imagem, vídeo (MP4), PDF, Word, Excel, DWG ou ZIP.";
   if (dados.length === 0) return "O arquivo está vazio.";
   if (dados.length > limiteDoTipo(tipoLimpo)) return `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`;
   if (!conferirAssinatura(dados, tipoLimpo)) return "O arquivo não parece ser do tipo informado.";
@@ -46,7 +48,7 @@ export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string): string | nul
 export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> {
   const motivo = motivoDeRecusaDaMidia(dados, tipo);
   if (motivo) throw new Error(motivo);
-  const extensao = extensaoDoTipo(tipo.split(";")[0].trim().toLowerCase())!;
+  const extensao = extensaoDoTipo(tipoCanonico(tipo))!;
   await mkdir(PASTA_MIDIAS, { recursive: true });
   const nome = `${randomUUID()}.${extensao}`;
   await writeFile(path.join(PASTA_MIDIAS, nome), dados);
@@ -54,7 +56,7 @@ export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> 
 }
 
 function caminhoSeguro(nome: string): string {
-  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
   return path.join(PASTA_MIDIAS, nome);
 }
 
@@ -85,7 +87,7 @@ export async function listarMidiasAntigasDaPasta(antesDe: Date): Promise<string[
   }
   const saida: string[] = [];
   for (const nome of nomes) {
-    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg)$/.test(nome)) continue; // só o que o sistema mesmo grava
+    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip)$/.test(nome)) continue; // só o que o sistema mesmo grava
     try {
       if ((await stat(path.join(PASTA_MIDIAS, nome))).mtime < antesDe) saida.push(nome);
     } catch {

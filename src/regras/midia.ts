@@ -16,7 +16,11 @@ export const TIPOS_MIDIA: Record<string, { extensao: string; familia: FamiliaMid
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { extensao: "xlsx", familia: "documento" },
   // DWG não tem um tipo único: o navegador e a Meta mandam vazio, "octet-stream" ou nomes diferentes. Este é o nome interno do sistema.
   "application/acad": { extensao: "dwg", familia: "documento" },
+  "application/zip": { extensao: "zip", familia: "documento" },
 };
+
+// Nomes diferentes para o mesmo tipo (o Windows informa "x-zip-compressed" para ZIP).
+const APELIDOS: Record<string, string> = { "application/x-zip-compressed": "application/zip", "application/x-zip": "application/zip" };
 
 /** Nome curto de cada tipo, para mostrar na tela (galeria, conversa). */
 export const ROTULO_TIPO: Record<string, string> = {
@@ -26,10 +30,11 @@ export const ROTULO_TIPO: Record<string, string> = {
   "application/vnd.ms-excel": "Excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
   "application/acad": "DWG",
+  "application/zip": "ZIP",
 };
 
 // Extensões de documento que valem mesmo quando o navegador ou a Meta não informam (ou informam um tipo genérico) o tipo certo.
-const EXTENSOES_DE_DOCUMENTO = ["pdf", "doc", "docx", "xls", "xlsx", "dwg"];
+const EXTENSOES_DE_DOCUMENTO = ["pdf", "doc", "docx", "xls", "xlsx", "dwg", "zip"];
 
 // Tamanho máximo por arquivo. PROVISÓRIO: o de imagem é o que já existia (5 MB); para vídeo e documento coloquei um teto
 // seguro para o disco. Os limites da própria Meta para vídeo e documento NÃO foram conferidos.
@@ -43,7 +48,7 @@ export const DIAS_MIDIA_ATE_APAGAR = 180;
 
 /**
  * O que o vendedor pode ENVIAR (menos que o que dá para receber): a Meta aceita só JPEG e PNG como imagem e MP4 como vídeo,
- * e PDF, Word e Excel como documento (conforme conheço; não conferi na página oficial). DWG: NÃO tenho certeza de que a Meta aceite;
+ * e PDF, Word e Excel como documento (conforme conheço; não conferi na página oficial). DWG e ZIP: NÃO tenho certeza de que a Meta aceite;
  * se recusar, a mensagem fica "falhou". WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia.
  */
 export const TIPOS_ENVIO = [
@@ -56,16 +61,25 @@ export const TIPOS_ENVIO = [
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/acad",
+  "application/zip",
 ] as const;
 // Para o seletor de arquivo do navegador: os tipos e as extensões (o navegador não conhece o tipo do DWG).
-export const ACEITO_NO_ANEXO = [...TIPOS_ENVIO.filter((t) => t !== "application/acad"), ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".dwg"].join(",");
+export const ACEITO_NO_ANEXO = [...TIPOS_ENVIO.filter((t) => t !== "application/acad"), ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".dwg", ".zip"].join(",");
 export function tipoPodeEnviar(tipo: string): boolean {
   return (TIPOS_ENVIO as readonly string[]).includes(limpo(tipo));
 }
 /** Tamanho do corpo do envio acima do qual nem se lê o pedido (maior arquivo permitido mais uma folga). */
 export const LIMITE_CORPO_ANEXO = Math.max(...Object.values(LIMITES_BYTES)) + 1024 * 1024;
 
-const limpo = (tipo: string) => tipo.split(";")[0].trim().toLowerCase();
+const limpo = (tipo: string) => {
+  const t = tipo.split(";")[0].trim().toLowerCase();
+  return APELIDOS[t] ?? t;
+};
+
+/** Tipo sem parâmetros e com apelidos trocados pelo nome do sistema (ex.: "x-zip-compressed" vira "zip"). */
+export function tipoCanonico(tipo: string): string {
+  return limpo(tipo);
+}
 
 export function tipoMidiaAceito(tipo: string): boolean {
   return limpo(tipo) in TIPOS_MIDIA;
@@ -103,7 +117,7 @@ export function descricaoDoTipo(tipo: string): string {
   if (f === "imagem") return "uma imagem";
   if (f === "video") return "um vídeo";
   const r = ROTULO_TIPO[t];
-  return r === "Excel" ? "uma planilha Excel" : r === "Word" ? "um documento Word" : r === "DWG" ? "um arquivo DWG" : r === "PDF" ? "um PDF" : "um arquivo";
+  return r === "Excel" ? "uma planilha Excel" : r === "Word" ? "um documento Word" : r === "DWG" ? "um arquivo DWG" : r === "ZIP" ? "um arquivo ZIP" : r === "PDF" ? "um PDF" : "um arquivo";
 }
 
 /**
@@ -112,9 +126,12 @@ export function descricaoDoTipo(tipo: string): string {
  */
 export function tipoDoArquivo(nome: string | null | undefined, tipoInformado: string | null | undefined): string | null {
   const t = limpo(tipoInformado ?? "");
-  if (t in TIPOS_MIDIA) return t;
   const extensao = (nome ?? "").split(".").pop()?.toLowerCase() ?? "";
-  return EXTENSOES_DE_DOCUMENTO.includes(extensao) ? tipoDaExtensao(extensao) : null;
+  const pelaExtensao = EXTENSOES_DE_DOCUMENTO.includes(extensao) ? tipoDaExtensao(extensao) : null;
+  // Word e Excel novos são ZIP por dentro: se vier "zip" mas o nome diz .docx/.xlsx, vale o nome.
+  if (t === "application/zip" && pelaExtensao && pelaExtensao !== t) return pelaExtensao;
+  if (t in TIPOS_MIDIA) return t;
+  return pelaExtensao;
 }
 
 /** Texto curto para a prévia do card e dos avisos quando a mensagem é só um arquivo. */

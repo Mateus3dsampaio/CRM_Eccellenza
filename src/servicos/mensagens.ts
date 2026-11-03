@@ -6,7 +6,7 @@ import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { temConsentimento } from "@/regras/consentimento";
-import { nomeSeguroDeArquivo, previaDaMidia, tipoPodeEnviar } from "@/regras/midia";
+import { nomeSeguroDeArquivo, previaDaMidia, tipoCanonico, tipoPodeEnviar } from "@/regras/midia";
 import { apagarMidia, salvarMidia } from "@/lib/midias";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { modoSimulador } from "@/lib/modo";
@@ -127,7 +127,7 @@ export async function enviarMensagemLoja(params: {
   }
   if (!texto && !params.anexo) throw new Error("Mensagem vazia.");
   if (params.anexo && params.modelo) throw new Error("Modelo e arquivo não vão juntos.");
-  if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel ou DWG.");
+  if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel, DWG ou ZIP.");
   // Guarda o arquivo antes de enviar: confere tipo, tamanho e o começo do arquivo (lança se não servir).
   const nomeAnexo = params.anexo ? nomeSeguroDeArquivo(params.anexo.nome) : undefined;
   const arquivo = params.anexo ? await salvarMidia(params.anexo.dados, params.anexo.tipo) : undefined;
@@ -154,7 +154,7 @@ export async function enviarMensagemLoja(params: {
         texto: texto || null,
         modelo: params.modelo,
         midiaArquivo: arquivo,
-        midiaTipo: params.anexo ? params.anexo.tipo.split(";")[0].trim().toLowerCase() : null,
+        midiaTipo: params.anexo ? tipoCanonico(params.anexo.tipo) : null,
         midiaNome: nomeAnexo ?? null,
         midiaBytes: params.anexo?.dados.length ?? null,
         status: falhou ? "falhou" : "enviado",

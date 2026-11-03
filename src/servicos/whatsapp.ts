@@ -178,7 +178,7 @@ async function aplicarMensagem(m: MensagemRecebida) {
     const arquivo = await baixarMidiaDaMeta(m.midiaId, "arquivo", m.nomeArquivo);
     // Se o conteúdo não confere com o tipo (ex.: executável disfarçado de DWG), não guarda, mas a mensagem do cliente não se perde.
     if (arquivo && !motivoDeRecusaDaMidia(arquivo.dados, arquivo.tipo)) midia = { ...arquivo, nome: m.nomeArquivo };
-    else texto = [texto, "[o cliente enviou um arquivo que o sistema não conseguiu baixar ou não aceita (só imagem, vídeo MP4, PDF, Word, Excel e DWG, com tamanho limitado)]"].filter(Boolean).join(" ");
+    else texto = [texto, "[o cliente enviou um arquivo que o sistema não conseguiu baixar ou não aceita (só imagem, vídeo MP4, PDF, Word, Excel, DWG e ZIP, com tamanho limitado)]"].filter(Boolean).join(" ");
   }
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {

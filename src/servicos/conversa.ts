@@ -1,6 +1,7 @@
 import { responderCliente } from "@/bot/atendimento";
 import { db } from "@/lib/db";
 import { apagarMidia, salvarMidia } from "@/lib/midias";
+import { tipoCanonico } from "@/regras/midia";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
@@ -34,7 +35,7 @@ export async function receberMensagemCliente(params: {
   let midia: { arquivo: string; tipo: string; nome?: string | null; bytes: number } | undefined;
   if (params.midia) {
     try {
-      const tipo = params.midia.tipo.split(";")[0].trim().toLowerCase();
+      const tipo = tipoCanonico(params.midia.tipo);
       midia = { arquivo: await salvarMidia(params.midia.dados, tipo), tipo, nome: params.midia.nome ?? null, bytes: params.midia.dados.length };
     } catch (erro) {
       throw new ErroConversa(erro instanceof Error ? erro.message : "Arquivo inválido.");
