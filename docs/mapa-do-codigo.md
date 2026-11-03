@@ -38,14 +38,14 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Tabela | Guarda |
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço) |
-| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) e mensagens que nenhum humano abriu (`naoLidas`). `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
+| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`). `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
 | `MudancaEtapa` | Cada mudança de etapa do lead (de, para, quem, quando). Gravada em `moverEtapa` e na criação do lead. Alimenta a exportação de desempenho |
 | `Visita`, `Bloqueio` | Agenda: visitas e bloqueios de horário |
 | `EventoMetrica` | Contadores anônimos do painel |
-| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
+| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
 | `Configuracao` | Pares chave/valor (modo de distribuição, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
@@ -70,7 +70,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Rota | O que faz | Serviço |
 |---|---|---|
 | `src/app/api/login/route.ts` | Entrar | `lib/sessao` |
-| `src/app/api/versao/route.ts` | Contador de mudanças (as telas recarregam) | `lib/versao` |
+| `src/app/api/versao/route.ts` | Contador de mudanças (as telas recarregam). A cada consulta também confere os prazos vermelhos de espera (falha aqui não derruba a rota) | `lib/versao`, `alertas` |
 | `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) | `consultas`, `rotinas` |
 | `src/app/api/alertas/route.ts` | Avisos novos para o usuário (`?depois=N`). Consultor: os dos seus leads; admin: todos | `alertas` |
 | `src/app/api/aguardando/route.ts` | Leads esperando um humano (consultor: os dele; admin: todos) e os prazos de cor. Alimenta o contador do topo, a lista e a cor dos cards | `consultas`, `configuracoes` |
@@ -113,10 +113,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil e tempo de resposta (bot e consultor) |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
-| `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita) e entrega os novos por usuário. Limpa os de mais de 1 dia |
+| `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
-| `src/servicos/rotinas.ts` | Retomada, "Sem resposta", limpeza de arquivados, relógio |
+| `src/servicos/rotinas.ts` | Retomada, "Sem resposta", limpeza de arquivados, relógio (também confere os prazos vermelhos) |
 
 ## Regras puras (`src/regras`)
 | Arquivo | Regra |
@@ -127,7 +127,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
-| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), validação, texto "12 min", ordem das colunas |
+| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead |
@@ -209,7 +209,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/instrucoes.test.ts` | Instruções: carga, edição, versão anterior, exclusão, zip |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
-| `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza |
+| `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
 | `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos, lista de aguardando |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |

@@ -58,6 +58,7 @@ model Lead {
   repassadoEm       DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
   esperandoDesde    DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
   naoLidas          Int     @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
+  alertaPrazoPara   DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
   erroBot           String?
 
   ultimaMensagemEm      DateTime?

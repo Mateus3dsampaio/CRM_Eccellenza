@@ -4,6 +4,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { deveExcluirArquivado, DIAS_ARQUIVADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
 import { formatarDataHora } from "@/regras/tempo";
+import { avisarPrazosVermelhos } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
@@ -56,6 +57,9 @@ async function executar(): Promise<ResultadoRotinas> {
   const arquivados = await db.lead.findMany({ where: { arquivadoEm: { not: null } }, select: { id: true, arquivadoEm: true } });
   const vencidos = arquivados.filter((l) => deveExcluirArquivado(l.arquivadoEm, quando)).map((l) => l.id);
   if (vencidos.length) resultado.excluidos = await excluirLeads(vencidos);
+
+  // O relógio simulado pode ter andado: confere os prazos de espera.
+  await avisarPrazosVermelhos();
 
   const partes: string[] = [];
   if (resultado.retomadas) partes.push(`${resultado.retomadas} retomada(s) enviada(s) após ${DIAS_PARA_RETOMADA} dias sem resposta`);

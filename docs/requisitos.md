@@ -118,7 +118,7 @@ Tarefas em `tarefas/`. Marcado ✅ o que já está pronto.
 - **ESP-06** Bolinha com o número de mensagens não lidas no card. ✅ Zera ao abrir a ficha com a aba visível.
 - **ESP-07** "Esperando há X min" no card. ✅
 - **ESP-08** Cor do card por espera (normal, amarelo, vermelho) com prazos editáveis em Configurações. ✅ regra, prazos e cor do card. **PROVISÓRIO:** 10 min amarelo e 30 min vermelho, até o Mateus decidir.
-- **ESP-09** Avisar o admin quando um lead passar do prazo vermelho sem resposta. *(tarefa 4)*
+- **ESP-09** Avisar o admin quando um lead passar do prazo vermelho sem resposta. ✅ Um aviso por espera (uma espera nova avisa de novo). Chega como notificação do navegador ou aviso na tela, sem som, e respeita o silenciar. O consultor não recebe este aviso.
 - **ESP-10** Cada coluna ordena primeiro quem espera resposta (o que espera há mais tempo no topo), depois o resto pela última mensagem. ✅
 - **ESP-11** O card sobe quando um lead que já existe manda mensagem nova. ✅
 - **ESP-12** Filtros de um clique: "Esperando resposta" e "Meus leads". ✅ ("Meus leads" só para consultor; o admin já tem os botões por consultor)

@@ -1,6 +1,6 @@
 // Avisos para quem atende (Bloco 1, tarefa 3): textos, título da aba e preferências. Só regra, sem banco.
 
-export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada";
+export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada" | "prazo_vermelho";
 
 export interface AlertaTela {
   id: number;
@@ -35,6 +35,11 @@ export function textoDoAlerta(a: Pick<AlertaTela, "tipo" | "leadNome" | "consult
       return {
         titulo: ehDono ? `${a.leadNome} foi passado para você` : `${a.leadNome} foi passado para ${consultor}`,
         corpo: "O bot passou o atendimento. O cliente aguarda resposta.",
+      };
+    case "prazo_vermelho":
+      return {
+        titulo: `${a.leadNome} passou do prazo sem resposta`,
+        corpo: `Espera de ${a.texto ?? "mais que o prazo"}. ${a.consultorNome ? `Consultor: ${a.consultorNome}.` : "Sem consultor: lead na fila."}`,
       };
     case "visita_marcada":
       return { titulo: `Visita marcada: ${a.leadNome}`, corpo: ehDono || !a.consultorNome ? (a.texto ?? "") : `${a.texto ?? ""} com ${a.consultorNome}`.trim() };

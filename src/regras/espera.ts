@@ -21,6 +21,11 @@ function emMs(valor: Instante): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+/** Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente). */
+export function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null }): Date | null {
+  return l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
+}
+
 /** Devolve o motivo do erro, ou null se os prazos servem: inteiros, de 1 minuto a 24 h, amarelo menor que vermelho. */
 export function validarPrazos(amarelo: unknown, vermelho: unknown): string | null {
   const inteiro = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n);

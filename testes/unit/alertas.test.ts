@@ -5,7 +5,11 @@ import { avancarRelogio } from "@/lib/relogio";
 import { lerPreferencias, textoDoAlerta, tituloDaAba } from "@/regras/alertas";
 import { DIA } from "@/regras/tempo";
 import { agendarVisita, horariosLivresParaLead } from "@/servicos/agenda";
-import { alertasDesde, registrarAlerta } from "@/servicos/alertas";
+import { alertasDesde, avisarPrazosVermelhos, registrarAlerta } from "@/servicos/alertas";
+import { definirPrazosDeEspera } from "@/servicos/configuracoes";
+import { arquivarLeads } from "@/servicos/leads";
+import { enviarMensagemLoja } from "@/servicos/mensagens";
+import { rodarRotinas } from "@/servicos/rotinas";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { registrarMensagemCliente } from "@/servicos/mensagens";
 import { criarConsultores, limparBanco } from "./ajuda";
@@ -19,6 +23,8 @@ describe("regras dos avisos (Bloco 1, tarefa 3)", () => {
     expect(textoDoAlerta({ ...base, tipo: "lead_passado", consultorId: null, consultorNome: null }, "admin").titulo).toMatch(/fila/);
     expect(textoDoAlerta({ ...base, tipo: "visita_marcada", texto: "qua 05/11 10h" }, "c1")).toEqual({ titulo: "Visita marcada: Ana", corpo: "qua 05/11 10h" });
     expect(textoDoAlerta({ ...base, tipo: "visita_marcada", texto: "qua 05/11 10h" }, "admin").corpo).toBe("qua 05/11 10h com Rafael");
+    expect(textoDoAlerta({ ...base, tipo: "prazo_vermelho", texto: "35 min" }, "admin")).toEqual({ titulo: "Ana passou do prazo sem resposta", corpo: "Espera de 35 min. Consultor: Rafael." });
+    expect(textoDoAlerta({ ...base, tipo: "prazo_vermelho", texto: "35 min", consultorNome: null }, "admin").corpo).toMatch(/fila/);
   });
 
   it("põe e tira o número da aba sem duplicar", () => {
@@ -109,5 +115,71 @@ describe("avisos no banco (Bloco 1, tarefa 3)", () => {
     await avancarRelogio(DIA + 60_000);
     await registrarAlerta({ tipo: "mensagem", leadId: lead.id, texto: "novo" });
     expect((await db.alerta.findMany()).map((a) => a.texto)).toEqual(["novo"]);
+  });
+});
+
+describe("prazo vermelho avisa o admin (ESP-09)", () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+  const admin = { id: "admin", perfil: "admin" };
+  const MIN = 60_000;
+
+  async function leadEsperando(telefone: string, nome: string, dono: string | null) {
+    const lead = await obterOuCriarLead(telefone, nome);
+    await db.lead.update({ where: { id: lead.id }, data: { consultorId: dono, modoAtendimento: "humano" } });
+    await registrarMensagemCliente(lead.id, "Alô?");
+    return lead.id;
+  }
+
+  it("só depois do prazo, uma vez por espera, e só para o admin", async () => {
+    const [a] = await criarConsultores();
+    const id = await leadEsperando("+5588900008101", "Hugo", a.id);
+    const { ultimoId } = await alertasDesde(admin);
+
+    await avancarRelogio(29 * MIN);
+    expect(await avisarPrazosVermelhos()).toBe(0);
+
+    await avancarRelogio(2 * MIN); // 31 min: passou dos 30
+    expect(await avisarPrazosVermelhos()).toBe(1);
+    expect(await avisarPrazosVermelhos()).toBe(0);
+    await avancarRelogio(60 * MIN);
+    expect(await rodarRotinas()).toBeTruthy();
+    expect(await avisarPrazosVermelhos()).toBe(0);
+
+    const doAdmin = (await alertasDesde(admin, ultimoId)).eventos.filter((e) => e.tipo === "prazo_vermelho");
+    expect(doAdmin).toHaveLength(1);
+    expect(doAdmin[0]).toMatchObject({ leadId: id, leadNome: "Hugo", consultorNome: a.nome, texto: "31 min" });
+    // O dono do lead não recebe o aviso de prazo: ele é do admin.
+    expect((await alertasDesde({ id: a.id, perfil: "consultor" }, ultimoId)).eventos.filter((e) => e.tipo === "prazo_vermelho")).toEqual([]);
+  });
+
+  it("espera nova depois de o consultor responder avisa de novo", async () => {
+    const [a] = await criarConsultores();
+    const id = await leadEsperando("+5588900008102", "Iara", a.id);
+    await avancarRelogio(31 * MIN);
+    expect(await avisarPrazosVermelhos()).toBe(1);
+
+    await enviarMensagemLoja({ leadId: id, autor: "consultor", autorNome: a.nome, texto: "Desculpe a demora!" });
+    await registrarMensagemCliente(id, "Tudo bem. Mais uma dúvida");
+    await avancarRelogio(10 * MIN);
+    expect(await avisarPrazosVermelhos()).toBe(0);
+    await avancarRelogio(25 * MIN);
+    expect(await avisarPrazosVermelhos()).toBe(1);
+    expect(await db.alerta.count({ where: { tipo: "prazo_vermelho" } })).toBe(2);
+  });
+
+  it("respeita o prazo configurado e ignora arquivado e quem não espera humano", async () => {
+    const [a] = await criarConsultores();
+    await definirPrazosDeEspera({ amarelo: 2, vermelho: 5 });
+    const esperando = await leadEsperando("+5588900008103", "Joel", a.id);
+    const arquivado = await leadEsperando("+5588900008104", "Kely", a.id);
+    await arquivarLeads([arquivado], "teste");
+    const comBot = await obterOuCriarLead("+5588900008105", "Lia");
+    await registrarMensagemCliente(comBot.id, "Oi");
+
+    await avancarRelogio(6 * MIN);
+    expect(await avisarPrazosVermelhos()).toBe(1);
+    expect((await db.alerta.findFirstOrThrow({ where: { tipo: "prazo_vermelho" } })).leadId).toBe(esperando);
   });
 });

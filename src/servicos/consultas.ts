@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
-import { ordenarParaColuna } from "@/regras/espera";
+import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { formatarHorarioCard, formatarVisitaCurta } from "@/regras/tempo";
 import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
@@ -10,11 +10,6 @@ import { statusEfetivo } from "./mensagens";
 // Consultas para as telas (formato pronto para o cliente/navegador).
 
 export { nomeExibicao };
-
-/** Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente). */
-function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null }): Date | null {
-  return l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
-}
 
 /**
  * Leads esperando um humano, para o contador do topo e a lista (ESP-05). Quem espera há mais tempo vem primeiro.

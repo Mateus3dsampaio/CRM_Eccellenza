@@ -1,8 +1,11 @@
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { DIAS_ALERTA_GUARDADO, type TipoAlerta } from "@/regras/alertas";
+import { esperaDoLead, faixaDeEspera, minutosEsperando, textoDeEspera } from "@/regras/espera";
 import { nomeExibicao } from "@/regras/telefone";
 import { DIA } from "@/regras/tempo";
+import { prazosDeEspera } from "./configuracoes";
+import { marcarMudanca } from "@/lib/versao";
 
 const LIMITE_POR_CONSULTA = 50;
 
@@ -37,7 +40,8 @@ export async function alertasDesde(usuario: { id: string; perfil: string }, depo
   const ultimo = (await db.alerta.aggregate({ _max: { id: true } }))._max.id ?? 0;
   if (depois === undefined) return { eventos: [], ultimoId: ultimo };
   const linhas = await db.alerta.findMany({
-    where: { id: { gt: depois }, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }) },
+    // Prazo vencido é aviso para o admin; o consultor só recebe os avisos dos seus leads.
+    where: { id: { gt: depois }, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id, tipo: { not: "prazo_vermelho" } }) },
     orderBy: { id: "asc" },
     take: LIMITE_POR_CONSULTA,
   });
@@ -55,4 +59,31 @@ export async function alertasDesde(usuario: { id: string; perfil: string }, depo
     // Se veio muita coisa de uma vez, a próxima consulta continua de onde esta parou.
     ultimoId: cheio ? linhas[linhas.length - 1].id : ultimo,
   };
+}
+
+/**
+ * Avisa o admin dos leads que passaram do prazo vermelho sem resposta (ESP-09). Um aviso só por espera:
+ * a espera é identificada pelo valor de `esperandoDesde`, então uma espera nova (depois de o consultor responder) avisa de novo.
+ * Barato o bastante para rodar a cada consulta de versão; a marca é gravada antes do aviso, então duas telas ao mesmo tempo não duplicam.
+ */
+export async function avisarPrazosVermelhos(): Promise<number> {
+  const quando = await agora();
+  const prazos = await prazosDeEspera();
+  const leads = await db.lead.findMany({ where: { arquivadoEm: null, aguardandoHumano: true }, select: { id: true, aguardandoHumano: true, esperandoDesde: true, repassadoEm: true, ultimaMsgClienteEm: true, alertaPrazoPara: true } });
+  let avisados = 0;
+  for (const lead of leads) {
+    const desde = esperaDoLead(lead);
+    if (!desde || faixaDeEspera(desde, quando, prazos) !== "vermelho") continue;
+    if (lead.alertaPrazoPara?.getTime() === desde.getTime()) continue;
+    // Reserva o aviso: só quem conseguir atualizar a linha cria o aviso.
+    const reservado = await db.lead.updateMany({
+      where: { id: lead.id, OR: [{ alertaPrazoPara: null }, { alertaPrazoPara: { not: desde } }] },
+      data: { alertaPrazoPara: desde },
+    });
+    if (!reservado.count) continue;
+    await registrarAlerta({ tipo: "prazo_vermelho", leadId: lead.id, texto: textoDeEspera(minutosEsperando(desde, quando)) });
+    avisados++;
+  }
+  if (avisados) await marcarMudanca();
+  return avisados;
 }
