@@ -35,6 +35,22 @@ interface Filtro {
   vendedorId: string;
 }
 
+// Quando o número SOBE, isso é bom, ruim ou não dá para julgar? PROVISÓRIO: confirmar com o Mateus.
+// Só "Sem resposta" é claramente pior ao subir; Curiosos e Outras cidades ficam neutros.
+const SENTIDO_DO_INDICADOR: Record<string, "mais_e_melhor" | "menos_e_melhor" | "neutro"> = {
+  sem_resposta: "menos_e_melhor",
+  curioso: "neutro",
+  outra_cidade: "neutro",
+};
+
+function variacao(tipo: string, atual: number, anterior: number) {
+  const diferenca = atual - anterior;
+  const sentido = SENTIDO_DO_INDICADOR[tipo] ?? "mais_e_melhor";
+  const cor = diferenca === 0 || sentido === "neutro" ? "text-texto-suave" : (diferenca > 0) === (sentido === "mais_e_melhor") ? "text-sucesso" : "text-alerta";
+  const texto = diferenca === 0 ? `igual ao período anterior (${anterior.toLocaleString("pt-BR")})` : `${diferenca > 0 ? "+" : "−"}${Math.abs(diferenca).toLocaleString("pt-BR")} em relação ao período anterior (era ${anterior.toLocaleString("pt-BR")})`;
+  return { diferenca, cor, texto };
+}
+
 function taxa(a: number, b: number) {
   if (!b) return "–";
   return `${Math.round((a / b) * 100).toLocaleString("pt-BR")}%`;
@@ -54,12 +70,12 @@ export function Painel() {
   const maiorConsultor = Math.max(1, ...(dados?.visitasPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="mr-1 text-xl font-semibold tracking-tight">Painel</h1>
         <div className="flex flex-wrap rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Atalhos de período">
           {ATALHOS_PAINEL.map((a) => (
-            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca text-sobre-marca" : "text-texto-suave")}>
+            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave")}>
               {a.nome}
             </button>
           ))}
@@ -100,22 +116,61 @@ export function Painel() {
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : dados ? (
         <>
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Resultado</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Total em negociação</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Orçamento ou Negociação, agora
+                {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
+              </p>
+            </div>
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Total vendido</p>
+              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}>{formatarReais(dados.vendas.vendido.total)}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
+              </p>
+            </div>
+            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel sm:col-span-2 lg:col-span-1">
+              <p className="text-sm text-texto-suave">Motivos de perda</p>
+              {dados.vendas.perdidos.quantidade === 0 ? (
+                <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {dados.vendas.perdidos.motivos.map((m) => (
+                    <li key={m.codigo} className="text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span>{m.nome}</span>
+                        <span className="tabular-nums font-medium">{m.total}</span>
+                      </div>
+                      {m.detalhes.length > 0 && <p className="text-xs text-texto-fraco">{m.detalhes.join(", ")}</p>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Leads no período</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {dados.indicadores.map((i) => {
-              const diferenca = i.atual - i.anterior;
+              const v = variacao(i.tipo, i.atual, i.anterior);
               return (
                 <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
                   <p className="text-sm text-texto-suave">{i.nome}</p>
                   <p className="mt-1 text-3xl font-semibold tabular-nums">{i.atual.toLocaleString("pt-BR")}</p>
-                  <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", diferenca > 0 ? "text-sucesso" : diferenca < 0 ? "text-alerta" : "text-texto-fraco")}>
-                    {diferenca > 0 ? <ArrowUpRight className="size-3.5" aria-hidden /> : diferenca < 0 ? <ArrowDownRight className="size-3.5" aria-hidden /> : <Minus className="size-3.5" aria-hidden />}
-                    {i.anterior.toLocaleString("pt-BR")} no período anterior
+                  <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
+                    {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
+                    {v.texto}
                   </p>
                 </div>
               );
             })}
           </div>
 
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
@@ -141,41 +196,6 @@ export function Painel() {
             </p>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
-              <p className="text-sm text-texto-suave">Total em negociação</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
-              <p className="mt-1 text-xs text-texto-fraco">
-                {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Orçamento ou Negociação, agora
-                {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
-              </p>
-            </div>
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
-              <p className="text-sm text-texto-suave">Total vendido</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums text-sucesso">{formatarReais(dados.vendas.vendido.total)}</p>
-              <p className="mt-1 text-xs text-texto-fraco">
-                {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
-              </p>
-            </div>
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel sm:col-span-2 lg:col-span-1">
-              <p className="text-sm text-texto-suave">Motivos de perda</p>
-              {dados.vendas.perdidos.quantidade === 0 ? (
-                <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
-              ) : (
-                <ul className="mt-2 space-y-1.5">
-                  {dados.vendas.perdidos.motivos.map((m) => (
-                    <li key={m.codigo} className="text-sm">
-                      <div className="flex justify-between gap-2">
-                        <span>{m.nome}</span>
-                        <span className="tabular-nums font-medium">{m.total}</span>
-                      </div>
-                      {m.detalhes.length > 0 && <p className="text-xs text-texto-fraco">{m.detalhes.join(", ")}</p>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">

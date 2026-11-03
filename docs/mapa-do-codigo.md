@@ -138,7 +138,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
-| `src/regras/layout-ficha.ts` | Grade da ficha do lead |
+| `src/regras/layout-ficha.ts` | Grade da ficha do lead. Padrão: conversa à esquerda e ficha à direita (campo de resposta visível em 1280×720) |
 | `src/regras/limites.ts` | Limites usados na tela e no servidor (tamanho máximo de imagem) |
 | `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) |
 | `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
@@ -163,7 +163,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Menu superior (inclui "Retornos de hoje" e o contador "X aguardando você"; no celular tem que caber em 375px sem rolar para o lado) |
+| `src/componentes/cabecalho.tsx` | Menu superior (inclui "Retornos de hoje" e o contador "X aguardando você"; no celular tem que caber em 375px sem rolar para o lado). Em telas médias só o item ativo mostra o nome; os demais têm tooltip |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
@@ -179,7 +179,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/chat.tsx` | Bolhas de conversa |
 | `src/componentes/almoco.tsx` | Botão de almoço do consultor |
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
-| `src/componentes/arquivados.tsx` | Lista de arquivados |
+| `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") |
 | `src/componentes/kanban/card.tsx` | Card do lead: cor por espera, "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado) |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
@@ -188,10 +188,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar) |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar pela ficha |
-| `src/componentes/agenda/agenda.tsx` | Grade da agenda |
-| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil |
+| `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) |
+| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
-| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado |
+| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |

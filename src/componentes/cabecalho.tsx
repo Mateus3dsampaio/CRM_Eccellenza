@@ -53,13 +53,15 @@ export function Cabecalho() {
                 key={href}
                 href={href}
                 aria-current={ativo(href) ? "page" : undefined}
+                title={rotulo}
                 className={juntar(
                   "inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium transition",
                   ativo(href) ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave hover:text-texto",
                 )}
               >
                 <Icone className="size-4" aria-hidden />
-                <span className="sr-only min-[1400px]:not-sr-only">{rotulo}</span>
+                {/* Telas médias: só o item ativo mostra o nome (o resto fica sem espaço); os demais têm o nome no tooltip. */}
+                <span className={juntar("sr-only min-[1400px]:not-sr-only", ativo(href) && "min-[1100px]:not-sr-only")}>{rotulo}</span>
               </Link>
             ))}
           </nav>

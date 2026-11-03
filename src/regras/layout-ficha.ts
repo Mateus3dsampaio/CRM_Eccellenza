@@ -25,17 +25,18 @@ export const NOMES_BLOCOS: Record<BlocoFicha, string> = {
   historico: "Histórico de alterações",
 };
 
-// Conversa grande, em largura total, em cima; o restante dividido em partes embaixo.
+// Conversa à esquerda e ficha à direita, lado a lado: o campo de resposta fica à vista sem rolar a página
+// (13 linhas de 30 px + espaços = ~534 px, cabem em uma tela de 1280x720). Abaixo da conversa vêm dados, notas e histórico.
 export const LAYOUT_PADRAO_FICHA: ItemLayout[] = [
-  { i: "conversa", x: 0, y: 0, w: 12, h: 18 },
-  { i: "resumo", x: 0, y: 18, w: 4, h: 9 },
-  { i: "etapa", x: 4, y: 18, w: 4, h: 9 },
-  { i: "visita", x: 8, y: 18, w: 4, h: 5 },
-  { i: "apresentacao", x: 8, y: 23, w: 4, h: 4 },
-  { i: "dados", x: 0, y: 27, w: 4, h: 14 },
-  { i: "medidas", x: 4, y: 27, w: 4, h: 14 },
-  { i: "notas", x: 8, y: 27, w: 4, h: 7 },
-  { i: "historico", x: 8, y: 34, w: 4, h: 7 },
+  { i: "conversa", x: 0, y: 0, w: 7, h: 13 },
+  { i: "dados", x: 0, y: 13, w: 7, h: 12 },
+  { i: "notas", x: 0, y: 25, w: 7, h: 6 },
+  { i: "historico", x: 0, y: 31, w: 7, h: 6 },
+  { i: "resumo", x: 7, y: 0, w: 5, h: 7 },
+  { i: "etapa", x: 7, y: 7, w: 5, h: 6 },
+  { i: "visita", x: 7, y: 13, w: 5, h: 5 },
+  { i: "apresentacao", x: 7, y: 18, w: 5, h: 4 },
+  { i: "medidas", x: 7, y: 22, w: 5, h: 8 },
 ];
 
 /** Aceita um layout salvo só se tiver todos os blocos, sem repetir, e dentro da grade. */

@@ -64,7 +64,7 @@ export function Arquivados() {
                   Restaurar
                 </Botao>
                 {podeExcluir && (
-                  <Botao variante="perigo" onClick={() => setExcluir(l)} icone={<Trash2 className="size-4" aria-hidden />}>
+                  <Botao variante="fantasma" className="ml-3 text-alerta hover:bg-alerta-suave hover:text-alerta" onClick={() => setExcluir(l)} icone={<Trash2 className="size-4" aria-hidden />}>
                     Excluir
                   </Botao>
                 )}

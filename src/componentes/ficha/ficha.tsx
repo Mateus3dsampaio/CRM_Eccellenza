@@ -170,7 +170,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
             </Botao>
           )}
           {podeExcluir && (
-            <Botao variante="perigo" onClick={() => setConfirmarExclusao(true)} icone={<Trash2 className="size-4" aria-hidden />}>
+            <Botao variante="fantasma" className="text-alerta hover:bg-alerta-suave hover:text-alerta sm:ml-4" onClick={() => setConfirmarExclusao(true)} icone={<Trash2 className="size-4" aria-hidden />}>
               <span className="hidden sm:inline">Excluir</span>
               <span className="sr-only sm:hidden">Excluir</span>
             </Botao>
@@ -233,7 +233,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
                 role="tab"
                 aria-selected={aba === a.id}
                 onClick={() => setAba(a.id)}
-                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca text-sobre-marca" : "text-texto-suave")}
+                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca-suave text-marca" : "text-texto-suave")}
               >
                 {a.rotulo}
               </button>

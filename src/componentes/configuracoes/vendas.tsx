@@ -106,13 +106,13 @@ export function VendasConfig() {
                 {!m.ativo && <p className="text-xs text-texto-fraco">Desativado</p>}
               </div>
               <div className="flex items-center">
-                <button aria-label={`Subir ${m.nome}`} disabled={ocupado || i === 0} onClick={() => mover(i, -1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
+                <button title="Subir" aria-label={`Subir ${m.nome}`} disabled={ocupado || i === 0} onClick={() => mover(i, -1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
                   <ArrowUp className="size-4" aria-hidden />
                 </button>
-                <button aria-label={`Descer ${m.nome}`} disabled={ocupado || i === motivos.length - 1} onClick={() => mover(i, 1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
+                <button title="Descer" aria-label={`Descer ${m.nome}`} disabled={ocupado || i === motivos.length - 1} onClick={() => mover(i, 1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
                   <ArrowDown className="size-4" aria-hidden />
                 </button>
-                <button aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "" })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave">
+                <button title="Editar" aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "" })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave">
                   <Pencil className="size-4" aria-hidden />
                 </button>
                 <button
@@ -124,7 +124,7 @@ export function VendasConfig() {
                 >
                   {m.ativo ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </button>
-                <button aria-label={`Excluir ${m.nome}`} onClick={() => setExcluindo(m)} className="inline-flex size-toque items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave">
+                <button title="Excluir" aria-label={`Excluir ${m.nome}`} onClick={() => setExcluindo(m)} className="ml-3 inline-flex size-toque items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave">
                   <Trash2 className="size-4" aria-hidden />
                 </button>
               </div>

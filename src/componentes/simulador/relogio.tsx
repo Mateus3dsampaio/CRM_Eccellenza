@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Clock } from "lucide-react";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
-import { Botao } from "../ui";
+import { Botao, Modal } from "../ui";
+
+const LIMITE_SALTO_GRANDE_HORAS = 24 * 7; // de +7 dias para cima pede confirmação
 
 const PASSOS = [
   { horas: 1, rotulo: "+1 hora" },
@@ -20,6 +22,7 @@ export function Relogio() {
   const avisar = useAviso();
   const { dados, recarregar } = useDados<{ agora: string; deslocamentoHoras: number; registros: { id: string; texto: string }[] }>("/api/relogio");
   const [ocupado, setOcupado] = useState(false);
+  const [confirmar, setConfirmar] = useState<(typeof PASSOS)[number] | null>(null);
 
   async function mudar(corpo: object) {
     setOcupado(true);
@@ -52,7 +55,7 @@ export function Relogio() {
       </div>
       <div className="grid grid-cols-3 gap-2">
         {PASSOS.map((p) => (
-          <Botao key={p.horas} onClick={() => mudar({ horas: p.horas })} disabled={ocupado} className="whitespace-nowrap px-2">
+          <Botao key={p.horas} onClick={() => (p.horas >= LIMITE_SALTO_GRANDE_HORAS ? setConfirmar(p) : mudar({ horas: p.horas }))} disabled={ocupado} className="whitespace-nowrap px-2">
             {p.rotulo}
           </Botao>
         ))}
@@ -70,6 +73,21 @@ export function Relogio() {
           ))}
         </ol>
       </div>
+      <Modal aberto={!!confirmar} aoFechar={() => setConfirmar(null)} titulo={`Avançar o relógio ${confirmar?.rotulo ?? ""}?`} largura="max-w-md">
+        <p className="text-sm text-texto-suave">O relógio só anda para a frente. As rotinas rodam: retomadas, &quot;Sem resposta&quot; e exclusão de arquivados com mais de 30 dias. Para voltar, só recomeçando os dados de teste.</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao variante="fantasma" onClick={() => setConfirmar(null)}>Cancelar</Botao>
+          <Botao
+            onClick={() => {
+              const passo = confirmar!;
+              setConfirmar(null);
+              void mudar({ horas: passo.horas });
+            }}
+          >
+            Avançar {confirmar?.rotulo}
+          </Botao>
+        </div>
+      </Modal>
     </aside>
   );
 }

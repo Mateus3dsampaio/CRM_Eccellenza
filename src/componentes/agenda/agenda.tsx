@@ -78,6 +78,9 @@ export function Agenda() {
     };
   }
 
+  // "Hoje" vem do relógio do servidor (pode ser o relógio simulado), não do navegador.
+  const hojeChave = dados ? chaveDia(new Date(dados.agora)) : "";
+
   const titulo = base ? (visao === "dia" ? formatarDiaLongo(base) : `Semana de ${formatarData(base)}`) : "";
 
   return (
@@ -87,7 +90,7 @@ export function Agenda() {
         <h1 className="mr-2 text-xl font-semibold tracking-tight">Agenda</h1>
         <div className="flex rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Visão">
           {(["dia", "semana"] as const).map((v) => (
-            <button key={v} role="tab" aria-selected={visao === v} onClick={() => setVisao(v)} className={juntar("min-h-toque rounded-controle px-4 text-sm font-medium", visao === v ? "bg-marca text-sobre-marca" : "text-texto-suave")}>
+            <button key={v} role="tab" aria-selected={visao === v} onClick={() => setVisao(v)} className={juntar("min-h-toque rounded-controle px-4 text-sm font-medium", visao === v ? "bg-marca-suave text-marca" : "text-texto-suave hover:bg-superficie-suave")}>
               {v === "dia" ? "Dia" : "Semana"}
             </button>
           ))}
@@ -138,11 +141,15 @@ export function Agenda() {
             <thead>
               <tr>
                 <th className="sticky top-0 z-10 w-16 border-b border-borda bg-superficie p-2 text-left text-xs font-medium text-texto-fraco">Hora</th>
-                {dias.map((d) => (
-                  <th key={d.toISOString()} className="sticky top-0 z-10 border-b border-l border-borda bg-superficie p-2 text-left font-semibold">
-                    <span className="capitalize">{formatarDiaSemana(d)}</span> <span className="font-normal text-texto-suave">{formatarData(d).slice(0, 5)}</span>
-                  </th>
-                ))}
+                {dias.map((d) => {
+                  const ehHoje = chaveDia(d) === hojeChave;
+                  return (
+                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "bg-marca-suave text-marca" : "bg-superficie")}>
+                      <span className="capitalize">{formatarDiaSemana(d)}</span> <span className={ehHoje ? "font-semibold" : "font-normal text-texto-suave"}>{formatarData(d).slice(0, 5)}</span>
+                      {ehHoje && <span className="ml-1.5 rounded-pilula bg-marca px-2 py-0.5 text-[11px] font-medium text-sobre-marca">Hoje</span>}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -153,7 +160,7 @@ export function Agenda() {
                     const aberto = horasDeInicio(partesLocais(d).diaSemana).includes(hora);
                     const { visitas, bloqueios } = itensNoHorario(d, hora);
                     return (
-                      <td key={d.toISOString()} className={juntar("h-9 overflow-hidden border-b border-l border-borda p-0.5 align-top", !aberto && "bg-superficie-suave")}>
+                      <td key={d.toISOString()} className={juntar("group/celula h-9 overflow-hidden border-b border-l border-borda p-0.5 align-top", !aberto && "bg-superficie-suave", aberto && chaveDia(d) === hojeChave && "bg-marca-suave/40")}>
                         {aberto && (
                           <div className="flex h-full gap-0.5">
                             {visitas.map((v) => (
@@ -171,7 +178,7 @@ export function Agenda() {
                             {visitas.length === 0 && (
                             <button
                               onClick={() => setBloqueio({ dia: chaveDia(d), hora, consultorId: usuario.perfil === "admin" ? (filtro ?? dados?.consultores[0]?.id ?? "") : usuario.id, horas: 1, motivo: "" })}
-                              className={juntar("flex h-7 items-center justify-center rounded-controle text-texto-fraco opacity-60 hover:bg-superficie-suave hover:opacity-100", bloqueios.length ? "w-7 shrink-0" : "w-full")}
+                              className={juntar("flex h-7 items-center justify-center rounded-controle text-texto-fraco opacity-0 [@media(hover:none)]:opacity-60 transition-opacity duration-150 hover:bg-superficie-suave hover:opacity-100 focus-visible:opacity-100 group-hover/celula:opacity-70", bloqueios.length ? "w-7 shrink-0" : "w-full")}
                               aria-label={`Bloquear ${formatarDiaSemana(d)} ${hora}h`}
                             >
                               <Plus className="size-3.5" aria-hidden />
