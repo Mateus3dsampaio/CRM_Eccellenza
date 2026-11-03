@@ -15,7 +15,7 @@ interface Uso {
 
 const numero = (n: number) => n.toLocaleString("pt-BR");
 
-/** Uso da API do Claude pelo bot (só admin). Mostra números, não reais: o preço muda e é melhor conferir no painel da Anthropic. */
+/** Uso da API (Claude ou GPT) pelo bot (só admin). Mostra números, não reais: o preço muda e é melhor conferir no painel da Anthropic. */
 export function UsoDoBot() {
   const { dados } = useDados<Uso>("/api/configuracoes/uso-bot");
   return (
@@ -43,7 +43,7 @@ export function UsoDoBot() {
       ) : (
         <p className="text-sm text-texto-suave">Carregando…</p>
       )}
-      <p className="mt-3 text-xs text-texto-fraco">O valor em dinheiro você confere no painel da Anthropic (console.anthropic.com), que é a fonte certa do preço.</p>
+      <p className="mt-3 text-xs text-texto-fraco">O valor em dinheiro você confere no painel do provedor em uso (console.anthropic.com para o Claude, platform.openai.com para o GPT), que é a fonte certa do preço. Os números acima somam os dois provedores.</p>
     </section>
   );
 }

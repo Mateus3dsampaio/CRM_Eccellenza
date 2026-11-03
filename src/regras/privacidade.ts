@@ -37,7 +37,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Com quem compartilhamos",
       paragrafos: [
-        "Usamos empresas que prestam serviço para a loja e que recebem os dados necessários para isso: Meta (WhatsApp, onde a conversa acontece), Anthropic (inteligência artificial do atendimento), OpenAI (transcrição de áudios) e Railway (hospedagem do sistema). Algumas dessas empresas ficam fora do Brasil. Não vendemos seus dados.",
+        "Usamos empresas que prestam serviço para a loja e que recebem os dados necessários para isso: Meta (WhatsApp, onde a conversa acontece), Anthropic ou OpenAI (inteligência artificial do atendimento: as mensagens da conversa são enviadas à empresa que a loja estiver usando no momento) e OpenAI (transcrição de áudios) e Railway (hospedagem do sistema). Algumas dessas empresas ficam fora do Brasil. Não vendemos seus dados.",
       ],
     },
     {

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
@@ -9,9 +10,11 @@ import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
+import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
 import { FERRAMENTAS } from "./ferramentas";
+import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type MotivoDeParada } from "./openai-conversao";
 import { montarPromptSistema } from "./prompt";
 import { limparResposta, respostaDescartada } from "./saida";
 
@@ -31,6 +34,47 @@ function clienteApi(chave: string): Anthropic {
 }
 
 export class ErroBot extends Error {}
+
+/** Uma volta com o modelo, no mesmo formato para os dois provedores (o histórico guardado é sempre o da Anthropic). */
+interface VoltaDoModelo {
+  content: BlocoEntrada[];
+  parada: MotivoDeParada;
+}
+
+async function voltaComClaude(chave: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+  const resposta = await clienteApi(chave).beta.messages.create({
+    model: MODELO_BOT,
+    max_tokens: 8000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "medium" },
+    // Cache de 1 hora (o máximo da API): cada uso renova o prazo, então com clientes escrevendo ao longo
+    // do dia o prompt é gravado poucas vezes. Os dois pontos de cache usam o mesmo prazo.
+    cache_control: { type: "ephemeral", ttl: "1h" },
+    system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral", ttl: "1h" } }],
+    tools: FERRAMENTAS,
+    messages: historico,
+  });
+  await registrarUso(resposta.usage);
+  const parada: MotivoDeParada =
+    resposta.stop_reason === "refusal" ? "refusal" : resposta.stop_reason === "max_tokens" ? "max_tokens" : resposta.stop_reason === "tool_use" ? "tool_use" : "end_turn";
+  return { content: resposta.content as BlocoEntrada[], parada };
+}
+
+let clienteOpenAI: { chave: string; api: OpenAI } | null = null;
+async function voltaComGpt(chave: string, modelo: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+  if (clienteOpenAI?.chave !== chave) clienteOpenAI = { chave, api: new OpenAI({ apiKey: chave, timeout: 60_000, maxRetries: 2 }) };
+  const resposta = await clienteOpenAI.api.chat.completions.create({
+    model: modelo,
+    max_completion_tokens: 8000,
+    messages: paraMensagensOpenAI(sistema, historico as never) as OpenAI.Chat.ChatCompletionMessageParam[],
+    tools: paraFerramentasOpenAI(FERRAMENTAS),
+  });
+  const cacheado = resposta.usage?.prompt_tokens_details?.cached_tokens ?? 0;
+  await registrarUso({ input_tokens: Math.max(0, (resposta.usage?.prompt_tokens ?? 0) - cacheado), output_tokens: resposta.usage?.completion_tokens ?? 0, cache_read_input_tokens: cacheado });
+  const { content, parada } = deRespostaOpenAI(resposta as never);
+  return { content: content as BlocoEntrada[], parada };
+}
 
 // Uma resposta por vez em cada conversa (evita o bot responder duas vezes em paralelo).
 const filas = new Map<string, Promise<unknown>>();
@@ -106,9 +150,9 @@ async function consultorAssumiu(leadId: string): Promise<boolean> {
   return atual?.modoAtendimento === "humano";
 }
 
-function textoDasRespostas(blocos: Anthropic.Beta.Messages.BetaContentBlock[]): string {
+function textoDasRespostas(blocos: BlocoEntrada[]): string {
   return blocos
-    .filter((b): b is Anthropic.Beta.Messages.BetaTextBlock => b.type === "text")
+    .filter((b): b is Anthropic.Beta.Messages.BetaTextBlockParam => b.type === "text")
     .map((b) => b.text.trim())
     .filter(Boolean)
     .join("\n\n");
@@ -126,7 +170,13 @@ async function marcarErro(leadId: string, mensagem: string) {
 
 function mensagemDeErro(erro: unknown): string {
   if (erro instanceof ErroBot) return erro.message;
-  if (erro instanceof Anthropic.AuthenticationError) return "a chave da API é inválida. Confira o .env.";
+  if (erro instanceof OpenAI.AuthenticationError) return "a chave da OpenAI é inválida. Confira em Configurações > Chaves de API.";
+  if (erro instanceof OpenAI.NotFoundError) return "a OpenAI não achou o modelo configurado (ou a conta não tem acesso). Confira o nome em Configurações > Chaves de API.";
+  if (erro instanceof OpenAI.RateLimitError) return "limite de uso ou saldo da OpenAI atingido. Confira a conta da OpenAI.";
+  if (erro instanceof OpenAI.BadRequestError) return "a OpenAI recusou a requisição.";
+  if (erro instanceof OpenAI.APIConnectionError) return "sem conexão com a API da OpenAI.";
+  if (erro instanceof OpenAI.APIError) return `a API da OpenAI está com problema (código ${erro.status ?? "?"}).`;
+  if (erro instanceof Anthropic.AuthenticationError) return "a chave da API do Claude é inválida. Confira em Configurações > Chaves de API.";
   if (erro instanceof Anthropic.RateLimitError) return "limite de uso da API atingido. Tente de novo em instantes.";
   if (erro instanceof Anthropic.BadRequestError) return "a API recusou a requisição.";
   if (erro instanceof Anthropic.APIConnectionError) return "sem conexão com a API do Claude.";
@@ -172,31 +222,18 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
     try {
       const chaveApi = await obterChave("texto");
       if (!chaveApi) throw new ErroBot("a chave da API de texto não está configurada (Configurações > Chaves de API).");
+      const { provedor, modeloOpenai } = await configDoBot();
       const sistema = await montarPromptSistema();
 
       for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-        const resposta = await clienteApi(chaveApi).beta.messages.create({
-          model: MODELO_BOT,
-          max_tokens: 8000,
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
-          output_config: { effort: "medium" },
-          // Cache de 1 hora (o máximo da API): cada uso renova o prazo, então com clientes escrevendo ao longo
-          // do dia o prompt é gravado poucas vezes. Os dois pontos de cache usam o mesmo prazo.
-          cache_control: { type: "ephemeral", ttl: "1h" },
-          system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral", ttl: "1h" } }],
-          tools: FERRAMENTAS,
-          messages: historico,
-        });
-
-        await registrarUso(resposta.usage);
-        if (resposta.stop_reason === "refusal") throw new ErroBot("o modelo recusou responder esta conversa.");
-        historico.push({ role: "assistant", content: resposta.content as BlocoEntrada[] });
+        const resposta = provedor === "openai" ? await voltaComGpt(chaveApi, modeloOpenai, sistema, historico) : await voltaComClaude(chaveApi, sistema, historico);
+        if (resposta.parada === "refusal") throw new ErroBot("o modelo recusou responder esta conversa.");
+        historico.push({ role: "assistant", content: resposta.content });
         const texto = textoDasRespostas(resposta.content);
         if (texto) textos.push(texto);
 
-        if (resposta.stop_reason === "max_tokens") throw new ErroBot("a resposta do modelo ficou longa demais.");
-        if (resposta.stop_reason !== "tool_use") break;
+        if (resposta.parada === "max_tokens") throw new ErroBot("a resposta do modelo ficou longa demais.");
+        if (resposta.parada !== "tool_use") break;
 
         const resultados: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
         for (const bloco of resposta.content) {

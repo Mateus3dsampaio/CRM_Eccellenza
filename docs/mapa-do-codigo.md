@@ -66,7 +66,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
 | `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
-| `UsoApi` | Uma linha por chamada à API do Claude: só contadores de tokens (sem texto de cliente). Alimenta "Uso do bot" em Configurações |
+| `UsoApi` | Uma linha por chamada à API de texto (Claude ou GPT, sem distinguir): só contadores de tokens (sem texto de cliente). Alimenta "Uso do bot" em Configurações |
 | `LogWebhook` | Log do que a Meta mandou e dos envios (sem conteúdo das mensagens, só tipo e final do telefone). Apagado após 14 dias |
 | `PedidoLgpd` | Registro de exclusões e exportações de dados de cliente (só ação, quem fez e os 4 últimos dígitos do telefone) |
 
@@ -127,6 +127,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
 | `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
 | `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (texto e áudio): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
+| `src/app/api/configuracoes/provedor-bot/route.ts` | Ler/gravar qual IA atende o texto (Claude ou GPT) e o modelo do GPT. Só admin | `provedor-bot` |
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
@@ -163,6 +164,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
 | `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API): `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
+| `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo do GPT (PROVISÓRIO `gpt-5.5`, editável na tela). Chaves `bot_provedor` e `bot_modelo_openai` em `Configuracao` |
 | `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave da tela ou `OPENAI_API_KEY`; modelo `whisper-1`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
@@ -200,7 +202,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Bot (`src/bot`)
 | Arquivo | Faz |
 |---|---|
-| `src/bot/atendimento.ts` | Chama a API do Claude (modelo, histórico, cache, laço de ferramentas) |
+| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato |
+| `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções ativas do banco. Não lê mais nenhum arquivo |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
@@ -247,7 +250,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
-| `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": dois campos em pontinhos (texto e áudio), mostra só o final, salvar/remover |
+| `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": escolha Claude/GPT para o texto e modelo do GPT, dois campos em pontinhos (texto e áudio), "usar a mesma do texto" no áudio, mostra só o final, salvar/remover |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
@@ -297,6 +300,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
 | `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
+| `testes/unit/provedor-gpt.test.ts` | GPT como IA do texto: conversão de histórico/ferramentas/resposta, bot com a OpenAI simulada, troca de provedor |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |

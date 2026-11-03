@@ -5,7 +5,7 @@ export const TIPOS_CHAVE = ["texto", "audio"] as const;
 export type TipoChave = (typeof TIPOS_CHAVE)[number];
 
 export const ROTULOS_CHAVE: Record<TipoChave, string> = {
-  texto: "Chave da API de texto (Claude)",
+  texto: "Chave da API de texto (Claude ou GPT)",
   audio: "Chave da API de transcrição de áudio (OpenAI/Whisper)",
 };
 

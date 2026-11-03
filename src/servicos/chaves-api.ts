@@ -44,6 +44,13 @@ export async function salvarChave(tipo: TipoChave, chave: string): Promise<void>
   await gravarConfig(CHAVE_BANCO[tipo], cifrarChave(limpa, segredo));
 }
 
+/** "Usar a mesma chave" (ex.: uma conta só na OpenAI): copia a chave que vale agora de um campo para o outro, sem passar pela tela. */
+export async function copiarChave(de: TipoChave, para: TipoChave): Promise<void> {
+  const chave = await obterChave(de);
+  if (!chave) throw new ErroChave("Não há chave configurada no campo de origem.");
+  await salvarChave(para, chave);
+}
+
 export async function removerChave(tipo: TipoChave): Promise<void> {
   await db.configuracao.deleteMany({ where: { chave: CHAVE_BANCO[tipo] } });
 }
