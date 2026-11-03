@@ -10,7 +10,26 @@ export const TIPOS_MIDIA: Record<string, { extensao: string; familia: FamiliaMid
   "video/mp4": { extensao: "mp4", familia: "video" },
   "video/3gpp": { extensao: "3gp", familia: "video" },
   "application/pdf": { extensao: "pdf", familia: "documento" },
+  "application/msword": { extensao: "doc", familia: "documento" },
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { extensao: "docx", familia: "documento" },
+  "application/vnd.ms-excel": { extensao: "xls", familia: "documento" },
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { extensao: "xlsx", familia: "documento" },
+  // DWG não tem um tipo único: o navegador e a Meta mandam vazio, "octet-stream" ou nomes diferentes. Este é o nome interno do sistema.
+  "application/acad": { extensao: "dwg", familia: "documento" },
 };
+
+/** Nome curto de cada tipo, para mostrar na tela (galeria, conversa). */
+export const ROTULO_TIPO: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/msword": "Word",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "Word",
+  "application/vnd.ms-excel": "Excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
+  "application/acad": "DWG",
+};
+
+// Extensões de documento que valem mesmo quando o navegador ou a Meta não informam (ou informam um tipo genérico) o tipo certo.
+const EXTENSOES_DE_DOCUMENTO = ["pdf", "doc", "docx", "xls", "xlsx", "dwg"];
 
 // Tamanho máximo por arquivo. PROVISÓRIO: o de imagem é o que já existia (5 MB); para vídeo e documento coloquei um teto
 // seguro para o disco. Os limites da própria Meta para vídeo e documento NÃO foram conferidos.
@@ -23,11 +42,23 @@ export const LIMITE_EXPORTACAO_BYTES = 200 * 1024 * 1024;
 export const DIAS_MIDIA_ATE_APAGAR = 180;
 
 /**
- * O que o vendedor pode ENVIAR (bem menos que o que dá para receber): a Meta aceita só JPEG e PNG como imagem e MP4 como vídeo
- * (conforme conheço; não conferi na página oficial). WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia.
+ * O que o vendedor pode ENVIAR (menos que o que dá para receber): a Meta aceita só JPEG e PNG como imagem e MP4 como vídeo,
+ * e PDF, Word e Excel como documento (conforme conheço; não conferi na página oficial). DWG: NÃO tenho certeza de que a Meta aceite;
+ * se recusar, a mensagem fica "falhou". WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia.
  */
-export const TIPOS_ENVIO = ["image/jpeg", "image/png", "video/mp4", "application/pdf"] as const;
-export const ACEITO_NO_ANEXO = TIPOS_ENVIO.join(",");
+export const TIPOS_ENVIO = [
+  "image/jpeg",
+  "image/png",
+  "video/mp4",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/acad",
+] as const;
+// Para o seletor de arquivo do navegador: os tipos e as extensões (o navegador não conhece o tipo do DWG).
+export const ACEITO_NO_ANEXO = [...TIPOS_ENVIO.filter((t) => t !== "application/acad"), ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".dwg"].join(",");
 export function tipoPodeEnviar(tipo: string): boolean {
   return (TIPOS_ENVIO as readonly string[]).includes(limpo(tipo));
 }
@@ -57,12 +88,39 @@ export function limiteDoTipo(tipo: string): number {
   return familia ? LIMITES_BYTES[familia] : 0;
 }
 
-export const ROTULO_FAMILIA: Record<FamiliaMidia, string> = { imagem: "Imagem", video: "Vídeo", documento: "PDF" };
+export const ROTULO_FAMILIA: Record<FamiliaMidia, string> = { imagem: "Imagem", video: "Vídeo", documento: "Documento" };
+
+/** Nome do tipo para a tela: "PDF", "Word", "Excel", "DWG", "Imagem" ou "Vídeo". */
+export function rotuloDoTipo(tipo: string): string {
+  const t = limpo(tipo);
+  return ROTULO_TIPO[t] ?? (familiaDoTipo(t) ? ROTULO_FAMILIA[familiaDoTipo(t)!] : "Arquivo");
+}
+
+/** "um PDF", "uma planilha Excel"... para frases (avisos ao bot, exportações). */
+export function descricaoDoTipo(tipo: string): string {
+  const t = limpo(tipo);
+  const f = familiaDoTipo(t);
+  if (f === "imagem") return "uma imagem";
+  if (f === "video") return "um vídeo";
+  const r = ROTULO_TIPO[t];
+  return r === "Excel" ? "uma planilha Excel" : r === "Word" ? "um documento Word" : r === "DWG" ? "um arquivo DWG" : r === "PDF" ? "um PDF" : "um arquivo";
+}
+
+/**
+ * Descobre o tipo de um arquivo. Usa o tipo informado se o sistema o conhece; senão (vazio, "octet-stream", nome estranho)
+ * usa a extensão do nome, mas só para documentos (PDF, Word, Excel, DWG). Depois o conteúdo ainda é conferido ao guardar.
+ */
+export function tipoDoArquivo(nome: string | null | undefined, tipoInformado: string | null | undefined): string | null {
+  const t = limpo(tipoInformado ?? "");
+  if (t in TIPOS_MIDIA) return t;
+  const extensao = (nome ?? "").split(".").pop()?.toLowerCase() ?? "";
+  return EXTENSOES_DE_DOCUMENTO.includes(extensao) ? tipoDaExtensao(extensao) : null;
+}
 
 /** Texto curto para a prévia do card e dos avisos quando a mensagem é só um arquivo. */
 export function previaDaMidia(tipo: string | null | undefined): string {
   const f = tipo ? familiaDoTipo(tipo) : null;
-  return f === "video" ? "🎥 Vídeo" : f === "documento" ? "📄 PDF" : "📷 Imagem";
+  return f === "video" ? "🎥 Vídeo" : f === "documento" && tipo ? `📄 ${rotuloDoTipo(tipo)}` : "📷 Imagem";
 }
 
 /** Nome de arquivo para mostrar e para baixar: sem pastas, sem caracteres de controle, tamanho limitado. */

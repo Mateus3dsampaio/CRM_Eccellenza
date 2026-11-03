@@ -61,17 +61,17 @@ Se a Meta recusar a "versão da API" (erro de versão no cartão WhatsApp), defi
 - A Meta recomenda dar instrução de como sair. Sugiro incluir "Responda PARAR para não receber mais mensagens" nos modelos (texto a aprovar).
 - Brasil e o nono dígito: o WhatsApp conhece muitos números **sem o 9**. O sistema trata as duas formas como a mesma pessoa e responde para o número no formato que a Meta informar.
 
-## Imagens, vídeos e PDFs
-- **Receber:** imagem, vídeo MP4 e PDF do cliente ficam guardados e aparecem na conversa e na **Galeria**. Outros tipos (Word, Excel, DWG, ZIP) viram só um aviso na conversa.
-- **Enviar:** o vendedor usa o clipe 📎 na conversa (com legenda opcional). Só dentro das 24h, como texto livre; fora disso só modelo. **Para enviar:** imagem JPG ou PNG, vídeo MP4 e PDF (do que conheço, é o que a Meta aceita; WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia). Não conferi na página oficial da Meta.
+## Imagens, vídeos e documentos (PDF, Word, Excel, DWG)
+- **Receber:** imagem, vídeo MP4, PDF, Word (doc/docx), Excel (xls/xlsx) e DWG do cliente ficam guardados e aparecem na conversa e na **Galeria**. Outros tipos (PowerPoint, ZIP, RAR, SKP...) viram só um aviso na conversa. O sistema reconhece Word, Excel e DWG também pela extensão do nome (a Meta e o navegador costumam informar um tipo genérico) e **confere o conteúdo**; se não bater (ex.: executável com nome de DWG), o arquivo não é guardado, mas a mensagem do cliente fica registrada com um aviso.
+- **Enviar:** o vendedor usa o clipe 📎 na conversa (com legenda opcional). Só dentro das 24h, como texto livre; fora disso só modelo. **Para enviar:** imagem JPG ou PNG, vídeo MP4, PDF, Word e Excel (do que conheço, é o que a Meta aceita) e DWG. **Atenção com o DWG: não tenho certeza de que a Meta aceite enviar esse tipo.** Se ela recusar, a mensagem fica "falhou" e o jeito é mandar um PDF da planta. WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia. Não conferi a lista de tipos na página oficial da Meta.
 - **Galeria:** cada vendedor vê os arquivos dos leads dele; o admin vê todos e filtra por vendedor. Cada arquivo tem Baixar, Abrir e "ver a conversa". **Só o admin apaga** arquivo.
 - **Não há pasta no PC do vendedor** (decisão: tudo fica no Railway). O vendedor baixa pelo botão quando precisar.
 - **Apagar:** excluir uma conversa apaga os arquivos dela, e o sistema **avisa antes** quantos arquivos e MB vão junto. Arquivos com mais de **180 dias** são apagados sozinhos (a galeria avisa quando faltam 30 dias ou menos).
-- **Tamanho máximo (PROVISÓRIO):** imagem 5 MB, vídeo 16 MB, PDF 25 MB. Os limites da Meta para vídeo e documento **não foram conferidos**; se a Meta recusar um arquivo, a mensagem fica "falhou".
+- **Tamanho máximo (PROVISÓRIO):** imagem 5 MB, vídeo 16 MB, documentos (PDF, Word, Excel, DWG) 25 MB. **DWG de projeto grande pode passar de 25 MB**: nesse caso o sistema avisa na conversa que não guardou; se isso acontecer, me diga para aumentarmos (lembrando do espaço do Volume). Os limites da Meta para vídeo e documento **não foram conferidos**; se a Meta recusar um arquivo, a mensagem fica "falhou".
 - **Espaço:** o plano Hobby do Railway tem 5 GB e vídeo enche rápido. Crie o Volume do tamanho que precisar e defina `MIDIAS_LIMITE_MB` (ex.: `5000`) para o sistema mostrar a porcentagem usada em Configurações. O Railway também mostra o uso do Volume no painel dele (não consegui confirmar daqui onde).
 - **Backup:** o backup do Postgres **não cobre o Volume**. Fotos, vídeos e PDFs não têm cópia de segurança, a menos que você configure uma.
-- **Segurança:** PDF nunca abre dentro do site (sempre baixa). O sistema confere se o arquivo é do tipo que diz ser. Mesmo assim, arquivo de cliente desconhecido pode ter vírus: abra no seu computador com antivírus.
-- O bot **não vê** vídeo nem PDF (só imagem); ele recebe o aviso de que o arquivo chegou.
+- **Segurança:** documentos (PDF, Word, Excel, DWG) nunca abrem dentro do site (sempre baixam). O sistema confere se o arquivo é do tipo que diz ser. Word e Excel antigos (doc, xls) podem trazer macros: se o programa perguntar se quer habilitar macros, **não habilite** em arquivo de cliente. Abra no seu computador com antivírus.
+- O bot **não vê** vídeo nem documento (só imagem); ele recebe o aviso de que o arquivo chegou.
 
 ## Transcrição de áudio (Whisper)
 - Com `OPENAI_API_KEY`, áudio que o cliente manda vira texto (`[áudio transcrito automaticamente] ...`) e o bot lê esse texto. O **áudio não fica guardado**, só a transcrição. O modelo padrão é o `whisper-1`; a OpenAI tem modelos de transcrição mais novos (variável `OPENAI_TRANSCRICAO_MODELO`): vale comparar.

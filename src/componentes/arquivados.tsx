@@ -75,7 +75,7 @@ export function Arquivados() {
         </ul>
       )}
       <Modal aberto={!!excluir} aoFechar={() => setExcluir(null)} titulo="Excluir de vez" largura="max-w-md">
-        <p className="text-sm text-texto-suave">Excluir {excluir?.nome}? Mensagens, fotos, vídeos e PDFs também serão apagados. Não dá para desfazer.</p>
+        <p className="text-sm text-texto-suave">Excluir {excluir?.nome}? Mensagens, fotos, vídeos e documentos também serão apagados. Não dá para desfazer.</p>
         {excluir && <AvisoMidias alvo={{ ids: [excluir.id] }} />}
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setExcluir(null)}>Cancelar</Botao>

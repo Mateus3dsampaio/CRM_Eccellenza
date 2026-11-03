@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
-import { familiaDoTipo, LIMITE_EXPORTACAO_BYTES, ROTULO_FAMILIA } from "@/regras/midia";
+import { LIMITE_EXPORTACAO_BYTES, rotuloDoTipo } from "@/regras/midia";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { montarZip } from "@/lib/zip";
@@ -108,8 +108,7 @@ export async function exportarDesempenho(pedido: PedidoExportacao): Promise<{ no
       const quem = m.autor === "cliente" ? "Cliente" : m.autor === "bot" ? "Bot" : m.autor === "consultor" ? `Consultor${m.autorNome ? ` (${m.autorNome})` : ""}` : "Sistema";
       const partes: string[] = [];
       if (m.midiaArquivo) {
-        const familia = m.midiaTipo ? familiaDoTipo(m.midiaTipo) : null;
-        const tipo = familia ? ROTULO_FAMILIA[familia].toLowerCase() : "arquivo";
+        const tipo = m.midiaTipo ? rotuloDoTipo(m.midiaTipo).toLowerCase() : "arquivo";
         if (pedido.incluirMidia) {
           try {
             if (!midiasIncluidas.has(m.midiaArquivo)) {
@@ -189,7 +188,7 @@ function leiame(vendedor: string, de: string, ate: string, midia: boolean, total
   return `# Exportação de desempenho: ${vendedor}
 
 Período: ${de} a ${ate} (horário de Fortaleza). Leads incluídos: ${totalLeads} (os que são do vendedor e tiveram criação ou mensagem no período).
-Mídias (fotos, plantas, vídeos, PDFs): ${midia ? "incluídas na pasta \`midias/\`." : "não incluídas."}
+Mídias (fotos, plantas, vídeos, documentos): ${midia ? "incluídas na pasta \`midias/\`." : "não incluídas."}
 
 ## Arquivos
 - \`resumo.csv\`: números do vendedor no período (tempo de resposta, quantidades, quantos leads chegaram em cada etapa).

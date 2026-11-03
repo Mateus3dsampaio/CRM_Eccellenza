@@ -2,7 +2,7 @@ import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
-import { intervaloDeBytes, nomeSeguroDeArquivo, tipoDaExtensao } from "@/regras/midia";
+import { familiaDoTipo, intervaloDeBytes, nomeSeguroDeArquivo, tipoDaExtensao } from "@/regras/midia";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,8 @@ export const GET = rota(async (req: Request, { params }: { params: Promise<{ nom
     throw new ErroHttp(404, "Não encontrado.");
   }
   const tipo = tipoDaExtensao(nome.split(".").pop() ?? "") ?? "application/octet-stream";
-  const baixar = tipo === "application/pdf" || new URL(req.url).searchParams.get("baixar") === "1";
+  // Documentos (PDF, Word, Excel, DWG) nunca abrem dentro do site: sempre baixam.
+  const baixar = familiaDoTipo(tipo) === "documento" || new URL(req.url).searchParams.get("baixar") === "1";
   const cabecalhos: Record<string, string> = {
     "Content-Type": tipo,
     // Vídeo e PDF não ficam guardados no navegador (depois de apagados não devem continuar acessíveis); imagem pode por poucos minutos.

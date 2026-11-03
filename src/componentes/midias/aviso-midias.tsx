@@ -7,7 +7,7 @@ import { chamarApi } from "../dados";
 
 type Alvo = { ids: string[] } | { etapa: string };
 
-/** Aviso antes de excluir leads: quantos arquivos (fotos, vídeos, PDFs) vão junto. Não aparece se não houver nenhum. */
+/** Aviso antes de excluir leads: quantos arquivos (fotos, vídeos, documentos) vão junto. Não aparece se não houver nenhum. */
 export function AvisoMidias({ alvo }: { alvo: Alvo | null }) {
   // O resultado carrega a chave do pedido: se o alvo mudar, o resultado antigo deixa de valer sem precisar limpar.
   const [pronto, setPronto] = useState<{ chave: string; arquivos: number; bytes: number } | null>(null);
@@ -34,7 +34,7 @@ export function AvisoMidias({ alvo }: { alvo: Alvo | null }) {
           Também serão apagados {resumo.arquivos} {resumo.arquivos === 1 ? "arquivo" : "arquivos"}
           {resumo.bytes > 0 ? ` (${formatarTamanho(resumo.bytes)})` : ""}
         </strong>{" "}
-        (fotos, vídeos e PDFs da conversa). Não dá para recuperar. Se precisar de algum, baixe antes na Galeria.
+        (fotos, vídeos e documentos da conversa). Não dá para recuperar. Se precisar de algum, baixe antes na Galeria.
       </p>
     </div>
   );

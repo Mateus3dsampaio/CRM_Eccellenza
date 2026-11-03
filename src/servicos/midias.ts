@@ -3,7 +3,7 @@ import { apagarMidia, listarMidiasAntigasDaPasta, tamanhoDaPasta } from "@/lib/m
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { DIA } from "@/regras/tempo";
-import { DIAS_MIDIA_ATE_APAGAR, familiaDoTipo, nomeSeguroDeArquivo, ROTULO_FAMILIA, type FamiliaMidia } from "@/regras/midia";
+import { DIAS_MIDIA_ATE_APAGAR, familiaDoTipo, nomeSeguroDeArquivo, rotuloDoTipo, ROTULO_FAMILIA, TIPOS_MIDIA, type FamiliaMidia } from "@/regras/midia";
 import { nomeExibicao } from "@/regras/telefone";
 import { registrarAlteracao } from "./historico";
 
@@ -111,7 +111,7 @@ export interface Galeria {
 const POR_TIPO: Record<FamiliaMidia, object> = {
   imagem: { midiaTipo: { startsWith: "image/" } },
   video: { midiaTipo: { startsWith: "video/" } },
-  documento: { midiaTipo: "application/pdf" },
+  documento: { midiaTipo: { in: Object.keys(TIPOS_MIDIA).filter((t) => TIPOS_MIDIA[t].familia === "documento") } },
 };
 
 /** Galeria: as mídias dos leads do vendedor (o admin vê todas e pode filtrar por vendedor). */
@@ -144,7 +144,7 @@ export async function listarGaleria(
         arquivo: m.midiaArquivo,
         tipo: m.midiaTipo,
         familia,
-        rotulo: ROTULO_FAMILIA[familia],
+        rotulo: rotuloDoTipo(m.midiaTipo),
         nome: nomeSeguroDeArquivo(m.midiaNome, ROTULO_FAMILIA[familia]),
         bytes: m.midiaBytes,
         enviadaEm: m.enviadaEm.toISOString(),

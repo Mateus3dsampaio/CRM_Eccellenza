@@ -121,7 +121,7 @@ export function Quadro() {
   function confirmarExclusao(ids: string[], depois?: () => void) {
     setConfirmacao({
       titulo: "Excluir de vez",
-      texto: `Excluir ${ids.length} ${ids.length === 1 ? "lead" : "leads"}? Mensagens, fotos, vídeos e PDFs também serão apagados. Não dá para desfazer.`,
+      texto: `Excluir ${ids.length} ${ids.length === 1 ? "lead" : "leads"}? Mensagens, fotos, vídeos e documentos também serão apagados. Não dá para desfazer.`,
       midias: { ids },
       botao: "Excluir",
       perigo: true,

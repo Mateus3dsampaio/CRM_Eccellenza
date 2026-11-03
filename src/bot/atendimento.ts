@@ -4,6 +4,7 @@ import { lerMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { avaliarLimiteDoBot } from "@/regras/limite-bot";
+import { descricaoDoTipo } from "@/regras/midia";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
@@ -61,9 +62,9 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
 
   for (const m of novas) {
     if (m.autor === "cliente") {
-      // PDF e vídeo ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
+      // Vídeo e documento (PDF, Word, Excel, DWG) ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
       if (m.midiaArquivo && m.midiaTipo && !m.midiaTipo.startsWith("image/")) {
-        const rotulo = m.midiaTipo === "application/pdf" ? "um PDF" : "um vídeo";
+        const rotulo = descricaoDoTipo(m.midiaTipo);
         blocos.push({ type: "text", text: `<cliente>[enviou ${rotulo}${m.midiaNome ? ` chamado "${escapar(m.midiaNome)}"` : ""}; o sistema guardou o arquivo para o consultor, mas você não consegue ver o conteúdo]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
         continue;
       }
@@ -81,7 +82,7 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
       blocos.push({ type: "text", text: `<cliente>${escapar(m.texto ?? "")}</cliente>` });
     } else {
       const quem = m.autor === "consultor" ? `o consultor ${m.autorNome ?? ""}`.trim() : "o sistema (mensagem automática)";
-      const arquivo = m.midiaTipo ? ` [enviou ${m.midiaTipo === "application/pdf" ? "um PDF" : m.midiaTipo.startsWith("video/") ? "um vídeo" : "uma imagem"}]` : "";
+      const arquivo = m.midiaTipo ? ` [enviou ${descricaoDoTipo(m.midiaTipo)}]` : "";
       blocos.push({ type: "text", text: `<sistema>Mensagem enviada ao cliente por ${quem}:${arquivo} "${escapar(m.texto ?? "")}"</sistema>` });
     }
   }

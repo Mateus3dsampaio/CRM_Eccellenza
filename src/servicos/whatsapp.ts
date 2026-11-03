@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { TAMANHO_MAXIMO, tipoImagemValido } from "@/lib/midias";
-import { familiaDoTipo, limiteDoTipo, tipoMidiaAceito } from "@/regras/midia";
+import { motivoDeRecusaDaMidia, TAMANHO_MAXIMO, tipoImagemValido } from "@/lib/midias";
+import { familiaDoTipo, limiteDoTipo, tipoDoArquivo, tipoMidiaAceito } from "@/regras/midia";
 import { LIMITE_AUDIO_BYTES, tipoAudioAceito, transcreverAudio, transcricaoConfigurada } from "./transcricao";
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { agora } from "@/lib/relogio";
@@ -95,7 +95,7 @@ async function subirArquivoParaMeta(cfg: NonNullable<ReturnType<typeof lerConfig
 }
 
 /** Baixa a imagem ou o áudio que o cliente mandou (2 passos: pede o endereço, depois baixa com o token). */
-export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "audio" | "arquivo" = "imagem"): Promise<{ dados: Buffer; tipo: string } | null> {
+export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "audio" | "arquivo" = "imagem", nomeArquivo?: string | null): Promise<{ dados: Buffer; tipo: string } | null> {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return null;
   // "arquivo" = imagem, vídeo MP4 ou PDF (o limite de tamanho depende do tipo).
@@ -109,7 +109,9 @@ export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "
     // Só baixa de servidor da Meta/Facebook, por https (evita o webhook ser usado para fazer o servidor visitar outro lugar).
     const destino = new URL(meta.url);
     if (destino.protocol !== "https:" || !/(^|\.)(facebook\.com|fbcdn\.net|fbsbx\.com|whatsapp\.net|facebook\.net)$/.test(destino.hostname)) return null;
-    const tipo = meta.mime_type.split(";")[0];
+    const mimeDaMeta = meta.mime_type.split(";")[0];
+    // Documento (Word, Excel, DWG...) costuma chegar com tipo genérico: usa a extensão do nome. O conteúdo é conferido ao guardar.
+    const tipo = tipoMidia === "arquivo" ? (tipoDoArquivo(nomeArquivo, mimeDaMeta) ?? mimeDaMeta) : mimeDaMeta;
     if (!aceito(tipo)) return null;
     // "manual": se a Meta redirecionar para outro lugar, o token NÃO vai junto (seria vazamento).
     const arquivo = await fetch(destino, { headers: cabecalho, redirect: "manual", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
@@ -173,9 +175,10 @@ async function aplicarMensagem(m: MensagemRecebida) {
     texto = await textoDoAudio(m);
   } else if (m.midiaId) {
     // Imagem, vídeo ou PDF: fica guardado e aparece na conversa e na galeria.
-    const arquivo = await baixarMidiaDaMeta(m.midiaId, "arquivo");
-    if (arquivo) midia = { ...arquivo, nome: m.nomeArquivo };
-    else texto = [texto, "[o cliente enviou um arquivo que o sistema não conseguiu baixar ou não aceita (só imagem, vídeo MP4 e PDF, com tamanho limitado)]"].filter(Boolean).join(" ");
+    const arquivo = await baixarMidiaDaMeta(m.midiaId, "arquivo", m.nomeArquivo);
+    // Se o conteúdo não confere com o tipo (ex.: executável disfarçado de DWG), não guarda, mas a mensagem do cliente não se perde.
+    if (arquivo && !motivoDeRecusaDaMidia(arquivo.dados, arquivo.tipo)) midia = { ...arquivo, nome: m.nomeArquivo };
+    else texto = [texto, "[o cliente enviou um arquivo que o sistema não conseguiu baixar ou não aceita (só imagem, vídeo MP4, PDF, Word, Excel e DWG, com tamanho limitado)]"].filter(Boolean).join(" ");
   }
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {

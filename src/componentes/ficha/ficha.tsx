@@ -267,7 +267,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       {janelas}
 
       <Modal aberto={confirmarExclusao} aoFechar={() => setConfirmarExclusao(false)} titulo="Excluir de vez" largura="max-w-md">
-        <p className="text-sm text-texto-suave">Excluir 1 lead? Mensagens, fotos, vídeos e PDFs também serão apagados. Não dá para desfazer.</p>
+        <p className="text-sm text-texto-suave">Excluir 1 lead? Mensagens, fotos, vídeos e documentos também serão apagados. Não dá para desfazer.</p>
         {confirmarExclusao && <AvisoMidias alvo={{ ids: [ficha.id] }} />}
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setConfirmarExclusao(false)}>Cancelar</Botao>

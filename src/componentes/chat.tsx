@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Bot, Download, FileText, Headset, Trash2, Zap } from "lucide-react";
-import { familiaDoTipo, formatarTamanho } from "@/regras/midia";
+import { familiaDoTipo, formatarTamanho, rotuloDoTipo } from "@/regras/midia";
 import { formatarData, formatarHora, inicioDoDiaLocal } from "@/regras/tempo";
 import { juntar } from "./estilos";
 import { StatusMensagem } from "./ui";
@@ -87,17 +87,17 @@ export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia }: { 
 function MidiaDaMensagem({ m, aoApagar }: { m: MensagemChat; aoApagar?: (mensagemId: string) => void }) {
   const url = `/api/midias/${m.midia}`;
   const familia = m.midiaTipo ? familiaDoTipo(m.midiaTipo) : "imagem"; // mensagens antigas só tinham imagem
-  const nome = m.midiaNome || "arquivo.pdf";
+  const nome = m.midiaNome || "arquivo";
   return (
     <div className="mb-1">
       {familia === "video" ? (
         <video src={url} controls preload="metadata" className="max-h-72 w-full rounded-controle bg-black" aria-label="Vídeo da conversa" />
       ) : familia === "documento" ? (
-        <a href={url} download className="flex items-center gap-3 rounded-controle bg-superficie-suave px-3 py-2 hover:bg-superficie" title="Baixar PDF">
+        <a href={url} download className="flex items-center gap-3 rounded-controle bg-superficie-suave px-3 py-2 hover:bg-superficie" title="Baixar arquivo">
           <FileText className="size-8 shrink-0 text-alerta" aria-hidden />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">{nome}</span>
-            <span className="text-xs text-texto-suave">PDF{m.midiaBytes ? ` · ${formatarTamanho(m.midiaBytes)}` : ""}</span>
+            <span className="text-xs text-texto-suave">{m.midiaTipo ? rotuloDoTipo(m.midiaTipo) : "Arquivo"}{m.midiaBytes ? ` · ${formatarTamanho(m.midiaBytes)}` : ""}</span>
           </span>
           <Download className="size-4 shrink-0 text-texto-suave" aria-hidden />
         </a>

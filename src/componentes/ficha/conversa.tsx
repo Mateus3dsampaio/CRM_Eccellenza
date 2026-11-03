@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Bot, Headset, Info, Paperclip, Send, X } from "lucide-react";
-import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoPodeEnviar } from "@/regras/midia";
+import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { MODELOS } from "@/regras/modelos";
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
@@ -25,8 +25,9 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
 
   function escolherArquivo(arquivo: File | undefined) {
     if (!arquivo) return;
-    if (!tipoPodeEnviar(arquivo.type)) return avisar("Para enviar, use imagem JPG ou PNG, vídeo MP4 ou PDF.", "erro");
-    if (arquivo.size > limiteDoTipo(arquivo.type)) return avisar(`Arquivo grande demais (máximo ${formatarTamanho(limiteDoTipo(arquivo.type))} para este tipo).`, "erro");
+    const tipo = tipoDoArquivo(arquivo.name, arquivo.type) ?? "";
+    if (!tipoPodeEnviar(tipo)) return avisar("Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel ou DWG.", "erro");
+    if (arquivo.size > limiteDoTipo(tipo)) return avisar(`Arquivo grande demais (máximo ${formatarTamanho(limiteDoTipo(tipo))} para este tipo).`, "erro");
     setAnexo(arquivo);
     setModelo("");
   }
@@ -152,7 +153,7 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
             onClick={() => refArquivo.current?.click()}
             disabled={!ficha.janelaAberta}
             className="inline-flex min-h-toque items-center justify-center gap-2 rounded-controle border border-borda px-3 text-sm text-texto-suave hover:bg-superficie-suave disabled:opacity-50"
-            title={ficha.janelaAberta ? "Enviar imagem, vídeo (MP4) ou PDF" : "Arquivos só dentro da janela de 24h"}
+            title={ficha.janelaAberta ? "Enviar imagem, vídeo (MP4), PDF, Word, Excel ou DWG" : "Arquivos só dentro da janela de 24h"}
             aria-label="Anexar arquivo"
           >
             <Paperclip className="size-4" aria-hidden />

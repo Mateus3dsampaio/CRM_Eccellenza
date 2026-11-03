@@ -20,7 +20,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Quais dados tratamos",
       paragrafos: [
-        "Número de telefone e nome do seu perfil no WhatsApp; as mensagens, fotos, vídeos, PDFs e plantas que você nos envia; e o que você nos conta sobre o seu projeto (ambientes, medidas, cidade, prazo e faixa de investimento).",
+        "Número de telefone e nome do seu perfil no WhatsApp; as mensagens, fotos, vídeos, documentos (PDF, Word, Excel, DWG) e plantas que você nos envia; e o que você nos conta sobre o seu projeto (ambientes, medidas, cidade, prazo e faixa de investimento).",
         "Se você mandar um áudio, ele é transformado em texto automaticamente. O áudio em si não fica guardado no nosso sistema, só o texto.",
       ],
     },
@@ -43,7 +43,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Por quanto tempo guardamos",
       paragrafos: [
-        "Conversas arquivadas são apagadas depois de 30 dias. Fotos, vídeos e PDFs são apagados automaticamente depois de 180 dias. [Prazo de guarda das demais conversas e dados do cliente: a definir.]",
+        "Conversas arquivadas são apagadas depois de 30 dias. Fotos, vídeos e documentos são apagados automaticamente depois de 180 dias. [Prazo de guarda das demais conversas e dados do cliente: a definir.]",
       ],
     },
     {

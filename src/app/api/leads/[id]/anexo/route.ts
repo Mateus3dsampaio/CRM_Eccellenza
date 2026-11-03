@@ -1,7 +1,7 @@
 import { naoEncontrado, rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
-import { formatarTamanho, LIMITE_CORPO_ANEXO, limiteDoTipo, tipoPodeEnviar } from "@/regras/midia";
+import { formatarTamanho, LIMITE_CORPO_ANEXO, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { responderComoConsultorComArquivo } from "@/servicos/conversa";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,9 @@ export const POST = rota(async (req: Request, { params }: { params: Promise<{ id
   const form = await req.formData();
   const arquivo = form.get("arquivo");
   if (!(arquivo instanceof File) || arquivo.size === 0) throw new ErroHttp(400, "Escolha um arquivo.");
-  const tipo = arquivo.type.split(";")[0].trim().toLowerCase();
-  if (!tipoPodeEnviar(tipo)) throw new ErroHttp(400, "Para enviar, use imagem JPG ou PNG, vídeo MP4 ou PDF.");
+  // O navegador não conhece o tipo do DWG (e às vezes de Word e Excel): vale também a extensão do nome.
+  const tipo = tipoDoArquivo(arquivo.name, arquivo.type) ?? "";
+  if (!tipoPodeEnviar(tipo)) throw new ErroHttp(400, "Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel ou DWG.");
   if (arquivo.size > limiteDoTipo(tipo)) throw new ErroHttp(400, `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipo))}.`);
   const legenda = String(form.get("legenda") ?? "").slice(0, 1000);
   try {

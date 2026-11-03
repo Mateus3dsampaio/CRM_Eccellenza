@@ -22,19 +22,31 @@ export function conferirAssinatura(dados: Buffer, tipo: string): boolean {
   if (tipo === "image/gif") return h.subarray(0, 3).toString("ascii") === "GIF";
   if (tipo === "image/webp") return h.subarray(0, 4).toString("ascii") === "RIFF" && h.subarray(8, 12).toString("ascii") === "WEBP";
   if (tipo === "application/pdf") return h.subarray(0, 5).toString("ascii") === "%PDF-";
+  // Word e Excel novos (docx, xlsx) são ZIP; os antigos (doc, xls) são o formato "OLE" da Microsoft.
+  if (tipo.includes("openxmlformats")) return h[0] === 0x50 && h[1] === 0x4b && h[2] === 0x03 && h[3] === 0x04;
+  if (tipo === "application/msword" || tipo === "application/vnd.ms-excel") return h[0] === 0xd0 && h[1] === 0xcf && h[2] === 0x11 && h[3] === 0xe0 && h[4] === 0xa1 && h[5] === 0xb1;
+  // DWG começa com a versão do AutoCAD: "AC1015", "AC1032"... (as muito antigas, "AC1.50", "AC2.10", "MC0.0").
+  if (tipo === "application/acad") return (h[0] === 0x41 && h[1] === 0x43 && h[2] >= 0x31 && h[2] <= 0x39) || h.subarray(0, 2).toString("ascii") === "MC";
   // MP4 e 3GP começam com uma "caixa" ftyp (tamanho nos 4 primeiros bytes, "ftyp" nos 4 seguintes).
   if (tipo === "video/mp4" || tipo === "video/3gpp") return h.subarray(4, 8).toString("ascii") === "ftyp";
   return false;
 }
 
-/** Guarda imagem, vídeo ou PDF (confere tipo, tamanho e o começo do arquivo). Devolve o nome com que foi guardado. */
-export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> {
+/** Confere tipo, tamanho e o começo do arquivo. Devolve o motivo da recusa, ou null se está tudo certo. */
+export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string): string | null {
   const tipoLimpo = tipo.split(";")[0].trim().toLowerCase();
-  const extensao = extensaoDoTipo(tipoLimpo);
-  if (!tipoMidiaAceito(tipoLimpo) || !extensao) throw new Error("Tipo de arquivo não aceito. Use imagem, vídeo (MP4) ou PDF.");
-  if (dados.length === 0) throw new Error("O arquivo está vazio.");
-  if (dados.length > limiteDoTipo(tipoLimpo)) throw new Error(`Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`);
-  if (!conferirAssinatura(dados, tipoLimpo)) throw new Error("O arquivo não parece ser do tipo informado.");
+  if (!tipoMidiaAceito(tipoLimpo) || !extensaoDoTipo(tipoLimpo)) return "Tipo de arquivo não aceito. Use imagem, vídeo (MP4), PDF, Word, Excel ou DWG.";
+  if (dados.length === 0) return "O arquivo está vazio.";
+  if (dados.length > limiteDoTipo(tipoLimpo)) return `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`;
+  if (!conferirAssinatura(dados, tipoLimpo)) return "O arquivo não parece ser do tipo informado.";
+  return null;
+}
+
+/** Guarda imagem, vídeo ou documento (confere tipo, tamanho e o começo do arquivo). Devolve o nome com que foi guardado. */
+export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> {
+  const motivo = motivoDeRecusaDaMidia(dados, tipo);
+  if (motivo) throw new Error(motivo);
+  const extensao = extensaoDoTipo(tipo.split(";")[0].trim().toLowerCase())!;
   await mkdir(PASTA_MIDIAS, { recursive: true });
   const nome = `${randomUUID()}.${extensao}`;
   await writeFile(path.join(PASTA_MIDIAS, nome), dados);
@@ -42,7 +54,7 @@ export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> 
 }
 
 function caminhoSeguro(nome: string): string {
-  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
   return path.join(PASTA_MIDIAS, nome);
 }
 
@@ -73,7 +85,7 @@ export async function listarMidiasAntigasDaPasta(antesDe: Date): Promise<string[
   }
   const saida: string[] = [];
   for (const nome of nomes) {
-    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf)$/.test(nome)) continue; // só o que o sistema mesmo grava
+    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg)$/.test(nome)) continue; // só o que o sistema mesmo grava
     try {
       if ((await stat(path.join(PASTA_MIDIAS, nome))).mtime < antesDe) saida.push(nome);
     } catch {

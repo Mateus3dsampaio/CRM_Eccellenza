@@ -4,6 +4,7 @@ import { agora } from "@/lib/relogio";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { exigirModoSimulador } from "@/lib/modo-rota";
 import { TAMANHO_MAXIMO } from "@/lib/midias";
+import { tipoDoArquivo } from "@/regras/midia";
 import { normalizarTelefone } from "@/regras/telefone";
 import { nomeExibicao } from "@/servicos/consultas";
 import { ErroConversa, receberMensagemCliente } from "@/servicos/conversa";
@@ -48,7 +49,7 @@ export const POST = rota(async (req: Request) => {
   let midia: { dados: Buffer; tipo: string; nome: string } | null = null;
   if (arquivo instanceof File && arquivo.size > 0) {
     if (arquivo.size > TAMANHO_MAXIMO) throw new ErroHttp(400, "Imagem maior que 5 MB.");
-    midia = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: arquivo.type, nome: arquivo.name };
+    midia = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: tipoDoArquivo(arquivo.name, arquivo.type) ?? arquivo.type, nome: arquivo.name };
   }
   try {
     return await receberMensagemCliente({

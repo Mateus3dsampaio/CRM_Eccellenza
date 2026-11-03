@@ -127,7 +127,7 @@ export async function enviarMensagemLoja(params: {
   }
   if (!texto && !params.anexo) throw new Error("Mensagem vazia.");
   if (params.anexo && params.modelo) throw new Error("Modelo e arquivo não vão juntos.");
-  if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4 ou PDF.");
+  if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel ou DWG.");
   // Guarda o arquivo antes de enviar: confere tipo, tamanho e o começo do arquivo (lança se não servir).
   const nomeAnexo = params.anexo ? nomeSeguroDeArquivo(params.anexo.nome) : undefined;
   const arquivo = params.anexo ? await salvarMidia(params.anexo.dados, params.anexo.tipo) : undefined;

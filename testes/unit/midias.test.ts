@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { apagarMidia, lerMidia, PASTA_MIDIAS, salvarMidia, tamanhoDaMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { pode } from "@/regras/permissoes";
-import { DIAS_MIDIA_ATE_APAGAR, formatarTamanho, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
+import { DIAS_MIDIA_ATE_APAGAR, formatarTamanho, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, rotuloDoTipo, tipoDoArquivo, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
 import { DIA } from "@/regras/tempo";
 import { responderComoConsultorComArquivo } from "@/servicos/conversa";
 import { acharLeadPorTelefone, excluirLeads, obterOuCriarLead } from "@/servicos/leads";
@@ -17,6 +17,11 @@ import { criarConsultores, limparBanco } from "./ajuda";
 const pdf = (extra = 20) => Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(extra, 65)]);
 const mp4 = (extra = 40) => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from("ftypmp42"), Buffer.alloc(extra, 1)]);
 const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const zip = (extra = 30) => Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(extra, 7)]); // docx e xlsx são ZIP
+const ole = (extra = 30) => Buffer.concat([Buffer.from("d0cf11e0a1b11ae1", "hex"), Buffer.alloc(extra, 7)]); // doc e xls antigos
+const dwg = (extra = 60) => Buffer.concat([Buffer.from("AC1032"), Buffer.alloc(extra, 0)]);
 
 const guardados: string[] = [];
 async function guardar(dados: Buffer, tipo: string) {
@@ -33,7 +38,8 @@ afterEach(async () => {
 describe("regras de mídia", () => {
   it("aceita imagem, vídeo MP4/3GP e PDF; recusa o resto", () => {
     for (const t of ["image/png", "image/jpeg", "video/mp4", "video/3gpp", "application/pdf", "Application/PDF; x=1"]) expect(tipoMidiaAceito(t)).toBe(true);
-    for (const t of ["application/zip", "text/html", "video/x-msvideo", "application/msword", ""]) expect(tipoMidiaAceito(t)).toBe(false);
+    for (const t of [DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad"]) expect(tipoMidiaAceito(t)).toBe(true);
+    for (const t of ["application/zip", "text/html", "video/x-msvideo", "application/vnd.ms-powerpoint", ""]) expect(tipoMidiaAceito(t)).toBe(false);
   });
   it("nome de arquivo: sem pasta, sem caracteres perigosos, com limite", () => {
     expect(nomeSeguroDeArquivo("../../etc/passwd")).toBe("passwd");
@@ -60,8 +66,22 @@ describe("regras de mídia", () => {
     expect(previaDaMidia("video/mp4")).toBe("🎥 Vídeo");
     expect(previaDaMidia("image/png")).toBe("📷 Imagem");
   });
-  it("o vendedor só envia JPG, PNG, MP4 e PDF (WEBP, GIF e 3GP só se recebem)", () => {
-    for (const ok of ["image/jpeg", "image/png", "video/mp4", "application/pdf"]) expect(tipoPodeEnviar(ok)).toBe(true);
+  it("tipo do arquivo: o informado vale; se vier vazio ou genérico, a extensão decide, mas só para documentos", () => {
+    expect(tipoDoArquivo("planta.dwg", "")).toBe("application/acad");
+    expect(tipoDoArquivo("PLANTA.DWG", "application/octet-stream")).toBe("application/acad");
+    expect(tipoDoArquivo("orçamento.docx", "")).toBe(DOCX);
+    expect(tipoDoArquivo("tabela.xlsx", "application/zip")).toBe(XLSX);
+    expect(tipoDoArquivo("a.xls", "application/vnd.ms-excel")).toBe("application/vnd.ms-excel");
+    expect(tipoDoArquivo("x.png", "image/png")).toBe("image/png");
+    expect(tipoDoArquivo("virus.exe", "application/octet-stream")).toBeNull();
+    expect(tipoDoArquivo("foto.png", "")).toBeNull(); // extensão de imagem não vale sozinha
+    expect(tipoDoArquivo(null, "")).toBeNull();
+    expect(rotuloDoTipo(DOCX)).toBe("Word");
+    expect(rotuloDoTipo("application/acad")).toBe("DWG");
+    expect(previaDaMidia(XLSX)).toBe("📄 Excel");
+  });
+  it("o vendedor só envia JPG, PNG, MP4, PDF, Word, Excel e DWG (WEBP, GIF e 3GP só se recebem)", () => {
+    for (const ok of ["image/jpeg", "image/png", "video/mp4", "application/pdf", DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad"]) expect(tipoPodeEnviar(ok)).toBe(true);
     for (const nao of ["image/webp", "image/gif", "video/3gpp", "application/zip"]) expect(tipoPodeEnviar(nao)).toBe(false);
   });
   it("só o admin apaga arquivo", () => {
@@ -78,6 +98,19 @@ describe("guardar arquivos", () => {
     expect(nomeMp4).toMatch(/\.mp4$/);
     expect((await lerMidia(nomePdf)).subarray(0, 5).toString()).toBe("%PDF-");
     expect(await tamanhoDaMidia(nomeMp4)).toBe(mp4().length);
+  });
+  it("Word, Excel e DWG: guardados quando o conteúdo confere; recusados quando o conteúdo é de outra coisa", async () => {
+    const docx = await guardar(zip(), DOCX);
+    const xlsx = await guardar(zip(), XLSX);
+    const doc = await guardar(ole(), "application/msword");
+    const xls = await guardar(ole(), "application/vnd.ms-excel");
+    const d = await guardar(dwg(), "application/acad");
+    expect([docx, xlsx, doc, xls, d].map((n) => n.split(".").pop())).toEqual(["docx", "xlsx", "doc", "xls", "dwg"]);
+    await expect(salvarMidia(Buffer.from("isto é um executável, não um Word"), DOCX)).rejects.toThrow(/não parece/);
+    await expect(salvarMidia(zip(), "application/msword")).rejects.toThrow(/não parece/); // ZIP não é .doc antigo
+    await expect(salvarMidia(ole(), XLSX)).rejects.toThrow(/não parece/);
+    await expect(salvarMidia(pdf(), "application/acad")).rejects.toThrow(/não parece/);
+    await expect(salvarMidia(Buffer.concat([zip(), Buffer.alloc(LIMITES_BYTES.documento)]), DOCX)).rejects.toThrow(/maior que/);
   });
   it("recusa arquivo que não é do tipo que diz ser, vazio ou grande demais", async () => {
     await expect(salvarMidia(Buffer.from("<html>oi</html>"), "application/pdf")).rejects.toThrow(/não parece/);
@@ -135,14 +168,40 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
 
   it("tipo que o sistema não aceita (Word) ou arquivo grande demais: a conversa registra o aviso e nada é guardado", async () => {
     metaConfigurada();
-    fingirMeta({ docx: { mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", dados: Buffer.from("PK") }, grande: { mime: "video/mp4", dados: Buffer.concat([mp4(), Buffer.alloc(LIMITES_BYTES.video)]) } });
-    await processarWebhook(entrada("wamid.W1", "document", { document: { id: "docx", filename: "a.docx" } }));
+    fingirMeta({ docx: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", dados: Buffer.from("PK") }, grande: { mime: "video/mp4", dados: Buffer.concat([mp4(), Buffer.alloc(LIMITES_BYTES.video)]) } });
+    await processarWebhook(entrada("wamid.W1", "document", { document: { id: "docx", filename: "apresentacao.pptx" } }));
     await processarWebhook(entrada("wamid.G1", "video", { video: { id: "grande" } }));
     for (const id of ["wamid.W1", "wamid.G1"]) {
       const m = await db.mensagem.findFirstOrThrow({ where: { idExterno: id } });
       expect(m.midiaArquivo).toBeNull();
       expect(m.texto).toMatch(/não conseguiu baixar ou não aceita/);
     }
+  });
+
+  it("Word, Excel e DWG que o cliente manda ficam guardados, mesmo quando a Meta informa o tipo genérico (usa a extensão)", async () => {
+    metaConfigurada();
+    fingirMeta({
+      w: { mime: DOCX, dados: zip() },
+      x: { mime: "application/octet-stream", dados: zip() },
+      d: { mime: "application/octet-stream", dados: dwg() },
+      falso: { mime: "application/octet-stream", dados: Buffer.from("MZ executável disfarçado de dwg") },
+    });
+    await processarWebhook(entrada("wamid.A1", "document", { document: { id: "w", filename: "orçamento.docx" } }));
+    await processarWebhook(entrada("wamid.A2", "document", { document: { id: "x", filename: "medidas.xlsx" } }));
+    await processarWebhook(entrada("wamid.A3", "document", { document: { id: "d", filename: "projeto.DWG" } }));
+    await processarWebhook(entrada("wamid.A4", "document", { document: { id: "falso", filename: "projeto.dwg" } }));
+    const tipos = [];
+    for (const id of ["wamid.A1", "wamid.A2", "wamid.A3"]) {
+      const m = await db.mensagem.findFirstOrThrow({ where: { idExterno: id } });
+      guardados.push(m.midiaArquivo!);
+      tipos.push(m.midiaTipo);
+    }
+    expect(tipos).toEqual([DOCX, XLSX, "application/acad"]);
+    // O conteúdo não confere com DWG: nada é guardado e o aviso fica na conversa.
+    const falso = await db.mensagem.findFirstOrThrow({ where: { idExterno: "wamid.A4" } });
+    expect(falso.midiaArquivo).toBeNull();
+    expect(falso.texto).toMatch(/não conseguiu baixar ou não aceita/);
+    expect((await acharLeadPorTelefone("+5588999991111"))?.ultimaMensagemPrevia).toMatch(/enviou um arquivo que o sistema não conseguiu/);
   });
 
   it("o bot não recebe PDF nem vídeo como imagem (só um aviso de que chegou)", async () => {
@@ -192,6 +251,19 @@ describe("enviar imagem, vídeo e PDF (vendedor)", () => {
     expect(JSON.parse(String(envio?.corpo))).toMatchObject({ type: "document", document: { id: "MEDIA123", caption: "Segue o orçamento", filename: "orçamento.pdf" } });
     expect(m).toMatchObject({ midiaTipo: "application/pdf", midiaNome: "orçamento.pdf", texto: "Segue o orçamento", status: "enviado" });
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).ultimaMensagemPrevia).toBe("Segue o orçamento");
+  });
+
+  it("Word, Excel e DWG saem como documento, com o nome e o tipo certos", async () => {
+    metaConfigurada();
+    const chamadas = fingirMeta({});
+    const lead = await leadComJanela("+5588999994455");
+    const w = await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", anexo: { dados: zip(), tipo: DOCX, nome: "proposta.docx" } });
+    const d = await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", anexo: { dados: dwg(), tipo: "application/acad", nome: "planta.dwg" } });
+    guardados.push(w.midiaArquivo!, d.midiaArquivo!);
+    const envios = chamadas.filter((c) => c.url.endsWith("/messages")).map((c) => JSON.parse(String(c.corpo)));
+    expect(envios[0]).toMatchObject({ type: "document", document: { filename: "proposta.docx" } });
+    expect(envios[1]).toMatchObject({ type: "document", document: { filename: "planta.dwg" } });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).ultimaMensagemPrevia).toBe("📄 DWG");
   });
 
   it("imagem e vídeo usam o tipo certo da Meta; sem legenda a prévia mostra o tipo", async () => {
@@ -287,9 +359,15 @@ describe("galeria, apagar e limpeza", () => {
     expect(admin.total).toBe(3);
     expect(admin.vendedores).toHaveLength(2);
     expect((await listarGaleria({ id: "x", perfil: "admin" }, { familia: "documento" })).itens.map((i) => i.nome)).toEqual(["a.pdf"]);
+    const nDwg = await guardar(dwg(), "application/acad");
+    const nXls = await guardar(ole(), "application/vnd.ms-excel");
+    await registrarMensagemCliente(leadA.id, null, { arquivo: nDwg, tipo: "application/acad", nome: "casa.dwg", bytes: 70 });
+    await registrarMensagemCliente(leadA.id, null, { arquivo: nXls, tipo: "application/vnd.ms-excel", nome: "lista.xls", bytes: 40 });
+    const docs = await listarGaleria({ id: "x", perfil: "admin" }, { familia: "documento" });
+    expect(docs.itens.map((i) => `${i.nome}:${i.rotulo}`).sort()).toEqual(["a.pdf:PDF", "casa.dwg:DWG", "lista.xls:Excel"]);
     expect((await listarGaleria({ id: "x", perfil: "admin" }, { vendedorId: b.id })).total).toBe(1);
     // Vendedor não consegue ver outro filtrando: o parâmetro de vendedor é ignorado para ele.
-    expect((await listarGaleria({ id: a.id, perfil: "consultor" }, { vendedorId: b.id })).itens).toHaveLength(2);
+    expect((await listarGaleria({ id: a.id, perfil: "consultor" }, { vendedorId: b.id })).itens).toHaveLength(4);
     expect(admin.itens.every((i) => i.apagaEmDias === null)).toBe(true);
   });
 
