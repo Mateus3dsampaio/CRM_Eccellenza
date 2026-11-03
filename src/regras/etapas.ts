@@ -71,5 +71,5 @@ export const ETIQUETA_DA_CLASSIFICACAO: Partial<Record<Classificacao, CodigoEtiq
   ja_atendido: "ja_atendido",
 };
 
-/** Cidades atendidas (agente/loja.md). */
+/** Cidades atendidas (instrução 14, Dados da loja). */
 export const CIDADES_ATENDIDAS = ["Juazeiro do Norte", "Crato", "Barbalha"];

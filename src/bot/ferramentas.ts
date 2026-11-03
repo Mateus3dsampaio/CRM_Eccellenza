@@ -22,18 +22,18 @@ const camposLead = {
 export const FERRAMENTAS: Anthropic.Tool[] = [
   {
     name: "registrar_lead",
-    description: "Grava os primeiros dados do lead desta conversa. Use quando o cliente começar a passar informações. Grave só o que o cliente disse.",
+    description: "Grava os primeiros dados do lead desta conversa.",
     input_schema: { type: "object", properties: camposLead, additionalProperties: false },
   },
   {
     name: "atualizar_lead",
-    description: "Atualiza ou completa os dados do lead desta conversa sempre que o cliente disser algo novo. Grave só o que o cliente disse.",
+    description: "Atualiza ou completa os dados do lead desta conversa.",
     input_schema: { type: "object", properties: camposLead, additionalProperties: false },
   },
   {
     name: "classificar_lead",
     description:
-      "Classifica o lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço, não passa informações), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento).",
+      "Classifica o lead. Os critérios de cada classificação estão nas instruções de atendimento.",
     input_schema: {
       type: "object",
       properties: {
@@ -46,7 +46,7 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
   },
   {
     name: "registrar_medidas",
-    description: "Grava medidas informadas pelo cliente (texto, foto, planta ou áudio). Para foto ou planta, só chame depois que o cliente confirmar o que você leu.",
+    description: "Grava as medidas do lead (texto, foto, planta ou áudio).",
     input_schema: {
       type: "object",
       properties: {
@@ -71,7 +71,7 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
   },
   {
     name: "ver_horarios_livres",
-    description: "Lista horários livres para a visita à loja, já respeitando as regras da agenda e os bloqueios. Ofereça ao cliente no máximo 3.",
+    description: "Lista os horários livres para a visita à loja, já respeitando as regras da agenda e os bloqueios.",
     input_schema: {
       type: "object",
       properties: {
@@ -82,7 +82,7 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
   },
   {
     name: "agendar_visita",
-    description: "Agenda a visita do cliente na loja em um horário retornado por ver_horarios_livres e escolhido pelo cliente.",
+    description: "Agenda a visita do cliente na loja em um horário retornado por ver_horarios_livres.",
     input_schema: {
       type: "object",
       properties: { inicio: { type: "string", description: "Início exato do horário, como veio em ver_horarios_livres (campo inicio)." } },

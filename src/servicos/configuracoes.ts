@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
+import { REGRAS_AGENDA_PADRAO, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
 const CHAVE_MODO = "distribuicao_modo";
@@ -29,6 +30,27 @@ export async function definirPrazosDeEspera(prazos: PrazosEspera): Promise<void>
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_ESPERA_AMARELO, String(prazos.amarelo));
   await gravarConfig(CHAVE_ESPERA_VERMELHO, String(prazos.vermelho));
+  await marcarMudanca();
+}
+
+const CHAVE_AGENDA = "agenda";
+
+/** Regras da agenda editadas em Configurações. Sem valor (ou valor inválido) vale o padrão PROVISÓRIO. */
+export async function regrasDaAgenda(): Promise<RegrasAgenda> {
+  const bruto = await lerConfig(CHAVE_AGENDA);
+  if (!bruto) return REGRAS_AGENDA_PADRAO;
+  try {
+    const r = JSON.parse(bruto) as RegrasAgenda;
+    return validarRegrasAgenda(r) === null ? r : REGRAS_AGENDA_PADRAO;
+  } catch {
+    return REGRAS_AGENDA_PADRAO;
+  }
+}
+
+export async function definirRegrasDaAgenda(regras: RegrasAgenda): Promise<void> {
+  const erro = validarRegrasAgenda(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_AGENDA, JSON.stringify(regras));
   await marcarMudanca();
 }
 

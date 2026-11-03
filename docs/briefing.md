@@ -11,7 +11,7 @@ Esta primeira fase é um **simulador**: prova o conceito sem tocar no WhatsApp r
 - Hoje tudo acontece no WhatsApp: não existe CRM nem métricas.
 - Cidades atendidas: Juazeiro do Norte, Crato e Barbalha. Outras cidades vão ao consultor (critério por valor e distância a definir).
 - Arquitetos, designers e construtoras vão direto ao consultor.
-- Regras comerciais completas: `agente/loja.md`. Comportamento do bot: `agente/instrucoes/` + `agente/complemento-crm.md`.
+- Regras comerciais, comportamento do bot e regras do CRM: tudo nas instruções de atendimento, que vivem no banco (Configurações). Dados da loja = instrução 14; regras do CRM e ferramentas = instrução 15.
 
 ## O que o sistema faz
 1. **Atendimento pelo bot**: segue as instruções da loja, faz uma pergunta por vez, registra tudo no CRM por ferramentas.

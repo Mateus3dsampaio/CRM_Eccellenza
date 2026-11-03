@@ -20,10 +20,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Onde mexer para…
 | Quero mudar… | Arquivos |
 |---|---|
-| O que o bot diz / como atende | Instruções: tela Configurações (banco). Regras do CRM: `agente/complemento-crm.md`. Montagem do prompt: `src/bot/prompt.ts` |
+| O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): roteiro 01-13, dados da loja 14, regras do CRM e ferramentas 15. Montagem do prompt: `src/bot/prompt.ts` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` |
-| Regras da agenda (horário, duração, vagas) | `src/regras/agenda.ts` + `src/servicos/agenda.ts` |
+| Regras da agenda (horário por dia, duração, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Sem resposta" | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
 | Modelos de mensagem / janela de 24h | `src/regras/modelos.ts`, `src/regras/janela24h.ts` |
 | Motivos de perda e se Negociação exige próximo contato | Tela: `src/componentes/configuracoes/vendas.tsx`. Regras e gravação: `src/servicos/vendas.ts` + `src/regras/vendas.ts` (`faltaParaMover`). A janela de mover e a ficha leem de `/api/vendas/regras` |
@@ -100,6 +100,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
 | `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
 | `src/app/api/configuracoes/layout-ficha/route.ts` | Layout padrão da ficha (chave `layout_ficha` em `Configuracao`) | `regras/layout-ficha` |
+| `src/app/api/configuracoes/agenda/route.ts` | Gravar as regras da agenda (só admin) | `configuracoes` |
 | `src/app/api/configuracoes/instrucoes/route.ts` | Listar e criar instruções | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
@@ -130,7 +131,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `src/regras/vendas.ts` | Acompanhamento de vendas: motivos de fábrica (carga inicial), dinheiro (centavos ↔ "R$ 1.621,00"), o que cada etapa exige para receber o card (próximo contato, valor fechado, motivo da perda; Negociação conforme o interruptor), data/hora de Fortaleza e situação do retorno (hoje, atrasado, sem data) |
 | `src/regras/etapas.ts` | Colunas do kanban, etiquetas, classificações, cidades atendidas |
-| `src/regras/agenda.ts` | Horário da loja, duração, vagas (PROVISÓRIO) |
+| `src/regras/agenda.ts` | Regras da agenda como parâmetro (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para "Sem resposta" |
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
@@ -152,7 +153,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Faz |
 |---|---|
 | `src/bot/atendimento.ts` | Chama a API do Claude (modelo, histórico, cache, laço de ferramentas) |
-| `src/bot/prompt.ts` | Monta o prompt: instruções (banco) + `agente/loja.md` + `agente/complemento-crm.md` |
+| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções ativas do banco. Não lê mais nenhum arquivo |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
 | `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente |
@@ -192,7 +193,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
 
@@ -230,6 +231,6 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/e2e/telas.spec.ts` | Telas no computador e no celular, com prints |
 
 ## Fora do código
-- `agente/complemento-crm.md`: regras do CRM para o bot (vale sobre as instruções). `agente/loja.md`: dados comerciais (cópia do projeto do WhatsApp). `agente/instrucoes/`: só a carga inicial.
+- `agente/instrucoes/` (01 a 15): só a carga inicial do banco; 14 = dados da loja, 15 = regras do CRM e ferramentas. O bot lê só do banco.
 - `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.

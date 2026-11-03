@@ -79,7 +79,7 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         const aPartirDe = a_partir_de ? lerChaveDia(a_partir_de) ?? undefined : undefined;
         // Com dia pedido pelo cliente, devolve mais opções a partir dele (para achar o horário que ele quer).
         const vagas = await horariosLivresParaLead(leadId, aPartirDe ? 12 : 6, aPartirDe);
-        if (!vagas.length) return { conteudo: "Nenhum horário livre nos próximos 14 dias. Diga ao cliente que o consultor vai combinar o horário." };
+        if (!vagas.length) return { conteudo: "Nenhum horário livre na janela de agendamento." };
         return { conteudo: JSON.stringify(vagas.map((v) => ({ inicio: isoLocal(v.inicio), rotulo: formatarVisitaCurta(v.inicio) }))) };
       }
 
@@ -117,7 +117,7 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);
         await atualizarResumo(leadId);
         await marcarMudanca();
-        return { conteudo: "Lead passado ao consultor. Envie agora sua mensagem final ao cliente, se ainda não enviou." };
+        return { conteudo: "Lead passado ao consultor." };
       }
 
       default:
@@ -127,6 +127,6 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
     if (erro instanceof ZodError) return { conteudo: `Dados inválidos: ${erro.issues.map((i) => i.message).join("; ")}`, erro: true };
     if (erro instanceof ErroAgenda) return { conteudo: erro.message, erro: true };
     console.error("[bot] erro na ferramenta", nome, erro instanceof Error ? erro.message : "");
-    return { conteudo: "Erro ao gravar. Siga a conversa sem citar o erro ao cliente.", erro: true };
+    return { conteudo: "Erro ao gravar.", erro: true };
   }
 }

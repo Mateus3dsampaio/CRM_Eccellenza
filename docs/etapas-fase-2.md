@@ -51,7 +51,7 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 - I, lead já repassado ao vendedor que está em almoço e que escreve de novo: o bot avisa que é horário de almoço e que o vendedor retorna já.
   - Texto da aviso: PROVISÓRIO, aguardando aprovação do Mateus:
     "Oi! Nosso consultor está em horário de almoço e já retorna. Assim que ele voltar, ele continua o seu atendimento por aqui."
-  - Esse aviso precisa de regra no `agente/complemento-crm.md` (aprovação do Mateus) e não pode repetir a cada mensagem: avisa uma vez por almoço.
+  - Esse aviso precisa de regra no a instrução 15 do bot (aprovação do Mateus) e não pode repetir a cada mensagem: avisa uma vez por almoço.
 
 ## Pendências anotadas
 - **A (parcial):** campo do nome do "Novo" cliente foi corrigido. A mensagem do cliente ainda aparece duplicada no simulador logo após enviar e some quando o bot responde (visual, não envia 2x). A correção por contagem não resolveu; investigar depois (provável corrida entre a recarga automática de 2 s e o POST, ou o `ListaMensagens` mostrando a mensagem salva + a provisória com ids diferentes).
@@ -73,7 +73,7 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 
 ### O que falta fazer
 1. **Etapa H:** opção em Configurações para ligar o rodízio; guardar quem recebeu o último lead; pular vendedor offline; lead sem ninguém online fica na fila para o primeiro que voltar e aparece para o admin. Hoje a distribuição é por "consultor com menos leads" (`consultorComMenosLeads` em `src/servicos/leads.ts`, marcada PROVISÓRIA).
-2. **Etapa I:** status online/offline do vendedor; botão de almoço; leads novos vão só para quem está online; leads que ele já tem ficam com ele; aviso ao cliente que escreve durante o almoço (texto aprovado, uma vez por almoço) e regra nova em `agente/complemento-crm.md`, que o Mateus precisa aprovar.
+2. **Etapa I:** status online/offline do vendedor; botão de almoço; leads novos vão só para quem está online; leads que ele já tem ficam com ele; aviso ao cliente que escreve durante o almoço (texto aprovado, uma vez por almoço) e regra nova em a instrução 15 do bot, que o Mateus precisa aprovar.
 3. **Mensagem duplicada no simulador** (pendência da etapa A).
 4. **Teste de tela com login:** o navegador de teste do Claude não conseguiu entrar (o login de teste do seed não funcionou no banco do Mateus). Nada de B, C (exceto login), D, E, F e G foi visto em tela por mim.
 5. Rodar `/ciclo` com os revisores (requisitos, código, design, cliente simulado) sobre a fase 2 e gerar o relatório em `docs/rodadas/`.
@@ -89,5 +89,5 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 - Configurações: escolha entre rodízio e "quem tem menos leads" (padrão continua "menos leads" até o admin ligar o rodízio); equipe com status e botão "Mandar almoçar / Voltou do almoço" para o admin; aviso de leads na fila.
 - Consultor: botão "Almoço" no topo da tela.
 - Rodízio: ordem da equipe = ordem de criação dos usuários; pula quem está em almoço; vale quando o bot agenda a visita ou passa o lead e o lead ainda não tem consultor.
-- Aviso ao cliente no almoço: uma vez por almoço, enviado pelo sistema, só quando o lead já foi passado ao consultor que está em almoço. Regra registrada em `agente/complemento-crm.md`.
+- Aviso ao cliente no almoço: uma vez por almoço, enviado pelo sistema, só quando o lead já foi passado ao consultor que está em almoço. Regra registrada em a instrução 15 do bot.
 - O item 1 e 2 da lista "O que falta fazer" acima estão concluídos.

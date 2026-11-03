@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import {
-  DURACAO_VISITA_MS,
   chaveVaga,
+  duracaoVisitaMs,
   horarioDentroDaRegra,
   horariosLivres,
   janelaDeAgendamento,
@@ -12,6 +12,7 @@ import {
   type Intervalo,
 } from "@/regras/agenda";
 import { formatarVisitaCurta } from "@/regras/tempo";
+import { regrasDaAgenda } from "./configuracoes";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { atualizarResumo, moverEtapa } from "./leads";
@@ -40,9 +41,10 @@ async function ocupados(de: Date, ate: Date, ignorarLeadId?: string): Promise<In
 export async function horariosLivresParaLead(leadId: string, limite = 3, aPartirDe?: Date) {
   const quando = await agora();
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { consultorId: true } });
-  const { de, ate } = janelaDeAgendamento(quando);
+  const regras = await regrasDaAgenda();
+  const { de, ate } = janelaDeAgendamento(quando, regras);
   const consultores = await consultoresAtivos();
-  return horariosLivres({ agora: quando, consultores, ocupados: await ocupados(de, ate, leadId), consultorPreferido: lead?.consultorId, limite, aPartirDe });
+  return horariosLivres({ agora: quando, consultores, ocupados: await ocupados(de, ate, leadId), consultorPreferido: lead?.consultorId, limite, aPartirDe, regras });
 }
 
 /**
@@ -54,13 +56,14 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   const tipo = params.tipo ?? "visita";
   const nomeTipo = tipo === "apresentacao" ? "apresentação" : "visita";
   const { inicio } = params;
-  if (!horarioDentroDaRegra(inicio)) throw new ErroAgenda("Horário fora do funcionamento da loja.");
+  const regras = await regrasDaAgenda();
+  if (!horarioDentroDaRegra(inicio, regras)) throw new ErroAgenda("Horário fora do funcionamento da loja.");
   if (inicio.getTime() <= quando.getTime()) throw new ErroAgenda("Horário já passou.");
   if (params.validarJanelaDoBot) {
-    const { de, ate } = janelaDeAgendamento(quando);
-    if (inicio < de || inicio >= ate) throw new ErroAgenda("Horário fora da janela de agendamento (próximo dia útil até 14 dias).");
+    const { de, ate } = janelaDeAgendamento(quando, regras);
+    if (inicio < de || inicio >= ate) throw new ErroAgenda(`Horário fora da janela de agendamento (próximo dia aberto até ${regras.diasAFrente} dias).`);
   }
-  const fim = new Date(inicio.getTime() + DURACAO_VISITA_MS);
+  const fim = new Date(inicio.getTime() + duracaoVisitaMs(regras));
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
 
   // Consultor escolhido; senão o consultor do lead; senão o primeiro livre.
@@ -71,7 +74,7 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
       ? [lead.consultorId, ...ativos.filter((c) => c !== lead.consultorId)]
       : ativos;
   const ocupado = await ocupados(inicio, fim, lead.id);
-  const consultorId = lista.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupado));
+  const consultorId = lista.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupado, regras));
   if (!consultorId) throw new ErroAgenda("Esse horário não está mais livre.");
 
   // Um compromisso ativo de cada tipo por lead: o anterior do mesmo tipo é cancelado (remarcação).
@@ -82,7 +85,7 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
     visita = await db.$transaction(async (tx) => {
       for (const v of anteriores) await tx.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
       return tx.visita.create({
-        data: { leadId: lead.id, consultorId, inicio, fim, tipo, vagaChave: chaveVaga(consultorId, inicio), criadoPor: params.autor, criadoEm: quando },
+        data: { leadId: lead.id, consultorId, inicio, fim, tipo, vagaChave: chaveVaga(consultorId, inicio, regras), criadoPor: params.autor, criadoEm: quando },
         include: { consultor: { select: { nome: true } } },
       });
     });

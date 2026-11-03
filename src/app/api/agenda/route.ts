@@ -6,6 +6,7 @@ import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { podeEditarAgendaDe } from "@/regras/permissoes";
 import { HORA, dataLocal, inicioDaSemanaLocal, inicioDoDiaLocal, lerChaveDia, somarDias } from "@/regras/tempo";
 import { agendarVisita, cancelarVisita, criarBloqueio, ErroAgenda, horariosLivresParaLead, removerBloqueio } from "@/servicos/agenda";
+import { regrasDaAgenda } from "@/servicos/configuracoes";
 import { dadosDaAgenda } from "@/servicos/consultas";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export const GET = rota(async (req: Request) => {
     de: de.toISOString(),
     ate: ate.toISOString(),
     agora: (await agora()).toISOString(),
+    regras: await regrasDaAgenda(),
     ...(await dadosDaAgenda(de, ate)),
     livres: livresPara ? (await horariosLivresParaLead(livresPara, 30)).map((v) => ({ inicio: v.inicio.toISOString(), consultorId: v.consultorId })) : undefined,
   };

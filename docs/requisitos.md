@@ -4,7 +4,7 @@ Cada requisito tem um ID. Os revisores citam o ID ao apontar problemas. **E1** =
 Um requisito só está "atendido" se o critério de aceite puder ser demonstrado no sistema rodando.
 
 ## BOT – atendimento
-- **BOT-01 (E1)** O prompt do bot é montado a cada conversa a partir das instruções de atendimento (banco do CRM, ver INST-01 a INST-06) + `agente/loja.md` + `agente/complemento-crm.md`, lidos em tempo de execução (não copiados à mão para dentro do código).
+- **BOT-01 (E1)** O prompt do bot é montado a cada conversa somente das instruções de atendimento (banco do CRM, ver INST-01 a INST-06), que incluem os dados da loja (14) e as regras do CRM e ferramentas (15), lidas em tempo de execução. Não existe outra fonte: nenhum arquivo nem texto fixo no código altera o comportamento do bot (a abertura fixa só identifica o bot e as tags <cliente>/<sistema>).
   - Aceite: alterar uma instrução no arquivo muda o comportamento do bot sem mexer no código.
 - **BOT-02 (E1)** O bot segue as instruções: uma pergunta por mensagem, roteiro da 02, faixa de valor só para cozinha (03), nunca preço fechado ou desconto, casos da 06 direto ao consultor.
   - Aceite: os cenários de `testes/cenarios.md` passam com o agente `cliente-simulado`.
@@ -41,7 +41,7 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 
 ## AGENDA
 - **AGENDA-01 (E1)** Calendário com visão de dia e semana, visitas e bloqueios por consultor.
-- **AGENDA-02 (E1)** O bot oferece só horários livres, dentro das regras de `agente/complemento-crm.md`, e nunca marca dois clientes no mesmo horário do mesmo consultor.
+- **AGENDA-02 (E1)** O bot oferece só horários livres, dentro das regras da agenda que o admin define em Configurações > Geral (horário por dia, duração, visitas por horário, dias à frente); o bot não conhece esses números, só oferece o que a ferramenta devolve, e nunca marca dois clientes no mesmo horário do mesmo consultor.
 - **AGENDA-03 (E1)** Consultor cria bloqueios, remarca e cancela visitas; o card e a ficha refletem a mudança.
 - **AGENDA-04 (E1)** Visita agendada aparece no card (data e hora) e move o card para "Visita agendada".
 
@@ -100,7 +100,7 @@ A etapa 1 termina quando:
 5. O relatório final em `docs/rodadas/` explica ao Mateus como rodar e testar, o que ficou pendente e o que foi marcado como PROVISÓRIO.
 
 ## Instruções de atendimento editáveis (pedido do Mateus, 31/10/2026)
-- **INST-01** O CRM é a fonte principal das instruções: as 13 originais entram no banco na primeira vez (carga inicial de `agente/instrucoes/`) e o bot passa a ler do banco.
+- **INST-01** O CRM é a fonte principal das instruções: as 15 (13 originais + dados da loja + regras do CRM) entram no banco na primeira vez (carga inicial de `agente/instrucoes/`) e o bot passa a ler do banco.
 - **INST-02** Só o admin vê e edita (tela e API conferem a permissão `configurar`).
 - **INST-03** Aba "Instruções de atendimento" em Configurações: criar, editar título e texto, reordenar e ativar/desativar.
 - **INST-04** Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior"; botão "Voltar para a anterior" troca as duas.

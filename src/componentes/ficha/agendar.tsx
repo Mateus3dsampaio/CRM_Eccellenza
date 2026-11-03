@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DESCRICAO_REGRAS_AGENDA } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { chaveDia, formatarDiaLongo, formatarHora, partesLocais } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { primeiraMaiuscula } from "../texto";
@@ -10,6 +10,7 @@ import { Botao, Carregando, EstadoVazio, Modal } from "../ui";
 import { useUsuario } from "../usuario";
 
 interface DadosLivres {
+  regras: RegrasAgenda;
   consultores: { id: string; nome: string }[];
   livres: { inicio: string; consultorId: string }[];
 }
@@ -64,7 +65,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
         <EstadoVazio titulo="Nenhum horário livre nos próximos 14 dias" />
       ) : (
         <div className="space-y-4">
-          <p className="text-sm text-texto-suave">Horários livres (regras PROVISÓRIAS: {DESCRICAO_REGRAS_AGENDA}).</p>
+          <p className="text-sm text-texto-suave">Horários livres ({descreverRegrasAgenda(dados?.regras ?? REGRAS_AGENDA_PADRAO)}).</p>
           <div className="max-h-[55dvh] space-y-3 overflow-y-auto pr-1">
             {porDia.map(([dia, vagas]) => (
               <div key={dia}>

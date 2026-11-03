@@ -9,7 +9,8 @@ import { DIA, HORA } from "@/regras/tempo";
 import { janelaDeAgendamento } from "@/regras/agenda";
 import { agendarVisita, criarBloqueio, horariosLivresParaLead } from "@/servicos/agenda";
 import { AVISO_ALMOCO } from "@/regras/almoco";
-import { definirModoDistribuicao } from "@/servicos/configuracoes";
+import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
+import { definirModoDistribuicao, definirRegrasDaAgenda, regrasDaAgenda } from "@/servicos/configuracoes";
 import { definirStatusConsultor, distribuirFila, escolherProximoConsultor } from "@/servicos/distribuicao";
 import { arquivarLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
@@ -104,6 +105,27 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     await expect(agendarVisita({ leadId: lead.id, inicio, autor: "teste" })).rejects.toThrow(/livre/);
     await agendarVisita({ leadId: lead.id, inicio: livres[0].inicio, autor: "bot" });
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("visita");
+  });
+});
+
+describe("regras da agenda editáveis (Configurações)", () => {
+  it("o que o admin grava vale na hora para os horários oferecidos; regra inválida é recusada", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900007777");
+    expect(await regrasDaAgenda()).toEqual(REGRAS_AGENDA_PADRAO);
+    const horasPadrao = new Set((await horariosLivresParaLead(lead.id, 40)).map((v) => v.inicio.getUTCHours()));
+    expect(horasPadrao.size).toBeGreaterThan(1);
+
+    // Só abre às 10h, de segunda a sexta, visitas de 1h.
+    const horario = REGRAS_AGENDA_PADRAO.horario.map((h, i) => (i >= 1 && i <= 5 ? { abre: 10, fecha: 11 } : null));
+    await definirRegrasDaAgenda({ ...REGRAS_AGENDA_PADRAO, horario });
+    const livres = await horariosLivresParaLead(lead.id, 40);
+    expect(livres.length).toBeGreaterThan(0);
+    expect(new Set(livres.map((v) => v.inicio.getTime() % DIA)).size).toBe(1);
+    await expect(agendarVisita({ leadId: lead.id, inicio: new Date(livres[0].inicio.getTime() + HORA), autor: "bot" })).rejects.toThrow(/funcionamento/);
+
+    await expect(definirRegrasDaAgenda({ ...REGRAS_AGENDA_PADRAO, duracaoMin: 5 })).rejects.toThrow();
+    expect((await regrasDaAgenda()).horario).toEqual(horario);
   });
 });
 

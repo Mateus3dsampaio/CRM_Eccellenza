@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { exigirUsuario } from "@/lib/sessao";
 import { periodoPadrao } from "@/regras/exportacao";
-import { modoDistribuicao, prazosDeEspera } from "@/servicos/configuracoes";
+import { modoDistribuicao, prazosDeEspera, regrasDaAgenda } from "@/servicos/configuracoes";
 import { leadsNaFila } from "@/servicos/distribuicao";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export const GET = rota(async () => {
     equipe,
     distribuicao: await modoDistribuicao(),
     prazosEspera: await prazosDeEspera(),
+    regrasAgenda: await regrasDaAgenda(),
     naFila: (await leadsNaFila()).length,
     periodoExportacao: periodoPadrao(await agora()),
   };

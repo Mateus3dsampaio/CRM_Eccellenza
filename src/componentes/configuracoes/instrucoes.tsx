@@ -92,7 +92,7 @@ export function InstrucoesAtendimento() {
       <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
         <h2 className="font-semibold">Instruções de atendimento do bot</h2>
         <p className="mt-1 text-sm text-texto-suave">
-          O bot segue estas instruções, na ordem da lista, junto com os dados da loja. Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.
+          O bot segue só estas instruções, na ordem da lista (os dados da loja e as regras do CRM também são instruções). Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => { setSalvouAgora(false); setEdicao({ id: null, titulo: "", texto: "" }); }}>

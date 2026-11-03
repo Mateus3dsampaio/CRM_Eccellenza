@@ -70,7 +70,7 @@ Mapa completo, arquivo por arquivo: [`docs/mapa-do-codigo.md`](docs/mapa-do-codi
 | `src/app/tokens.css` | Todas as cores, sombras, raios e espaçamentos |
 | `prisma/` | Banco (SQLite) e dados de exemplo |
 | `midias/` | Fotos e plantas enviadas (fora da pasta pública; só com login) |
-| `agente/` | `loja.md` (cópia do projeto do agente do WhatsApp), `complemento-crm.md` e a carga inicial das instruções. As instruções de atendimento hoje vivem no banco e são editadas em Configurações |
+| `agente/` | a carga inicial das 15 instruções (roteiro, dados da loja e regras do CRM). Tudo o que o bot segue vive no banco e é editado em Configurações |
 | `docs/` | Briefing, requisitos, design e relatórios de cada rodada |
 
 ## Arquivos de trabalho

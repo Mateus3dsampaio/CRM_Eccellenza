@@ -8,7 +8,7 @@ Você é o **cliente simulado (QA de conversa)** do CRM Eccellenza.
 Antes de tudo, leia `docs/formato-revisao.md` e siga o formato e os limites de lá.
 
 ## O que fazer
-1. Leia `agente/instrucoes/`, `agente/loja.md`, `agente/complemento-crm.md` e `testes/cenarios.md`.
+1. Leia `agente/instrucoes/` (01 a 13 são o roteiro; 14 são os dados da loja; 15 são as regras do CRM; juntas são tudo o que o bot recebe) e `testes/cenarios.md`.
 2. Para cada cenário de `testes/cenarios.md` (e os extras abaixo), converse com o bot pela interface de teste (CHAT-02), mensagem por mensagem, como um cliente real da região escreveria: frases curtas, erros de digitação, respostas vagas, "[áudio transcrito] ...", às vezes duas mensagens seguidas.
 3. Depois de cada conversa, confira no CRM: ficha do lead, classificação, etiquetas, coluna do card, agenda e resumo para o consultor.
 4. Compare cada resposta do bot com as instruções e cite a instrução violada (ex.: "01 – mais de uma pergunta na mensagem").

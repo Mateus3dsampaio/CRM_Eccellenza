@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, Plus, Presentation } from "lucide-react";
-import { DESCRICAO_REGRAS_AGENDA, horasDeInicio } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda } from "@/regras/agenda";
 import { DIA, chaveDia, formatarData, formatarDiaLongo, formatarDiaSemana, formatarHora, lerChaveDia, partesLocais, somarDias } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { primeiraMaiuscula } from "../texto";
@@ -14,10 +14,9 @@ import { useUsuario } from "../usuario";
 
 interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: "visita" | "apresentacao" }
 interface Bloqueio { id: string; consultorId: string; inicio: string; fim: string; motivo: string | null }
-interface DadosAgenda { visao: "dia" | "semana"; de: string; ate: string; agora: string; consultores: { id: string; nome: string }[]; visitas: Visita[]; bloqueios: Bloqueio[] }
+interface DadosAgenda { visao: "dia" | "semana"; de: string; ate: string; agora: string; regras: RegrasAgenda; consultores: { id: string; nome: string }[]; visitas: Visita[]; bloqueios: Bloqueio[] }
 
 // Grade de 8h às 20h (último quadro 19h–20h). Fora do horário da loja o quadro fica cinza e não aceita visita.
-const HORAS = Array.from({ length: 12 }, (_, i) => 8 + i);
 
 // Agenda própria (AGENDA-01/03): visão de dia e de semana, visitas e bloqueios por consultor.
 export function Agenda() {
@@ -40,8 +39,14 @@ export function Agenda() {
   // Filtro por consultor (só o admin vê os botões); null = todos.
   const [filtro, setFiltro] = useState<string | null>(null);
 
+  const regras = dados?.regras ?? REGRAS_AGENDA_PADRAO;
+  const descricaoRegras = descreverRegrasAgenda(regras);
+  const abertos = regras.horario.flatMap((h) => (h ? [h] : []));
+  const primeiraHora = Math.min(...abertos.map((h) => h.abre));
+  const ultimaHora = Math.max(...abertos.map((h) => h.fecha));
+  const horas = Array.from({ length: Math.max(1, ultimaHora - primeiraHora) }, (_, i) => primeiraHora + i);
   const base = dados ? new Date(dados.de) : null;
-  const dias = base ? Array.from({ length: visao === "dia" ? 1 : 7 }, (_, i) => somarDias(base, i)).filter((d) => visao === "dia" || partesLocais(d).diaSemana !== 0) : [];
+  const dias = base ? Array.from({ length: visao === "dia" ? 1 : 7 }, (_, i) => somarDias(base, i)).filter((d) => visao === "dia" || regras.horario[partesLocais(d).diaSemana] !== null) : [];
   const corConsultor = (id: string) => COR_AVATAR[Math.max(0, dados?.consultores.findIndex((c) => c.id === id) ?? 0) % COR_AVATAR.length];
   const nomeConsultor = (id: string) => dados?.consultores.find((c) => c.id === id)?.nome ?? "";
 
@@ -129,7 +134,7 @@ export function Agenda() {
           </div>
         )}
       </div>
-      <p className="truncate text-xs text-texto-fraco" title={DESCRICAO_REGRAS_AGENDA}>Regras PROVISÓRIAS (a confirmar com o Mateus): {DESCRICAO_REGRAS_AGENDA}. Clique no + de um horário para bloquear a agenda de um consultor.</p>
+      <p className="truncate text-xs text-texto-fraco" title={descricaoRegras}>Regras da agenda (o administrador muda em Configurações): {descricaoRegras}. Clique no + de um horário para bloquear a agenda de um consultor.</p>
 
       {carregando && !dados ? (
         <Carregando linhas={4} />
@@ -153,11 +158,11 @@ export function Agenda() {
               </tr>
             </thead>
             <tbody>
-              {HORAS.map((hora) => (
+              {horas.map((hora) => (
                 <tr key={hora}>
                   <td className="border-b border-borda p-2 align-top text-xs text-texto-fraco">{hora}h</td>
                   {dias.map((d) => {
-                    const aberto = horasDeInicio(partesLocais(d).diaSemana).includes(hora);
+                    const aberto = horasDeInicio(partesLocais(d).diaSemana, regras).includes(hora);
                     const { visitas, bloqueios } = itensNoHorario(d, hora);
                     return (
                       <td key={d.toISOString()} className={juntar("group/celula h-9 overflow-hidden border-b border-l border-borda p-0.5 align-top", !aberto && "bg-superficie-suave", aberto && chaveDia(d) === hojeChave && "bg-marca-suave/40")}>

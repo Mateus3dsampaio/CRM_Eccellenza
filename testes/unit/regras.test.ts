@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { horariosLivres, horarioDentroDaRegra, janelaDeAgendamento } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horariosLivres, horarioDentroDaRegra, horasDeInicio, janelaDeAgendamento, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
 import { escolherConsultor } from "@/regras/distribuicao";
@@ -84,6 +84,19 @@ describe("agenda (AGENDA-02)", () => {
     const { de, ate } = janelaDeAgendamento(dataLocal(2026, 11, 7, 9)); // sábado
     expect(partesLocais(de).diaSemana).toBe(1); // segunda
     expect(ate.getTime() - dataLocal(2026, 11, 7).getTime()).toBe(15 * DIA);
+  });
+  it("segue as regras editadas: dia aberto, duração, janela e validação", () => {
+    const regras: RegrasAgenda = { horario: [{ abre: 9, fecha: 12 }, ...REGRAS_AGENDA_PADRAO.horario.slice(1)], duracaoMin: 90, visitasPorHorario: 2, diasAFrente: 3 };
+    expect(validarRegrasAgenda(regras)).toBeNull();
+    expect(horasDeInicio(0, regras)).toEqual([9, 10]); // 10h + 1h30 = 11h30, cabe; 11h não
+    expect(horarioDentroDaRegra(dataLocal(2026, 11, 8, 10), regras)).toBe(true); // domingo agora abre
+    expect(horarioDentroDaRegra(dataLocal(2026, 11, 8, 10))).toBe(false); // padrão: fechado
+    const { de, ate } = janelaDeAgendamento(dataLocal(2026, 11, 3, 9), regras);
+    expect(ate.getTime() - de.getTime()).toBe(3 * DIA);
+    expect(descreverRegrasAgenda(regras)).toContain("dom 9h–12h");
+    expect(validarRegrasAgenda({ ...regras, duracaoMin: 10 })).not.toBeNull();
+    expect(validarRegrasAgenda({ ...regras, horario: regras.horario.map(() => null) })).not.toBeNull();
+    expect(validarRegrasAgenda({ ...regras, horario: [{ abre: 9, fecha: 10 }, ...regras.horario.slice(1)] })).not.toBeNull(); // 1h não comporta 1h30
   });
   it("uma visita por horário na loja; bloqueio tira só o consultor bloqueado", () => {
     const inicio = dataLocal(2026, 11, 4, 8);

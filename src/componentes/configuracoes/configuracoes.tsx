@@ -1,8 +1,9 @@
 "use client";
 
-import { LayoutDashboard, Shuffle, Timer, UtensilsCrossed, Users } from "lucide-react";
+import { CalendarClock, LayoutDashboard, Shuffle, Timer, UtensilsCrossed, Users } from "lucide-react";
 import { useState } from "react";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
+import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
@@ -16,6 +17,7 @@ interface Dados {
   distribuicao: ModoDistribuicao;
   naFila: number;
   prazosEspera: PrazosEspera;
+  regrasAgenda: RegrasAgenda;
   periodoExportacao: { de: string; ate: string };
 }
 
@@ -107,6 +109,8 @@ export function Configuracoes() {
 
             <PrazosDeEspera prazos={dados.prazosEspera} aoSalvar={(p) => chamar("/api/configuracoes/prazos-espera", "PUT", p, "Prazos de espera salvos.")} />
 
+            <RegrasDaAgenda regras={dados.regrasAgenda} aoSalvar={(r) => chamar("/api/configuracoes/agenda", "PUT", r, "Regras da agenda salvas.")} />
+
             <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
               <h2 className="mb-1 flex items-center gap-2 font-semibold">
                 <Users className="size-4 text-texto-suave" aria-hidden /> Equipe e almoço
@@ -193,6 +197,82 @@ function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: 
       <div className="mt-3">
         <Botao onClick={salvar} disabled={!mudou || salvando}>
           {salvando ? "Salvando..." : "Salvar prazos"}
+        </Botao>
+      </div>
+    </section>
+  );
+}
+
+function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: (r: RegrasAgenda) => Promise<void> }) {
+  const [rascunho, setRascunho] = useState<RegrasAgenda>(regras);
+  const [salvando, setSalvando] = useState(false);
+  const mudou = JSON.stringify(rascunho) !== JSON.stringify(regras);
+  // Segunda a sábado, depois domingo.
+  const ordem = [1, 2, 3, 4, 5, 6, 0];
+
+  function mudarDia(dia: number, faixa: { abre: number; fecha: number } | null) {
+    setRascunho((r) => ({ ...r, horario: r.horario.map((h, i) => (i === dia ? faixa : h)) }));
+  }
+  function mudarNumero(campo: "duracaoMin" | "visitasPorHorario" | "diasAFrente", valor: string) {
+    setRascunho((r) => ({ ...r, [campo]: Number(valor) }));
+  }
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await aoSalvar(rascunho);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Regras da agenda de visitas
+      </h2>
+      <p className="mb-3 text-sm text-texto-suave">
+        Valem para o bot e para a agenda. O bot não conhece estes números: ele só oferece os horários livres que o sistema devolve. O próximo horário é sempre o próximo dia aberto.{" "}
+        <span className="rounded-pilula bg-aviso-suave px-2 py-0.5 text-xs font-medium text-aviso">Provisório</span>
+      </p>
+      <ul className="divide-y divide-borda">
+        {ordem.map((dia) => {
+          const faixa = rascunho.horario[dia];
+          return (
+            <li key={dia} className="flex flex-wrap items-center gap-3 py-2 text-sm">
+              <label className="flex w-36 items-center gap-2 font-medium">
+                <input type="checkbox" checked={faixa !== null} onChange={(e) => mudarDia(dia, e.target.checked ? { abre: 8, fecha: 12 } : null)} />
+                {NOMES_DIAS[dia]}
+              </label>
+              {faixa ? (
+                <span className="flex items-center gap-2">
+                  das
+                  <input type="number" min={0} max={23} aria-label={`${NOMES_DIAS[dia]}: abre às`} value={faixa.abre} onChange={(e) => mudarDia(dia, { ...faixa, abre: Number(e.target.value) })} className={juntar(classeEntrada, "w-20")} />
+                  às
+                  <input type="number" min={1} max={24} aria-label={`${NOMES_DIAS[dia]}: fecha às`} value={faixa.fecha} onChange={(e) => mudarDia(dia, { ...faixa, fecha: Number(e.target.value) })} className={juntar(classeEntrada, "w-20")} />
+                  h
+                </span>
+              ) : (
+                <span className="text-texto-fraco">Fechado</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <Campo rotulo="Duração da visita (min)">
+          <input type="number" inputMode="numeric" min={30} max={240} step={15} value={rascunho.duracaoMin} onChange={(e) => mudarNumero("duracaoMin", e.target.value)} className={classeEntrada} />
+        </Campo>
+        <Campo rotulo="Visitas ao mesmo tempo na loja">
+          <input type="number" inputMode="numeric" min={1} max={10} value={rascunho.visitasPorHorario} onChange={(e) => mudarNumero("visitasPorHorario", e.target.value)} className={classeEntrada} />
+        </Campo>
+        <Campo rotulo="Marcar até quantos dias à frente">
+          <input type="number" inputMode="numeric" min={1} max={90} value={rascunho.diasAFrente} onChange={(e) => mudarNumero("diasAFrente", e.target.value)} className={classeEntrada} />
+        </Campo>
+      </div>
+      <div className="mt-3">
+        <Botao onClick={salvar} disabled={!mudou || salvando}>
+          {salvando ? "Salvando..." : "Salvar regras da agenda"}
         </Botao>
       </div>
     </section>

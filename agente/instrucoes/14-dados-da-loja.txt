@@ -1,7 +1,5 @@
-# Contexto comercial – Eccellenza
-
-> Fonte de verdade para as instruções. Só altere com informação confirmada pelo Mateus.
-> Itens marcados como INTERNO não devem ser ditos ao cliente pelo agente.
+14. DADOS DA LOJA
+Fonte de verdade dos dados comerciais. Itens marcados como INTERNO nunca são ditos ao cliente.
 
 ## Loja
 - Eccellenza – loja de móveis planejados, franquia Italínea, Juazeiro do Norte – CE.
@@ -45,7 +43,7 @@
 ## Projeto e orçamento
 - Projeto e orçamento sem custo. (PENDENTE: confirmar se é "projeto e orçamento" ou só "orçamento".)
 - O orçamento é sempre apresentado **pessoalmente na loja**. Nunca por WhatsApp/PDF/e-mail. Esse compromisso filtra curiosos.
-- O convite para a visita é feito pelo agente; **dia e horário são confirmados pelo consultor**.
+- O convite para a visita é feito pelo agente, que também marca o dia e o horário com o cliente usando a agenda do CRM (ver 15. REGRAS DO CRM).
 
 ## Perfis de lead (INTERNO)
 - Baixa conversão: cliente que quer fazer estrutura de alvenaria/gesso e pede só portas e parte de cima "para economizar". O agente não comenta isso com o cliente; apenas não promete nada e encaminha ao consultor com o pedido literal.
