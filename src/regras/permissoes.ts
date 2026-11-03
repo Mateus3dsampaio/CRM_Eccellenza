@@ -1,10 +1,10 @@
 // Permissões (USR-02, LIMP-05). Sempre verificadas no servidor.
 export type Perfil = "admin" | "consultor";
 
-export type Acao = "excluir_lead" | "arquivar_lead" | "editar_lead" | "ver_metricas" | "gerir_agenda" | "enviar_mensagem" | "remover_medida" | "configurar";
+export type Acao = "excluir_lead" | "arquivar_lead" | "editar_lead" | "ver_metricas" | "gerir_agenda" | "enviar_mensagem" | "remover_medida" | "configurar" | "apagar_midia";
 
 const PERMISSOES: Record<Perfil, Acao[]> = {
-  admin: ["excluir_lead", "arquivar_lead", "editar_lead", "ver_metricas", "gerir_agenda", "enviar_mensagem", "remover_medida", "configurar"],
+  admin: ["excluir_lead", "arquivar_lead", "editar_lead", "ver_metricas", "gerir_agenda", "enviar_mensagem", "remover_medida", "configurar", "apagar_midia"],
   consultor: ["arquivar_lead", "editar_lead", "ver_metricas", "gerir_agenda", "enviar_mensagem"],
 };
 

@@ -35,4 +35,5 @@ WhatsApp fica por último porque sem banco estável, rotina e proteção ele nã
 | 15 LGPD | Feita e testada (textos PROVISÓRIOS) |
 | 16 WhatsApp webhook e envio | Feita e testada com payloads de exemplo e `fetch` falso. **Nunca testada com a Meta de verdade** |
 | 18 Pendências da Meta (03/11/2026) | Feitas e testadas: bloqueio de modelo para quem pediu para parar; nono dígito (`wa_id`); caixa de entrada do webhook (grava antes do 200, reprocessa); consentimento para modelos; registro do número (`scripts/registrar-numero.ts`); página `/privacidade` (rascunho); transcrição de áudio com Whisper. Pendem do Mateus: textos, decisão do consentimento, chave da OpenAI |
+| 19 Mídias (04/11/2026) | Feita e testada: receber e enviar imagem, vídeo MP4 e PDF; galeria por vendedor; só admin apaga; apagar sozinho com 180 dias; aviso antes de excluir; indicador de armazenamento. Pende: Mateus conferir limites da Meta e criar o Volume do tamanho certo |
 | 17 Colocar no ar | Dockerfile, `railway.json`, `.env.example` e guia prontos; sistema compilado e testado em modo produção com Postgres local. **Nunca rodou no Railway** |

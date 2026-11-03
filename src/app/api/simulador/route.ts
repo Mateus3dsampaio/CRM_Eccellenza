@@ -35,7 +35,7 @@ export const GET = rota(async (req: Request) => {
       mensagens: mensagens
         // Mensagens que falharam nunca chegam ao cliente.
         .filter((m) => m.status !== "falhou")
-        .map((m) => ({ id: m.id, autor: m.autor, texto: m.texto, midia: m.midiaArquivo, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando) })),
+        .map((m) => ({ id: m.id, autor: m.autor, texto: m.texto, midia: m.midiaArquivo, midiaTipo: m.midiaTipo, midiaNome: m.midiaNome, midiaBytes: m.midiaBytes, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando) })),
     },
   };
 });
@@ -45,17 +45,17 @@ export const POST = rota(async (req: Request) => {
   await exigirUsuario();
   const form = await req.formData();
   const arquivo = form.get("imagem");
-  let imagem: { dados: Buffer; tipo: string } | null = null;
+  let midia: { dados: Buffer; tipo: string; nome: string } | null = null;
   if (arquivo instanceof File && arquivo.size > 0) {
     if (arquivo.size > TAMANHO_MAXIMO) throw new ErroHttp(400, "Imagem maior que 5 MB.");
-    imagem = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: arquivo.type };
+    midia = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: arquivo.type, nome: arquivo.name };
   }
   try {
     return await receberMensagemCliente({
       telefone: String(form.get("telefone") ?? ""),
       nomePerfil: String(form.get("nome") ?? "") || null,
       texto: String(form.get("texto") ?? ""),
-      imagem,
+      midia,
     });
   } catch (erro) {
     if (erro instanceof ErroConversa) throw new ErroHttp(400, erro.message);

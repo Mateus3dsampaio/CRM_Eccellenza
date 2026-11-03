@@ -25,7 +25,8 @@ export interface MensagemRecebida {
   telefone: string; // só dígitos, como a Meta manda (ex.: 5588999990000)
   nomePerfil: string | null;
   texto: string | null;
-  midiaId: string | null; // imagem ou áudio: id para baixar
+  midiaId: string | null; // imagem, vídeo, documento ou áudio: id para baixar
+  nomeArquivo: string | null; // documento: nome original do arquivo
   tipo: string;
 }
 
@@ -51,8 +52,6 @@ export const PREFIXO_AUDIO = "[áudio transcrito automaticamente] ";
 // PROVISÓRIO: texto que o bot "lê" quando o cliente manda algo que o sistema ainda não entende. O Mateus pode trocar.
 const NAO_ENTENDIDO: Record<string, string> = {
   audio: "[o cliente enviou um áudio, que o sistema ainda não consegue ouvir]",
-  video: "[o cliente enviou um vídeo, que o sistema ainda não consegue ver]",
-  document: "[o cliente enviou um documento, que o sistema ainda não consegue abrir]",
   sticker: "[o cliente enviou uma figurinha]",
   location: "[o cliente enviou uma localização]",
   contacts: "[o cliente enviou um contato]",
@@ -78,10 +77,18 @@ export function extrairEventos(payload: unknown): EventosWebhook {
         if (!id || !de) continue;
         let conteudo: string | null = null;
         let midiaId: string | null = null;
+        let nomeArquivo: string | null = null;
         if (tipo === "text") conteudo = texto(obj(msg.text).body);
         else if (tipo === "image") {
           midiaId = texto(obj(msg.image).id);
           conteudo = texto(obj(msg.image).caption);
+        } else if (tipo === "video") {
+          midiaId = texto(obj(msg.video).id);
+          conteudo = texto(obj(msg.video).caption);
+        } else if (tipo === "document") {
+          midiaId = texto(obj(msg.document).id);
+          nomeArquivo = texto(obj(msg.document).filename);
+          conteudo = texto(obj(msg.document).caption);
         } else if (tipo === "audio") {
           // O texto abaixo é o que vale se a transcrição estiver desligada ou falhar (servicos/whatsapp.ts).
           midiaId = texto(obj(msg.audio).id);
@@ -92,7 +99,7 @@ export function extrairEventos(payload: unknown): EventosWebhook {
           conteudo = texto(obj(i.button_reply).title) ?? texto(obj(i.list_reply).title);
         } else conteudo = NAO_ENTENDIDO[tipo] ?? "[o cliente enviou algo que o sistema não entende]";
         if (!conteudo && !midiaId) continue;
-        saida.mensagens.push({ idExterno: id, telefone: de, nomePerfil: nomes.get(de) ?? null, texto: conteudo, midiaId, tipo });
+        saida.mensagens.push({ idExterno: id, telefone: de, nomePerfil: nomes.get(de) ?? null, texto: conteudo, midiaId, nomeArquivo, tipo });
       }
       for (const s of lista(valor.statuses)) {
         const st = obj(s);

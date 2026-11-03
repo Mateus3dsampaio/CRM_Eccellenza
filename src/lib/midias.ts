@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { TAMANHO_MAXIMO_IMAGEM } from "@/regras/limites";
+import { extensaoDoTipo, formatarTamanho, limiteDoTipo, tipoMidiaAceito } from "@/regras/midia";
 
 // Mídias ficam fora da pasta pública (SEG-03) e só são servidas por rota com login.
 // No Railway, MIDIAS_DIR aponta para o volume (disco que não some a cada deploy), ex.: /data/midias.
 export const PASTA_MIDIAS = process.env.MIDIAS_DIR?.trim() ? path.resolve(process.env.MIDIAS_DIR.trim()) : path.join(process.cwd(), "midias");
 export const TIPOS_IMAGEM = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 export const TAMANHO_MAXIMO = TAMANHO_MAXIMO_IMAGEM;
-
-const EXTENSAO: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 
 export function tipoImagemValido(tipo: string): tipo is (typeof TIPOS_IMAGEM)[number] {
   return (TIPOS_IMAGEM as readonly string[]).includes(tipo);
@@ -22,21 +21,28 @@ export function conferirAssinatura(dados: Buffer, tipo: string): boolean {
   if (tipo === "image/jpeg") return h[0] === 0xff && h[1] === 0xd8;
   if (tipo === "image/gif") return h.subarray(0, 3).toString("ascii") === "GIF";
   if (tipo === "image/webp") return h.subarray(0, 4).toString("ascii") === "RIFF" && h.subarray(8, 12).toString("ascii") === "WEBP";
+  if (tipo === "application/pdf") return h.subarray(0, 5).toString("ascii") === "%PDF-";
+  // MP4 e 3GP começam com uma "caixa" ftyp (tamanho nos 4 primeiros bytes, "ftyp" nos 4 seguintes).
+  if (tipo === "video/mp4" || tipo === "video/3gpp") return h.subarray(4, 8).toString("ascii") === "ftyp";
   return false;
 }
 
+/** Guarda imagem, vídeo ou PDF (confere tipo, tamanho e o começo do arquivo). Devolve o nome com que foi guardado. */
 export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> {
-  if (!tipoImagemValido(tipo)) throw new Error("Tipo de arquivo não aceito.");
-  if (dados.length > TAMANHO_MAXIMO) throw new Error("Arquivo maior que 5 MB.");
-  if (!conferirAssinatura(dados, tipo)) throw new Error("O arquivo não é uma imagem válida.");
+  const tipoLimpo = tipo.split(";")[0].trim().toLowerCase();
+  const extensao = extensaoDoTipo(tipoLimpo);
+  if (!tipoMidiaAceito(tipoLimpo) || !extensao) throw new Error("Tipo de arquivo não aceito. Use imagem, vídeo (MP4) ou PDF.");
+  if (dados.length === 0) throw new Error("O arquivo está vazio.");
+  if (dados.length > limiteDoTipo(tipoLimpo)) throw new Error(`Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`);
+  if (!conferirAssinatura(dados, tipoLimpo)) throw new Error("O arquivo não parece ser do tipo informado.");
   await mkdir(PASTA_MIDIAS, { recursive: true });
-  const nome = `${randomUUID()}.${EXTENSAO[tipo]}`;
+  const nome = `${randomUUID()}.${extensao}`;
   await writeFile(path.join(PASTA_MIDIAS, nome), dados);
   return nome;
 }
 
 function caminhoSeguro(nome: string): string {
-  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
   return path.join(PASTA_MIDIAS, nome);
 }
 
@@ -46,4 +52,57 @@ export async function lerMidia(nome: string): Promise<Buffer> {
 
 export async function apagarMidia(nome: string): Promise<void> {
   await rm(caminhoSeguro(nome), { force: true });
+}
+
+/** Tamanho em bytes do arquivo guardado, ou null se não existir. */
+export async function tamanhoDaMidia(nome: string): Promise<number | null> {
+  try {
+    return (await stat(caminhoSeguro(nome))).size;
+  } catch {
+    return null;
+  }
+}
+
+/** Nomes dos arquivos da pasta que foram gravados antes de `antesDe` (para achar arquivos soltos, sem mensagem). */
+export async function listarMidiasAntigasDaPasta(antesDe: Date): Promise<string[]> {
+  let nomes: string[] = [];
+  try {
+    nomes = await readdir(PASTA_MIDIAS);
+  } catch {
+    return [];
+  }
+  const saida: string[] = [];
+  for (const nome of nomes) {
+    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf)$/.test(nome)) continue; // só o que o sistema mesmo grava
+    try {
+      if ((await stat(path.join(PASTA_MIDIAS, nome))).mtime < antesDe) saida.push(nome);
+    } catch {
+      // sumiu no meio da conta
+    }
+  }
+  return saida;
+}
+
+/** Quantos arquivos e quantos bytes a pasta de mídias ocupa agora (para o indicador de armazenamento). */
+export async function tamanhoDaPasta(): Promise<{ arquivos: number; bytes: number }> {
+  let nomes: string[] = [];
+  try {
+    nomes = await readdir(PASTA_MIDIAS);
+  } catch {
+    return { arquivos: 0, bytes: 0 };
+  }
+  let bytes = 0;
+  let arquivos = 0;
+  for (const nome of nomes) {
+    try {
+      const e = await stat(path.join(PASTA_MIDIAS, nome));
+      if (e.isFile()) {
+        arquivos++;
+        bytes += e.size;
+      }
+    } catch {
+      // arquivo sumiu no meio da conta: ignora
+    }
+  }
+  return { arquivos, bytes };
 }

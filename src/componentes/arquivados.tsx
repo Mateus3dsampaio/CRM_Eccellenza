@@ -6,6 +6,7 @@ import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { DIAS_ARQUIVADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { DIA, formatarData } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados, useVersao } from "./dados";
+import { AvisoMidias } from "./midias/aviso-midias";
 import { Avatar, Botao, Carregando, EstadoErro, EstadoVazio, Modal } from "./ui";
 import { usePode } from "./usuario";
 
@@ -74,7 +75,8 @@ export function Arquivados() {
         </ul>
       )}
       <Modal aberto={!!excluir} aoFechar={() => setExcluir(null)} titulo="Excluir de vez" largura="max-w-md">
-        <p className="text-sm text-texto-suave">Excluir {excluir?.nome}? Mensagens, fotos e plantas também serão apagadas. Não dá para desfazer.</p>
+        <p className="text-sm text-texto-suave">Excluir {excluir?.nome}? Mensagens, fotos, vídeos e PDFs também serão apagados. Não dá para desfazer.</p>
+        {excluir && <AvisoMidias alvo={{ ids: [excluir.id] }} />}
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setExcluir(null)}>Cancelar</Botao>
           <Botao

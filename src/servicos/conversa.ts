@@ -1,6 +1,6 @@
 import { responderCliente } from "@/bot/atendimento";
 import { db } from "@/lib/db";
-import { salvarMidia } from "@/lib/midias";
+import { apagarMidia, salvarMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
@@ -19,7 +19,8 @@ export async function receberMensagemCliente(params: {
   telefone: string;
   nomePerfil?: string | null;
   texto?: string | null;
-  imagem?: { dados: Buffer; tipo: string } | null;
+  /** Imagem, vídeo ou PDF que o cliente mandou. */
+  midia?: { dados: Buffer; tipo: string; nome?: string | null } | null;
   /** Id da mensagem na Meta (WhatsApp real). Evita processar a mesma mensagem duas vezes. */
   idExterno?: string | null;
   /** Número como a Meta o conhece (wa_id). Guardado para as respostas irem para o formato certo. */
@@ -28,18 +29,26 @@ export async function receberMensagemCliente(params: {
   const telefone = normalizarTelefone(params.telefone);
   if (!telefone) throw new ErroConversa("Telefone inválido.");
   const texto = params.texto?.trim().slice(0, 4000) || null;
-  if (!texto && !params.imagem) throw new ErroConversa("Mensagem vazia.");
+  if (!texto && !params.midia) throw new ErroConversa("Mensagem vazia.");
 
-  let midia: { arquivo: string; tipo: string } | undefined;
-  if (params.imagem) {
+  let midia: { arquivo: string; tipo: string; nome?: string | null; bytes: number } | undefined;
+  if (params.midia) {
     try {
-      midia = { arquivo: await salvarMidia(params.imagem.dados, params.imagem.tipo), tipo: params.imagem.tipo };
+      const tipo = params.midia.tipo.split(";")[0].trim().toLowerCase();
+      midia = { arquivo: await salvarMidia(params.midia.dados, tipo), tipo, nome: params.midia.nome ?? null, bytes: params.midia.dados.length };
     } catch (erro) {
-      throw new ErroConversa(erro instanceof Error ? erro.message : "Imagem inválida.");
+      throw new ErroConversa(erro instanceof Error ? erro.message : "Arquivo inválido.");
     }
   }
-  const lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null, params.waId ?? null);
-  await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined);
+  let lead: Awaited<ReturnType<typeof obterOuCriarLead>>;
+  try {
+    lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null, params.waId ?? null);
+    await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined);
+  } catch (erro) {
+    // Não deixa o arquivo solto no disco sem mensagem (nem a exclusão do cliente nem a limpeza de 180 dias chegariam nele).
+    if (midia) await apagarMidia(midia.arquivo).catch(() => undefined);
+    throw erro;
+  }
   // LGPD: pedido claro para parar. Registra, confirma e não chama o bot.
   // (Áudio transcrito também vale: "parar" falado em voz alta é um pedido.)
   if (!midia && pediuParaParar(texto?.startsWith(PREFIXO_AUDIO) ? texto.slice(PREFIXO_AUDIO.length) : texto)) {
@@ -48,6 +57,16 @@ export async function receberMensagemCliente(params: {
   }
   const resultado = await responderCliente(lead.id);
   return { leadId: lead.id, ...resultado };
+}
+
+/** Consultor manda imagem, vídeo ou PDF (com legenda opcional). Só dentro da janela de 24h. Responder já assume a conversa. */
+export async function responderComoConsultorComArquivo(leadId: string, usuario: { nome: string }, anexo: { dados: Buffer; tipo: string; nome: string }, legenda?: string) {
+  const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
+  if (!janelaAberta(lead.ultimaMsgClienteEm, await agora())) {
+    throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado. Arquivos só dentro da janela.");
+  }
+  if (lead.modoAtendimento !== "humano") await assumirConversa(leadId, usuario);
+  return enviarMensagemLoja({ leadId, autor: "consultor", autorNome: usuario.nome, texto: legenda, anexo });
 }
 
 export async function assumirConversa(leadId: string, usuario: { nome: string }) {

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
+import { familiaDoTipo, LIMITE_EXPORTACAO_BYTES, ROTULO_FAMILIA } from "@/regras/midia";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { montarZip } from "@/lib/zip";
@@ -17,7 +18,6 @@ export interface PedidoExportacao {
 
 type Arquivo = { nome: string; conteudo: string | Buffer };
 
-const ROTULO_MIDIA: Record<string, string> = { imagem: "imagem", foto: "foto", planta: "planta", audio: "áudio" };
 
 /**
  * Exporta o desempenho de um vendedor num .zip para analisar fora do CRM (Claude Code): números, mudanças de etapa
@@ -46,6 +46,7 @@ export async function exportarDesempenho(pedido: PedidoExportacao): Promise<{ no
 
   const arquivos: Arquivo[] = [];
   const midiasIncluidas = new Set<string>();
+  let bytesDeMidia = 0;
   const linhasLeads: (string | number | boolean | null)[][] = [];
   const linhasMudancas: (string | null)[][] = [];
   const segundosConsultor: number[] = [];
@@ -107,11 +108,19 @@ export async function exportarDesempenho(pedido: PedidoExportacao): Promise<{ no
       const quem = m.autor === "cliente" ? "Cliente" : m.autor === "bot" ? "Bot" : m.autor === "consultor" ? `Consultor${m.autorNome ? ` (${m.autorNome})` : ""}` : "Sistema";
       const partes: string[] = [];
       if (m.midiaArquivo) {
-        const tipo = ROTULO_MIDIA[m.midiaTipo ?? ""] ?? m.midiaTipo ?? "arquivo";
+        const familia = m.midiaTipo ? familiaDoTipo(m.midiaTipo) : null;
+        const tipo = familia ? ROTULO_FAMILIA[familia].toLowerCase() : "arquivo";
         if (pedido.incluirMidia) {
           try {
             if (!midiasIncluidas.has(m.midiaArquivo)) {
-              arquivos.push({ nome: `midias/${m.midiaArquivo}`, conteudo: await lerMidia(m.midiaArquivo) });
+              const conteudo = await lerMidia(m.midiaArquivo);
+              // O .zip é montado na memória: passou do teto, o arquivo não entra (a conversa registra isso).
+              if (bytesDeMidia + conteudo.length > LIMITE_EXPORTACAO_BYTES) {
+                partes.push(`[${tipo}: não incluído(a), passou do limite de tamanho da exportação]`);
+                continue;
+              }
+              bytesDeMidia += conteudo.length;
+              arquivos.push({ nome: `midias/${m.midiaArquivo}`, conteudo });
               midiasIncluidas.add(m.midiaArquivo);
             }
             partes.push(`[${tipo}: midias/${m.midiaArquivo}]`);
@@ -180,7 +189,7 @@ function leiame(vendedor: string, de: string, ate: string, midia: boolean, total
   return `# Exportação de desempenho: ${vendedor}
 
 Período: ${de} a ${ate} (horário de Fortaleza). Leads incluídos: ${totalLeads} (os que são do vendedor e tiveram criação ou mensagem no período).
-Mídias (fotos, plantas): ${midia ? "incluídas na pasta \`midias/\`." : "não incluídas."}
+Mídias (fotos, plantas, vídeos, PDFs): ${midia ? "incluídas na pasta \`midias/\`." : "não incluídas."}
 
 ## Arquivos
 - \`resumo.csv\`: números do vendedor no período (tempo de resposta, quantidades, quantos leads chegaram em cada etapa).

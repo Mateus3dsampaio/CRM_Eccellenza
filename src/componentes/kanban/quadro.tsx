@@ -19,6 +19,7 @@ import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
+import { AvisoMidias } from "../midias/aviso-midias";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode, useUsuario } from "../usuario";
 import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
@@ -29,7 +30,7 @@ function contagem(n: number) {
   return `${n.toLocaleString("pt-BR")} ${n === 1 ? "conversa" : "conversas"}`;
 }
 
-type Confirmacao = { titulo: string; texto: string; botao: string; perigo: boolean; executar: () => Promise<void> } | null;
+type Confirmacao = { titulo: string; texto: string; botao: string; perigo: boolean; midias?: { ids: string[] } | { etapa: string }; executar: () => Promise<void> } | null;
 
 export function Quadro() {
   const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
@@ -120,7 +121,8 @@ export function Quadro() {
   function confirmarExclusao(ids: string[], depois?: () => void) {
     setConfirmacao({
       titulo: "Excluir de vez",
-      texto: `Excluir ${ids.length} ${ids.length === 1 ? "lead" : "leads"}? Mensagens, fotos e plantas também serão apagadas. Não dá para desfazer.`,
+      texto: `Excluir ${ids.length} ${ids.length === 1 ? "lead" : "leads"}? Mensagens, fotos, vídeos e PDFs também serão apagados. Não dá para desfazer.`,
+      midias: { ids },
       botao: "Excluir",
       perigo: true,
       executar: async () => {
@@ -147,6 +149,7 @@ export function Quadro() {
         modo === "excluir"
           ? `Excluir ${totalReal} ${totalReal === 1 ? "lead" : "leads"}? Não dá para desfazer.`
           : `Arquivar ${totalReal} ${totalReal === 1 ? "lead" : "leads"}? Eles saem do kanban e podem ser restaurados em Arquivados por 30 dias.`,
+      ...(modo === "excluir" ? { midias: { etapa } } : {}),
       botao: modo === "excluir" ? "Excluir todos" : "Arquivar todos",
       perigo: modo === "excluir",
       executar: () => acao({ acao: "limpar_coluna", etapa, modo }, modo === "excluir" ? "{n} lead(s) excluído(s)." : "{n} lead(s) arquivado(s)."),
@@ -393,6 +396,7 @@ export function Quadro() {
 
       <Modal aberto={!!confirmacao} aoFechar={() => setConfirmacao(null)} titulo={confirmacao?.titulo ?? ""} largura="max-w-md">
         <p className="text-sm text-texto-suave">{confirmacao?.texto}</p>
+        {confirmacao?.midias && <AvisoMidias alvo={confirmacao.midias} />}
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setConfirmacao(null)}>
             Cancelar

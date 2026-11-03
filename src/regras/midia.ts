@@ -1,0 +1,102 @@
+// Arquivos que o CRM guarda e troca com o cliente: imagem, vídeo e PDF (regras puras, sem banco nem disco).
+
+export type FamiliaMidia = "imagem" | "video" | "documento";
+
+export const TIPOS_MIDIA: Record<string, { extensao: string; familia: FamiliaMidia }> = {
+  "image/jpeg": { extensao: "jpg", familia: "imagem" },
+  "image/png": { extensao: "png", familia: "imagem" },
+  "image/webp": { extensao: "webp", familia: "imagem" },
+  "image/gif": { extensao: "gif", familia: "imagem" },
+  "video/mp4": { extensao: "mp4", familia: "video" },
+  "video/3gpp": { extensao: "3gp", familia: "video" },
+  "application/pdf": { extensao: "pdf", familia: "documento" },
+};
+
+// Tamanho máximo por arquivo. PROVISÓRIO: o de imagem é o que já existia (5 MB); para vídeo e documento coloquei um teto
+// seguro para o disco. Os limites da própria Meta para vídeo e documento NÃO foram conferidos.
+export const LIMITES_BYTES: Record<FamiliaMidia, number> = { imagem: 5 * 1024 * 1024, video: 16 * 1024 * 1024, documento: 25 * 1024 * 1024 };
+
+/** Teto de bytes de arquivos dentro de uma exportação (.zip montado na memória do servidor). */
+export const LIMITE_EXPORTACAO_BYTES = 200 * 1024 * 1024;
+
+/** Apagar mídia automaticamente depois de tantos dias (decisão do Mateus, 04/11/2026). */
+export const DIAS_MIDIA_ATE_APAGAR = 180;
+
+/**
+ * O que o vendedor pode ENVIAR (bem menos que o que dá para receber): a Meta aceita só JPEG e PNG como imagem e MP4 como vídeo
+ * (conforme conheço; não conferi na página oficial). WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia.
+ */
+export const TIPOS_ENVIO = ["image/jpeg", "image/png", "video/mp4", "application/pdf"] as const;
+export const ACEITO_NO_ANEXO = TIPOS_ENVIO.join(",");
+export function tipoPodeEnviar(tipo: string): boolean {
+  return (TIPOS_ENVIO as readonly string[]).includes(limpo(tipo));
+}
+/** Tamanho do corpo do envio acima do qual nem se lê o pedido (maior arquivo permitido mais uma folga). */
+export const LIMITE_CORPO_ANEXO = Math.max(...Object.values(LIMITES_BYTES)) + 1024 * 1024;
+
+const limpo = (tipo: string) => tipo.split(";")[0].trim().toLowerCase();
+
+export function tipoMidiaAceito(tipo: string): boolean {
+  return limpo(tipo) in TIPOS_MIDIA;
+}
+
+export function familiaDoTipo(tipo: string): FamiliaMidia | null {
+  return TIPOS_MIDIA[limpo(tipo)]?.familia ?? null;
+}
+
+export function extensaoDoTipo(tipo: string): string | null {
+  return TIPOS_MIDIA[limpo(tipo)]?.extensao ?? null;
+}
+
+export function tipoDaExtensao(extensao: string): string | null {
+  return Object.entries(TIPOS_MIDIA).find(([, v]) => v.extensao === extensao.toLowerCase())?.[0] ?? null;
+}
+
+export function limiteDoTipo(tipo: string): number {
+  const familia = familiaDoTipo(tipo);
+  return familia ? LIMITES_BYTES[familia] : 0;
+}
+
+export const ROTULO_FAMILIA: Record<FamiliaMidia, string> = { imagem: "Imagem", video: "Vídeo", documento: "PDF" };
+
+/** Texto curto para a prévia do card e dos avisos quando a mensagem é só um arquivo. */
+export function previaDaMidia(tipo: string | null | undefined): string {
+  const f = tipo ? familiaDoTipo(tipo) : null;
+  return f === "video" ? "🎥 Vídeo" : f === "documento" ? "📄 PDF" : "📷 Imagem";
+}
+
+/** Nome de arquivo para mostrar e para baixar: sem pastas, sem caracteres de controle, tamanho limitado. */
+export function nomeSeguroDeArquivo(nome: string | null | undefined, padrao = "arquivo"): string {
+  const base = (nome ?? "").split(/[\\/]/).pop() ?? "";
+  const limpoNome = base.replace(/[\u0000-\u001f\u007f"<>:*?|]/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
+  return limpoNome && limpoNome !== "." && limpoNome !== ".." ? limpoNome : padrao;
+}
+
+/**
+ * Cabeçalho Range (vídeo precisa dele para avançar e voltar). Devolve o trecho [inicio, fim] ou null se não for válido.
+ * Só aceita um intervalo simples ("bytes=0-99", "bytes=100-", "bytes=-50").
+ */
+export function intervaloDeBytes(cabecalho: string | null, tamanho: number): { inicio: number; fim: number } | null {
+  if (!cabecalho || tamanho <= 0) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(cabecalho.trim());
+  if (!m || (m[1] === "" && m[2] === "")) return null;
+  let inicio: number;
+  let fim: number;
+  if (m[1] === "") {
+    const ultimos = Number(m[2]);
+    if (ultimos <= 0) return null;
+    inicio = Math.max(0, tamanho - ultimos);
+    fim = tamanho - 1;
+  } else {
+    inicio = Number(m[1]);
+    fim = m[2] === "" ? tamanho - 1 : Math.min(Number(m[2]), tamanho - 1);
+  }
+  return inicio <= fim && inicio < tamanho ? { inicio, fim } : null;
+}
+
+export function formatarTamanho(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`.replace(".", ",");
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`.replace(".", ",");
+}

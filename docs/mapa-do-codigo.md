@@ -37,13 +37,15 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
 | WhatsApp real (receber, enviar, status, mídia) | Regras puras: `src/regras/whatsapp.ts`. Chamadas à Meta e processamento: `src/servicos/whatsapp.ts`. Rota: `src/app/api/whatsapp/webhook/route.ts`. Chaves: `src/lib/whatsapp-config.ts` (variáveis de ambiente). O envio pelo bot/consultor passa por `enviarMensagemLoja` em `src/servicos/mensagens.ts` |
 | Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (valores PROVISÓRIOS) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
-| LGPD (parar de receber, exportar, excluir com registro) | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
+| LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (receber) e tipos que o vendedor pode enviar (JPG, PNG, MP4, PDF), limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
+| `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
 | `src/regras/privacidade.ts` | Texto PROPOSTO da política de privacidade (trechos [entre colchetes] a preencher) |
 | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
 | Login, tentativas, primeiro admin, criar usuário | `src/regras/tentativas-login.ts` + `src/app/api/login/route.ts` + `src/servicos/usuarios.ts` + `scripts/criar-usuario.ts` |
 | Colocar no ar (Railway, Postgres) | `Dockerfile`, `railway.json`, `prisma/postgres/` (esquema gerado + migrações), guia em `docs/colocar-no-ar.md` |
+| Enviar/receber imagem, vídeo e PDF; galeria; apagar mídia | Tipos, limites, nome seguro, Range de vídeo: `src/regras/midia.ts` (limites de vídeo e PDF PROVISÓRIOS). Disco: `src/lib/midias.ts`. Apagar, limpeza de 180 dias, galeria, resumo antes de excluir, armazenamento: `src/servicos/midias.ts`. Envio pela Meta: `enviarPelaMeta` (`servicos/whatsapp.ts`) e `enviarMensagemLoja` (`anexo`). Tela: `src/componentes/galeria/galeria.tsx` e anexo em `src/componentes/ficha/conversa.tsx` |
 | Tabelas do banco | `prisma/schema.prisma` (depois `npm run esquema:postgres` e uma migração nova em `prisma/postgres/migrations/`; o teste `esquema.test.ts` avisa se esquecer) (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
 
 ## Banco (`prisma/schema.prisma`)
@@ -51,7 +53,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço) |
 | `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm`, `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
-| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia. `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
+| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
 | `MudancaEtapa` | Cada mudança de etapa do lead (de, para, quem, quando). Gravada em `moverEtapa` e na criação do lead. Alimenta a exportação de desempenho |
@@ -80,6 +82,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/(app)/agenda/page.tsx` | Agenda |
 | `src/app/(app)/painel/page.tsx` | Painel de métricas |
 | `src/app/(app)/simulador/page.tsx` | Simulador (chat do cliente fictício) |
+| `src/app/(app)/galeria/page.tsx` | Galeria de imagens, vídeos e PDFs |
 | `src/app/privacidade/page.tsx` | Política de privacidade PÚBLICA (sem login; a Meta e os clientes abrem). Rascunho até `PRIVACIDADE_APROVADA=1`; contato em `PRIVACIDADE_CONTATO` |
 | `src/app/(app)/arquivados/page.tsx` | Arquivados |
 | `src/app/(app)/configuracoes/page.tsx` | Configurações (só admin) |
@@ -106,9 +109,14 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
 | `src/app/api/equipe/status/route.ts` | Consultor online/almoço | `distribuicao` |
-| `src/app/api/midias/[nome]/route.ts` | Serve fotos/plantas (só logado). Estava fora do Git por causa do `.gitignore` (`midias/`); agora o `.gitignore` só ignora `/midias/` da raiz | `lib/midias` |
+| `src/app/api/midias/[nome]/route.ts` | Serve imagem, vídeo (com Range) e PDF (sempre baixa, nunca abre dentro do site) (só logado); cabeçalhos de segurança.  Estava fora do Git por causa do `.gitignore` (`midias/`); agora o `.gitignore` só ignora `/midias/` da raiz | `lib/midias` |
 | `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
 | `src/app/api/whatsapp/webhook/route.ts` | Webhook da Meta: GET verifica o token; POST valida a assinatura, GRAVA o evento (caixa de entrada) e responde 200; processa depois (a rotina reprocessa o que ficar pendente). Pública de propósito (a assinatura protege) | `whatsapp`, `regras/whatsapp` |
+| `src/app/api/leads/[id]/anexo/route.ts` | Vendedor envia imagem, vídeo (MP4) ou PDF ao cliente, com legenda. Só dentro das 24h | `conversa` |
+| `src/app/api/galeria/route.ts` | Galeria: mídias dos leads do vendedor (admin: todas, filtra por vendedor e tipo) | `midias` |
+| `src/app/api/mensagens/[id]/midia/route.ts` | Apagar um arquivo de uma conversa. Só admin (`apagar_midia`) | `midias` |
+| `src/app/api/midias/resumo/route.ts` | Antes de excluir leads: quantos arquivos e MB vão junto (por ids ou por coluna). Só quem pode excluir | `midias` |
+| `src/app/api/configuracoes/armazenamento/route.ts` | Espaço ocupado pelas mídias (`MIDIAS_LIMITE_MB` mostra a porcentagem). Só admin | `midias` |
 | `src/app/api/saude/route.ts` | "Está de pé?" para o Railway (pública, sem dados) | `lib/db` |
 | `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
 | `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
@@ -146,6 +154,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Sem resposta", limpeza de arquivados e de logs antigos, relógio (também confere os prazos vermelhos) |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
+| `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
 | `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (`OPENAI_API_KEY`; modelo `whisper-1`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
@@ -223,6 +232,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe |
+| `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
+| `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
+| `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
@@ -269,6 +281,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
 | `testes/unit/lgpd.test.ts` | Parar de receber, exportar, excluir com registro |
 | `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
+| `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |

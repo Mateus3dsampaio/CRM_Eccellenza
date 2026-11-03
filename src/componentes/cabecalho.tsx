@@ -16,6 +16,7 @@ import { useUsuario } from "./usuario";
 const TITULOS: [string, string][] = [
   ["/agenda", "Agenda"],
   ["/painel", "Painel"],
+  ["/galeria", "Galeria"],
   ["/simulador", "Simulador"],
   ["/arquivados", "Arquivados"],
   ["/configuracoes", "Configurações"],

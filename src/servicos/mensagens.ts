@@ -6,6 +6,8 @@ import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { temConsentimento } from "@/regras/consentimento";
+import { nomeSeguroDeArquivo, previaDaMidia, tipoPodeEnviar } from "@/regras/midia";
+import { apagarMidia, salvarMidia } from "@/lib/midias";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { modoSimulador } from "@/lib/modo";
 import { whatsappRealAtivo } from "@/lib/whatsapp-config";
@@ -34,9 +36,9 @@ export function statusEfetivo(
   return "enviado";
 }
 
-function previa(texto: string | null, temMidia: boolean): string {
+function previa(texto: string | null, temMidia: boolean, tipoMidia?: string | null): string {
   if (texto && texto.trim()) return texto.trim().slice(0, 140);
-  return temMidia ? "📷 Imagem" : "";
+  return temMidia ? previaDaMidia(tipoMidia) : "";
 }
 
 /** Marca como lidas as mensagens da loja (cliente abriu a conversa ou respondeu). */
@@ -50,11 +52,11 @@ export async function marcarLidas(leadId: string): Promise<void> {
 }
 
 /** Mensagem que chega do cliente (simulada). Aplica RET-02 e reabre arquivados. */
-export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string }, idExterno?: string) {
+export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string; nome?: string | null; bytes?: number }, idExterno?: string) {
   const quando = await agora();
   await marcarLidas(leadId);
   const mensagem = await db.mensagem.create({
-    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, enviadaEm: quando, status: "lido", idExterno },
+    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno },
   });
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
@@ -63,7 +65,7 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
     where: { id: leadId },
     data: {
       ultimaMensagemEm: quando,
-      ultimaMensagemPrevia: previa(texto, !!midia),
+      ultimaMensagemPrevia: previa(texto, !!midia, midia?.tipo),
       ultimaMsgClienteEm: quando,
       arquivadoEm: null,
       aguardandoHumano: aguardando,
@@ -72,7 +74,7 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
     },
   });
   if (lead.arquivadoEm) await registrarAlteracao(leadId, "sistema", "Cliente escreveu: lead saiu do arquivo");
-  await registrarAlerta({ tipo: "mensagem", leadId, texto: previa(texto, !!midia) });
+  await registrarAlerta({ tipo: "mensagem", leadId, texto: previa(texto, !!midia, midia?.tipo) });
 
   // RET-02: o cliente respondeu depois da retomada.
   if (lerLista(lead.etiquetas).includes("retomada")) {
@@ -105,8 +107,10 @@ export async function enviarMensagemLoja(params: {
   leadId: string;
   autor: AutorLoja;
   autorNome?: string;
-  texto?: string;
+  texto?: string; // com anexo, vira a legenda
   modelo?: string;
+  /** Imagem, vídeo ou PDF para o cliente (só dentro da janela de 24h, como texto livre). */
+  anexo?: { dados: Buffer; tipo: string; nome: string };
 }) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
   const quando = await agora();
@@ -121,37 +125,53 @@ export async function enviarMensagemLoja(params: {
   } else if (!janelaAberta(lead.ultimaMsgClienteEm, quando)) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
-  if (!texto) throw new Error("Mensagem vazia.");
+  if (!texto && !params.anexo) throw new Error("Mensagem vazia.");
+  if (params.anexo && params.modelo) throw new Error("Modelo e arquivo não vão juntos.");
+  if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4 ou PDF.");
+  // Guarda o arquivo antes de enviar: confere tipo, tamanho e o começo do arquivo (lança se não servir).
+  const nomeAnexo = params.anexo ? nomeSeguroDeArquivo(params.anexo.nome) : undefined;
+  const arquivo = params.anexo ? await salvarMidia(params.anexo.dados, params.anexo.tipo) : undefined;
 
   // WhatsApp real quando as chaves da Meta estão no ambiente; senão simulado. Em produção sem chaves nada "finge" ser enviado.
   let falhou: boolean;
   let idExterno: string | undefined;
-  if (whatsappRealAtivo()) {
-    // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
-    const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo });
-    falhou = !envio.ok;
-    idExterno = envio.id;
-    if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });
-  } else {
-    falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone);
+  let mensagem: Awaited<ReturnType<typeof db.mensagem.create>>;
+  try {
+    if (whatsappRealAtivo()) {
+      // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
+      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
+      falhou = !envio.ok;
+      idExterno = envio.id;
+      if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });
+    } else {
+      falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone);
+    }
+    mensagem = await db.mensagem.create({
+      data: {
+        leadId: lead.id,
+        autor: params.autor,
+        autorNome: params.autorNome,
+        texto: texto || null,
+        modelo: params.modelo,
+        midiaArquivo: arquivo,
+        midiaTipo: params.anexo ? params.anexo.tipo.split(";")[0].trim().toLowerCase() : null,
+        midiaNome: nomeAnexo ?? null,
+        midiaBytes: params.anexo?.dados.length ?? null,
+        status: falhou ? "falhou" : "enviado",
+        idExterno,
+        enviadaEm: quando,
+      },
+    });
+  } catch (erro) {
+    // Não deixa o arquivo solto no disco sem mensagem (nem a exclusão do cliente nem a limpeza de 180 dias chegariam nele).
+    if (arquivo) await apagarMidia(arquivo).catch(() => undefined);
+    throw erro;
   }
-  const mensagem = await db.mensagem.create({
-    data: {
-      leadId: lead.id,
-      autor: params.autor,
-      autorNome: params.autorNome,
-      texto,
-      modelo: params.modelo,
-      status: falhou ? "falhou" : "enviado",
-      idExterno,
-      enviadaEm: quando,
-    },
-  });
   await db.lead.update({
     where: { id: lead.id },
     data: {
       ultimaMensagemEm: quando,
-      ultimaMensagemPrevia: previa(texto, false),
+      ultimaMensagemPrevia: previa(texto, !!arquivo, params.anexo?.tipo),
       ultimaMsgLojaEm: falhou ? lead.ultimaMsgLojaEm : quando,
       aguardandoHumano: params.autor === "consultor" ? false : lead.aguardandoHumano,
       // Consultor respondeu: o cliente não espera mais e a conversa conta como vista.

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { TAMANHO_MAXIMO, tipoImagemValido } from "@/lib/midias";
+import { familiaDoTipo, limiteDoTipo, tipoMidiaAceito } from "@/regras/midia";
 import { LIMITE_AUDIO_BYTES, tipoAudioAceito, transcreverAudio, transcricaoConfigurada } from "./transcricao";
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { agora } from "@/lib/relogio";
@@ -30,11 +31,26 @@ export interface ResultadoEnvio {
 }
 
 /** Envia texto livre (dentro da janela de 24h) ou um modelo aprovado. O nome do modelo na Meta é o código do modelo no CRM. */
-export async function enviarPelaMeta(params: { para: string; texto?: string; modelo?: string }): Promise<ResultadoEnvio> {
+export async function enviarPelaMeta(params: { para: string; texto?: string; modelo?: string; anexo?: { dados: Buffer; tipo: string; nome: string } }): Promise<ResultadoEnvio> {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return { ok: false, erro: "WhatsApp não configurado" };
   const para = params.para.replace(/\D/g, "");
-  const corpo = params.modelo
+  let corpo: object;
+  if (params.anexo) {
+    // Arquivo: primeiro sobe para a Meta (recebe um id), depois manda a mensagem apontando para esse id.
+    const idArquivo = await subirArquivoParaMeta(cfg, params.anexo);
+    if (!idArquivo) {
+      await registrarLogWebhook("envio", `Envio de arquivo para …${fim(para)}: a Meta não aceitou o upload`, false);
+      return { ok: false, erro: "a Meta não aceitou o arquivo" };
+    }
+    const familia = familiaDoTipo(params.anexo.tipo);
+    const chave = familia === "imagem" ? "image" : familia === "video" ? "video" : "document";
+    const conteudo: Record<string, string> = { id: idArquivo };
+    if (params.texto?.trim()) conteudo.caption = params.texto.trim().slice(0, 1024);
+    if (chave === "document") conteudo.filename = params.anexo.nome;
+    corpo = { messaging_product: "whatsapp", to: para, type: chave, [chave]: conteudo };
+  } else
+  corpo = params.modelo
     ? { messaging_product: "whatsapp", to: para, type: "template", template: { name: params.modelo, language: { code: cfg.idiomaModelos } } }
     : { messaging_product: "whatsapp", to: para, type: "text", text: { body: params.texto ?? "", preview_url: false } };
   try {
@@ -58,12 +74,33 @@ export async function enviarPelaMeta(params: { para: string; texto?: string; mod
   }
 }
 
+/** Sobe um arquivo para a Meta e devolve o id dele (ou null). Nunca lança. */
+async function subirArquivoParaMeta(cfg: NonNullable<ReturnType<typeof lerConfigWhatsapp>>, anexo: { dados: Buffer; tipo: string; nome: string }): Promise<string | null> {
+  try {
+    const form = new FormData();
+    form.append("messaging_product", "whatsapp");
+    form.append("type", anexo.tipo);
+    form.append("file", new Blob([new Uint8Array(anexo.dados)], { type: anexo.tipo }), anexo.nome);
+    const resposta = await fetch(`https://graph.facebook.com/${cfg.versaoApi}/${cfg.numeroId}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.token}` },
+      body: form,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const json = (await resposta.json().catch(() => ({}))) as { id?: string };
+    return resposta.ok && json.id ? json.id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Baixa a imagem ou o áudio que o cliente mandou (2 passos: pede o endereço, depois baixa com o token). */
-export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "audio" = "imagem"): Promise<{ dados: Buffer; tipo: string } | null> {
+export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "audio" | "arquivo" = "imagem"): Promise<{ dados: Buffer; tipo: string } | null> {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return null;
-  const limite = tipoMidia === "audio" ? LIMITE_AUDIO_BYTES : TAMANHO_MAXIMO;
-  const aceito = tipoMidia === "audio" ? tipoAudioAceito : tipoImagemValido;
+  // "arquivo" = imagem, vídeo MP4 ou PDF (o limite de tamanho depende do tipo).
+  const aceito = tipoMidia === "audio" ? tipoAudioAceito : tipoMidia === "arquivo" ? tipoMidiaAceito : tipoImagemValido;
+  const limiteDe = (tipo: string) => (tipoMidia === "audio" ? LIMITE_AUDIO_BYTES : tipoMidia === "arquivo" ? limiteDoTipo(tipo) : TAMANHO_MAXIMO);
   try {
     const cabecalho = { Authorization: `Bearer ${cfg.token}` };
     const info = await fetch(`https://graph.facebook.com/${cfg.versaoApi}/${encodeURIComponent(midiaId)}`, { headers: cabecalho, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
@@ -78,9 +115,9 @@ export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "
     const arquivo = await fetch(destino, { headers: cabecalho, redirect: "manual", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
     if (!arquivo.ok) return null;
     const declarado = Number(arquivo.headers.get("content-length"));
-    if (Number.isFinite(declarado) && declarado > limite) return null;
+    if (Number.isFinite(declarado) && declarado > limiteDe(tipo)) return null;
     const dados = Buffer.from(await arquivo.arrayBuffer());
-    if (dados.length > limite) return null;
+    if (dados.length > limiteDe(tipo)) return null;
     return { dados, tipo };
   } catch {
     return null;
@@ -130,18 +167,20 @@ async function aplicarMensagem(m: MensagemRecebida) {
     await registrarLogWebhook("mensagem", `Mensagem repetida de …${fim(m.telefone)} ignorada`);
     return;
   }
-  let imagem: { dados: Buffer; tipo: string } | null = null;
+  let midia: { dados: Buffer; tipo: string; nome: string | null } | null = null;
   let texto = m.texto;
   if (m.tipo === "audio") {
     texto = await textoDoAudio(m);
   } else if (m.midiaId) {
-    imagem = await baixarMidiaDaMeta(m.midiaId);
-    if (!imagem) texto = [texto, "[o cliente enviou uma imagem que o sistema não conseguiu baixar]"].filter(Boolean).join(" ");
+    // Imagem, vídeo ou PDF: fica guardado e aparece na conversa e na galeria.
+    const arquivo = await baixarMidiaDaMeta(m.midiaId, "arquivo");
+    if (arquivo) midia = { ...arquivo, nome: m.nomeArquivo };
+    else texto = [texto, "[o cliente enviou um arquivo que o sistema não conseguiu baixar ou não aceita (só imagem, vídeo MP4 e PDF, com tamanho limitado)]"].filter(Boolean).join(" ");
   }
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
     try {
-      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, imagem, idExterno: m.idExterno, waId: m.telefone });
+      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, midia, idExterno: m.idExterno, waId: m.telefone });
       await registrarLogWebhook("mensagem", `Mensagem (${m.tipo}) de …${fim(m.telefone)} recebida`);
       return;
     } catch (erro) {

@@ -10,6 +10,7 @@ import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
+import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
 export interface ResultadoRotinas {
@@ -62,6 +63,14 @@ async function executar(): Promise<ResultadoRotinas> {
   const vencidos = arquivados.filter((l) => deveExcluirArquivado(l.arquivadoEm, quando)).map((l) => l.id);
   if (vencidos.length) resultado.excluidos = await excluirLeads(vencidos);
 
+  // A limpeza de arquivos nunca pode derrubar o resto das rotinas.
+  try {
+    const midiasApagadas = await apagarMidiasAntigas();
+    if (midiasApagadas) await registrar(`${formatarDataHora(quando)}: ${midiasApagadas} arquivo(s) apagado(s) por terem mais de 180 dias.`);
+    await apagarMidiasSoltas();
+  } catch {
+    console.error("[rotinas] a limpeza de arquivos falhou");
+  }
   await limparLogsAntigos();
   await reprocessarEventosPendentes();
 

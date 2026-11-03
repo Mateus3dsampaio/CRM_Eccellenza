@@ -121,6 +121,8 @@ model Mensagem {
   texto             String?
   midiaArquivo      String? // nome do arquivo em midias/ (fora da pasta pública)
   midiaTipo         String?
+  midiaNome         String? // nome original do arquivo (PDF), só para mostrar e baixar
+  midiaBytes        Int? // tamanho do arquivo guardado (para avisar antes de apagar e medir o espaço)
   modelo            String? // código do modelo aprovado usado (MSG-02)
   status            String    @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
   enviadaEm         DateTime

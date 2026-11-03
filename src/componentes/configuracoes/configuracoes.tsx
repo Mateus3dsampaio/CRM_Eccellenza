@@ -10,6 +10,7 @@ import { juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
+import { Armazenamento } from "./armazenamento";
 import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
@@ -153,6 +154,8 @@ export function Configuracoes() {
             </section>
 
             <WhatsappConfig />
+
+            <Armazenamento />
 
             <UsoDoBot />
 

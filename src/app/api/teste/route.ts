@@ -56,7 +56,7 @@ export const POST = rota(async (req: Request) => {
           telefone: corpo.telefone,
           nomePerfil: corpo.nome,
           texto: corpo.texto,
-          imagem: corpo.imagemBase64 ? { dados: Buffer.from(corpo.imagemBase64, "base64"), tipo: corpo.imagemTipo ?? "image/png" } : null,
+          midia: corpo.imagemBase64 ? { dados: Buffer.from(corpo.imagemBase64, "base64"), tipo: corpo.imagemTipo ?? "image/png" } : null,
         });
         return { respostas: r.respostas, erro: r.erro };
       } catch (erro) {

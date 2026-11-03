@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bot, Headset, Zap } from "lucide-react";
+import { Bot, Download, FileText, Headset, Trash2, Zap } from "lucide-react";
+import { familiaDoTipo, formatarTamanho } from "@/regras/midia";
 import { formatarData, formatarHora, inicioDoDiaLocal } from "@/regras/tempo";
 import { juntar } from "./estilos";
 import { StatusMensagem } from "./ui";
@@ -12,6 +13,9 @@ export interface MensagemChat {
   autorNome?: string | null;
   texto: string | null;
   midia: string | null;
+  midiaTipo?: string | null;
+  midiaNome?: string | null;
+  midiaBytes?: number | null;
   enviadaEm: string;
   status: string | null;
   modelo?: string | null;
@@ -21,7 +25,7 @@ export interface MensagemChat {
  * Lista de mensagens estilo WhatsApp.
  * lado "loja": cliente à esquerda, loja à direita (ficha). lado "cliente": o contrário (simulador).
  */
-export function ListaMensagens({ mensagens, lado, digitando }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean }) {
+export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean; aoApagarMidia?: (mensagemId: string) => void }) {
   const fim = useRef<HTMLDivElement>(null);
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "end" });
@@ -56,10 +60,7 @@ export function ListaMensagens({ mensagens, lado, digitando }: { mensagens: Mens
                     {m.modelo && <span className="font-normal">· modelo aprovado</span>}
                   </p>
                 )}
-                {m.midia && (
-                  // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota protegida
-                  <img src={`/api/midias/${m.midia}`} alt="Imagem enviada pelo cliente" className="mb-1 max-h-72 rounded-controle object-contain" />
-                )}
+                {m.midia && <MidiaDaMensagem m={m} aoApagar={aoApagarMidia} />}
                 {m.texto && <p className="whitespace-pre-wrap break-words">{m.texto}</p>}
                 <p className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-texto-fraco">
                   {formatarHora(data)}
@@ -78,6 +79,37 @@ export function ListaMensagens({ mensagens, lado, digitando }: { mensagens: Mens
         </div>
       )}
       <div ref={fim} />
+    </div>
+  );
+}
+
+/** Imagem, vídeo ou PDF dentro da bolha. Os arquivos vêm de uma rota protegida (só logado). */
+function MidiaDaMensagem({ m, aoApagar }: { m: MensagemChat; aoApagar?: (mensagemId: string) => void }) {
+  const url = `/api/midias/${m.midia}`;
+  const familia = m.midiaTipo ? familiaDoTipo(m.midiaTipo) : "imagem"; // mensagens antigas só tinham imagem
+  const nome = m.midiaNome || "arquivo.pdf";
+  return (
+    <div className="mb-1">
+      {familia === "video" ? (
+        <video src={url} controls preload="metadata" className="max-h-72 w-full rounded-controle bg-black" aria-label="Vídeo da conversa" />
+      ) : familia === "documento" ? (
+        <a href={url} download className="flex items-center gap-3 rounded-controle bg-superficie-suave px-3 py-2 hover:bg-superficie" title="Baixar PDF">
+          <FileText className="size-8 shrink-0 text-alerta" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium">{nome}</span>
+            <span className="text-xs text-texto-suave">PDF{m.midiaBytes ? ` · ${formatarTamanho(m.midiaBytes)}` : ""}</span>
+          </span>
+          <Download className="size-4 shrink-0 text-texto-suave" aria-hidden />
+        </a>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota protegida
+        <img src={url} alt="Imagem da conversa" className="max-h-72 rounded-controle object-contain" />
+      )}
+      {aoApagar && (
+        <button type="button" onClick={() => aoApagar(m.id)} className="mt-1 inline-flex items-center gap-1 text-[11px] text-alerta hover:underline">
+          <Trash2 className="size-3" aria-hidden /> Apagar arquivo
+        </button>
+      )}
     </div>
   );
 }

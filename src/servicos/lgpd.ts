@@ -5,6 +5,7 @@ import { montarZip } from "@/lib/zip";
 import { PASTA_MIDIAS } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
+import { LIMITE_EXPORTACAO_BYTES } from "@/regras/midia";
 import { ORIGENS_CONSENTIMENTO, type OrigemConsentimento } from "@/regras/consentimento";
 import { TEXTO_CONFIRMA_PARAR } from "@/regras/optout";
 import { registrarAlteracao } from "./historico";
@@ -68,11 +69,21 @@ export async function exportarDadosDoCliente(leadId: string, quem: string): Prom
           delete copia.processadaPeloBot;
           return copia;
         }) }, null, 2) });
+  let bytesDeMidia = 0;
+  let omitidos = 0;
   for (const m of mensagens) {
     if (!m.midiaArquivo) continue;
     const dadosArquivo = await readFile(path.join(PASTA_MIDIAS, path.basename(m.midiaArquivo))).catch(() => null);
-    if (dadosArquivo) arquivos.push({ nome: `midias/${path.basename(m.midiaArquivo)}`, conteudo: dadosArquivo });
+    if (!dadosArquivo) continue;
+    // O .zip é montado na memória: passou do teto, o arquivo fica de fora e o LEIA-ME avisa.
+    if (bytesDeMidia + dadosArquivo.length > LIMITE_EXPORTACAO_BYTES) {
+      omitidos++;
+      continue;
+    }
+    bytesDeMidia += dadosArquivo.length;
+    arquivos.push({ nome: `midias/${path.basename(m.midiaArquivo)}`, conteudo: dadosArquivo });
   }
+  if (omitidos) arquivos.push({ nome: "LEIA-ME.txt", conteudo: `${omitidos} arquivo(s) não entraram neste .zip por passarem do limite de tamanho. Peça uma exportação separada ao administrador.\n` });
   await db.pedidoLgpd.create({ data: { acao: "exportacao", quem, telefoneFim: fim(lead.telefone) } });
   return { nome: `dados-cliente-${fim(lead.telefone)}.zip`, zip: montarZip(arquivos) };
 }

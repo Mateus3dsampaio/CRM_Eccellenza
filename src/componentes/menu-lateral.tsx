@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Archive, BarChart3, CalendarDays, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
+import { Archive, BarChart3, CalendarDays, Images, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
 import { juntar } from "./estilos";
 import { usePode } from "./usuario";
 
@@ -11,6 +11,7 @@ export const LINKS = [
   { href: "/", rotulo: "Kanban", icone: KanbanSquare },
   { href: "/agenda", rotulo: "Agenda", icone: CalendarDays },
   { href: "/painel", rotulo: "Painel", icone: BarChart3 },
+  { href: "/galeria", rotulo: "Galeria", icone: Images },
   { href: "/simulador", rotulo: "Simulador", icone: Smartphone },
   { href: "/arquivados", rotulo: "Arquivados", icone: Archive },
 ];

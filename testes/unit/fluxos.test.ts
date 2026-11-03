@@ -172,7 +172,7 @@ describe("bot sem chave da API (BOT-06)", () => {
 async function receberMensagemSemBot() {
   const lead = await obterOuCriarLead("+5588900006666");
   await db.lead.update({ where: { id: lead.id }, data: { modoAtendimento: "humano" } });
-  return receberMensagemCliente({ telefone: "+5588900006666", texto: "Segue a planta", imagem: { dados: PNG, tipo: "image/png" } });
+  return receberMensagemCliente({ telefone: "+5588900006666", texto: "Segue a planta", midia: { dados: PNG, tipo: "image/png" } });
 }
 
 describe("funil e arquivamento (MET-02, AGENDA-02)", () => {

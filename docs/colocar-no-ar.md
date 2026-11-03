@@ -20,6 +20,7 @@ Tudo no código já está pronto. Falta só **você** fazer as partes que exigem
 | `ADMIN_SENHA` | uma senha **longa** (mínimo 10 caracteres) |
 | `ADMIN_NOME` | seu nome |
 | `MIDIAS_DIR` | `/data/midias` |
+| `MIDIAS_LIMITE_MB` | tamanho do seu Volume em MB (ex.: `5000`), para mostrar a porcentagem usada |
 | `PRIVACIDADE_CONTATO` | e-mail ou telefone para pedidos de dados (aparece em `/privacidade`) |
 | `OPENAI_API_KEY` | (opcional) chave da OpenAI para transcrever áudios; sem ela o bot avisa que não consegue ouvir |
 
@@ -59,6 +60,18 @@ Se a Meta recusar a "versão da API" (erro de versão no cartão WhatsApp), defi
 - Quem escreve **PARAR** (ou "sair", "cancelar"...) para de receber retomada e modelos, e o bot não responde mais. Um consultor pode devolver ao bot se o cliente mudar de ideia.
 - A Meta recomenda dar instrução de como sair. Sugiro incluir "Responda PARAR para não receber mais mensagens" nos modelos (texto a aprovar).
 - Brasil e o nono dígito: o WhatsApp conhece muitos números **sem o 9**. O sistema trata as duas formas como a mesma pessoa e responde para o número no formato que a Meta informar.
+
+## Imagens, vídeos e PDFs
+- **Receber:** imagem, vídeo MP4 e PDF do cliente ficam guardados e aparecem na conversa e na **Galeria**. Outros tipos (Word, Excel, DWG, ZIP) viram só um aviso na conversa.
+- **Enviar:** o vendedor usa o clipe 📎 na conversa (com legenda opcional). Só dentro das 24h, como texto livre; fora disso só modelo. **Para enviar:** imagem JPG ou PNG, vídeo MP4 e PDF (do que conheço, é o que a Meta aceita; WEBP, GIF e 3GP o cliente pode mandar, mas a loja não envia). Não conferi na página oficial da Meta.
+- **Galeria:** cada vendedor vê os arquivos dos leads dele; o admin vê todos e filtra por vendedor. Cada arquivo tem Baixar, Abrir e "ver a conversa". **Só o admin apaga** arquivo.
+- **Não há pasta no PC do vendedor** (decisão: tudo fica no Railway). O vendedor baixa pelo botão quando precisar.
+- **Apagar:** excluir uma conversa apaga os arquivos dela, e o sistema **avisa antes** quantos arquivos e MB vão junto. Arquivos com mais de **180 dias** são apagados sozinhos (a galeria avisa quando faltam 30 dias ou menos).
+- **Tamanho máximo (PROVISÓRIO):** imagem 5 MB, vídeo 16 MB, PDF 25 MB. Os limites da Meta para vídeo e documento **não foram conferidos**; se a Meta recusar um arquivo, a mensagem fica "falhou".
+- **Espaço:** o plano Hobby do Railway tem 5 GB e vídeo enche rápido. Crie o Volume do tamanho que precisar e defina `MIDIAS_LIMITE_MB` (ex.: `5000`) para o sistema mostrar a porcentagem usada em Configurações. O Railway também mostra o uso do Volume no painel dele (não consegui confirmar daqui onde).
+- **Backup:** o backup do Postgres **não cobre o Volume**. Fotos, vídeos e PDFs não têm cópia de segurança, a menos que você configure uma.
+- **Segurança:** PDF nunca abre dentro do site (sempre baixa). O sistema confere se o arquivo é do tipo que diz ser. Mesmo assim, arquivo de cliente desconhecido pode ter vírus: abra no seu computador com antivírus.
+- O bot **não vê** vídeo nem PDF (só imagem); ele recebe o aviso de que o arquivo chegou.
 
 ## Transcrição de áudio (Whisper)
 - Com `OPENAI_API_KEY`, áudio que o cliente manda vira texto (`[áudio transcrito automaticamente] ...`) e o bot lê esse texto. O **áudio não fica guardado**, só a transcrição. O modelo padrão é o `whisper-1`; a OpenAI tem modelos de transcrição mais novos (variável `OPENAI_TRANSCRICAO_MODELO`): vale comparar.
