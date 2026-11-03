@@ -13,7 +13,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CheckSquare, Filter, Minus, Plus, Search, Trash2, Archive, X } from "lucide-react";
+import { CheckSquare, Clock, Filter, Minus, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
 import { CODIGOS_ETAPA, ETAPAS, ETAPAS_LIMPAVEIS, ETIQUETAS, nomeEtapa } from "@/regras/etapas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -33,7 +33,8 @@ export function Quadro() {
   const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
-  const ehAdmin = useUsuario().perfil === "admin";
+  const usuario = useUsuario();
+  const ehAdmin = usuario.perfil === "admin";
   const zoom = useZoomKanban();
   const indiceZoom = (NIVEIS_ZOOM as readonly number[]).indexOf(zoom);
 
@@ -41,6 +42,9 @@ export function Quadro() {
   const [etiqueta, setEtiqueta] = useState("");
   const [consultor, setConsultor] = useState("");
   const [cidade, setCidade] = useState("");
+  // Filtros de um clique (ESP-12).
+  const [soEsperando, setSoEsperando] = useState(false);
+  const [soMeus, setSoMeus] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
@@ -72,9 +76,12 @@ export function Quadro() {
         (!termo || c.busca.includes(termo) || (termoDigitos.length >= 4 && c.busca.replace(/\D/g, "").includes(termoDigitos))) &&
         (!etiqueta || c.etiquetas.includes(etiqueta)) &&
         (!consultor || c.consultor?.id === consultor) &&
-        (!cidade || c.cidade === cidade),
+        (!cidade || c.cidade === cidade) &&
+        (!soEsperando || c.esperandoDesde !== null) &&
+        (!soMeus || c.consultor?.id === usuario.id),
     );
-  }, [cards, busca, etiqueta, consultor, cidade]);
+  }, [cards, busca, etiqueta, consultor, cidade, soEsperando, soMeus, usuario.id]);
+  const totalEsperando = useMemo(() => cards.filter((c) => c.esperandoDesde !== null).length, [cards]);
 
   const porEtapa = useMemo(() => {
     const mapa: Record<string, CardKanban[]> = Object.fromEntries(CODIGOS_ETAPA.map((e) => [e, []]));
@@ -214,6 +221,27 @@ export function Quadro() {
             <Botao onClick={() => setSelecionando(true)} icone={<CheckSquare className="size-4" aria-hidden />}>
               Selecionar
             </Botao>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtros rápidos">
+          <button
+            onClick={() => setSoEsperando((v) => !v)}
+            aria-pressed={soEsperando}
+            className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soEsperando ? "bg-alerta text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+          >
+            <Clock className="size-4" aria-hidden />
+            Esperando resposta
+            <span className="tabular-nums">({totalEsperando})</span>
+          </button>
+          {!ehAdmin && (
+            <button
+              onClick={() => setSoMeus((v) => !v)}
+              aria-pressed={soMeus}
+              className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soMeus ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+            >
+              <UserRound className="size-4" aria-hidden />
+              Meus leads
+            </button>
           )}
         </div>
         {ehAdmin && (

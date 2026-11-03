@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -30,6 +30,19 @@ function useTelaGrande() {
   return useSyncExternalStore(assinarTela, () => window.matchMedia("(min-width: 1024px)").matches, () => true);
 }
 
+/** Com a ficha aberta e a aba visível, a conversa conta como vista: zera a bolinha de não lidas (ESP-06). */
+function useMarcarComoVista(id: string, naoLidas: number) {
+  useEffect(() => {
+    if (naoLidas <= 0) return;
+    const marcar = () => {
+      if (document.visibilityState === "visible") void chamarApi(`/api/leads/${id}/conversa`, { method: "POST", json: { acao: "vista" } }).catch(() => undefined);
+    };
+    marcar();
+    document.addEventListener("visibilitychange", marcar);
+    return () => document.removeEventListener("visibilitychange", marcar);
+  }, [id, naoLidas]);
+}
+
 export function Ficha({ id }: { id: string }) {
   const { dados: ficha, erro, carregando, recarregar } = useDados<FichaLead>(`/api/leads/${id}`);
   if (carregando && !ficha) return <div className="mx-auto w-full max-w-6xl p-4"><Carregando linhas={4} /></div>;
@@ -51,6 +64,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   const { width, containerRef, mounted } = useContainerWidth();
   const telaGrande = useTelaGrande();
   const { blocos: blocosDados, janelas } = useBlocosDadosLead(ficha, recarregar);
+  useMarcarComoVista(id, ficha.naoLidas);
 
   async function acao(corpo: object, sucesso: string, depois?: () => void) {
     try {

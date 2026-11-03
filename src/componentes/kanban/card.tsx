@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, CalendarCheck, CircleDollarSign, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
 import { ETAPAS } from "@/regras/etapas";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
 import { Avatar, Etiqueta, Sino } from "../ui";
+import { CLASSE_CARD_ESPERA, CLASSE_TEXTO_ESPERA, useSituacaoEspera } from "../espera";
+import { BolinhaNaoLidas } from "./bolinha";
 
 export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
@@ -20,6 +22,7 @@ export interface AcoesCard {
 
 /** Informações do card (KAN-02). */
 export function ConteudoCard({ card }: { card: CardKanban }) {
+  const espera = useSituacaoEspera(card.esperandoDesde);
   return (
     <>
       <div className="flex items-start gap-3 pr-8">
@@ -32,14 +35,28 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
               <span className="text-xs text-texto-fraco">{card.horario}</span>
             </span>
           </div>
-          {card.previa && (
-            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-texto-suave">
-              <MessageCircle className="size-3.5 shrink-0 fill-whatsapp text-whatsapp" aria-label="WhatsApp" />
-              <span className="truncate">{card.previa}</span>
-            </p>
+          {(card.previa || card.naoLidas > 0) && (
+            <div className="mt-0.5 flex items-center gap-1.5 text-sm text-texto-suave">
+              {card.previa && (
+                <>
+                  <MessageCircle className="size-3.5 shrink-0 fill-whatsapp text-whatsapp" aria-label="WhatsApp" />
+                  <span className="truncate">{card.previa}</span>
+                </>
+              )}
+              <span className="ml-auto pl-1">
+                <BolinhaNaoLidas total={card.naoLidas} />
+              </span>
+            </div>
           )}
+
         </div>
       </div>
+      {espera.esperando && (
+        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_ESPERA[espera.faixa])}>
+          <Clock className="size-3.5 shrink-0" aria-hidden />
+          esperando há {espera.texto}
+        </p>
+      )}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-10 text-xs text-texto-suave">
         {card.cidade && (
           <span className="inline-flex items-center gap-1">
@@ -118,6 +135,7 @@ export function Card({
   aoSelecionar: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
+  const { faixa } = useSituacaoEspera(card.esperandoDesde);
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
   const refBotao = useRef<HTMLButtonElement>(null);
@@ -178,7 +196,8 @@ export function Card({
       data-card={card.id}
       aria-roledescription="card arrastável"
       className={juntar(
-        "group relative select-none rounded-card border border-borda bg-superficie p-3 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+        "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+        CLASSE_CARD_ESPERA[faixa],
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
       )}

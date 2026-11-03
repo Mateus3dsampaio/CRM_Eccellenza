@@ -13,6 +13,33 @@ export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | n
   return lead.nome || lead.nomePerfil || formatarTelefone(lead.telefone);
 }
 
+/** Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente). */
+function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null }): Date | null {
+  return l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
+}
+
+/**
+ * Leads esperando um humano, para o contador do topo e a lista (ESP-05). Quem espera há mais tempo vem primeiro.
+ * O consultor vê só os próprios leads; o admin vê todos, inclusive os que ainda não têm dono.
+ */
+export async function leadsAguardando(usuario: { id: string; perfil: string }) {
+  const leads = await db.lead.findMany({
+    where: { arquivadoEm: null, aguardandoHumano: true, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }) },
+    include: { consultor: { select: { id: true, nome: true } } },
+  });
+  const lista = leads.map((l) => ({
+    id: l.id,
+    nome: nomeExibicao(l),
+    etapa: l.etapa,
+    previa: l.ultimaMensagemPrevia ?? "",
+    naoLidas: l.naoLidas,
+    consultor: l.consultor,
+    esperandoDesde: esperaDoLead(l)?.toISOString() ?? null,
+    ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
+  }));
+  return ordenarParaColuna(lista);
+}
+
 export async function cardsDoKanban() {
   const quando = await agora();
   const leads = await db.lead.findMany({
@@ -27,8 +54,7 @@ export async function cardsDoKanban() {
     const ambientes = lerLista(l.ambientes);
     const visita = l.visitas[0];
     const nome = nomeExibicao(l);
-    // Lead antigo, de antes do campo existir: a espera conta do repasse (ou da última mensagem do cliente).
-    const esperandoDesde = l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
+    const esperandoDesde = esperaDoLead(l);
     return {
       id: l.id,
       nome,
@@ -101,6 +127,7 @@ export async function fichaDoLead(id: string) {
     consultor: lead.consultor,
     modo: lead.modoAtendimento,
     aguardandoHumano: lead.aguardandoHumano,
+    naoLidas: lead.naoLidas,
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,
     janelaAberta: janelaAberta(lead.ultimaMsgClienteEm, quando),

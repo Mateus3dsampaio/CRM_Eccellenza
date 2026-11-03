@@ -7,6 +7,7 @@ import { Archive, BarChart3, CalendarDays, Clock, KanbanSquare, LogOut, MessageS
 import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { juntar } from "./estilos";
+import { BotaoAguardando } from "./aguardando";
 import { BotaoAlmoco } from "./almoco";
 import { NovaMensagem } from "./nova-mensagem";
 import { BotaoTema } from "./tema";
@@ -56,17 +57,18 @@ export function Cabecalho() {
                 )}
               >
                 <Icone className="size-4" aria-hidden />
-                <span className="sr-only lg:not-sr-only">{rotulo}</span>
+                <span className="sr-only min-[1400px]:not-sr-only">{rotulo}</span>
               </Link>
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             {agora && (
-              <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave xl:inline-flex">
+              <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave 2xl:inline-flex">
                 <Clock className="size-3.5" aria-hidden />
                 {formatarDataHora(new Date(agora))}
               </Link>
             )}
+            <BotaoAguardando />
             {usuario.perfil === "consultor" && <BotaoAlmoco />}
             <button
               onClick={() => setNovaAberta(true)}
@@ -77,13 +79,13 @@ export function Cabecalho() {
               <span className="sr-only sm:hidden">Nova mensagem</span>
             </button>
             <span
-              className="inline-flex size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca xl:hidden"
+              className="inline-flex size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca 2xl:hidden"
               title={`${usuario.nome} (${usuario.perfil === "admin" ? "Administrador" : "Consultor"})`}
             >
               {usuario.nome.slice(0, 1)}
               <span className="sr-only">{usuario.nome}</span>
             </span>
-            <div className="hidden text-right leading-tight xl:block">
+            <div className="hidden text-right leading-tight 2xl:block">
               <p className="text-sm font-medium">{usuario.nome}</p>
               <p className="text-xs text-texto-fraco">{usuario.perfil === "admin" ? "Administrador" : "Consultor"}</p>
             </div>

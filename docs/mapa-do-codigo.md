@@ -69,7 +69,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|---|
 | `src/app/api/login/route.ts` | Entrar | `lib/sessao` |
 | `src/app/api/versao/route.ts` | Contador de mudanças (as telas recarregam) | `lib/versao` |
-| `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) e prazos de espera | `consultas`, `configuracoes`, `rotinas` |
+| `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) | `consultas`, `rotinas` |
+| `src/app/api/aguardando/route.ts` | Leads esperando um humano (consultor: os dele; admin: todos) e os prazos de cor. Alimenta o contador do topo, a lista e a cor dos cards | `consultas`, `configuracoes` |
 | `src/app/api/leads/[id]/route.ts` | Ficha e correção de dados | `consultas`, `leads`, `historico` |
 | `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder, marcar como vista (zera a bolinha) | `conversa` |
 | `src/app/api/leads/[id]/medidas/route.ts` | Medidas | `leads`, `historico` |
@@ -106,7 +107,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
-| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
+| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil e tempo de resposta (bot e consultor) |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
@@ -149,7 +150,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Menu superior |
+| `src/componentes/cabecalho.tsx` | Menu superior (inclui o contador "X aguardando você") |
+| `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
+| `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
 | `src/componentes/tema.tsx` | Tema claro/escuro |
 | `src/componentes/tema-script.ts` | Script do tema (lido pelo layout do servidor) |
@@ -158,10 +161,11 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/almoco.tsx` | Botão de almoço do consultor |
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados |
-| `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar |
-| `src/componentes/kanban/card.tsx` | Card do lead |
+| `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar, busca e filtros (inclui "Esperando resposta" e "Meus leads") |
+| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera, "esperando há X min", bolinha de não lidas |
+| `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro |
-| `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular) |
+| `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
 | `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar pela ficha |
@@ -197,7 +201,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/instrucoes.test.ts` | Instruções: carga, edição, versão anterior, exclusão, zip |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
-| `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos |
+| `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos, lista de aguardando |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |

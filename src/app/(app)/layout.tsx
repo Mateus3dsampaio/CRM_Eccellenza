@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/sessao";
 import { Cabecalho } from "@/componentes/cabecalho";
 import { ProvedorAvisos, ProvedorVersao } from "@/componentes/dados";
+import { ProvedorEspera } from "@/componentes/espera";
 import { ProvedorUsuario } from "@/componentes/usuario";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +14,12 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
     <ProvedorUsuario usuario={usuario}>
       <ProvedorVersao>
         <ProvedorAvisos>
-          <div className="flex min-h-dvh flex-col">
-            <Cabecalho />
-            <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
-          </div>
+          <ProvedorEspera>
+            <div className="flex min-h-dvh flex-col">
+              <Cabecalho />
+              <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
+            </div>
+          </ProvedorEspera>
         </ProvedorAvisos>
       </ProvedorVersao>
     </ProvedorUsuario>

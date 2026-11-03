@@ -12,7 +12,7 @@ import {
   validarPrazos,
 } from "@/regras/espera";
 import { definirPrazosDeEspera, prazosDeEspera } from "@/servicos/configuracoes";
-import { cardsDoKanban } from "@/servicos/consultas";
+import { cardsDoKanban, fichaDoLead, leadsAguardando } from "@/servicos/consultas";
 import { devolverAoBot, marcarConversaVista } from "@/servicos/conversa";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
@@ -51,6 +51,8 @@ describe("regras de espera (Bloco 1)", () => {
     expect(textoDeEspera(12)).toBe("12 min");
     expect(textoDeEspera(60)).toBe("1 h");
     expect(textoDeEspera(65)).toBe("1 h 05 min");
+    expect(textoDeEspera(26 * 60 + 10)).toBe("1 d 2 h");
+    expect(textoDeEspera(48 * 60)).toBe("2 d");
   });
 
   it("ordena: quem espera primeiro (mais antigo no topo), depois o resto pela última mensagem", () => {
@@ -180,5 +182,31 @@ describe("espera e não lidas no banco (Bloco 1)", () => {
     expect(await prazosDeEspera()).toEqual({ amarelo: 5, vermelho: 20 });
     await expect(definirPrazosDeEspera({ amarelo: 20, vermelho: 5 })).rejects.toThrow(/menor/);
     expect(await prazosDeEspera()).toEqual({ amarelo: 5, vermelho: 20 });
+  });
+
+  it("a lista de aguardando: o consultor vê só os dele, o admin vê todos, e a ficha traz as não lidas", async () => {
+    const [a, b] = await criarConsultores();
+    const criar = async (tel: string, dono: string | null) => {
+      const lead = await obterOuCriarLead(tel, tel);
+      await db.lead.update({ where: { id: lead.id }, data: { consultorId: dono, modoAtendimento: "humano" } });
+      await registrarMensagemCliente(lead.id, "Oi");
+      await avancarRelogio(MIN);
+      return lead.id;
+    };
+    const deA = await criar("+5588900007021", a.id);
+    const deB = await criar("+5588900007022", b.id);
+    const semDono = await criar("+5588900007023", null);
+    const respondido = await criar("+5588900007024", a.id);
+    await enviarMensagemLoja({ leadId: respondido, autor: "consultor", autorNome: a.nome, texto: "Oi!" });
+
+    expect((await leadsAguardando({ id: a.id, perfil: "consultor" })).map((l) => l.id)).toEqual([deA]);
+    expect((await leadsAguardando({ id: b.id, perfil: "consultor" })).map((l) => l.id)).toEqual([deB]);
+    expect((await leadsAguardando({ id: "admin", perfil: "admin" })).map((l) => l.id)).toEqual([deA, deB, semDono]);
+
+    expect((await fichaDoLead(deA))?.naoLidas).toBe(1);
+    await marcarConversaVista(deA);
+    expect((await fichaDoLead(deA))?.naoLidas).toBe(0);
+    // Abrir a conversa não tira o lead da lista: ele continua esperando até o consultor responder.
+    expect((await leadsAguardando({ id: a.id, perfil: "consultor" })).map((l) => l.id)).toEqual([deA]);
   });
 });

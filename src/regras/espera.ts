@@ -45,11 +45,15 @@ export function faixaDeEspera(esperandoDesde: Instante, agora: Date, prazos: Pra
   return "normal";
 }
 
-/** "12 min", "1 h 05 min", "2 h". Para o "esperando há ..." do card. */
+/** "12 min", "1 h 05 min", "2 h", "1 d 2 h". Para o "esperando há ..." do card. */
 export function textoDeEspera(minutos: number): string {
   if (minutos < 1) return "menos de 1 min";
   if (minutos < 60) return `${minutos} min`;
   const horas = Math.floor(minutos / 60);
+  if (horas >= 24) {
+    const dias = Math.floor(horas / 24);
+    return horas % 24 ? `${dias} d ${horas % 24} h` : `${dias} d`;
+  }
   const resto = minutos % 60;
   return resto ? `${horas} h ${String(resto).padStart(2, "0")} min` : `${horas} h`;
 }
