@@ -24,6 +24,8 @@ WhatsApp fica por último porque sem banco estável, rotina e proteção ele nã
 - Aprovar textos que o cliente final lê e valores de política (limites, retenção).
 - Autorizar push e deploy.
 
+> Lista viva do que falta: [`docs/pendencias.md`](../docs/pendencias.md).
+
 ## Situação em 03/11/2026
 | Tarefa | Estado |
 |---|---|

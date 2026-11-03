@@ -11,6 +11,8 @@ CRM com atendimento por IA (API do Claude) para a Eccellenza. Nesta fase roda s�
 ## Pronto para produção (03/11/2026)
 O código já está preparado para o Railway e para o WhatsApp oficial da Meta: webhook, envio, Postgres, rotinas automáticas, login protegido, LGPD e limites do bot. **O que falta depende de você** (contas Railway e Meta, chaves, aprovação de textos): passo a passo em [`docs/colocar-no-ar.md`](docs/colocar-no-ar.md). No seu computador nada muda: o simulador continua igual.
 
+**O que ainda falta fazer:** [`docs/pendencias.md`](docs/pendencias.md).
+
 ## Como rodar (passo a passo)
 1. Tenha o **Node.js 20 ou mais novo** instalado.
 2. Confira se o arquivo `.env` na raiz tem a sua chave (copie do `.env.example` se não tiver):

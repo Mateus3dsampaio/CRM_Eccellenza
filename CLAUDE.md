@@ -34,6 +34,7 @@ Leia antes de qualquer trabalho: `docs/briefing.md`, `docs/requisitos.md` e `doc
 - Revisores ativos na etapa 1: `revisor-requisitos`, `revisor-codigo`, `revisor-design`, `cliente-simulado`. O `diretor-de-arte` entra só na etapa 2 (layout), quando o Mateus liberar.
 
 ## Produção (Railway + WhatsApp Meta)
+- **Pendências abertas: `docs/pendencias.md`** (o que falta do Mateus, do Claude e o que nunca foi testado). Leia no começo de cada sessão e atualize ao concluir algo.
 - Código pronto; falta só o Mateus criar as contas e colar as variáveis. Guia: `docs/colocar-no-ar.md`. **Chaves da Meta, `DATABASE_URL`, `ANTHROPIC_API_KEY` e senhas só existem como variáveis de ambiente**; nunca em arquivo versionado nem em log.
 - Um esquema de banco só: `prisma/schema.prisma` (SQLite, computador e testes). Mudou o esquema → `npm run esquema:postgres` + migração nova em `prisma/postgres/migrations/` (o `esquema.test.ts` barra se esquecer). `npm run test:postgres` roda tudo num Postgres de teste.
 - Produção desliga o simulador (`MODO_SIMULADOR`); `iniciar-crm.bat` liga de novo no computador do Mateus. Em produção sem chaves da Meta nenhuma mensagem "finge" ter sido enviada.
