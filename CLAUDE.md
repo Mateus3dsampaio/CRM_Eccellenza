@@ -33,5 +33,8 @@ Leia antes de qualquer trabalho: `docs/briefing.md`, `docs/requisitos.md` e `doc
 - Cada rodada gera um relatório em `docs/rodadas/NN-descricao.md`.
 - Revisores ativos na etapa 1: `revisor-requisitos`, `revisor-codigo`, `revisor-design`, `cliente-simulado`. O `diretor-de-arte` entra só na etapa 2 (layout), quando o Mateus liberar.
 
+## Aparelho principal
+- **PC** (decidido pelo Mateus em 03/11/2026). O agente `designer` otimiza só para PC (1440×900 e 1280×720). O celular continua funcionando (docs/design.md), mas não é cobrado na revisão do `designer`.
+
 ## Stack
 Next.js (App Router) + TypeScript, SQLite com ORM (Prisma ou Drizzle), Tailwind CSS, dnd-kit (arrastar e soltar), Framer Motion (animações), SDK oficial da Anthropic, Playwright (testes de tela e prints). Detalhes em `docs/briefing.md`.
