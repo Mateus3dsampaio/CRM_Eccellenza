@@ -1,11 +1,12 @@
 "use client";
 
-import { LayoutDashboard, Shuffle, UtensilsCrossed, Users } from "lucide-react";
+import { LayoutDashboard, Shuffle, Timer, UtensilsCrossed, Users } from "lucide-react";
 import { useState } from "react";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
+import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
-import { Botao, Carregando, EstadoErro } from "../ui";
+import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 
@@ -13,6 +14,7 @@ interface Dados {
   equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
   distribuicao: ModoDistribuicao;
   naFila: number;
+  prazosEspera: PrazosEspera;
   periodoExportacao: { de: string; ate: string };
 }
 
@@ -99,6 +101,8 @@ export function Configuracoes() {
               )}
             </section>
 
+            <PrazosDeEspera prazos={dados.prazosEspera} aoSalvar={(p) => chamar("/api/configuracoes/prazos-espera", "PUT", p, "Prazos de espera salvos.")} />
+
             <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
               <h2 className="mb-1 flex items-center gap-2 font-semibold">
                 <Users className="size-4 text-texto-suave" aria-hidden /> Equipe e almoço
@@ -147,5 +151,46 @@ export function Configuracoes() {
         )
       )}
     </div>
+  );
+}
+
+function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: (p: PrazosEspera) => Promise<void> }) {
+  const [amarelo, setAmarelo] = useState(String(prazos.amarelo));
+  const [vermelho, setVermelho] = useState(String(prazos.vermelho));
+  const [salvando, setSalvando] = useState(false);
+  const mudou = amarelo !== String(prazos.amarelo) || vermelho !== String(prazos.vermelho);
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await aoSalvar({ amarelo: Number(amarelo), vermelho: Number(vermelho) });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <Timer className="size-4 text-texto-suave" aria-hidden /> Prazos de espera do cliente
+      </h2>
+      <p className="mb-3 text-sm text-texto-suave">
+        Quando o cliente espera um consultor, o card muda de cor conforme o tempo. Valores em minutos.{" "}
+        <span className="rounded-pilula bg-aviso-suave px-2 py-0.5 text-xs font-medium text-aviso">Provisório</span>
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo rotulo="Fica amarelo depois de (min)">
+          <input type="number" inputMode="numeric" min={1} max={1440} value={amarelo} onChange={(e) => setAmarelo(e.target.value)} className={classeEntrada} />
+        </Campo>
+        <Campo rotulo="Fica vermelho depois de (min)" dica="O administrador também é avisado quando um lead passa deste prazo.">
+          <input type="number" inputMode="numeric" min={1} max={1440} value={vermelho} onChange={(e) => setVermelho(e.target.value)} className={classeEntrada} />
+        </Campo>
+      </div>
+      <div className="mt-3">
+        <Botao onClick={salvar} disabled={!mudou || salvando}>
+          {salvando ? "Salvando..." : "Salvar prazos"}
+        </Botao>
+      </div>
+    </section>
   );
 }

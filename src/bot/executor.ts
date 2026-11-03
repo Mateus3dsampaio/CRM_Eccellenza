@@ -97,7 +97,19 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         const { motivo } = esquemaPassar.parse(entrada ?? {});
         const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
         const consultorId = lead.consultorId ?? (await escolherProximoConsultor());
-        await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "pausado", aguardandoHumano: true, consultorId, repassadoEm: lead.aguardandoHumano && lead.repassadoEm ? lead.repassadoEm : await agora() } });
+        const quando = await agora();
+        await db.lead.update({
+          where: { id: leadId },
+          data: {
+            modoAtendimento: "pausado",
+            aguardandoHumano: true,
+            consultorId,
+            repassadoEm: lead.aguardandoHumano && lead.repassadoEm ? lead.repassadoEm : quando,
+            // O consultor ainda não viu nada: a espera começa agora e a mensagem que motivou o repasse conta como não lida.
+            esperandoDesde: lead.esperandoDesde ?? quando,
+            naoLidas: Math.max(lead.naoLidas, 1),
+          },
+        });
         if (lead.etapa === "novo") await moverEtapa(leadId, "pronto", "bot");
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);
         await atualizarResumo(leadId);

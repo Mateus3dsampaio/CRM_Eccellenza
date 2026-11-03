@@ -44,9 +44,15 @@ export async function assumirConversa(leadId: string, usuario: { nome: string })
 }
 
 export async function devolverAoBot(leadId: string, usuario: { nome: string }) {
-  await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "bot", aguardandoHumano: false, erroBot: null } });
+  await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "bot", aguardandoHumano: false, esperandoDesde: null, naoLidas: 0, erroBot: null } });
   await registrarAlteracao(leadId, usuario.nome, "Devolveu a conversa ao bot");
   await marcarMudanca();
+}
+
+/** Alguém abriu a conversa: zera a bolinha de não lidas. A espera continua até o consultor responder. */
+export async function marcarConversaVista(leadId: string) {
+  const r = await db.lead.updateMany({ where: { id: leadId, naoLidas: { gt: 0 } }, data: { naoLidas: 0 } });
+  if (r.count) await marcarMudanca();
 }
 
 /** Consultor responde pela tela da conversa (CHAT-03). Responder já assume a conversa. */

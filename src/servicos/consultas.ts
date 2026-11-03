@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
+import { ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { formatarHorarioCard, formatarVisitaCurta } from "@/regras/tempo";
 import { formatarTelefone } from "@/regras/telefone";
@@ -16,17 +17,18 @@ export async function cardsDoKanban() {
   const quando = await agora();
   const leads = await db.lead.findMany({
     where: { arquivadoEm: null },
-    orderBy: { ordem: "asc" },
     include: {
       consultor: { select: { id: true, nome: true } },
       visitas: { where: { status: "agendada", tipo: "visita" }, orderBy: { inicio: "asc" }, take: 1 },
       notas: { select: { texto: true } },
     },
   });
-  return leads.map((l) => {
+  const cards = leads.map((l) => {
     const ambientes = lerLista(l.ambientes);
     const visita = l.visitas[0];
     const nome = nomeExibicao(l);
+    // Lead antigo, de antes do campo existir: a espera conta do repasse (ou da última mensagem do cliente).
+    const esperandoDesde = l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
     return {
       id: l.id,
       nome,
@@ -35,6 +37,9 @@ export async function cardsDoKanban() {
       etapa: l.etapa,
       ordem: l.ordem,
       horario: l.ultimaMensagemEm ? formatarHorarioCard(l.ultimaMensagemEm, quando) : "",
+      ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
+      esperandoDesde: esperandoDesde?.toISOString() ?? null,
+      naoLidas: l.naoLidas,
       previa: l.ultimaMensagemPrevia ?? "",
       cidade: l.cidade,
       ambientes,
@@ -52,6 +57,8 @@ export async function cardsDoKanban() {
         .toLowerCase(),
     };
   });
+  // Cada coluna mostra primeiro quem espera resposta, depois o resto pela última mensagem (a ordem vale para a lista toda).
+  return ordenarParaColuna(cards);
 }
 
 export type CardKanban = Awaited<ReturnType<typeof cardsDoKanban>>[number];

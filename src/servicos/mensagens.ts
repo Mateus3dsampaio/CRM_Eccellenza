@@ -50,6 +50,8 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
     data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, enviadaEm: quando, status: "lido" },
   });
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
+  // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
+  const aguardando = lead.modoAtendimento !== "bot" ? true : lead.aguardandoHumano;
   await db.lead.update({
     where: { id: leadId },
     data: {
@@ -57,8 +59,9 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
       ultimaMensagemPrevia: previa(texto, !!midia),
       ultimaMsgClienteEm: quando,
       arquivadoEm: null,
-      // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
-      aguardandoHumano: lead.modoAtendimento !== "bot" ? true : lead.aguardandoHumano,
+      aguardandoHumano: aguardando,
+      // A espera conta desde a mensagem mais antiga ainda sem resposta humana; a bolinha conta as que ninguém abriu.
+      ...(aguardando ? { esperandoDesde: lead.esperandoDesde ?? quando, naoLidas: { increment: 1 } } : {}),
     },
   });
   if (lead.arquivadoEm) await registrarAlteracao(leadId, "sistema", "Cliente escreveu: lead saiu do arquivo");
@@ -128,6 +131,8 @@ export async function enviarMensagemLoja(params: {
       ultimaMensagemPrevia: previa(texto, false),
       ultimaMsgLojaEm: falhou ? lead.ultimaMsgLojaEm : quando,
       aguardandoHumano: params.autor === "consultor" ? false : lead.aguardandoHumano,
+      // Consultor respondeu: o cliente não espera mais e a conversa conta como vista.
+      ...(params.autor === "consultor" ? { esperandoDesde: null, naoLidas: 0 } : {}),
     },
   });
   await marcarMudanca();

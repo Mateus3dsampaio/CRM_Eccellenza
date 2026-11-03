@@ -26,6 +26,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Regras da agenda (horário, duração, vagas) | `src/regras/agenda.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Sem resposta" | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
 | Modelos de mensagem / janela de 24h | `src/regras/modelos.ts`, `src/regras/janela24h.ts` |
+| Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
@@ -36,7 +37,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Tabela | Guarda |
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço) |
-| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`) |
+| `Lead` | Ficha do cliente: etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) e mensagens que nenhum humano abriu (`naoLidas`). `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
@@ -68,9 +69,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|---|
 | `src/app/api/login/route.ts` | Entrar | `lib/sessao` |
 | `src/app/api/versao/route.ts` | Contador de mudanças (as telas recarregam) | `lib/versao` |
-| `src/app/api/kanban/route.ts` | Cards do quadro | `consultas`, `rotinas` |
+| `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) e prazos de espera | `consultas`, `configuracoes`, `rotinas` |
 | `src/app/api/leads/[id]/route.ts` | Ficha e correção de dados | `consultas`, `leads`, `historico` |
-| `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder | `conversa` |
+| `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder, marcar como vista (zera a bolinha) | `conversa` |
 | `src/app/api/leads/[id]/medidas/route.ts` | Medidas | `leads`, `historico` |
 | `src/app/api/leads/[id]/notas/route.ts` | Notas internas | `historico` |
 | `src/app/api/leads/acoes/route.ts` | Mover, arquivar, excluir em lote | `leads` |
@@ -86,6 +87,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
+| `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
 | `src/app/api/configuracoes/layout-ficha/route.ts` | Layout padrão da ficha (chave `layout_ficha` em `Configuracao`) | `regras/layout-ficha` |
 | `src/app/api/configuracoes/instrucoes/route.ts` | Listar e criar instruções | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir | `instrucoes` |
@@ -97,14 +99,14 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Faz |
 |---|---|
 | `src/servicos/leads.ts` | Criar lead, mover etapa, etiquetas, campos, arquivar, restaurar, excluir |
-| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja, status (entregue/lido) |
-| `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver, responder como consultor |
+| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja, status (entregue/lido). Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
+| `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
 | `src/servicos/agenda.ts` | Horários livres, agendar, cancelar visita, bloqueios |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço |
-| `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição |
+| `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
-| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados) |
+| `src/servicos/consultas.ts` | Dados prontos para as telas (kanban, ficha, agenda, arquivados). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil e tempo de resposta (bot e consultor) |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
@@ -120,6 +122,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
+| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), validação, texto "12 min", ordem das colunas |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead |
@@ -166,7 +169,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), tempo médio de resposta, funil |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Instruções e Exportar desempenho) |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
 
@@ -194,6 +197,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/instrucoes.test.ts` | Instruções: carga, edição, versão anterior, exclusão, zip |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
+| `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
@@ -201,4 +205,5 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 
 ## Fora do código
 - `agente/complemento-crm.md`: regras do CRM para o bot (vale sobre as instruções). `agente/loja.md`: dados comerciais (cópia do projeto do WhatsApp). `agente/instrucoes/`: só a carga inicial.
+- `tarefas/`: tarefas numeradas do Bloco 1 (avisos e leads esperando resposta), uma por vez.
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios). `.claude/agents` e `.claude/skills`: revisores e comandos.

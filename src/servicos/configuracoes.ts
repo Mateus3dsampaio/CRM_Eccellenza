@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
+import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
 const CHAVE_MODO = "distribuicao_modo";
 export const CHAVE_ULTIMO_RODIZIO = "distribuicao_ultimo";
@@ -11,6 +12,24 @@ export async function lerConfig(chave: string): Promise<string | null> {
 
 export async function gravarConfig(chave: string, valor: string): Promise<void> {
   await db.configuracao.upsert({ where: { chave }, create: { chave, valor }, update: { valor } });
+}
+
+const CHAVE_ESPERA_AMARELO = "espera_amarelo_min";
+const CHAVE_ESPERA_VERMELHO = "espera_vermelho_min";
+
+/** Prazos de espera do cliente (cor amarela e vermelha do card). Sem valor gravado, vale o padrão PROVISÓRIO. */
+export async function prazosDeEspera(): Promise<PrazosEspera> {
+  const amarelo = Number(await lerConfig(CHAVE_ESPERA_AMARELO));
+  const vermelho = Number(await lerConfig(CHAVE_ESPERA_VERMELHO));
+  return validarPrazos(amarelo, vermelho) === null ? { amarelo, vermelho } : { ...PRAZOS_ESPERA_PADRAO };
+}
+
+export async function definirPrazosDeEspera(prazos: PrazosEspera): Promise<void> {
+  const erro = validarPrazos(prazos.amarelo, prazos.vermelho);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_ESPERA_AMARELO, String(prazos.amarelo));
+  await gravarConfig(CHAVE_ESPERA_VERMELHO, String(prazos.vermelho));
+  await marcarMudanca();
 }
 
 // Padrão: quem tem menos leads (como era antes). O admin liga o rodízio em Configurações.

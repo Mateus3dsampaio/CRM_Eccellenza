@@ -100,6 +100,8 @@ async function main() {
         retomadaEnviadaEm: e.etiquetas?.includes("retomada") ? new Date(agora.getTime() - 8640 * 60_000) : null,
         ultimaMensagemEm: ultimaEm, ultimaMensagemPrevia: ultima[1].slice(0, 140),
         ultimaMsgClienteEm: ultimaCliente ? new Date(agora.getTime() - ultimaCliente[2] * 60_000) : null,
+        esperandoDesde: e.aguardando && ultimaCliente ? new Date(agora.getTime() - ultimaCliente[2] * 60_000) : null,
+        naoLidas: e.aguardando ? 1 : 0,
         ultimaMsgLojaEm: ultimaLoja ? new Date(agora.getTime() - ultimaLoja[2] * 60_000) : null,
         criadoEm, ordem: -ultimaEm.getTime(), conversaApi: { create: {} },
         mensagens: {

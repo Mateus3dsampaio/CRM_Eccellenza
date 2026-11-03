@@ -107,3 +107,20 @@ A etapa 1 termina quando:
 - **INST-05** Exportar: janela com seleção por instrução e "selecionar todas"; saída em .txt único ou .zip com um .txt por instrução.
 - **INST-06** Aviso de confirmação ao salvar e atalho "Testar no simulador".
 - **INST-07** O admin pode excluir uma instrução de vez, com confirmação clara de que não dá para desfazer. Não pode excluir a última instrução ativa.
+
+## Bloco 1 – Avisos e leads esperando resposta (pedido do Mateus, 04/11/2026)
+Tarefas em `tarefas/`. Marcado ✅ o que já está pronto.
+- **ESP-01** Som quando chega mensagem nova de cliente. *(tarefa 3)*
+- **ESP-02** Notificação do navegador, com a aba em segundo plano, para mensagem nova, lead passado pelo bot e visita marcada. *(tarefa 3)*
+- **ESP-03** O aviso vai só para o dono do lead; o admin recebe todos e pode silenciar. *(tarefa 3)*
+- **ESP-04** Número de leads esperando na aba do navegador, ex.: "(3) CRM Eccellenza". *(tarefa 3)*
+- **ESP-05** Contador "X aguardando você" no topo que abre a lista desses leads. *(tarefa 2)*
+- **ESP-06** Bolinha com o número de mensagens não lidas no card. ✅ dado (tarefa 1); visual na tarefa 2.
+- **ESP-07** "Esperando há X min" no card. *(tarefa 2; o dado `esperandoDesde` já existe)*
+- **ESP-08** Cor do card por espera (normal, amarelo, vermelho) com prazos editáveis em Configurações. ✅ regra e prazos (tarefa 1); cor no card na tarefa 2. **PROVISÓRIO:** 10 min amarelo e 30 min vermelho, até o Mateus decidir.
+- **ESP-09** Avisar o admin quando um lead passar do prazo vermelho sem resposta. *(tarefa 4)*
+- **ESP-10** Cada coluna ordena primeiro quem espera resposta (o que espera há mais tempo no topo), depois o resto pela última mensagem. ✅
+- **ESP-11** O card sobe quando um lead que já existe manda mensagem nova. ✅
+- **ESP-12** Filtros de um clique: "Esperando resposta" e "Meus leads". *(tarefa 2)*
+- Definição de "esperando": só o lead que está com humano (bot passou, consultor na conversa ou erro do bot). A espera começa na 1ª mensagem do cliente sem resposta do consultor e só termina quando o consultor responde ou devolve ao bot. Mensagem do bot ou do sistema não encerra.
+- Limite conhecido: a bolinha de não lidas é uma só por lead. Se o admin abrir a conversa, ela zera para o consultor também.

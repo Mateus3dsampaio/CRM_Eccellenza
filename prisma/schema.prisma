@@ -56,6 +56,8 @@ model Lead {
   modoAtendimento   String  @default("bot") // bot | humano | pausado
   aguardandoHumano  Boolean @default(false)
   repassadoEm       DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
+  esperandoDesde    DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
+  naoLidas          Int     @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
   erroBot           String?
 
   ultimaMensagemEm      DateTime?

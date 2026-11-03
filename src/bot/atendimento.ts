@@ -103,7 +103,11 @@ function textoDasRespostas(blocos: Anthropic.Beta.Messages.BetaContentBlock[]): 
 }
 
 async function marcarErro(leadId: string, mensagem: string) {
-  await db.lead.update({ where: { id: leadId }, data: { aguardandoHumano: true, erroBot: mensagem } });
+  const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, select: { esperandoDesde: true, naoLidas: true } });
+  await db.lead.update({
+    where: { id: leadId },
+    data: { aguardandoHumano: true, erroBot: mensagem, esperandoDesde: lead.esperandoDesde ?? (await agora()), naoLidas: Math.max(lead.naoLidas, 1) },
+  });
   await registrarAlteracao(leadId, "sistema", `Bot não respondeu: ${mensagem}`);
   await marcarMudanca();
 }
