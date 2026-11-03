@@ -21,6 +21,7 @@ CRM com atendimento por IA (API do Claude) para a Eccellenza. Nesta fase roda s�
    npm run seed
    npm run dev
    ```
+   **No dia a dia (e nos computadores da loja), use a versão final:** dê dois cliques em `iniciar-crm.bat`. Ele gera a versão otimizada e abre o navegador. O `npm run dev` é só para programar e deixa o computador lento (principalmente com 8 GB de memória).
 4. Abra **http://127.0.0.1:3000** e entre com um dos usuários de teste:
 
    | Usuário | Senha | Perfil |
