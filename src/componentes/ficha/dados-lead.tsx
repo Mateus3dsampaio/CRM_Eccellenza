@@ -88,6 +88,18 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
     }
   }
 
+  const souAdmin = usePode("configurar");
+  async function transferir(para: string) {
+    try {
+      await chamarApi(`/api/leads/${ficha.id}/transferir`, { method: "POST", json: { para } });
+      avisar("Lead transferido.");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível transferir.", "erro");
+    } finally {
+      aoMudar();
+    }
+  }
+
   async function acaoLead(corpo: object, sucesso: string) {
     try {
       await chamarApi("/api/leads/acoes", { method: "POST", json: { ...corpo, ids: [ficha.id] } });
@@ -150,9 +162,10 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
               </select>
             </Campo>
             <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
-            <Campo rotulo="Consultor responsável">
-              <select className={classeEntrada} value={ficha.consultor?.id ?? ""} onChange={(e) => salvar({ consultorId: e.target.value || null })}>
-                <option value="">Sem consultor</option>
+            <Campo rotulo="Consultor responsável" dica={souAdmin ? undefined : "Só o administrador transfere o lead para outro consultor."}>
+              <select className={classeEntrada} value={ficha.consultor?.id ?? ""} disabled={!souAdmin} onChange={(e) => e.target.value && void transferir(e.target.value)}>
+                {!ficha.consultor && <option value="">Sem consultor</option>}
+                {ficha.consultor && !agenda?.consultores.some((c) => c.id === ficha.consultor?.id) && <option value={ficha.consultor.id}>{ficha.consultor.nome} (inativo)</option>}
                 {agenda?.consultores.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}

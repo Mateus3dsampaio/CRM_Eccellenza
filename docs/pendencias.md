@@ -38,7 +38,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] (Opcional) Colar no bot a instrução sobre áudio transcrito (texto sugerido no `docs/colocar-no-ar.md`).
 
 ## B. Do Claude (código)
-- [ ] **Tela de usuários** (admin cria, desativa e redefine senha) e **"trocar minha senha"**. Hoje consultor novo entra por `scripts/criar-usuario.ts`.
+- [x] **Tela de usuários** (Configurações > Geral > Equipe: criar, editar, nova senha, desativar, transferir leads) e **"trocar minha senha"** no cabeçalho (04/11/2026). Senha: 6+ caracteres com letra, número e maiúscula. Limitação conhecida: trocar a senha não derruba a sessão aberta (12 h); desativar derruba na hora (decisão do Mateus: não precisa agora).
 - [ ] Isolamento de arquivos entre vendedores (a galeria é só um filtro; hoje qualquer logado abre qualquer arquivo se souber o nome). Decidir primeiro se os vendedores devem ver conversas uns dos outros, porque a ficha hoje mostra.
 - [ ] Lead duplicado se uma mensagem com o 9 (digitada na loja) e outra sem (vinda do webhook) chegarem exatamente juntas (`obterOuCriarLead`).
 - [ ] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual).

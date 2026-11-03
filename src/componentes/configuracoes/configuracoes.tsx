@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, LayoutDashboard, Shuffle, Timer, UtensilsCrossed, Users } from "lucide-react";
+import { CalendarClock, LayoutDashboard, Shuffle, Timer } from "lucide-react";
 import { useState } from "react";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
@@ -8,6 +8,7 @@ import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
+import { EquipeConfig, type Membro } from "./equipe";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
@@ -16,7 +17,7 @@ import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
 
 interface Dados {
-  equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
+  equipe: Membro[];
   distribuicao: ModoDistribuicao;
   naFila: number;
   prazosEspera: PrazosEspera;
@@ -114,44 +115,7 @@ export function Configuracoes() {
 
             <RegrasDaAgenda regras={dados.regrasAgenda} aoSalvar={(r) => chamar("/api/configuracoes/agenda", "PUT", r, "Regras da agenda salvas.")} />
 
-            <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
-              <h2 className="mb-1 flex items-center gap-2 font-semibold">
-                <Users className="size-4 text-texto-suave" aria-hidden /> Equipe e almoço
-              </h2>
-              <p className="mb-3 text-sm text-texto-suave">
-                <UtensilsCrossed className="mr-1 inline size-3.5" aria-hidden />
-                Em almoço, o consultor não recebe leads novos. Os leads que ele já tem continuam com ele. O consultor também liga e desliga o próprio almoço no topo da tela.
-              </p>
-              <ul className="divide-y divide-borda">
-                {dados.equipe.map((u) => (
-                  <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                    <div>
-                      <p className="font-medium">{u.nome}</p>
-                      <p className="text-xs text-texto-fraco">Login: {u.login}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca-texto">{u.perfil === "admin" ? "Administrador" : "Consultor"}</span>
-                      {!u.ativo && <span className="rounded-pilula bg-superficie-suave px-2.5 py-1 text-texto-suave">Inativo</span>}
-                      {u.perfil === "consultor" && u.ativo && (
-                        <>
-                          <span className={juntar("rounded-pilula px-2.5 py-1 font-medium", u.status === "almoco" ? "bg-aviso-suave text-aviso" : "bg-sucesso-suave text-sucesso")}>
-                            {u.status === "almoco" ? "Em almoço" : "Online"}
-                          </span>
-                          <Botao
-                            variante="fantasma"
-                            onClick={() =>
-                              chamar("/api/equipe/status", "POST", { usuarioId: u.id, status: u.status === "almoco" ? "online" : "almoco" }, u.status === "almoco" ? `${u.nome} voltou.` : `${u.nome} saiu para o almoço.`)
-                            }
-                          >
-                            {u.status === "almoco" ? "Voltou do almoço" : "Mandar almoçar"}
-                          </Botao>
-                        </>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <EquipeConfig equipe={dados.equipe} recarregar={recarregar} />
 
             <WhatsappConfig />
 

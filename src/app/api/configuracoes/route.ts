@@ -1,22 +1,18 @@
 import { rota } from "@/lib/api";
-import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { exigirUsuario } from "@/lib/sessao";
 import { periodoPadrao } from "@/regras/exportacao";
 import { modoDistribuicao, prazosDeEspera, regrasDaAgenda } from "@/servicos/configuracoes";
 import { leadsNaFila } from "@/servicos/distribuicao";
+import { listarEquipe } from "@/servicos/usuarios";
 
 export const dynamic = "force-dynamic";
 
 // Configurações da loja (só admin).
 export const GET = rota(async () => {
   await exigirUsuario("configurar");
-  const equipe = await db.usuario.findMany({
-    orderBy: [{ perfil: "asc" }, { criadoEm: "asc" }, { nome: "asc" }],
-    select: { id: true, nome: true, login: true, perfil: true, ativo: true, status: true },
-  });
   return {
-    equipe,
+    equipe: await listarEquipe(),
     distribuicao: await modoDistribuicao(),
     prazosEspera: await prazosDeEspera(),
     regrasAgenda: await regrasDaAgenda(),

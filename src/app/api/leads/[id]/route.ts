@@ -32,7 +32,6 @@ const esquemaEdicao = z
     investimento: texto,
     pedidosTecnicos: lista,
     observacoes: z.string().max(2000).nullable().optional(),
-    consultorId: z.string().max(40).nullable().optional(),
     classificacao: z.enum(CODIGOS_CLASSIFICACAO as [string, ...string[]]).nullable().optional(),
     restaurar: z.boolean().optional(),
     venda: esquemaDadosDeVenda.optional(),
@@ -47,10 +46,6 @@ export const PATCH = rota(async (req: Request, { params }: Contexto) => {
   if (!lead) naoEncontrado();
   const { classificacao, restaurar, venda, ...campos } = esquemaEdicao.parse(await req.json());
   if (restaurar) await restaurarLead(id, usuario.nome);
-  if (campos.consultorId) {
-    const existe = await db.usuario.findFirst({ where: { id: campos.consultorId, perfil: "consultor" } });
-    if (!existe) campos.consultorId = undefined;
-  }
   await atualizarCampos(id, campos, usuario.nome, "substituir");
   // Trocar a data do retorno, o valor ou o motivo sem mudar de etapa.
   if (venda) await moverEtapa(id, lead.etapa as CodigoEtapa, usuario.nome, { dados: dadosDeVenda(venda) });

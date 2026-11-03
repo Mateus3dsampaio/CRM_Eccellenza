@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Clock, LogOut, MessageSquarePlus } from "lucide-react";
+import { Clock, KeyRound, LogOut, MessageSquarePlus } from "lucide-react";
 import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
 import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotaoAlmoco } from "./almoco";
+import { JanelaMinhaSenha } from "./configuracoes/equipe";
 import { NovaMensagem } from "./nova-mensagem";
 import { useUsuario } from "./usuario";
 
@@ -30,6 +31,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
   const usuario = useUsuario();
   const { agora } = useVersao();
   const [novaAberta, setNovaAberta] = useState(false);
+  const [senhaAberta, setSenhaAberta] = useState(false);
   const titulo = TITULOS.find(([prefixo]) => caminho.startsWith(prefixo))?.[1] ?? "Atendimentos";
 
   async function sair() {
@@ -78,6 +80,9 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
               <p className="text-xs text-texto-fraco">{usuario.perfil === "admin" ? "Administrador" : "Consultor"}</p>
             </div>
             <BotaoAvisos />
+            <button onClick={() => setSenhaAberta(true)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Trocar minha senha" title="Trocar minha senha">
+              <KeyRound className="size-5" aria-hidden />
+            </button>
             <button onClick={sair} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Sair" title="Sair">
               <LogOut className="size-5" aria-hidden />
             </button>
@@ -86,6 +91,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
       </header>
 
       <NovaMensagem aberta={novaAberta} aoFechar={() => setNovaAberta(false)} />
+      {senhaAberta && <JanelaMinhaSenha aoFechar={() => setSenhaAberta(false)} />}
     </>
   );
 }

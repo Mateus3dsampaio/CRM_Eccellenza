@@ -44,6 +44,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
 | Login, tentativas, primeiro admin, criar usuário | `src/regras/tentativas-login.ts` + `src/app/api/login/route.ts` + `src/servicos/usuarios.ts` + `scripts/criar-usuario.ts` |
+| Cadastro de usuários (criar, editar, nova senha, desativar, transferir leads), trocar a própria senha, regra da senha (6+, letra, número e maiúscula) | Tela: `src/componentes/configuracoes/equipe.tsx` (cartão Equipe em Configurações > Geral; `JanelaMinhaSenha` abre pelo cabeçalho). Regra: `src/regras/senha.ts`. Gravação: `src/servicos/usuarios.ts` + `transferirLeads` em `src/servicos/distribuicao.ts`. Rotas: `/api/configuracoes/usuarios`, `/api/leads/[id]/transferir`, `/api/conta/senha` |
 | Colocar no ar (Railway, Postgres) | `Dockerfile`, `railway.json`, `prisma/postgres/` (esquema gerado + migrações), guia em `docs/colocar-no-ar.md` |
 | Enviar/receber imagem, vídeo e PDF; galeria; apagar mídia | Tipos, limites, nome seguro, Range de vídeo: `src/regras/midia.ts` (limites de vídeo e PDF PROVISÓRIOS). Disco: `src/lib/midias.ts`. Apagar, limpeza de 180 dias, galeria, resumo antes de excluir, armazenamento: `src/servicos/midias.ts`. Envio pela Meta: `enviarPelaMeta` (`servicos/whatsapp.ts`) e `enviarMensagemLoja` (`anexo`). Tela: `src/componentes/galeria/galeria.tsx` e anexo em `src/componentes/ficha/conversa.tsx` |
 | Tabelas do banco | `prisma/schema.prisma` (depois `npm run esquema:postgres` e uma migração nova em `prisma/postgres/migrations/`; o teste `esquema.test.ts` avisa se esquecer) (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
@@ -108,7 +109,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
 | `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
-| `src/app/api/equipe/status/route.ts` | Consultor online/almoço | `distribuicao` |
+| `src/app/api/equipe/status/route.ts` | Consultor online/almoço. Só volta do almoço quando ele (ou o admin) clica: nada é automático | `distribuicao` |
+| `src/app/api/configuracoes/usuarios/route.ts` | Criar usuário (só admin) | `usuarios` |
+| `src/app/api/configuracoes/usuarios/[id]/route.ts` | Editar nome/perfil, redefinir senha, desativar/reativar (desativar consultor com leads exige `transferirPara`). Só admin | `usuarios` |
+| `src/app/api/configuracoes/usuarios/transferir/route.ts` | Passar os leads em andamento de um consultor para outro. Só admin | `distribuicao` |
+| `src/app/api/leads/[id]/transferir/route.ts` | Passar UM lead para outro consultor ativo (a ficha usa; o PATCH da ficha não troca mais o consultor). Só admin | `distribuicao` |
+| `src/app/api/conta/senha/route.ts` | Trocar a própria senha (pede a atual; 5 erros em 15 min bloqueiam) | `usuarios` |
 | `src/app/api/midias/[nome]/route.ts` | Serve imagem, vídeo (com Range) e documentos (PDF, Word, Excel, DWG: sempre baixam, nunca abrem dentro do site) (só logado); cabeçalhos de segurança.  Estava fora do Git por causa do `.gitignore` (`midias/`); agora o `.gitignore` só ignora `/midias/` da raiz | `lib/midias` |
 | `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
 | `src/app/api/whatsapp/webhook/route.ts` | Webhook da Meta: GET verifica o token; POST valida a assinatura, GRAVA o evento (caixa de entrada) e responde 200; processa depois (a rotina reprocessa o que ficar pendente). Pública de propósito (a assinatura protege) | `whatsapp`, `regras/whatsapp` |
@@ -141,7 +147,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja (envio real pela Meta quando as chaves existem; senão simulado; em produção sem chaves a mensagem fica "falhou"), status (entregue/lido: o real vem do webhook). Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
 | `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
 | `src/servicos/agenda.ts` | Horários livres, agendar, cancelar visita, bloqueios |
-| `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço |
+| `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço (só muda por clique), `transferirLeads` (todos os leads em andamento de um consultor para outro) e `transferirLead` (um lead só), ambos com registro na ficha |
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
@@ -158,7 +164,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (`OPENAI_API_KEY`; modelo `whisper-1`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
-| `src/servicos/usuarios.ts` | Criar usuário (senha mínima 10) e criar o primeiro admin a partir de `ADMIN_*` |
+| `src/servicos/usuarios.ts` | Criar usuário, listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
 
 ## Regras puras (`src/regras`)
 | Arquivo | Regra |
@@ -186,6 +192,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (PROVISÓRIO: 8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (PROVISÓRIO) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
+| `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
 
 ## Bot (`src/bot`)
 | Arquivo | Faz |
@@ -202,7 +209,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, sair). No celular tem que caber em 375px sem rolar para o lado |
+| `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, trocar minha senha, sair). No celular tem que caber em 375px sem rolar para o lado |
 | `src/componentes/menu-lateral.tsx` | Menu lateral (computador) com indicador que desliza e opção de encolher (guarda a escolha); no celular vira a barra de baixo |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
@@ -230,8 +237,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
+| `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe (cadastro de usuários em `equipe.tsx`) |
 | `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
@@ -284,6 +292,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
+| `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |

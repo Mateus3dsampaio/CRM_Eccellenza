@@ -44,6 +44,45 @@ export async function distribuirFila(): Promise<number> {
   return total;
 }
 
+const LEADS_EM_ANDAMENTO = { arquivadoEm: null, etapa: { notIn: ["fechado", "perdido"] } };
+
+export function contarLeadsEmAndamento(consultorId: string): Promise<number> {
+  return db.lead.count({ where: { consultorId, ...LEADS_EM_ANDAMENTO } });
+}
+
+async function consultorDestino(paraId: string) {
+  const para = await db.usuario.findUnique({ where: { id: paraId } });
+  if (!para || !para.ativo || para.perfil !== "consultor") throw new Error("Os leads só podem ir para um consultor ativo.");
+  return para;
+}
+
+/**
+ * Passa os leads em andamento (não arquivados, fora de Fechado e Perdido) de um consultor para outro.
+ * A conversa, a espera do cliente e as não lidas seguem junto. Devolve quantos foram.
+ */
+export async function transferirLeads(deId: string, paraId: string, autor: string): Promise<number> {
+  if (deId === paraId) throw new Error("Escolha um consultor diferente.");
+  const de = await db.usuario.findUniqueOrThrow({ where: { id: deId } });
+  const para = await consultorDestino(paraId);
+  const leads = await db.lead.findMany({ where: { consultorId: deId, ...LEADS_EM_ANDAMENTO }, select: { id: true } });
+  for (const lead of leads) {
+    await db.lead.update({ where: { id: lead.id }, data: { consultorId: paraId } });
+    await registrarAlteracao(lead.id, autor, `Lead transferido de ${de.nome} para ${para.nome}`);
+  }
+  if (leads.length) await marcarMudanca();
+  return leads.length;
+}
+
+/** Passa um lead só (qualquer etapa) para outro consultor ativo, mesmo que hoje não tenha dono. */
+export async function transferirLead(leadId: string, paraId: string, autor: string): Promise<void> {
+  const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, include: { consultor: { select: { nome: true } } } });
+  if (lead.consultorId === paraId) throw new Error("O lead já está com esse consultor.");
+  const para = await consultorDestino(paraId);
+  await db.lead.update({ where: { id: leadId }, data: { consultorId: paraId } });
+  await registrarAlteracao(leadId, autor, `Lead transferido de ${lead.consultor?.nome ?? "ninguém (sem consultor)"} para ${para.nome}`);
+  await marcarMudanca();
+}
+
 /** Muda a disponibilidade do consultor. Ao voltar (online) ele recebe a fila e volta ao rodízio. */
 export async function definirStatusConsultor(usuarioId: string, status: StatusConsultor): Promise<void> {
   const usuario = await db.usuario.findUniqueOrThrow({ where: { id: usuarioId } });

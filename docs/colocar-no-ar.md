@@ -17,7 +17,7 @@ Tudo no código já está pronto. Falta só **você** fazer as partes que exigem
 | `DATABASE_URL` | clique em "Add Reference" e escolha `DATABASE_URL` do Postgres |
 | `ANTHROPIC_API_KEY` | sua chave da Anthropic |
 | `ADMIN_LOGIN` | o login do seu administrador (ex.: `mateus`) |
-| `ADMIN_SENHA` | uma senha **longa** (mínimo 10 caracteres) |
+| `ADMIN_SENHA` | uma senha **longa** (mínimo 6, com letra, número e uma maiúscula) |
 | `ADMIN_NOME` | seu nome |
 | `MIDIAS_DIR` | `/data/midias` |
 | `MIDIAS_LIMITE_MB` | tamanho do seu Volume em MB (ex.: `5000`), para mostrar a porcentagem usada |

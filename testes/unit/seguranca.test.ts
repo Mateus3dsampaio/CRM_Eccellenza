@@ -31,33 +31,33 @@ describe("login e usuários", () => {
   beforeEach(limparBanco);
 
   it("depois de 5 senhas erradas responde 429, mesmo com a senha certa", async () => {
-    await criarUsuario({ nome: "Ana", login: "ana", senha: "senha-bem-longa-1", perfil: "consultor" });
+    await criarUsuario({ nome: "Ana", login: "ana", senha: "Senha1bem", perfil: "consultor" });
     for (let i = 0; i < MAX_TENTATIVAS; i++) expect((await login(pedido("ana", "errada", "9.9.9.9"))).status).toBe(401);
-    expect((await login(pedido("ana", "senha-bem-longa-1", "9.9.9.9"))).status).toBe(429);
+    expect((await login(pedido("ana", "Senha1bem", "9.9.9.9"))).status).toBe(429);
     // Outra origem não é afetada.
-    expect((await login(pedido("ana", "senha-bem-longa-1", "8.8.8.8"))).status).toBe(200);
+    expect((await login(pedido("ana", "Senha1bem", "8.8.8.8"))).status).toBe(200);
   });
 
   it("forjar o cabeçalho de origem não adianta: o limite por usuário também vale", async () => {
-    await criarUsuario({ nome: "Dani", login: "dani", senha: "senha-bem-longa-1", perfil: "consultor" });
+    await criarUsuario({ nome: "Dani", login: "dani", senha: "Senha1bem", perfil: "consultor" });
     let ultimo = 0;
     for (let i = 0; i < 21; i++) ultimo = (await login(pedido("dani", "errada", `1.1.1.${i}`))).status;
     expect(ultimo).toBe(429);
-    expect((await login(pedido("dani", "senha-bem-longa-1", "2.2.2.2"))).status).toBe(429);
+    expect((await login(pedido("dani", "Senha1bem", "2.2.2.2"))).status).toBe(429);
   });
 
   it("senha curta, login repetido e login inválido são recusados", async () => {
-    await expect(criarUsuario({ nome: "X", login: "xx", senha: "curta", perfil: "admin" })).rejects.toThrow(/pelo menos/);
-    await criarUsuario({ nome: "X", login: "xx", senha: "uma-senha-longa", perfil: "admin" });
-    await expect(criarUsuario({ nome: "Y", login: "XX", senha: "uma-senha-longa", perfil: "admin" })).rejects.toThrow(/Já existe/);
-    await expect(criarUsuario({ nome: "Z", login: "a b", senha: "uma-senha-longa", perfil: "admin" })).rejects.toThrow(/Login inválido/);
+    await expect(criarUsuario({ nome: "X", login: "xx", senha: "Ab1", perfil: "admin" })).rejects.toThrow(/pelo menos/);
+    await criarUsuario({ nome: "X", login: "xx", senha: "UmaSenha1", perfil: "admin" });
+    await expect(criarUsuario({ nome: "Y", login: "XX", senha: "UmaSenha1", perfil: "admin" })).rejects.toThrow(/Já existe/);
+    await expect(criarUsuario({ nome: "Z", login: "a b", senha: "UmaSenha1", perfil: "admin" })).rejects.toThrow(/Login inválido/);
   });
 
   it("primeiro admin: cria só com banco vazio e variáveis preenchidas", async () => {
     expect(await garantirPrimeiroAdmin({})).toBe(false);
-    expect(await garantirPrimeiroAdmin({ ADMIN_LOGIN: "mateus", ADMIN_SENHA: "senha-segura-123", ADMIN_NOME: "Mateus" })).toBe(true);
+    expect(await garantirPrimeiroAdmin({ ADMIN_LOGIN: "mateus", ADMIN_SENHA: "SenhaSegura1", ADMIN_NOME: "Mateus" })).toBe(true);
     expect((await db.usuario.findUniqueOrThrow({ where: { login: "mateus" } })).perfil).toBe("admin");
-    expect(await garantirPrimeiroAdmin({ ADMIN_LOGIN: "outro", ADMIN_SENHA: "senha-segura-123" })).toBe(false);
+    expect(await garantirPrimeiroAdmin({ ADMIN_LOGIN: "outro", ADMIN_SENHA: "SenhaSegura1" })).toBe(false);
     expect(await db.usuario.count()).toBe(1);
   });
 });
@@ -65,11 +65,11 @@ describe("login e usuários", () => {
 describe("cookie de sessão", () => {
   beforeEach(limparBanco);
   const cookie = async (url: string, extra: Record<string, string> = {}) => {
-    const r = await login(new Request(url, { method: "POST", headers: { "content-type": "application/json", ...extra }, body: JSON.stringify({ login: "bia", senha: "senha-bem-longa-1" }) }));
+    const r = await login(new Request(url, { method: "POST", headers: { "content-type": "application/json", ...extra }, body: JSON.stringify({ login: "bia", senha: "Senha1bem" }) }));
     return r.headers.get("set-cookie") ?? "";
   };
   it("só é 'Secure' quando o acesso é por https (no computador, em http, precisa funcionar)", async () => {
-    await criarUsuario({ nome: "Bia", login: "bia", senha: "senha-bem-longa-1", perfil: "consultor" });
+    await criarUsuario({ nome: "Bia", login: "bia", senha: "Senha1bem", perfil: "consultor" });
     expect(await cookie("http://127.0.0.1:3000/api/login")).not.toMatch(/Secure/i);
     expect(await cookie("https://crm.exemplo/api/login")).toMatch(/Secure/i);
     expect(await cookie("http://interno/api/login", { "x-forwarded-proto": "https" })).toMatch(/Secure/i);
