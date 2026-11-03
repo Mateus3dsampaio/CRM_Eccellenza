@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { apagarMidia, lerMidia, PASTA_MIDIAS, salvarMidia, tamanhoDaMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { pode } from "@/regras/permissoes";
-import { DIAS_MIDIA_ATE_APAGAR, formatarTamanho, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, rotuloDoTipo, tipoDoArquivo, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
+import { DIAS_MIDIA_ATE_APAGAR, extensaoBloqueada, formatarTamanho, rotuloDoArquivo, TIPO_GENERICO, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, rotuloDoTipo, tipoDoArquivo, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
 import { DIA } from "@/regras/tempo";
 import { responderComoConsultorComArquivo } from "@/servicos/conversa";
 import { acharLeadPorTelefone, excluirLeads, obterOuCriarLead } from "@/servicos/leads";
@@ -24,8 +24,8 @@ const ole = (extra = 30) => Buffer.concat([Buffer.from("d0cf11e0a1b11ae1", "hex"
 const dwg = (extra = 60) => Buffer.concat([Buffer.from("AC1032"), Buffer.alloc(extra, 0)]);
 
 const guardados: string[] = [];
-async function guardar(dados: Buffer, tipo: string) {
-  const nome = await salvarMidia(dados, tipo);
+async function guardar(dados: Buffer, tipo: string, nomeOriginal?: string) {
+  const nome = await salvarMidia(dados, tipo, nomeOriginal);
   guardados.push(nome);
   return nome;
 }
@@ -84,9 +84,20 @@ describe("regras de mídia", () => {
     expect(rotuloDoTipo("application/acad")).toBe("DWG");
     expect(previaDaMidia(XLSX)).toBe("📄 Excel");
   });
+  it("extensões bloqueadas no modo 'qualquer arquivo': programas, scripts, páginas e arquivos com macro", () => {
+    for (const nome of ["setup.exe", "A.BAT", "foto.jpg.exe", "pagina.html", "logo.svg", "planilha.xlsm", "script.ps1", "x.exe.", "x.EXE "]) expect(extensaoBloqueada(nome)).not.toBeNull();
+    for (const nome of ["projeto.rar", "apresentacao.pptx", "lista.txt", "dados.csv", "modelo.skp", "semextensao", ".exe", "exe", ""]) expect(extensaoBloqueada(nome)).toBeNull();
+    expect(rotuloDoArquivo(TIPO_GENERICO, "projeto.rar")).toBe("RAR");
+    expect(rotuloDoArquivo(TIPO_GENERICO, "semextensao")).toBe("Arquivo");
+    expect(rotuloDoArquivo(TIPO_GENERICO, "x.extensaomuitolonga")).toBe("Arquivo");
+    expect(rotuloDoArquivo("application/pdf", "a.pdf")).toBe("PDF");
+    // octet-stream é o "não sei": o nome decide (docx continua docx; desconhecido fica genérico no recebimento)
+    expect(tipoDoArquivo("a.docx", TIPO_GENERICO)).toBe(DOCX);
+    expect(tipoDoArquivo("a.rar", TIPO_GENERICO)).toBeNull();
+  });
   it("o vendedor só envia JPG, PNG, MP4, PDF, Word, Excel, DWG e ZIP (WEBP, GIF e 3GP só se recebem)", () => {
     for (const ok of ["image/jpeg", "image/png", "video/mp4", "application/pdf", DOCX, XLSX, "application/msword", "application/vnd.ms-excel", "application/acad", "application/zip"]) expect(tipoPodeEnviar(ok)).toBe(true);
-    for (const nao of ["image/webp", "image/gif", "video/3gpp", "application/x-rar-compressed"]) expect(tipoPodeEnviar(nao)).toBe(false);
+    for (const nao of ["image/webp", "image/gif", "video/3gpp", "application/x-rar-compressed", TIPO_GENERICO]) expect(tipoPodeEnviar(nao)).toBe(false); // arquivo genérico só se recebe
   });
   it("só o admin apaga arquivo", () => {
     expect(pode("admin", "apagar_midia")).toBe(true);
@@ -117,6 +128,14 @@ describe("guardar arquivos", () => {
     await expect(salvarMidia(ole(), XLSX)).rejects.toThrow(/não parece/);
     await expect(salvarMidia(pdf(), "application/acad")).rejects.toThrow(/não parece/);
     await expect(salvarMidia(Buffer.concat([zip(), Buffer.alloc(LIMITES_BYTES.documento)]), DOCX)).rejects.toThrow(/maior que/);
+  });
+  it("arquivo genérico: guardado como .bin se o nome for seguro; recusado se for programa, script ou página", async () => {
+    const g = await guardar(Buffer.from("conteúdo qualquer de um rar"), TIPO_GENERICO, "projeto.rar");
+    expect(g).toMatch(/\.bin$/);
+    await expect(salvarMidia(Buffer.from("MZ..."), TIPO_GENERICO, "setup.exe")).rejects.toThrow(/bloqueados/);
+    await expect(salvarMidia(Buffer.from("<html>"), TIPO_GENERICO, "pagina.html")).rejects.toThrow(/bloqueados/);
+    await expect(salvarMidia(Buffer.alloc(0), TIPO_GENERICO, "vazio.rar")).rejects.toThrow(/vazio/);
+    await expect(salvarMidia(Buffer.alloc(LIMITES_BYTES.documento + 1), TIPO_GENERICO, "grande.rar")).rejects.toThrow(/maior que/);
   });
   it("recusa arquivo que não é do tipo que diz ser, vazio ou grande demais", async () => {
     await expect(salvarMidia(Buffer.from("<html>oi</html>"), "application/pdf")).rejects.toThrow(/não parece/);
@@ -172,12 +191,12 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
     expect((await acharLeadPorTelefone("+5588999991111"))?.ultimaMensagemPrevia).toBe("🎥 Vídeo");
   });
 
-  it("tipo que o sistema não aceita (Word) ou arquivo grande demais: a conversa registra o aviso e nada é guardado", async () => {
+  it("vídeo grande demais ou de formato estranho: a conversa registra o aviso e nada é guardado", async () => {
     metaConfigurada();
-    fingirMeta({ docx: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", dados: Buffer.from("PK") }, grande: { mime: "video/mp4", dados: Buffer.concat([mp4(), Buffer.alloc(LIMITES_BYTES.video)]) } });
-    await processarWebhook(entrada("wamid.W1", "document", { document: { id: "docx", filename: "apresentacao.pptx" } }));
+    fingirMeta({ grande: { mime: "video/mp4", dados: Buffer.concat([mp4(), Buffer.alloc(LIMITES_BYTES.video)]) }, avi: { mime: "video/x-msvideo", dados: Buffer.from("RIFF") } });
     await processarWebhook(entrada("wamid.G1", "video", { video: { id: "grande" } }));
-    for (const id of ["wamid.W1", "wamid.G1"]) {
+    await processarWebhook(entrada("wamid.G2", "video", { video: { id: "avi" } }));
+    for (const id of ["wamid.G1", "wamid.G2"]) {
       const m = await db.mensagem.findFirstOrThrow({ where: { idExterno: id } });
       expect(m.midiaArquivo).toBeNull();
       expect(m.texto).toMatch(/não conseguiu baixar ou não aceita/);
@@ -208,6 +227,52 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
     expect(falso.midiaArquivo).toBeNull();
     expect(falso.texto).toMatch(/não conseguiu baixar ou não aceita/);
     expect((await acharLeadPorTelefone("+5588999991111"))?.ultimaMensagemPrevia).toMatch(/enviou um arquivo que o sistema não conseguiu/);
+  });
+
+  it("qualquer arquivo que o cliente mande como documento fica guardado (RAR, PowerPoint, TXT); programa e página não", async () => {
+    metaConfigurada();
+    const chamadas = fingirMeta({
+      rar: { mime: "application/x-rar-compressed", dados: Buffer.from("Rar!conteudo") },
+      ppt: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", dados: Buffer.from("PK conteudo de apresentacao") },
+      txt: { mime: "text/plain", dados: Buffer.from("medidas: 2,5 x 3") },
+      exe: { mime: "application/x-msdownload", dados: Buffer.from("MZ...") },
+      html: { mime: "text/html", dados: Buffer.from("<script>alert(1)</script>") },
+      docx: { mime: "application/octet-stream", dados: zip() },
+      video: { mime: "video/x-msvideo", dados: Buffer.from("RIFF") },
+    });
+    const doc = (id: string, nome: string, cod: string) => processarWebhook(entrada(id, "document", { document: { id: cod, filename: nome } }));
+    await doc("wamid.R1", "projeto.rar", "rar");
+    await doc("wamid.R2", "apresentacao.pptx", "ppt");
+    await doc("wamid.R3", "medidas.txt", "txt");
+    await doc("wamid.R4", "instalador.exe", "exe");
+    await doc("wamid.R5", "pagina.html", "html");
+    await doc("wamid.R6", "orçamento.docx", "docx"); // tipo genérico, mas o nome diz Word
+    await processarWebhook(entrada("wamid.R7", "video", { video: { id: "video" } })); // vídeo de formato estranho: NÃO vira arquivo genérico
+    const pegar = (id: string) => db.mensagem.findFirstOrThrow({ where: { idExterno: id } });
+    for (const id of ["wamid.R1", "wamid.R2", "wamid.R3"]) {
+      const m = await pegar(id);
+      guardados.push(m.midiaArquivo!);
+      expect(m.midiaTipo).toBe(TIPO_GENERICO);
+      expect(m.midiaArquivo).toMatch(/\.bin$/);
+    }
+    expect((await pegar("wamid.R1")).midiaNome).toBe("projeto.rar");
+    const w = await pegar("wamid.R6");
+    guardados.push(w.midiaArquivo!);
+    expect(w.midiaTipo).toBe(DOCX);
+    for (const id of ["wamid.R4", "wamid.R5"]) {
+      const m = await pegar(id);
+      expect(m.midiaArquivo).toBeNull();
+      expect(m.texto).toMatch(/bloqueia por segurança/);
+    }
+    // Arquivo bloqueado nem é baixado.
+    expect(chamadas.some((c) => c.url.endsWith("/exe") || c.url.endsWith("/html"))).toBe(false);
+    const v = await pegar("wamid.R7");
+    expect(v.midiaArquivo).toBeNull();
+    // Na galeria o genérico aparece com a extensão e entra no filtro Documentos.
+    const lead = (await acharLeadPorTelefone("+5588999991111"))!;
+    await db.lead.update({ where: { id: lead.id }, data: { consultorId: null } });
+    const docs = await listarGaleria({ id: "x", perfil: "admin" }, { familia: "documento" });
+    expect(docs.itens.map((i) => i.rotulo).sort()).toEqual(["RAR", "TXT", "PPTX", "Word"].sort());
   });
 
   it("o bot não recebe PDF nem vídeo como imagem (só um aviso de que chegou)", async () => {

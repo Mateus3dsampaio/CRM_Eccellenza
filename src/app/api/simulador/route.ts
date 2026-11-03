@@ -49,7 +49,7 @@ export const POST = rota(async (req: Request) => {
   let midia: { dados: Buffer; tipo: string; nome: string } | null = null;
   if (arquivo instanceof File && arquivo.size > 0) {
     if (arquivo.size > TAMANHO_MAXIMO) throw new ErroHttp(400, "Imagem maior que 5 MB.");
-    midia = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: tipoDoArquivo(arquivo.name, arquivo.type) ?? arquivo.type, nome: arquivo.name };
+    midia = { dados: Buffer.from(await arquivo.arrayBuffer()), tipo: tipoDoArquivo(arquivo.name, arquivo.type) ?? "tipo/desconhecido", nome: arquivo.name };
   }
   try {
     return await receberMensagemCliente({

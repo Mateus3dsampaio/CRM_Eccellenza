@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Bot, Download, FileText, Headset, Trash2, Zap } from "lucide-react";
-import { familiaDoTipo, formatarTamanho, rotuloDoTipo } from "@/regras/midia";
+import { familiaDoTipo, formatarTamanho, rotuloDoArquivo } from "@/regras/midia";
 import { formatarData, formatarHora, inicioDoDiaLocal } from "@/regras/tempo";
 import { juntar } from "./estilos";
 import { StatusMensagem } from "./ui";
@@ -97,7 +97,7 @@ function MidiaDaMensagem({ m, aoApagar }: { m: MensagemChat; aoApagar?: (mensage
           <FileText className="size-8 shrink-0 text-alerta" aria-hidden />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">{nome}</span>
-            <span className="text-xs text-texto-suave">{m.midiaTipo ? rotuloDoTipo(m.midiaTipo) : "Arquivo"}{m.midiaBytes ? ` · ${formatarTamanho(m.midiaBytes)}` : ""}</span>
+            <span className="text-xs text-texto-suave">{m.midiaTipo ? rotuloDoArquivo(m.midiaTipo, m.midiaNome) : "Arquivo"}{m.midiaBytes ? ` · ${formatarTamanho(m.midiaBytes)}` : ""}</span>
           </span>
           <Download className="size-4 shrink-0 text-texto-suave" aria-hidden />
         </a>

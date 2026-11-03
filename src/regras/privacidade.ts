@@ -20,7 +20,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Quais dados tratamos",
       paragrafos: [
-        "Número de telefone e nome do seu perfil no WhatsApp; as mensagens, fotos, vídeos, documentos (PDF, Word, Excel, DWG, ZIP) e plantas que você nos envia; e o que você nos conta sobre o seu projeto (ambientes, medidas, cidade, prazo e faixa de investimento).",
+        "Número de telefone e nome do seu perfil no WhatsApp; as mensagens, fotos, vídeos, documentos e arquivos (PDF, Word, Excel, DWG, ZIP e outros) e plantas que você nos envia; e o que você nos conta sobre o seu projeto (ambientes, medidas, cidade, prazo e faixa de investimento).",
         "Se você mandar um áudio, ele é transformado em texto automaticamente. O áudio em si não fica guardado no nosso sistema, só o texto.",
       ],
     },

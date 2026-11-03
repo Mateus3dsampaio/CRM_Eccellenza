@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { TAMANHO_MAXIMO_IMAGEM } from "@/regras/limites";
-import { extensaoDoTipo, formatarTamanho, limiteDoTipo, tipoCanonico, tipoMidiaAceito } from "@/regras/midia";
+import { extensaoBloqueada, extensaoDoTipo, formatarTamanho, limiteDoTipo, TIPO_GENERICO, tipoCanonico, tipoMidiaAceito } from "@/regras/midia";
 
 // Mídias ficam fora da pasta pública (SEG-03) e só são servidas por rota com login.
 // No Railway, MIDIAS_DIR aponta para o volume (disco que não some a cada deploy), ex.: /data/midias.
@@ -35,8 +35,16 @@ export function conferirAssinatura(dados: Buffer, tipo: string): boolean {
 }
 
 /** Confere tipo, tamanho e o começo do arquivo. Devolve o motivo da recusa, ou null se está tudo certo. */
-export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string): string | null {
+export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string, nome?: string | null): string | null {
   const tipoLimpo = tipoCanonico(tipo);
+  // Arquivo genérico (qualquer coisa que o cliente mande): não dá para conferir o conteúdo, então o nome não pode ser de programa ou script.
+  if (tipoLimpo === TIPO_GENERICO) {
+    const bloqueada = extensaoBloqueada(nome);
+    if (bloqueada) return `Arquivos .${bloqueada} são bloqueados por segurança.`;
+    if (dados.length === 0) return "O arquivo está vazio.";
+    if (dados.length > limiteDoTipo(tipoLimpo)) return `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`;
+    return null;
+  }
   if (!tipoMidiaAceito(tipoLimpo) || !extensaoDoTipo(tipoLimpo)) return "Tipo de arquivo não aceito. Use imagem, vídeo (MP4), PDF, Word, Excel, DWG ou ZIP.";
   if (dados.length === 0) return "O arquivo está vazio.";
   if (dados.length > limiteDoTipo(tipoLimpo)) return `Arquivo maior que ${formatarTamanho(limiteDoTipo(tipoLimpo))}.`;
@@ -45,8 +53,8 @@ export function motivoDeRecusaDaMidia(dados: Buffer, tipo: string): string | nul
 }
 
 /** Guarda imagem, vídeo ou documento (confere tipo, tamanho e o começo do arquivo). Devolve o nome com que foi guardado. */
-export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> {
-  const motivo = motivoDeRecusaDaMidia(dados, tipo);
+export async function salvarMidia(dados: Buffer, tipo: string, nomeOriginal?: string | null): Promise<string> {
+  const motivo = motivoDeRecusaDaMidia(dados, tipo, nomeOriginal);
   if (motivo) throw new Error(motivo);
   const extensao = extensaoDoTipo(tipoCanonico(tipo))!;
   await mkdir(PASTA_MIDIAS, { recursive: true });
@@ -56,7 +64,7 @@ export async function salvarMidia(dados: Buffer, tipo: string): Promise<string> 
 }
 
 function caminhoSeguro(nome: string): string {
-  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip|bin)$/.test(nome)) throw new Error("Nome de arquivo inválido.");
   return path.join(PASTA_MIDIAS, nome);
 }
 
@@ -87,7 +95,7 @@ export async function listarMidiasAntigasDaPasta(antesDe: Date): Promise<string[
   }
   const saida: string[] = [];
   for (const nome of nomes) {
-    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip)$/.test(nome)) continue; // só o que o sistema mesmo grava
+    if (!/^[a-f0-9-]+\.(jpg|png|webp|gif|mp4|3gp|pdf|doc|docx|xls|xlsx|dwg|zip|bin)$/.test(nome)) continue; // só o que o sistema mesmo grava
     try {
       if ((await stat(path.join(PASTA_MIDIAS, nome))).mtime < antesDe) saida.push(nome);
     } catch {

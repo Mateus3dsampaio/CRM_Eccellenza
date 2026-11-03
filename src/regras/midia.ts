@@ -19,6 +19,31 @@ export const TIPOS_MIDIA: Record<string, { extensao: string; familia: FamiliaMid
   "application/zip": { extensao: "zip", familia: "documento" },
 };
 
+/**
+ * Arquivo de tipo desconhecido (RAR, 7z, PowerPoint, TXT, SKP...), só no RECEBIMENTO. Fica guardado com a extensão ".bin"
+ * (o nome original só aparece para o usuário) e é sempre baixado, nunca aberto no site. O conteúdo não dá para conferir.
+ */
+export const TIPO_GENERICO = "application/octet-stream";
+
+/** Extensões que o sistema NUNCA guarda, mesmo no modo "qualquer arquivo": programas, scripts, páginas e arquivos com macro. */
+const EXTENSOES_BLOQUEADAS = new Set([
+  "exe", "msi", "bat", "cmd", "com", "scr", "pif", "js", "jse", "vbs", "vbe", "wsf", "wsh", "ps1", "psm1", "jar", "hta", "lnk", "reg", "dll", "sys", "cpl", "msc",
+  "html", "htm", "xhtml", "svg", "xml", "php", "asp", "aspx", "jsp", "swf", "apk", "app", "dmg", "sh", "bin", "iso", "docm", "xlsm", "pptm", "dotm", "xlam",
+]);
+
+/** Extensão do nome (minúscula, sem pontos e espaços do fim), ou "". */
+export function extensaoDoNome(nome: string | null | undefined): string {
+  const limpoNome = (nome ?? "").trim().replace(/[. ]+$/, "");
+  const i = limpoNome.lastIndexOf(".");
+  return i > 0 && i < limpoNome.length - 1 ? limpoNome.slice(i + 1).toLowerCase() : "";
+}
+
+/** O nome tem uma extensão que o sistema bloqueia? Devolve a extensão (para avisar) ou null. */
+export function extensaoBloqueada(nome: string | null | undefined): string | null {
+  const e = extensaoDoNome(nome);
+  return EXTENSOES_BLOQUEADAS.has(e) ? e : null;
+}
+
 // Nomes diferentes para o mesmo tipo (o Windows informa "x-zip-compressed" para ZIP).
 const APELIDOS: Record<string, string> = { "application/x-zip-compressed": "application/zip", "application/x-zip": "application/zip" };
 
@@ -31,6 +56,7 @@ export const ROTULO_TIPO: Record<string, string> = {
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
   "application/acad": "DWG",
   "application/zip": "ZIP",
+  [TIPO_GENERICO]: "Arquivo",
 };
 
 // Extensões de documento que valem mesmo quando o navegador ou a Meta não informam (ou informam um tipo genérico) o tipo certo.
@@ -82,19 +108,24 @@ export function tipoCanonico(tipo: string): string {
 }
 
 export function tipoMidiaAceito(tipo: string): boolean {
-  return limpo(tipo) in TIPOS_MIDIA;
+  const t = limpo(tipo);
+  return t in TIPOS_MIDIA || t === TIPO_GENERICO;
 }
 
 export function familiaDoTipo(tipo: string): FamiliaMidia | null {
-  return TIPOS_MIDIA[limpo(tipo)]?.familia ?? null;
+  const t = limpo(tipo);
+  return t === TIPO_GENERICO ? "documento" : TIPOS_MIDIA[t]?.familia ?? null;
 }
 
 export function extensaoDoTipo(tipo: string): string | null {
-  return TIPOS_MIDIA[limpo(tipo)]?.extensao ?? null;
+  const t = limpo(tipo);
+  return t === TIPO_GENERICO ? "bin" : TIPOS_MIDIA[t]?.extensao ?? null;
 }
 
 export function tipoDaExtensao(extensao: string): string | null {
-  return Object.entries(TIPOS_MIDIA).find(([, v]) => v.extensao === extensao.toLowerCase())?.[0] ?? null;
+  const e = extensao.toLowerCase();
+  if (e === "bin") return TIPO_GENERICO;
+  return Object.entries(TIPOS_MIDIA).find(([, v]) => v.extensao === e)?.[0] ?? null;
 }
 
 export function limiteDoTipo(tipo: string): number {
@@ -108,6 +139,15 @@ export const ROTULO_FAMILIA: Record<FamiliaMidia, string> = { imagem: "Imagem", 
 export function rotuloDoTipo(tipo: string): string {
   const t = limpo(tipo);
   return ROTULO_TIPO[t] ?? (familiaDoTipo(t) ? ROTULO_FAMILIA[familiaDoTipo(t)!] : "Arquivo");
+}
+
+/** Como mostrar o tipo na tela: para arquivo genérico usa a extensão do nome ("RAR", "PPTX"). */
+export function rotuloDoArquivo(tipo: string, nome: string | null | undefined): string {
+  if (limpo(tipo) === TIPO_GENERICO) {
+    const e = extensaoDoNome(nome);
+    return e && e.length <= 5 && /^[a-z0-9]+$/.test(e) ? e.toUpperCase() : "Arquivo";
+  }
+  return rotuloDoTipo(tipo);
 }
 
 /** "um PDF", "uma planilha Excel"... para frases (avisos ao bot, exportações). */
@@ -126,11 +166,12 @@ export function descricaoDoTipo(tipo: string): string {
  */
 export function tipoDoArquivo(nome: string | null | undefined, tipoInformado: string | null | undefined): string | null {
   const t = limpo(tipoInformado ?? "");
-  const extensao = (nome ?? "").split(".").pop()?.toLowerCase() ?? "";
+  const extensao = extensaoDoNome(nome);
   const pelaExtensao = EXTENSOES_DE_DOCUMENTO.includes(extensao) ? tipoDaExtensao(extensao) : null;
   // Word e Excel novos são ZIP por dentro: se vier "zip" mas o nome diz .docx/.xlsx, vale o nome.
   if (t === "application/zip" && pelaExtensao && pelaExtensao !== t) return pelaExtensao;
-  if (t in TIPOS_MIDIA) return t;
+  // "octet-stream" é o "não sei" da Meta e dos navegadores: nesse caso quem decide é o nome (e, se não for conhecido, é arquivo genérico).
+  if (t !== TIPO_GENERICO && t in TIPOS_MIDIA) return t;
   return pelaExtensao;
 }
 

@@ -36,7 +36,7 @@ export async function receberMensagemCliente(params: {
   if (params.midia) {
     try {
       const tipo = tipoCanonico(params.midia.tipo);
-      midia = { arquivo: await salvarMidia(params.midia.dados, tipo), tipo, nome: params.midia.nome ?? null, bytes: params.midia.dados.length };
+      midia = { arquivo: await salvarMidia(params.midia.dados, tipo, params.midia.nome), tipo, nome: params.midia.nome ?? null, bytes: params.midia.dados.length };
     } catch (erro) {
       throw new ErroConversa(erro instanceof Error ? erro.message : "Arquivo inválido.");
     }
