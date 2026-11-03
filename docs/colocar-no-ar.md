@@ -21,7 +21,7 @@ Tudo no código já está pronto. Falta só **você** fazer as partes que exigem
 | `ADMIN_NOME` | seu nome |
 | `MIDIAS_DIR` | `/data/midias` |
 | `MIDIAS_LIMITE_MB` | tamanho do seu Volume em MB (ex.: `5000`), para mostrar a porcentagem usada |
-| `PRIVACIDADE_CONTATO` | (opcional) contato para pedidos de dados em `/privacidade`. Sem ela vale o e-mail italinea.eccellenza@hotmail.com |
+| `PRIVACIDADE_CONTATO` | (opcional) contato para pedidos de dados em `/privacidade`. Sem ela valem o e-mail italinea.eccellenza@hotmail.com e o telefone (88) 98213-5125 |
 | `CHAVE_MESTRA` | texto longo e secreto (16+ caracteres) que criptografa as chaves salvas em Configurações > Chaves de API. Sem ela, as chaves só valem pelas variáveis abaixo |
 | `OPENAI_API_KEY` | (opcional) chave da OpenAI para transcrever áudios; sem ela o bot avisa que não consegue ouvir |
 

@@ -8,8 +8,8 @@ export interface SecaoPrivacidade {
   paragrafos: string[];
 }
 
-// E-mail de contato informado pelo Mateus (04/11/2026). A variável PRIVACIDADE_CONTATO, se existir, vale mais (ex.: para incluir o telefone da loja).
-export const CONTATO_PADRAO = "italinea.eccellenza@hotmail.com";
+// E-mail e telefone da loja informados pelo Mateus (04/11/2026). A variável PRIVACIDADE_CONTATO, se existir, vale mais (ex.: para incluir o telefone da loja).
+export const CONTATO_PADRAO = "italinea.eccellenza@hotmail.com ou telefone/WhatsApp (88) 98213-5125";
 
 export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade[] {
   const canal = contato?.trim() || CONTATO_PADRAO;
