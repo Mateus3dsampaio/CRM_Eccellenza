@@ -1,6 +1,6 @@
 // Política de privacidade pública (página /privacidade), exigida pela Meta para o app do WhatsApp e pela LGPD.
 // PROVISÓRIO: texto PROPOSTO pelo Claude, NÃO é parecer jurídico. O Mateus aprova (de preferência com quem cuida da parte
-// jurídica) antes de valer. Os trechos [entre colchetes] são dados que só a loja sabe; nenhum foi inventado.
+// jurídica) antes de valer. Razão social, CNPJ, contato e prazos vieram do Mateus (04/11/2026); base legal ficou de fora por decisão dele.
 // Para tirar o aviso de "rascunho" da página: variável PRIVACIDADE_APROVADA=1. O e-mail de contato vem de PRIVACIDADE_CONTATO.
 
 export interface SecaoPrivacidade {
@@ -8,14 +8,15 @@ export interface SecaoPrivacidade {
   paragrafos: string[];
 }
 
-export const PLACEHOLDER_CONTATO = "[e-mail ou telefone de contato da loja: a definir]";
+// E-mail de contato informado pelo Mateus (04/11/2026). A variável PRIVACIDADE_CONTATO, se existir, vale mais (ex.: para incluir o telefone da loja).
+export const CONTATO_PADRAO = "italinea.eccellenza@hotmail.com";
 
 export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade[] {
-  const canal = contato?.trim() || PLACEHOLDER_CONTATO;
+  const canal = contato?.trim() || CONTATO_PADRAO;
   return [
     {
       titulo: "Quem somos",
-      paragrafos: ["A Eccellenza é uma loja de móveis planejados Italínea em Juazeiro do Norte, Ceará. [Razão social e CNPJ: a definir]. Esta página explica como tratamos os dados de quem conversa conosco pelo WhatsApp."],
+      paragrafos: ["A Eccellenza é uma loja de móveis planejados Italínea em Juazeiro do Norte, Ceará. A empresa responsável é a Amj Moveis Planejados LTDA, CNPJ 44.584.819/0001-19. Esta página explica como tratamos os dados de quem conversa conosco pelo WhatsApp."],
     },
     {
       titulo: "Quais dados tratamos",
@@ -27,7 +28,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Para que usamos",
       paragrafos: [
-        "Atender você, entender o seu projeto, preparar orçamento, agendar visita ou apresentação e acompanhar o atendimento. Podemos mandar uma mensagem de retomada se a conversa parar. [Base legal de cada finalidade: a definir com a assessoria jurídica.]",
+        "Atender você, entender o seu projeto, preparar orçamento, agendar visita ou apresentação e acompanhar o atendimento. Podemos mandar uma mensagem de retomada se a conversa parar.",
       ],
     },
     {
@@ -43,7 +44,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Por quanto tempo guardamos",
       paragrafos: [
-        "Conversas arquivadas são apagadas depois de 30 dias. Fotos, vídeos e documentos são apagados automaticamente depois de 180 dias. [Prazo de guarda das demais conversas e dados do cliente: a definir.]",
+        "Enquanto durar o atendimento, guardamos a conversa e os dados do seu projeto. Se o projeto não for fechado, a conversa é arquivada e apagada depois de 30 dias. Se o projeto for fechado, guardamos os dados por até 180 dias. Fotos, vídeos e documentos são apagados automaticamente depois de 180 dias.",
       ],
     },
     {

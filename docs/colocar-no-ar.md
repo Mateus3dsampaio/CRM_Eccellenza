@@ -21,7 +21,7 @@ Tudo no código já está pronto. Falta só **você** fazer as partes que exigem
 | `ADMIN_NOME` | seu nome |
 | `MIDIAS_DIR` | `/data/midias` |
 | `MIDIAS_LIMITE_MB` | tamanho do seu Volume em MB (ex.: `5000`), para mostrar a porcentagem usada |
-| `PRIVACIDADE_CONTATO` | e-mail ou telefone para pedidos de dados (aparece em `/privacidade`) |
+| `PRIVACIDADE_CONTATO` | (opcional) contato para pedidos de dados em `/privacidade`. Sem ela vale o e-mail italinea.eccellenza@hotmail.com |
 | `CHAVE_MESTRA` | texto longo e secreto (16+ caracteres) que criptografa as chaves salvas em Configurações > Chaves de API. Sem ela, as chaves só valem pelas variáveis abaixo |
 | `OPENAI_API_KEY` | (opcional) chave da OpenAI para transcrever áudios; sem ela o bot avisa que não consegue ouvir |
 
@@ -49,7 +49,7 @@ Isto leva dias por causa das aprovações da Meta. **Comece cedo.**
 5b. **Registre o número na API** (passo obrigatório; não dá para fazer só pelo painel). Escolha um PIN de 6 dígitos e **guarde-o**. No seu computador, com as 4 variáveis no `.env` apontando para a mesma conta: `npx tsx scripts/registrar-numero.ts 123456` (troque pelo seu PIN). Deve aparecer "Número registrado com sucesso". Se o número já tinha verificação em duas etapas, use o PIN que ele já tem.
 5c. **Nome de exibição:** na Meta, o nome que aparece para o cliente (ex.: "Eccellenza Móveis Planejados") precisa ser aprovado e combinar com os dados da empresa.
 5d. **Forma de pagamento:** cadastre no WhatsApp Manager. Mensagens de modelo (fora das 24h) são cobradas por mensagem; a conversa dentro das 24h, iniciada pelo cliente, é de graça. Confira a tabela de preços em reais na página oficial de preços da Meta, que muda a cada trimestre.
-5e. **Política de privacidade:** a Meta pede um endereço público. Use `SEU-ENDEREÇO/privacidade`. O texto hoje é um **rascunho** (trechos entre colchetes a preencher e revisão jurídica). Quando aprovado, defina `PRIVACIDADE_APROVADA=1` no Railway para tirar o aviso de rascunho. Também costuma ser preciso colocar o app da Meta em modo "Live" para receber mensagens de clientes reais (não confirmei isso nas páginas oficiais; confira).
+5e. **Política de privacidade:** a Meta pede um endereço público. Use `SEU-ENDEREÇO/privacidade`. O texto já tem razão social, CNPJ, contato e prazos; sem a variável `PRIVACIDADE_APROVADA=1` a página mostra o aviso de rascunho. Quando aprovado, defina `PRIVACIDADE_APROVADA=1` no Railway para tirar o aviso de rascunho. Também costuma ser preciso colocar o app da Meta em modo "Live" para receber mensagens de clientes reais (não confirmei isso nas páginas oficiais; confira).
 6. **Webhook:** na Meta, WhatsApp → Configuration → Webhook. Em "Callback URL" ponha `SEU-ENDEREÇO/api/whatsapp/webhook`, em "Verify token" o mesmo `WHATSAPP_VERIFY_TOKEN`, e clique em verificar. Depois **assine o campo `messages`**.
 7. **Modelos de mensagem** (necessários para falar com cliente depois de 24 h sem resposta, como a retomada): na Meta crie modelos com **o mesmo nome do código** usado no CRM (`retomada`, `primeiro_contato`, `lembrete_visita`), idioma português (Brasil), **sem variáveis**. Os textos hoje são PROVISÓRIOS; você precisa aprová-los antes de enviar à Meta. A Meta aprova em horas ou dias.
 8. **Teste:** mande uma mensagem do seu celular para o número da loja. Ela deve aparecer no CRM (Configurações → cartão WhatsApp mostra os últimos avisos da Meta, com erros se houver).

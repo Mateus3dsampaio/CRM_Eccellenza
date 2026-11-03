@@ -39,7 +39,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (valores PROVISÓRIOS) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
-| `src/regras/privacidade.ts` | Texto PROPOSTO da política de privacidade (trechos [entre colchetes] a preencher) |
+| `src/regras/privacidade.ts` | Texto da política de privacidade (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
 | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
