@@ -196,7 +196,7 @@ describe("transcrição de áudio (Whisper)", () => {
     configurarMeta();
     vi.stubEnv("OPENAI_API_KEY", "");
     const chamadas = fingirMetaEOpenAI();
-    expect(transcricaoConfigurada()).toBe(false);
+    expect(await transcricaoConfigurada()).toBe(false);
     await processarWebhook(audioMsg());
     expect(chamadas.some((c) => c.url.includes("openai"))).toBe(false);
     const m = await db.mensagem.findFirstOrThrow({ where: { idExterno: "wamid.AUD1" } });

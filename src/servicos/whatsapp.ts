@@ -151,7 +151,7 @@ async function aplicarStatus(s: StatusRecebido) {
 
 /** Áudio do cliente: vira texto (Whisper) quando a transcrição está ligada; senão o texto avisa que não deu para ouvir. */
 async function textoDoAudio(m: MensagemRecebida): Promise<string | null> {
-  if (!m.midiaId || !transcricaoConfigurada()) return m.texto; // mensagem padrão de "não consigo ouvir"
+  if (!m.midiaId || !(await transcricaoConfigurada())) return m.texto; // mensagem padrão de "não consigo ouvir"
   const audio = await baixarMidiaDaMeta(m.midiaId, "audio");
   if (!audio) return "[o cliente enviou um áudio que o sistema não conseguiu processar]";
   const falado = await transcreverAudio(audio.dados, audio.tipo);

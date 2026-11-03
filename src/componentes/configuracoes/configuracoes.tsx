@@ -12,6 +12,7 @@ import { EquipeConfig, type Membro } from "./equipe";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
+import { ChavesApi } from "./chaves-api";
 import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
@@ -120,6 +121,8 @@ export function Configuracoes() {
             <WhatsappConfig />
 
             <Armazenamento />
+
+            <ChavesApi />
 
             <UsoDoBot />
 

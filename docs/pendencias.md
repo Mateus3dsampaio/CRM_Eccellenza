@@ -21,7 +21,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Criar o projeto (Hobby) e conectar o repositório / branch.
 - [ ] Adicionar o Postgres.
 - [ ] Criar o Volume montado em `/data` (do tamanho que precisar; o Hobby tem 5 GB e vídeo enche rápido).
-- [ ] Colar as variáveis: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_LOGIN`, `ADMIN_SENHA`, `ADMIN_NOME`, `MIDIAS_DIR=/data/midias`, `MIDIAS_LIMITE_MB`, `PRIVACIDADE_CONTATO`, as 4 do WhatsApp e (opcional) `OPENAI_API_KEY`.
+- [ ] Colar as variáveis: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_LOGIN`, `ADMIN_SENHA`, `ADMIN_NOME`, `MIDIAS_DIR=/data/midias`, `MIDIAS_LIMITE_MB`, `PRIVACIDADE_CONTATO`, as 4 do WhatsApp `CHAVE_MESTRA` (texto longo e secreto, para salvar chaves pela tela) e (opcional) `OPENAI_API_KEY`. As chaves de texto e áudio também podem ser coladas em Configurações > Chaves de API.
 - [ ] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`).
 - [ ] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway.
 - [ ] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway.

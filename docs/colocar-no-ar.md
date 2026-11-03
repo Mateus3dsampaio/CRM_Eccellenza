@@ -15,13 +15,14 @@ Tudo no código já está pronto. Falta só **você** fazer as partes que exigem
 | Variável | Valor |
 |---|---|
 | `DATABASE_URL` | clique em "Add Reference" e escolha `DATABASE_URL` do Postgres |
-| `ANTHROPIC_API_KEY` | sua chave da Anthropic |
+| `ANTHROPIC_API_KEY` | sua chave da Anthropic (ou cole em Configurações > Chaves de API; a da tela vale mais) |
 | `ADMIN_LOGIN` | o login do seu administrador (ex.: `mateus`) |
 | `ADMIN_SENHA` | uma senha **longa** (mínimo 6, com letra, número e uma maiúscula) |
 | `ADMIN_NOME` | seu nome |
 | `MIDIAS_DIR` | `/data/midias` |
 | `MIDIAS_LIMITE_MB` | tamanho do seu Volume em MB (ex.: `5000`), para mostrar a porcentagem usada |
 | `PRIVACIDADE_CONTATO` | e-mail ou telefone para pedidos de dados (aparece em `/privacidade`) |
+| `CHAVE_MESTRA` | texto longo e secreto (16+ caracteres) que criptografa as chaves salvas em Configurações > Chaves de API. Sem ela, as chaves só valem pelas variáveis abaixo |
 | `OPENAI_API_KEY` | (opcional) chave da OpenAI para transcrever áudios; sem ela o bot avisa que não consegue ouvir |
 
    As quatro do WhatsApp (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `META_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`) ficam para a Parte 2. Sem elas o sistema sobe normalmente, só que **sem enviar nem receber WhatsApp**.

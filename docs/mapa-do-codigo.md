@@ -62,7 +62,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `EventoWebhook` | Caixa de entrada do webhook da Meta: o corpo (traz texto e telefone do cliente) é gravado antes do 200, processado depois e ESVAZIADO ao terminar; a linha some em 2 dias. Excluir um cliente apaga também os eventos pendentes dele |
 | `EventoMetrica` | Contadores anônimos do painel |
 | `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
-| `Configuracao` | Pares chave/valor (modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
+| `Configuracao` | Pares chave/valor (chaves de API criptografadas, modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
 | `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
@@ -126,6 +126,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/saude/route.ts` | "Está de pé?" para o Railway (pública, sem dados) | `lib/db` |
 | `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
 | `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
+| `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (texto e áudio): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
@@ -161,7 +162,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
-| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (`OPENAI_API_KEY`; modelo `whisper-1`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
+| `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API): `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
+| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave da tela ou `OPENAI_API_KEY`; modelo `whisper-1`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
 | `src/servicos/usuarios.ts` | Criar usuário, listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
@@ -192,6 +194,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (PROVISÓRIO: 8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (PROVISÓRIO) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
+| `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
 
 ## Bot (`src/bot`)
@@ -244,6 +247,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
+| `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": dois campos em pontinhos (texto e áudio), mostra só o final, salvar/remover |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
@@ -263,6 +267,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/lib/modo.ts`, `src/lib/modo-rota.ts` | Modo simulador (liga em dev/teste, desligado em produção, `MODO_SIMULADOR` manda) e o 404 das rotas de simulação |
 | `src/lib/whatsapp-config.ts` | Lê as 4 variáveis do WhatsApp (só nomes aparecem na tela). `whatsappRealAtivo` = 4 variáveis E simulador desligado: só então algo sai pela Meta |
 | `src/instrumentation.ts` | Roda ao subir o servidor: cria o primeiro admin e liga o agendador |
+| `src/lib/cifra.ts` | Criptografia AES-256-GCM de segredos guardados no banco (chaves de API) |
 | `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
 | `prisma/seed.ts` | Dados fictícios (apaga tudo e recria) |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
@@ -291,6 +296,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
+| `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |

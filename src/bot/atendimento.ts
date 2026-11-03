@@ -8,6 +8,7 @@ import { descricaoDoTipo } from "@/regras/midia";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
+import { obterChave } from "@/servicos/chaves-api";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
 import { FERRAMENTAS } from "./ferramentas";
@@ -21,11 +22,12 @@ const MAX_VOLTAS = 8;
 type MensagemApi = Anthropic.Beta.Messages.BetaMessageParam;
 type BlocoEntrada = Anthropic.Beta.Messages.BetaContentBlockParam;
 
-let cliente: Anthropic | null = null;
-function clienteApi(): Anthropic {
-  // A chave vem só do .env (ANTHROPIC_API_KEY); nunca é lida, exibida ou registrada pelo sistema.
-  cliente ??= new Anthropic({ timeout: 45_000, maxRetries: 2 });
-  return cliente;
+let cliente: { chave: string; api: Anthropic } | null = null;
+function clienteApi(chave: string): Anthropic {
+  // A chave vem de Configurações > Chaves de API (ou da variável ANTHROPIC_API_KEY); nunca é exibida nem registrada.
+  // O cliente é refeito quando a chave muda, para uma troca pela tela valer na próxima mensagem.
+  if (cliente?.chave !== chave) cliente = { chave, api: new Anthropic({ apiKey: chave, timeout: 45_000, maxRetries: 2 }) };
+  return cliente.api;
 }
 
 export class ErroBot extends Error {}
@@ -168,11 +170,12 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
 
     const textos: string[] = [];
     try {
-      if (!process.env.ANTHROPIC_API_KEY) throw new ErroBot("a chave da API não está configurada no .env.");
+      const chaveApi = await obterChave("texto");
+      if (!chaveApi) throw new ErroBot("a chave da API de texto não está configurada (Configurações > Chaves de API).");
       const sistema = await montarPromptSistema();
 
       for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-        const resposta = await clienteApi().beta.messages.create({
+        const resposta = await clienteApi(chaveApi).beta.messages.create({
           model: MODELO_BOT,
           max_tokens: 8000,
           betas: ["server-side-fallback-2026-07-01"],
