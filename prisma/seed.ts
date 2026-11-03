@@ -13,6 +13,7 @@ const db = new PrismaClient();
 async function main() {
   // Banco limpo a cada seed.
   await db.eventoMetrica.deleteMany();
+  await db.alerta.deleteMany();
   await db.lead.deleteMany();
   await db.bloqueio.deleteMany();
   await db.usuario.deleteMany();

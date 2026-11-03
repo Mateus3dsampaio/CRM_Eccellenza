@@ -36,3 +36,8 @@ export function formatarTelefone(e164: string): string {
 export function simularSemWhatsapp(e164: string): boolean {
   return e164.endsWith("0000");
 }
+
+/** Nome que aparece para o lead: o nome corrigido, senão o do perfil do WhatsApp, senão o telefone. */
+export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | null; telefone: string }): string {
+  return lead.nome || lead.nomePerfil || formatarTelefone(lead.telefone);
+}

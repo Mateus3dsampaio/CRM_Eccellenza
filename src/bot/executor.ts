@@ -5,6 +5,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { ETIQUETA_DA_CLASSIFICACAO, type Classificacao } from "@/regras/etapas";
 import { formatarVisitaCurta, lerChaveDia, partesLocais } from "@/regras/tempo";
 import { agendarVisita, ErroAgenda, horariosLivresParaLead } from "@/servicos/agenda";
+import { registrarAlerta } from "@/servicos/alertas";
 import { registrarAlteracao } from "@/servicos/historico";
 import { escolherProximoConsultor } from "@/servicos/distribuicao";
 import { alterarEtiqueta, atualizarCampos, atualizarResumo, moverEtapa } from "@/servicos/leads";
@@ -111,6 +112,8 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
           },
         });
         if (lead.etapa === "novo") await moverEtapa(leadId, "pronto", "bot");
+        // Só avisa na primeira vez: repasse repetido de um lead que já espera não é novidade.
+        if (!lead.aguardandoHumano) await registrarAlerta({ tipo: "lead_passado", leadId });
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);
         await atualizarResumo(leadId);
         await marcarMudanca();

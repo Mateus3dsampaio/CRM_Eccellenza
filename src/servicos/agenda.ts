@@ -12,6 +12,7 @@ import {
   type Intervalo,
 } from "@/regras/agenda";
 import { formatarVisitaCurta } from "@/regras/tempo";
+import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { atualizarResumo, moverEtapa } from "./leads";
 import { registrarUmaVez } from "./metricas";
@@ -97,6 +98,8 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   // AGENDA-04: visita agendada move o card (sem voltar etapas mais avançadas).
   if (tipo === "visita" && ["novo", "pronto", "sem_resposta"].includes(lead.etapa)) await moverEtapa(lead.id, "visita", params.autor);
   await atualizarResumo(lead.id);
+  // Aviso só quando o bot marca: quem marca pela tela já sabe que marcou.
+  if (params.autor === "bot") await registrarAlerta({ tipo: "visita_marcada", leadId: lead.id, texto: formatarVisitaCurta(inicio) });
   await marcarMudanca();
   return visita;
 }

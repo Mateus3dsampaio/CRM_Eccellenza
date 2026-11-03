@@ -8,6 +8,7 @@ import { formatarDataHora } from "@/regras/tempo";
 import { chamarApi, useVersao } from "./dados";
 import { juntar } from "./estilos";
 import { BotaoAguardando } from "./aguardando";
+import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotaoAlmoco } from "./almoco";
 import { NovaMensagem } from "./nova-mensagem";
 import { BotaoTema } from "./tema";
@@ -89,6 +90,7 @@ export function Cabecalho() {
               <p className="text-sm font-medium">{usuario.nome}</p>
               <p className="text-xs text-texto-fraco">{usuario.perfil === "admin" ? "Administrador" : "Consultor"}</p>
             </div>
+            <BotaoAvisos />
             <BotaoTema />
             <button onClick={sair} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Sair" title="Sair">
               <LogOut className="size-5" aria-hidden />

@@ -118,6 +118,19 @@ model Mensagem {
   @@index([leadId, enviadaEm])
 }
 
+// Avisos para quem atende (som, notificação do navegador). A tela consulta só o que veio depois do último `id` que viu.
+// Sem relação com Lead de propósito: o aviso é descartável e some em 1 dia.
+model Alerta {
+  id            Int      @id @default(autoincrement())
+  tipo          String // mensagem | lead_passado | visita_marcada
+  leadId        String
+  leadNome      String
+  consultorId   String? // dono do lead na hora do aviso; sem dono, só o admin recebe
+  consultorNome String?
+  texto         String? // prévia da mensagem ou horário da visita
+  criadoEm      DateTime
+}
+
 // Histórico da conversa no formato da API do Claude. Só cresce (nunca editado).
 model ConversaApi {
   leadId   String @id

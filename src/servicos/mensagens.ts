@@ -6,6 +6,7 @@ import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { simularSemWhatsapp } from "@/regras/telefone";
+import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, moverEtapa, etapaOuErro } from "./leads";
 import { registrarUmaVez } from "./metricas";
@@ -65,6 +66,7 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
     },
   });
   if (lead.arquivadoEm) await registrarAlteracao(leadId, "sistema", "Cliente escreveu: lead saiu do arquivo");
+  await registrarAlerta({ tipo: "mensagem", leadId, texto: previa(texto, !!midia) });
 
   // RET-02: o cliente respondeu depois da retomada.
   if (lerLista(lead.etiquetas).includes("retomada")) {

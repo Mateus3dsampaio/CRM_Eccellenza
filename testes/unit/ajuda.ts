@@ -3,6 +3,7 @@ import { gerarHashSenha } from "@/lib/senha";
 
 export async function limparBanco() {
   await db.eventoMetrica.deleteMany();
+  await db.alerta.deleteMany();
   await db.lead.deleteMany();
   await db.bloqueio.deleteMany();
   await db.usuario.deleteMany();

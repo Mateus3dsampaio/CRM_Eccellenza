@@ -4,14 +4,12 @@ import { agora } from "@/lib/relogio";
 import { ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { formatarHorarioCard, formatarVisitaCurta } from "@/regras/tempo";
-import { formatarTelefone } from "@/regras/telefone";
+import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
 import { statusEfetivo } from "./mensagens";
 
 // Consultas para as telas (formato pronto para o cliente/navegador).
 
-export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | null; telefone: string }) {
-  return lead.nome || lead.nomePerfil || formatarTelefone(lead.telefone);
-}
+export { nomeExibicao };
 
 /** Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente). */
 function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null }): Date | null {

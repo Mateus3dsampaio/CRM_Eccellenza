@@ -110,10 +110,10 @@ A etapa 1 termina quando:
 
 ## Bloco 1 – Avisos e leads esperando resposta (pedido do Mateus, 04/11/2026)
 Tarefas em `tarefas/`. Marcado ✅ o que já está pronto.
-- **ESP-01** Som quando chega mensagem nova de cliente. *(tarefa 3)*
-- **ESP-02** Notificação do navegador, com a aba em segundo plano, para mensagem nova, lead passado pelo bot e visita marcada. *(tarefa 3)*
-- **ESP-03** O aviso vai só para o dono do lead; o admin recebe todos e pode silenciar. *(tarefa 3)*
-- **ESP-04** Número de leads esperando na aba do navegador, ex.: "(3) CRM Eccellenza". *(tarefa 3)*
+- **ESP-01** Som quando chega mensagem nova de cliente. ✅ Som feito no navegador; só toca para quem recebe o aviso.
+- **ESP-02** Notificação do navegador, com a aba em segundo plano, para mensagem nova, lead passado pelo bot e visita marcada. ✅ Com a aba na frente, o aviso aparece dentro do CRM. Visita só gera aviso quando o bot marca.
+- **ESP-03** O aviso vai só para o dono do lead; o admin recebe todos e pode silenciar. ✅ O silenciar (som e notificações) fica no sino do topo e vale só naquele navegador. Lead sem dono: só o admin recebe.
+- **ESP-04** Número de leads esperando na aba do navegador, ex.: "(3) CRM Eccellenza". ✅ O título atual é "CRM Eccellenza – simulador", então aparece "(3) CRM Eccellenza – simulador".
 - **ESP-05** Contador "X aguardando você" no topo que abre a lista desses leads. ✅ (consultor vê os dele; admin vê todos)
 - **ESP-06** Bolinha com o número de mensagens não lidas no card. ✅ Zera ao abrir a ficha com a aba visível.
 - **ESP-07** "Esperando há X min" no card. ✅
