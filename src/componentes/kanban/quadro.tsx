@@ -14,12 +14,14 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CheckSquare, Clock, Filter, Minus, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
-import { CODIGOS_ETAPA, ETAPAS, ETAPAS_LIMPAVEIS, ETIQUETAS, nomeEtapa } from "@/regras/etapas";
+import { CODIGOS_ETAPA, ETAPAS, ETAPAS_LIMPAVEIS, ETIQUETAS, nomeEtapa, type CodigoEtapa } from "@/regras/etapas";
+import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode, useUsuario } from "../usuario";
+import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { NIVEIS_ZOOM, definirZoom, useZoomKanban } from "./zoom";
 import { Card, CardFlutuante, type AcoesCard } from "./card";
 
@@ -52,6 +54,7 @@ export function Quadro() {
   const [abaCelular, setAbaCelular] = useState<string>("novo");
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
   const [executando, setExecutando] = useState(false);
+  const [pedido, setPedido] = useState<{ id: string; etapa: CodigoEtapa } | null>(null);
 
   const sensores = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -103,9 +106,15 @@ export function Quadro() {
   }
 
   function mover(id: string, etapa: string) {
+    // Etapas que exigem dados (retorno, valor fechado, motivo da perda): abre a janela e só move ao confirmar.
+    if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido({ id, etapa: etapa as CodigoEtapa });
+    moverAgora(id, etapa);
+  }
+
+  function moverAgora(id: string, etapa: string, venda?: VendaParaApi) {
     // Atualiza na tela na hora; o servidor confirma em seguida.
     setDados((d) => (d ? { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
-    void acao({ acao: "mover", ids: [id], etapa }, `Movido para "${nomeEtapa(etapa)}".`);
+    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, `Movido para "${nomeEtapa(etapa)}".`);
   }
 
   function confirmarExclusao(ids: string[], depois?: () => void) {
@@ -369,6 +378,18 @@ export function Quadro() {
             ) : null}
           </DragOverlay>
         </DndContext>
+      )}
+
+      {pedido && (
+        <JanelaMudanca
+          etapa={pedido.etapa}
+          atuais={cards.find((c) => c.id === pedido.id)}
+          aoCancelar={() => setPedido(null)}
+          aoConfirmar={(venda) => {
+            moverAgora(pedido.id, pedido.etapa, venda);
+            setPedido(null);
+          }}
+        />
       )}
 
       <Modal aberto={!!confirmacao} aoFechar={() => setConfirmacao(null)} titulo={confirmacao?.titulo ?? ""} largura="max-w-md">

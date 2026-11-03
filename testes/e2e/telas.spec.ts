@@ -36,11 +36,34 @@ test("menu Mover para... move o card", async ({ page }, info) => {
   await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
   await page.screenshot({ path: `${PASTA}/${info.project.name}-mover-para.png` });
   await page.getByRole("menuitem", { name: "Negociação" }).click();
+  // Negociação exige o próximo contato: a janela abre e o card só muda ao confirmar (Bloco 2).
+  const janela = page.getByRole("dialog", { name: /Negociação/ });
+  await expect(janela).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-janela-negociacao.png` });
+  await janela.getByLabel("Próximo contato em").fill("2030-01-10");
+  await janela.getByLabel("Hora").fill("14:30");
+  await janela.getByRole("textbox", { name: /Valor do orçamento/ }).fill("1621");
+  await janela.getByRole("button", { name: "Mover" }).click();
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Negociação/ }).click();
   await expect(page.getByRole("region", { name: "Negociação" }).getByText(nome)).toBeVisible();
   // Devolve para não alterar os dados dos outros testes.
   await page.getByRole("region", { name: "Negociação" }).getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
   await page.getByRole("menuitem", { name: "Novo / bot atendendo" }).click();
+});
+
+test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info) => {
+  await entrar(page);
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
+  const coluna = page.getByRole("region", { name: "Novo / bot atendendo" });
+  const nome = (await coluna.locator("[data-card] p.font-semibold").first().textContent())!;
+  await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Perdido" }).click();
+  const janela = page.getByRole("dialog", { name: /Perdido/ });
+  await janela.getByRole("combobox").selectOption("concorrente");
+  await expect(janela.getByLabel("Qual concorrente?")).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-janela-perdido.png` });
+  await janela.getByRole("button", { name: "Cancelar" }).click();
+  await expect(coluna.getByText(nome).first()).toBeVisible();
 });
 
 test("ficha do lead, agenda, painel, simulador e arquivados abrem sem quebrar", async ({ page }, info) => {

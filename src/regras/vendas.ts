@@ -1,6 +1,7 @@
 // Acompanhamento de vendas: o que cada etapa exige, motivos de perda e dinheiro.
 // Dinheiro é sempre guardado em centavos (inteiro) para não ter erro de arredondamento.
 import type { CodigoEtapa } from "./etapas";
+import { dataLocal, partesLocais } from "./tempo";
 
 export const MOTIVOS_PERDA = [
   { codigo: "preco", nome: "Preço" },
@@ -68,4 +69,27 @@ export function faltaParaMover(etapa: CodigoEtapa, final: DadosDeVenda): string 
     if (final.motivoPerda === "concorrente" && !final.concorrente?.trim()) return "Informe qual foi o concorrente.";
   }
   return null;
+}
+
+/** Etapas que pedem dados ao receber o card (a tela abre a janela). */
+export const ETAPAS_QUE_PEDEM_DADOS: CodigoEtapa[] = ["orcamento", "negociacao", "fechado", "perdido"];
+
+/** "2026-11-10" + "14:30" (horário de Fortaleza) → instante. Inválido: null. */
+export function lerDataHoraLocal(data: string, hora: string): Date | null {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+  const h = /^(\d{2}):(\d{2})$/.exec(hora);
+  if (!d || !h) return null;
+  const [ano, mes, dia, hh, mm] = [d[1], d[2], d[3], h[1], h[2]].map(Number);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31 || hh > 23 || mm > 59) return null;
+  const resultado = dataLocal(ano, mes, dia, hh, mm);
+  // 31/02 viraria 03/03: confere se o dia continuou o mesmo.
+  return partesLocais(resultado).dia === dia ? resultado : null;
+}
+
+/** Instante → { data: "2026-11-10", hora: "14:30" } no horário de Fortaleza, para os campos da tela. */
+export function partirDataHoraLocal(quando: Date | string | null | undefined): { data: string; hora: string } {
+  if (!quando) return { data: "", hora: "" };
+  const p = partesLocais(new Date(quando));
+  const dois = (n: number) => String(n).padStart(2, "0");
+  return { data: `${p.ano}-${dois(p.mes)}-${dois(p.dia)}`, hora: `${dois(p.hora)}:${dois(p.minuto)}` };
 }

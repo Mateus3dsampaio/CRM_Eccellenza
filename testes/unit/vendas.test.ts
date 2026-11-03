@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { faltaParaMover, formatarReais, lerReais } from "@/regras/vendas";
+import { faltaParaMover, formatarReais, lerDataHoraLocal, lerReais, partirDataHoraLocal } from "@/regras/vendas";
 import { conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { limparBanco } from "./ajuda";
 
@@ -21,6 +21,12 @@ describe("dinheiro (Bloco 2)", () => {
     expect(lerReais("abc")).toBeNull();
     expect(lerReais("")).toBeNull();
     expect(lerReais("1,234")).toBeNull();
+  });
+  it("data e hora no horário de Fortaleza (UTC-3)", () => {
+    expect(lerDataHoraLocal("2026-11-10", "14:30")?.toISOString()).toBe("2026-11-10T17:30:00.000Z");
+    expect(lerDataHoraLocal("2026-02-31", "10:00")).toBeNull();
+    expect(lerDataHoraLocal("", "10:00")).toBeNull();
+    expect(partirDataHoraLocal("2026-11-10T17:30:00.000Z")).toEqual({ data: "2026-11-10", hora: "14:30" });
   });
   it("o que cada etapa exige", () => {
     expect(faltaParaMover("orcamento", {})).toMatch(/próximo contato/);

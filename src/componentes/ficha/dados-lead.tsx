@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
-import { CLASSIFICACOES, ETAPAS, ETIQUETAS, type Classificacao } from "@/regras/etapas";
+import { CLASSIFICACOES, ETAPAS, ETIQUETAS, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
+import { formatarVisitaCurta } from "@/regras/tempo";
+import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Campo, Etiqueta, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
+import { JanelaMudanca } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "./agendar";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
@@ -17,6 +20,33 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
     <div className="grid grid-cols-[8.5rem_1fr] gap-2 py-1.5 text-sm">
       <dt className="text-texto-suave">{rotulo}</dt>
       <dd className="min-w-0 break-words text-texto">{valor || <span className="text-texto-fraco">não informado</span>}</dd>
+    </div>
+  );
+}
+
+/** Retorno marcado, valores e motivo da perda, conforme a etapa. Só aparece nas etapas que têm esses dados. */
+function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => void }) {
+  const podeEditar = usePode("editar_lead");
+  if (!(ETAPAS_QUE_PEDEM_DADOS as string[]).includes(ficha.etapa)) return null;
+  const linhas: [string, string][] = [];
+  if (ficha.etapa === "orcamento" || ficha.etapa === "negociacao") {
+    linhas.push(["Próximo contato", ficha.proximoContatoEm ? formatarVisitaCurta(new Date(ficha.proximoContatoEm)) : "não definido"]);
+    linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
+  }
+  if (ficha.etapa === "fechado") linhas.push(["Valor fechado", formatarReais(ficha.valorFechado) || "não informado"]);
+  if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
+  return (
+    <div className="sm:col-span-2 rounded-controle bg-superficie-suave p-3">
+      <dl>
+        {linhas.map(([r, v]) => (
+          <Linha key={r} rotulo={r} valor={v} />
+        ))}
+      </dl>
+      {podeEditar && (
+        <Botao variante="secundario" className="mt-1" icone={<Pencil className="size-4" aria-hidden />} onClick={aoEditar}>
+          Editar
+        </Botao>
+      )}
     </div>
   );
 }
@@ -40,6 +70,8 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
   const [editando, setEditando] = useState(false);
   const [agendar, setAgendar] = useState<"visita" | "apresentacao" | null>(null);
+  // Etapa que pede dados (retorno, valor fechado, motivo da perda): abre a janela; trocar só vale ao confirmar.
+  const [pedido, setPedido] = useState<CodigoEtapa | null>(null);
 
   async function salvar(corpo: object, sucesso = "Ficha atualizada.") {
     try {
@@ -107,7 +139,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
         <Painel titulo="Etapa e responsável">
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo rotulo="Etapa">
-              <select className={classeEntrada} value={ficha.etapa} onChange={(e) => acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada.")}>
+              <select className={classeEntrada} value={ficha.etapa} onChange={(e) => ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(e.target.value) ? setPedido(e.target.value as CodigoEtapa) : void acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada."))}>
                 {ETAPAS.map((e) => (
                   <option key={e.codigo} value={e.codigo}>
                     {e.nome}
@@ -115,6 +147,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
                 ))}
               </select>
             </Campo>
+            <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
             <Campo rotulo="Consultor responsável">
               <select className={classeEntrada} value={ficha.consultor?.id ?? ""} onChange={(e) => salvar({ consultorId: e.target.value || null })}>
                 <option value="">Sem consultor</option>
@@ -239,7 +272,22 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
     medidas: <Medidas ficha={ficha} aoMudar={aoMudar} />,
   };
   // Janela de agendar visita/apresentação: fica fora da grade.
-  const janelas = <AgendarVisita leadId={ficha.id} tipo={agendar ?? "visita"} aberto={agendar !== null} aoFechar={() => setAgendar(null)} aoAgendar={aoMudar} />;
+  const janelas = (
+    <>
+      <AgendarVisita leadId={ficha.id} tipo={agendar ?? "visita"} aberto={agendar !== null} aoFechar={() => setAgendar(null)} aoAgendar={aoMudar} />
+      {pedido && (
+        <JanelaMudanca
+          etapa={pedido}
+          atuais={ficha}
+          aoCancelar={() => setPedido(null)}
+          aoConfirmar={(venda) => {
+            void acaoLead({ acao: "mover", etapa: pedido, dados: venda }, pedido === ficha.etapa ? "Dados atualizados." : "Etapa alterada.");
+            setPedido(null);
+          }}
+        />
+      )}
+    </>
+  );
   return { blocos, janelas };
 }
 
