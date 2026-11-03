@@ -23,3 +23,15 @@ WhatsApp fica por último porque sem banco estável, rotina e proteção ele nã
 - Testar com WhatsApp de verdade: eu valido com payloads de exemplo; o teste real é com você, no seu celular.
 - Aprovar textos que o cliente final lê e valores de política (limites, retenção).
 - Autorizar push e deploy.
+
+## Situação em 03/11/2026
+| Tarefa | Estado |
+|---|---|
+| 10 Banco Postgres | Feita: esquema Postgres gerado, migração inicial aplicada e **148 testes passando num Postgres 16**; `npm run test:postgres`. Falta só o Mateus criar o Postgres no Railway |
+| 11 Rotinas no servidor | Feita e testada |
+| 12 Login e usuários | Feito o mínimo (cookie Secure em https, limite de tentativas, primeiro admin por variável, seed bloqueado em produção, senha mínima 10, script para criar usuário, cabeçalhos de segurança). **Falta** a tela de usuários e "trocar minha senha" (a pedido do Mateus, depois) |
+| 13 Modo produção | Feita e testada |
+| 14 Proteção do bot | Feita e testada (limites PROVISÓRIOS, uso da API, `/api/saude`) |
+| 15 LGPD | Feita e testada (textos PROVISÓRIOS) |
+| 16 WhatsApp webhook e envio | Feita e testada com payloads de exemplo e `fetch` falso. **Nunca testada com a Meta de verdade** |
+| 17 Colocar no ar | Dockerfile, `railway.json`, `.env.example` e guia prontos; sistema compilado e testado em modo produção com Postgres local. **Nunca rodou no Railway** |

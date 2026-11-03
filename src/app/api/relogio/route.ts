@@ -3,6 +3,7 @@ import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { agora, avancarRelogio, deslocamentoMs } from "@/lib/relogio";
 import { exigirUsuario } from "@/lib/sessao";
+import { exigirModoSimulador } from "@/lib/modo-rota";
 import { marcarMudanca } from "@/lib/versao";
 import { HORA, formatarDataHora } from "@/regras/tempo";
 import { registrarAvanco, rodarRotinas } from "@/servicos/rotinas";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 // Relógio simulado (RET-04).
 export const GET = rota(async () => {
+  exigirModoSimulador();
   await exigirUsuario();
   const registros = await db.registroRotina.findMany({ orderBy: { criadoEm: "desc" }, take: 30 });
   return {
@@ -24,6 +26,7 @@ export const GET = rota(async () => {
 const esquema = z.object({ horas: z.number().int().min(1).max(24 * 60) });
 
 export const POST = rota(async (req: Request) => {
+  exigirModoSimulador();
   await exigirUsuario();
   const { horas } = esquema.parse(await req.json());
   const novo = await avancarRelogio(horas * HORA);

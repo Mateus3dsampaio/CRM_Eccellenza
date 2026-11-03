@@ -4,7 +4,8 @@ import path from "node:path";
 import { TAMANHO_MAXIMO_IMAGEM } from "@/regras/limites";
 
 // Mídias ficam fora da pasta pública (SEG-03) e só são servidas por rota com login.
-export const PASTA_MIDIAS = path.join(process.cwd(), "midias");
+// No Railway, MIDIAS_DIR aponta para o volume (disco que não some a cada deploy), ex.: /data/midias.
+export const PASTA_MIDIAS = process.env.MIDIAS_DIR?.trim() ? path.resolve(process.env.MIDIAS_DIR.trim()) : path.join(process.cwd(), "midias");
 export const TIPOS_IMAGEM = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 export const TAMANHO_MAXIMO = TAMANHO_MAXIMO_IMAGEM;
 

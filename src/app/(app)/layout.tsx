@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { modoSimulador } from "@/lib/modo";
 import { usuarioAtual } from "@/lib/sessao";
 import { Cabecalho } from "@/componentes/cabecalho";
 import { MenuLateral } from "@/componentes/menu-lateral";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const usuario = await usuarioAtual();
   if (!usuario) redirect("/login");
+  const simulador = modoSimulador();
   return (
     <ProvedorUsuario usuario={usuario}>
       <ProvedorVersao>
@@ -23,9 +25,9 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
               <ProvedorRetornos>
                 <ProvedorAlertas>
                   <div className="flex min-h-dvh">
-                    <MenuLateral />
+                    <MenuLateral simulador={simulador} />
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <Cabecalho />
+                      <Cabecalho simulador={simulador} />
                       <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
                     </div>
                   </div>

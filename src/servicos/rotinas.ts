@@ -9,6 +9,7 @@ import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
+import { limparLogsAntigos } from "./whatsapp";
 
 export interface ResultadoRotinas {
   retomadas: number;
@@ -34,7 +35,7 @@ async function executar(): Promise<ResultadoRotinas> {
   const resultado: ResultadoRotinas = { retomadas: 0, semResposta: 0, excluidos: 0 };
 
   const leads = await db.lead.findMany({
-    where: { arquivadoEm: null, etapa: "novo", modoAtendimento: "bot", ultimaMsgLojaEm: { not: null } },
+    where: { arquivadoEm: null, etapa: "novo", modoAtendimento: "bot", ultimaMsgLojaEm: { not: null }, naoReceberEm: null },
     include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
   });
   for (const lead of leads) {
@@ -57,6 +58,8 @@ async function executar(): Promise<ResultadoRotinas> {
   const arquivados = await db.lead.findMany({ where: { arquivadoEm: { not: null } }, select: { id: true, arquivadoEm: true } });
   const vencidos = arquivados.filter((l) => deveExcluirArquivado(l.arquivadoEm, quando)).map((l) => l.id);
   if (vencidos.length) resultado.excluidos = await excluirLeads(vencidos);
+
+  await limparLogsAntigos();
 
   // O relógio simulado pode ter andado: confere os prazos de espera.
   await avisarPrazosVermelhos();

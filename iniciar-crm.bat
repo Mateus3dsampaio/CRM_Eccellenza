@@ -16,5 +16,7 @@ echo.
 echo CRM pronto. O navegador vai abrir em http://127.0.0.1:3000
 echo Para desligar, feche esta janela.
 start "" cmd /c "timeout /t 4 >nul & start http://127.0.0.1:3000"
+rem No computador o CRM roda como simulador (Simulador e relogio ligados).
+set MODO_SIMULADOR=1
 call npm start
 pause

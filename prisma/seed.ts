@@ -11,6 +11,10 @@ import { chaveVaga, horasDeInicio } from "../src/regras/agenda";
 const db = new PrismaClient();
 
 async function main() {
+  // O seed APAGA TUDO e cria senhas de teste. Nunca roda em produção (nem por engano com o banco do Railway).
+  if (process.env.NODE_ENV === "production" || process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID) {
+    throw new Error("O seed apaga todos os dados e usa senhas de teste: bloqueado em produção.");
+  }
   // Banco limpo a cada seed.
   await db.eventoMetrica.deleteMany();
   await db.alerta.deleteMany();

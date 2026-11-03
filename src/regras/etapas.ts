@@ -38,6 +38,7 @@ export const ETIQUETAS = [
   { codigo: "pos_venda", nome: "Pós-venda" },
   { codigo: "ja_atendido", nome: "Já atendido" },
   { codigo: "retomada", nome: "Retomada enviada" },
+  { codigo: "nao_receber", nome: "Pediu para parar" },
 ] as const;
 
 export type CodigoEtiqueta = (typeof ETIQUETAS)[number]["codigo"];

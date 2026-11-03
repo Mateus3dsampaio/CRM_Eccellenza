@@ -1,6 +1,6 @@
 {
   "name": "crm-eccellenza",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev -H 127.0.0.1",
@@ -10,9 +10,11 @@
     "tipos": "tsc --noEmit",
     "test": "vitest run",
     "test:tela": "playwright test",
-    "seed": "prisma db push --skip-generate --accept-data-loss && tsx prisma/seed.ts",
+    "seed": "tsx scripts/bloquear-producao.ts && prisma db push --skip-generate --accept-data-loss && tsx prisma/seed.ts",
     "simular": "tsx scripts/simular.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "esquema:postgres": "tsx scripts/gerar-esquema-postgres.ts",
+    "test:postgres": "tsx scripts/testar-postgres.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

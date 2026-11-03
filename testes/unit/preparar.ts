@@ -4,6 +4,16 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export default function preparar() {
+  // Teste contra Postgres (npm run test:postgres): recria as tabelas do banco de teste a partir das migrações.
+  const urlPostgres = process.env.CRM_TESTE_POSTGRES;
+  if (urlPostgres) {
+    if (!/teste/i.test(urlPostgres)) throw new Error('A URL do Postgres de teste precisa ter "teste" no nome do banco (o teste apaga tudo).');
+    const env = { ...process.env, DATABASE_URL: urlPostgres };
+    // Apaga e recria só o banco de teste (o nome já foi conferido acima) e aplica as migrações do jeito do Railway.
+    execSync("npx prisma db execute --stdin --schema prisma/postgres/schema.prisma", { input: "DROP SCHEMA public CASCADE; CREATE SCHEMA public;", stdio: ["pipe", "ignore", "ignore"], env });
+    execSync("npx prisma migrate deploy --schema prisma/postgres/schema.prisma", { stdio: "ignore", env });
+    return () => {};
+  }
   const pasta = path.join(process.cwd(), "prisma");
   const teste = path.join(pasta, "teste.db");
   const esquemaTeste = path.join(pasta, "schema.teste.prisma");

@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, etiquetaValida } from "@/regras/etapas";
 import { dadosDeVenda, esquemaDadosDeVenda } from "@/lib/esquema-venda";
-import { alterarEtiqueta, arquivarLeads, conferirMudanca, excluirLeads, moverEtapa } from "@/servicos/leads";
+import { alterarEtiqueta, arquivarLeads, conferirMudanca, moverEtapa } from "@/servicos/leads";
+import { excluirComRegistro } from "@/servicos/lgpd";
 
 const ids = z.array(z.string().min(1).max(40)).min(1).max(500);
 
@@ -32,7 +33,7 @@ export const POST = rota(async (req: Request) => {
       return { ok: true, total: await arquivarLeads(corpo.ids, usuario.nome) };
     case "excluir":
       await exigirUsuario("excluir_lead");
-      return { ok: true, total: await excluirLeads(corpo.ids) };
+      return { ok: true, total: await excluirComRegistro(corpo.ids, usuario.nome) };
     case "etiqueta":
       if (!etiquetaValida(corpo.etiqueta)) throw new ErroHttp(400, "Etiqueta inválida.");
       for (const id of corpo.ids) await alterarEtiqueta(id, corpo.etiqueta, corpo.ativa, usuario.nome);
@@ -41,7 +42,7 @@ export const POST = rota(async (req: Request) => {
       await exigirUsuario(corpo.modo === "excluir" ? "excluir_lead" : "arquivar_lead");
       const alvo = await db.lead.findMany({ where: { etapa: corpo.etapa, arquivadoEm: null }, select: { id: true } });
       const lista = alvo.map((l) => l.id);
-      const total = corpo.modo === "excluir" ? await excluirLeads(lista) : await arquivarLeads(lista, usuario.nome);
+      const total = corpo.modo === "excluir" ? await excluirComRegistro(lista, usuario.nome) : await arquivarLeads(lista, usuario.nome);
       return { ok: true, total };
     }
   }

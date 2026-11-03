@@ -11,6 +11,9 @@ export async function limparBanco() {
   await db.configuracao.deleteMany();
   await db.instrucao.deleteMany();
   await db.motivoPerda.deleteMany();
+  await db.usoApi.deleteMany();
+  await db.logWebhook.deleteMany();
+  await db.pedidoLgpd.deleteMany();
 }
 
 export async function criarConsultores() {

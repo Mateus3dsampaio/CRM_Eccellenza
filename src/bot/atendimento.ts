@@ -3,9 +3,11 @@ import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
+import { avaliarLimiteDoBot } from "@/regras/limite-bot";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
+import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
 import { FERRAMENTAS } from "./ferramentas";
 import { montarPromptSistema } from "./prompt";
@@ -130,6 +132,21 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
   return naFila(leadId, async () => {
     const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, include: { conversaApi: true } });
     if (lead.modoAtendimento !== "bot") return { respostas: [] };
+    // Cliente que pediu para parar (LGPD): o bot não responde e a mensagem fica para um humano.
+    if (lead.naoReceberEm) return { respostas: [] };
+
+    // Proteção de custo (tarefa 14): excesso de mensagens do cliente não chama a API, passa para um humano.
+    const recentes = await db.mensagem.findMany({
+      where: { leadId, autor: "cliente", enviadaEm: { gte: new Date((await agora()).getTime() - 24 * 60 * 60 * 1000) } },
+      select: { enviadaEm: true },
+    });
+    const limite = avaliarLimiteDoBot(recentes.map((m) => m.enviadaEm), await agora());
+    if (limite.excedeu) {
+      const mensagem = `${limite.motivo}; o bot pausou para não gastar a API à toa.`;
+      await db.mensagem.updateMany({ where: { leadId, autor: { not: "bot" }, processadaPeloBot: false }, data: { processadaPeloBot: true } });
+      await marcarErro(leadId, mensagem);
+      return { respostas: [], erro: mensagem };
+    }
 
     const conversa = lead.conversaApi ?? (await db.conversaApi.create({ data: { leadId } }));
     const historico = JSON.parse(conversa.mensagens) as MensagemApi[];
@@ -161,6 +178,7 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
           messages: historico,
         });
 
+        await registrarUso(resposta.usage);
         if (resposta.stop_reason === "refusal") throw new ErroBot("o modelo recusou responder esta conversa.");
         historico.push({ role: "assistant", content: resposta.content as BlocoEntrada[] });
         const texto = textoDasRespostas(resposta.content);
@@ -209,7 +227,15 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       await marcarErro(leadId, mensagem);
       return { respostas: [], erro: mensagem };
     }
-    if (final) await enviarMensagemLoja({ leadId, autor: "bot", autorNome: "Bot", texto: final });
+    if (final) {
+      const enviada = await enviarMensagemLoja({ leadId, autor: "bot", autorNome: "Bot", texto: final });
+      // A Meta recusou (token vencido, modelo, janela...): o cliente ficou sem resposta e alguém precisa saber.
+      if (enviada.status === "falhou") {
+        const mensagem = "o WhatsApp não entregou a resposta do bot.";
+        await marcarErro(leadId, mensagem);
+        return { respostas: [], erro: mensagem };
+      }
+    }
     if (lead.erroBot) await db.lead.update({ where: { id: leadId }, data: { erroBot: null } });
     await marcarMudanca();
     return { respostas: final ? [final] : [] };

@@ -286,6 +286,8 @@ export async function excluirLeads(ids: string[]): Promise<number> {
     const midias = await db.mensagem.findMany({ where: { leadId: id, midiaArquivo: { not: null } }, select: { midiaArquivo: true } });
     const r = await db.lead.deleteMany({ where: { id } });
     if (!r.count) continue;
+    // O aviso guarda a prévia da mensagem do cliente e não tem ligação com o lead: sai junto (LGPD).
+    await db.alerta.deleteMany({ where: { leadId: id } });
     total += r.count;
     for (const m of midias) if (m.midiaArquivo) await apagarMidia(m.midiaArquivo);
   }

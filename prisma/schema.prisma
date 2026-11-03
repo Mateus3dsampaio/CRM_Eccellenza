@@ -1,4 +1,4 @@
-// Banco do simulador (SQLite). Só dados fictícios.
+// Esquema único do banco. No computador e nos testes roda em SQLite; para o Railway é copiado para prisma/postgres/ (npm run esquema:postgres).
 generator client {
   provider = "prisma-client-js"
 }
@@ -27,70 +27,71 @@ model Usuario {
 }
 
 model Lead {
-  id       String @id @default(cuid())
-  telefone String @unique // E.164, ex.: +5588900000001
+  id         String  @id @default(cuid())
+  telefone   String  @unique // E.164, ex.: +5588900000001
   nomePerfil String? // nome que aparece no perfil do WhatsApp
-  nome     String?
-  avatarCor Int    @default(0)
+  nome       String?
+  avatarCor  Int     @default(0)
 
-  cidade         String?
-  endereco       String?
-  ambientes      String @default("[]") // JSON string[]
-  exigencias     String @default("[]") // JSON string[]
-  situacaoImovel String?
-  prazo          String?
-  investimento   String?
-  pedidosTecnicos String @default("[]") // JSON string[] (literais)
-  observacoes    String?
-  classificacao  String? // qualificado | curioso | outra_cidade | parceiro | pos_venda | ja_atendido
-  resumo         String?
+  cidade          String?
+  endereco        String?
+  ambientes       String  @default("[]") // JSON string[]
+  exigencias      String  @default("[]") // JSON string[]
+  situacaoImovel  String?
+  prazo           String?
+  investimento    String?
+  pedidosTecnicos String  @default("[]") // JSON string[] (literais)
+  observacoes     String?
+  classificacao   String? // qualificado | curioso | outra_cidade | parceiro | pos_venda | ja_atendido
+  resumo          String?
 
-  etapa          String  @default("novo")
-  etapaAnterior  String? // usada pela retomada (RET-02)
-  ordem          Float   @default(0)
-  etiquetas      String  @default("[]") // JSON string[] de códigos
+  etapa         String  @default("novo")
+  etapaAnterior String? // usada pela retomada (RET-02)
+  ordem         Float   @default(0)
+  etiquetas     String  @default("[]") // JSON string[] de códigos
 
   // Acompanhamento de vendas. Dinheiro em centavos.
-  proximoContatoEm DateTime? // obrigatório em Orçamento apresentado e Negociação
-  valorOrcamento   Int?
-  valorFechado     Int?
-  motivoPerda      String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
-  concorrente      String? // nome, quando o motivo é "concorrente"
+  proximoContatoEm  DateTime? // obrigatório em Orçamento apresentado e Negociação
+  valorOrcamento    Int?
+  valorFechado      Int?
+  motivoPerda       String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
+  concorrente       String? // nome, quando o motivo é "concorrente"
   alertaContatoPara DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
 
-  consultorId    String?
-  consultor      Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
+  consultorId String?
+  consultor   Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
 
-  modoAtendimento   String  @default("bot") // bot | humano | pausado
-  aguardandoHumano  Boolean @default(false)
-  repassadoEm       DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
-  esperandoDesde    DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
-  naoLidas          Int     @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
-  alertaPrazoPara   DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
-  erroBot           String?
+  modoAtendimento  String    @default("bot") // bot | humano | pausado
+  aguardandoHumano Boolean   @default(false)
+  repassadoEm      DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
+  esperandoDesde   DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
+  naoLidas         Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
+  alertaPrazoPara  DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
+  erroBot          String?
+  naoReceberEm     DateTime? // cliente pediu para parar de receber mensagens automáticas (LGPD): sem retomada nem bot
 
-  ultimaMensagemEm      DateTime?
-  ultimaMensagemPrevia  String?
-  ultimaMsgClienteEm    DateTime?
-  ultimaMsgLojaEm       DateTime? // bot, consultor ou sistema
-  retomadaEnviadaEm     DateTime?
-  avisoAlmocoSeq        Int? // almoço do consultor em que o aviso ao cliente já foi enviado
-  semRespostaEm         DateTime?
+  ultimaMensagemEm     DateTime?
+  ultimaMensagemPrevia String?
+  ultimaMsgClienteEm   DateTime?
+  ultimaMsgLojaEm      DateTime? // bot, consultor ou sistema
+  retomadaEnviadaEm    DateTime?
+  avisoAlmocoSeq       Int? // almoço do consultor em que o aviso ao cliente já foi enviado
+  semRespostaEm        DateTime?
 
   // Marcas para contar cada evento de métrica só uma vez por lead.
   marcasMetricas String @default("[]")
 
-  arquivadoEm   DateTime?
-  criadoEm      DateTime
-  atualizadoEm  DateTime @updatedAt
+  arquivadoEm  DateTime?
+  criadoEm     DateTime
+  atualizadoEm DateTime  @updatedAt
 
-  mensagens  Mensagem[]
-  medidas    Medida[]
-  notas      Nota[]
-  historico  Alteracao[]
+  mensagens     Mensagem[]
+  medidas       Medida[]
+  notas         Nota[]
+  historico     Alteracao[]
   mudancasEtapa MudancaEtapa[]
-  visitas    Visita[]
-  conversaApi ConversaApi?
+  visitas       Visita[]
+  conversaApi   ConversaApi?
 }
 
 // Cada mudança de etapa do lead (de onde veio, para onde foi, quem moveu). Alimenta a exportação de desempenho.
@@ -108,21 +109,22 @@ model MudancaEtapa {
 }
 
 model Mensagem {
-  id        String   @id @default(cuid())
-  leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  autor     String // cliente | bot | consultor | sistema
-  autorNome String?
-  texto     String?
-  midiaArquivo String? // nome do arquivo em midias/ (fora da pasta pública)
-  midiaTipo    String?
-  modelo    String? // código do modelo aprovado usado (MSG-02)
-  status    String   @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
-  enviadaEm DateTime
-  entregueEm DateTime?
-  lidaEm    DateTime?
+  id                String    @id @default(cuid())
+  leadId            String
+  lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autor             String // cliente | bot | consultor | sistema
+  autorNome         String?
+  texto             String?
+  midiaArquivo      String? // nome do arquivo em midias/ (fora da pasta pública)
+  midiaTipo         String?
+  modelo            String? // código do modelo aprovado usado (MSG-02)
+  status            String    @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
+  enviadaEm         DateTime
+  entregueEm        DateTime?
+  lidaEm            DateTime?
   // Já foi passada ao bot (o progresso é por mensagem, não por horário: o relógio simulado pode mudar).
-  processadaPeloBot Boolean @default(false)
+  processadaPeloBot Boolean   @default(false)
+  idExterno         String?   @unique // id da mensagem na Meta (wamid): evita processar a mesma mensagem duas vezes
 
   @@index([leadId, enviadaEm])
 }
@@ -142,21 +144,21 @@ model Alerta {
 
 // Histórico da conversa no formato da API do Claude. Só cresce (nunca editado).
 model ConversaApi {
-  leadId   String @id
-  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String @id
+  lead      Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   mensagens String @default("[]")
 }
 
 model Medida {
-  id          String   @id @default(cuid())
-  leadId      String
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  ambiente    String
-  descricao   String
-  fonte       String // texto | foto | planta | audio
-  origem      String   @default("informada pelo cliente")
-  confirmada  Boolean  @default(false)
-  criadoEm    DateTime
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ambiente   String
+  descricao  String
+  fonte      String // texto | foto | planta | audio
+  origem     String   @default("informada pelo cliente")
+  confirmada Boolean  @default(false)
+  criadoEm   DateTime
 }
 
 model Nota {
@@ -249,4 +251,36 @@ model Instrucao {
   anteriorEm     DateTime?
   criadoEm       DateTime  @default(now())
   atualizadoEm   DateTime  @default(now())
+}
+
+// Uso da API do Claude pelo bot: uma linha por chamada (só contadores, sem texto de cliente).
+model UsoApi {
+  id           Int      @id @default(autoincrement())
+  criadoEm     DateTime
+  entrada      Int
+  saida        Int
+  cacheLeitura Int      @default(0)
+  cacheEscrita Int      @default(0)
+
+  @@index([criadoEm])
+}
+
+// Log dos webhooks recebidos da Meta, para depurar (sem o corpo da mensagem do cliente).
+model LogWebhook {
+  id       Int      @id @default(autoincrement())
+  criadoEm DateTime @default(now())
+  tipo     String // verificacao | mensagem | status | invalido | erro
+  resumo   String
+  ok       Boolean  @default(true)
+
+  @@index([criadoEm])
+}
+
+// Pedidos de exclusão de dados (LGPD): guarda só que foi pedido e quando, sem o conteúdo apagado.
+model PedidoLgpd {
+  id          Int      @id @default(autoincrement())
+  criadoEm    DateTime @default(now())
+  acao        String // exclusao | exportacao
+  quem        String // nome de quem executou
+  telefoneFim String // só os 4 últimos dígitos
 }

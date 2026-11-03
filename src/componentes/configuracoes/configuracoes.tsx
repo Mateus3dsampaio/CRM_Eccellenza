@@ -10,7 +10,9 @@ import { juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
+import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
+import { WhatsappConfig } from "./whatsapp";
 
 interface Dados {
   equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
@@ -149,6 +151,10 @@ export function Configuracoes() {
                 ))}
               </ul>
             </section>
+
+            <WhatsappConfig />
+
+            <UsoDoBot />
 
             <section className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
               <LayoutDashboard className="mb-2 size-5 text-texto-suave" aria-hidden />

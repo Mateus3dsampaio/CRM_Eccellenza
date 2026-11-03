@@ -8,6 +8,8 @@ import { normalizarTelefone } from "@/regras/telefone";
 import { registrarAlteracao } from "./historico";
 import { obterOuCriarLead } from "./leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "./mensagens";
+import { liberarPedidoParar, registrarPedidoParar } from "./lgpd";
+import { pediuParaParar } from "@/regras/optout";
 
 export class ErroConversa extends Error {}
 
@@ -17,6 +19,8 @@ export async function receberMensagemCliente(params: {
   nomePerfil?: string | null;
   texto?: string | null;
   imagem?: { dados: Buffer; tipo: string } | null;
+  /** Id da mensagem na Meta (WhatsApp real). Evita processar a mesma mensagem duas vezes. */
+  idExterno?: string | null;
 }) {
   const telefone = normalizarTelefone(params.telefone);
   if (!telefone) throw new ErroConversa("Telefone inválido.");
@@ -32,7 +36,12 @@ export async function receberMensagemCliente(params: {
     }
   }
   const lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null);
-  await registrarMensagemCliente(lead.id, texto, midia);
+  await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined);
+  // LGPD: pedido claro para parar. Registra, confirma e não chama o bot.
+  if (!midia && pediuParaParar(texto)) {
+    await registrarPedidoParar(lead.id);
+    return { leadId: lead.id, respostas: [] as string[] };
+  }
   const resultado = await responderCliente(lead.id);
   return { leadId: lead.id, ...resultado };
 }
@@ -45,6 +54,7 @@ export async function assumirConversa(leadId: string, usuario: { nome: string })
 
 export async function devolverAoBot(leadId: string, usuario: { nome: string }) {
   await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "bot", aguardandoHumano: false, esperandoDesde: null, naoLidas: 0, erroBot: null } });
+  await liberarPedidoParar(leadId);
   await registrarAlteracao(leadId, usuario.nome, "Devolveu a conversa ao bot");
   await marcarMudanca();
 }

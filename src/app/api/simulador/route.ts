@@ -2,6 +2,7 @@ import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
+import { exigirModoSimulador } from "@/lib/modo-rota";
 import { TAMANHO_MAXIMO } from "@/lib/midias";
 import { normalizarTelefone } from "@/regras/telefone";
 import { nomeExibicao } from "@/servicos/consultas";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 // Tela do simulador (CHAT-01): lista de clientes e conversa vista pelo lado do cliente.
 export const GET = rota(async (req: Request) => {
+  exigirModoSimulador();
   await exigirUsuario();
   const telefone = normalizarTelefone(new URL(req.url).searchParams.get("telefone") ?? "");
   const leads = await db.lead.findMany({ orderBy: { ultimaMensagemEm: "desc" }, take: 100 });
@@ -39,6 +41,7 @@ export const GET = rota(async (req: Request) => {
 });
 
 export const POST = rota(async (req: Request) => {
+  exigirModoSimulador();
   await exigirUsuario();
   const form = await req.formData();
   const arquivo = form.get("imagem");

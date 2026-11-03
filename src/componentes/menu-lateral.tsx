@@ -20,10 +20,10 @@ const CHAVE_MINI = "menu-mini";
 const ALTURA_ITEM = 42; // px; o indicador desliza de 44 em 44 (item + espaço de 2)
 
 /** Menu lateral (computador) com indicador que desliza e opção de encolher; no celular vira a barra de baixo. */
-export function MenuLateral() {
+export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const caminho = usePathname();
   const podeConfigurar = usePode("configurar");
-  const links = LINKS;
+  const links = simulador ? LINKS : LINKS.filter((l) => l.href !== "/simulador");
   const [mini, setMini] = useState(false);
 
   // Começa encolhido em telas estreitas; depois vale a escolha da pessoa.

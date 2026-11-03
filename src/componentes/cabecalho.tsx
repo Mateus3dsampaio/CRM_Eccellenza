@@ -23,7 +23,7 @@ const TITULOS: [string, string][] = [
 ];
 
 /** Barra de cima: título da tela e ações do dia a dia. A navegação fica no menu lateral. */
-export function Cabecalho() {
+export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
   const caminho = usePathname();
   const router = useRouter();
   const usuario = useUsuario();
@@ -48,7 +48,7 @@ export function Cabecalho() {
             {titulo}
           </p>
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            {agora && (
+            {simulador && agora && (
               <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave 2xl:inline-flex">
                 <Clock className="size-3.5" aria-hidden />
                 {formatarDataHora(new Date(agora))}

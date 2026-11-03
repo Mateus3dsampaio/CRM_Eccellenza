@@ -5,8 +5,8 @@ node_modules/
 !.env.example
 *.db
 *.db-journal
-uploads/
-midias/
+/uploads/
+/midias/
 test-results/
 playwright-report/
 docs/rodadas/evidencias/

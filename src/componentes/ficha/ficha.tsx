@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { Archive, ArchiveRestore, ArrowLeft, GripHorizontal, LayoutDashboard, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Download, GripHorizontal, LayoutDashboard, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { nomeEtapa } from "@/regras/etapas";
 import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, NOMES_BLOCOS, limparLayout, type BlocoFicha, type ItemLayout } from "@/regras/layout-ficha";
 import { formatarDataHora } from "@/regras/tempo";
@@ -168,6 +168,14 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
             <Botao onClick={() => acao({ acao: "arquivar" }, "Lead arquivado.", () => router.push("/"))} icone={<Archive className="size-4" aria-hidden />}>
               Arquivar
             </Botao>
+          )}
+          {podeExcluir && (
+            // LGPD: baixa tudo o que o CRM guarda deste cliente. É um link normal; o servidor confere se é admin.
+            <a href={`/api/leads/${ficha.id}/exportar`} download className="tecla inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium" title="Baixar todos os dados deste cliente (LGPD)">
+              <Download className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Exportar dados</span>
+              <span className="sr-only sm:hidden">Exportar dados</span>
+            </a>
           )}
           {podeExcluir && (
             <Botao variante="fantasma" className="text-alerta hover:bg-alerta-suave hover:text-alerta sm:ml-4" onClick={() => setConfirmarExclusao(true)} icone={<Trash2 className="size-4" aria-hidden />}>

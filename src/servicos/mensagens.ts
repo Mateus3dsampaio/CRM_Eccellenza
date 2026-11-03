@@ -6,6 +6,9 @@ import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { simularSemWhatsapp } from "@/regras/telefone";
+import { modoSimulador } from "@/lib/modo";
+import { whatsappRealAtivo } from "@/lib/whatsapp-config";
+import { enviarPelaMeta } from "./whatsapp";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, moverEtapa, etapaOuErro } from "./leads";
@@ -24,6 +27,8 @@ export function statusEfetivo(
   if (m.autor === "cliente") return null;
   if (m.status === "falhou") return "falhou";
   if (m.lidaEm) return "lido";
+  // WhatsApp real: o status é o que a Meta contou (webhook); só o simulado "entrega" sozinho depois de uns segundos.
+  if (whatsappRealAtivo()) return m.status === "entregue" ? "entregue" : "enviado";
   if (quando.getTime() - m.enviadaEm.getTime() >= ATRASO_ENTREGA_MS) return "entregue";
   return "enviado";
 }
@@ -44,11 +49,11 @@ export async function marcarLidas(leadId: string): Promise<void> {
 }
 
 /** Mensagem que chega do cliente (simulada). Aplica RET-02 e reabre arquivados. */
-export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string }) {
+export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string }, idExterno?: string) {
   const quando = await agora();
   await marcarLidas(leadId);
   const mensagem = await db.mensagem.create({
-    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, enviadaEm: quando, status: "lido" },
+    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, enviadaEm: quando, status: "lido", idExterno },
   });
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
@@ -114,7 +119,16 @@ export async function enviarMensagemLoja(params: {
   }
   if (!texto) throw new Error("Mensagem vazia.");
 
-  const falhou = simularSemWhatsapp(lead.telefone);
+  // WhatsApp real quando as chaves da Meta estão no ambiente; senão simulado. Em produção sem chaves nada "finge" ser enviado.
+  let falhou: boolean;
+  let idExterno: string | undefined;
+  if (whatsappRealAtivo()) {
+    const envio = await enviarPelaMeta({ para: lead.telefone, texto, modelo: params.modelo });
+    falhou = !envio.ok;
+    idExterno = envio.id;
+  } else {
+    falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone);
+  }
   const mensagem = await db.mensagem.create({
     data: {
       leadId: lead.id,
@@ -123,6 +137,7 @@ export async function enviarMensagemLoja(params: {
       texto,
       modelo: params.modelo,
       status: falhou ? "falhou" : "enviado",
+      idExterno,
       enviadaEm: quando,
     },
   });

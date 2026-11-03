@@ -35,14 +35,21 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
 | O que a exportação de desempenho leva | `src/servicos/vendas.ts` | Configurações de vendas: motivos de perda (carga inicial, criar, editar, reordenar, excluir só se sem uso) e o interruptor "Negociação exige próximo contato" (padrão ligado). `regrasDeVendas` entrega o que o `moverEtapa` confere |
 | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
-| Tabelas do banco | `prisma/schema.prisma` (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
+| WhatsApp real (receber, enviar, status, mídia) | Regras puras: `src/regras/whatsapp.ts`. Chamadas à Meta e processamento: `src/servicos/whatsapp.ts`. Rota: `src/app/api/whatsapp/webhook/route.ts`. Chaves: `src/lib/whatsapp-config.ts` (variáveis de ambiente). O envio pelo bot/consultor passa por `enviarMensagemLoja` em `src/servicos/mensagens.ts` |
+| Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (valores PROVISÓRIOS) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
+| LGPD (parar de receber, exportar, excluir com registro) | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
+| Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
+| Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
+| Login, tentativas, primeiro admin, criar usuário | `src/regras/tentativas-login.ts` + `src/app/api/login/route.ts` + `src/servicos/usuarios.ts` + `scripts/criar-usuario.ts` |
+| Colocar no ar (Railway, Postgres) | `Dockerfile`, `railway.json`, `prisma/postgres/` (esquema gerado + migrações), guia em `docs/colocar-no-ar.md` |
+| Tabelas do banco | `prisma/schema.prisma` (depois `npm run esquema:postgres` e uma migração nova em `prisma/postgres/migrations/`; o teste `esquema.test.ts` avisa se esquecer) (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
 
 ## Banco (`prisma/schema.prisma`)
 | Tabela | Guarda |
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço) |
-| `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm`, `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`). `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
-| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia |
+| `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm`, `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`). `naoReceberEm`: o cliente pediu para parar (sem bot nem retomada). `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
+| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia. `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
 | `MudancaEtapa` | Cada mudança de etapa do lead (de, para, quem, quando). Gravada em `moverEtapa` e na criação do lead. Alimenta a exportação de desempenho |
@@ -53,6 +60,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
 | `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
+| `UsoApi` | Uma linha por chamada à API do Claude: só contadores de tokens (sem texto de cliente). Alimenta "Uso do bot" em Configurações |
+| `LogWebhook` | Log do que a Meta mandou e dos envios (sem conteúdo das mensagens, só tipo e final do telefone). Apagado após 14 dias |
+| `PedidoLgpd` | Registro de exclusões e exportações de dados de cliente (só ação, quem fez e os 4 últimos dígitos do telefone) |
 
 ## Telas (`src/app/(app)`)
 | Arquivo | Tela |
@@ -73,7 +83,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## API (`src/app/api`) → serviço que usa
 | Rota | O que faz | Serviço |
 |---|---|---|
-| `src/app/api/login/route.ts` | Entrar | `lib/sessao` |
+| `src/app/api/login/route.ts` | Entrar (limite de 5 erros em 15 min; cookie Secure só em https) | `lib/sessao`, `regras/tentativas-login` |
 | `src/app/api/versao/route.ts` | Contador de mudanças (as telas recarregam). A cada consulta também confere os prazos vermelhos de espera e os retornos que chegaram na hora (falha aqui não derruba a rota) | `lib/versao`, `alertas` |
 | `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) | `consultas`, `rotinas` |
 | `src/app/api/alertas/route.ts` | Avisos novos para o usuário (`?depois=N`). Consultor: os dos seus leads; admin: todos | `alertas` |
@@ -83,17 +93,22 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder, marcar como vista (zera a bolinha) | `conversa` |
 | `src/app/api/leads/[id]/medidas/route.ts` | Medidas | `leads`, `historico` |
 | `src/app/api/leads/[id]/notas/route.ts` | Notas internas | `historico` |
-| `src/app/api/leads/acoes/route.ts` | Mover (com os dados de venda; confere o lote todo antes), arquivar, excluir em lote | `leads` |
+| `src/app/api/leads/acoes/route.ts` | Mover (com os dados de venda; confere o lote todo antes), arquivar, excluir em lote (exclusão grava o registro LGPD) | `leads`, `lgpd` |
 | `src/app/api/arquivados/route.ts` | Lista de arquivados | `consultas`, `rotinas` |
 | `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios | `agenda`, `consultas` |
 | `src/app/api/painel/route.ts` | Métricas (atalho ou datas, vendedor só para admin) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG) | `conversa`, `leads`, `consultas` |
-| `src/app/api/simulador/route.ts` | Chat do cliente fictício | `conversa`, `mensagens`, `consultas` |
-| `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas | `rotinas` |
+| `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
+| `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
 | `src/app/api/equipe/status/route.ts` | Consultor online/almoço | `distribuicao` |
-| `src/app/api/midias/[nome]/route.ts` | Serve fotos/plantas (só logado) | `lib/midias` |
+| `src/app/api/midias/[nome]/route.ts` | Serve fotos/plantas (só logado). Estava fora do Git por causa do `.gitignore` (`midias/`); agora o `.gitignore` só ignora `/midias/` da raiz | `lib/midias` |
 | `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
+| `src/app/api/whatsapp/webhook/route.ts` | Webhook da Meta: GET verifica o token; POST valida a assinatura, responde 200 e processa depois. Pública de propósito (a assinatura protege) | `whatsapp`, `regras/whatsapp` |
+| `src/app/api/saude/route.ts` | "Está de pé?" para o Railway (pública, sem dados) | `lib/db` |
+| `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
+| `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
+| `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
 | `src/app/api/vendas/regras/route.ts` | Regras de vendas e motivos para a janela de mover, a ficha e o card (qualquer usuário logado) | `vendas` |
@@ -111,7 +126,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Faz |
 |---|---|
 | `src/servicos/leads.ts` | Criar lead, mover etapa (recusa se faltar próximo contato, valor fechado ou motivo da perda; `conferirMudanca` só confere, sem gravar; também troca data/valores sem mudar de etapa), etiquetas, campos, arquivar, restaurar, excluir |
-| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja, status (entregue/lido). Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
+| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja (envio real pela Meta quando as chaves existem; senão simulado; em produção sem chaves a mensagem fica "falhou"), status (entregue/lido: o real vem do webhook). Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
 | `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
 | `src/servicos/agenda.ts` | Horários livres, agendar, cancelar visita, bloqueios |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço |
@@ -124,7 +139,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita, hora do retorno) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarRetornos`: avisa o dono do lead (e o admin) na hora do próximo contato, uma vez por data marcada. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
-| `src/servicos/rotinas.ts` | Retomada, "Sem resposta", limpeza de arquivados, relógio (também confere os prazos vermelhos) |
+| `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Sem resposta", limpeza de arquivados e de logs antigos, relógio (também confere os prazos vermelhos) |
+| `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
+| `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo, baixar imagem (só de hosts da Meta), processar mensagens e status do webhook (sem duplicar), log do webhook |
+| `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, exportar dados do cliente (.zip), excluir com registro |
+| `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
+| `src/servicos/usuarios.ts` | Criar usuário (senha mínima 10) e criar o primeiro admin a partir de `ADMIN_*` |
 
 ## Regras puras (`src/regras`)
 | Arquivo | Regra |
@@ -148,6 +168,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador |
 | `src/regras/telefone.ts` | Telefone E.164 e nome de exibição do lead |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
+| `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
+| `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (PROVISÓRIO: 8 e 150) |
+| `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (PROVISÓRIO) |
+| `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
 
 ## Bot (`src/bot`)
 | Arquivo | Faz |
@@ -194,6 +218,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe |
+| `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
+| `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
 
@@ -206,13 +232,20 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/lib/senha.ts` | Hash de senha |
 | `src/lib/relogio.ts` | `agora()` e avanço do relógio simulado |
 | `src/lib/versao.ts` | Contador de mudanças (`marcarMudanca`) |
-| `src/lib/midias.ts` | Fotos e plantas fora da pasta pública |
+| `src/lib/midias.ts` | Fotos e plantas fora da pasta pública (`MIDIAS_DIR` aponta para o volume no Railway) |
 | `src/lib/esquema-venda.ts` | Validação (zod) dos dados de venda que chegam da tela e conversão para o serviço |
 | `src/lib/json.ts` | `lerLista`/`gravarLista`: listas guardadas como JSON em texto (SQLite) |
+| `src/lib/modo.ts`, `src/lib/modo-rota.ts` | Modo simulador (liga em dev/teste, desligado em produção, `MODO_SIMULADOR` manda) e o 404 das rotas de simulação |
+| `src/lib/whatsapp-config.ts` | Lê as 4 variáveis do WhatsApp (só nomes aparecem na tela). `whatsappRealAtivo` = 4 variáveis E simulador desligado: só então algo sai pela Meta |
+| `src/instrumentation.ts` | Roda ao subir o servidor: cria o primeiro admin e liga o agendador |
 | `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
 | `prisma/seed.ts` | Dados fictícios (apaga tudo e recria) |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
 | `scripts/gerar-planta.ts` | Gera a planta fictícia de teste |
+| `scripts/criar-usuario.ts` | Cria usuário no banco configurado |
+| `scripts/bloquear-producao.ts` | Primeiro passo do `npm run seed`: recusa rodar em produção (o seed apaga tudo) |
+| `scripts/gerar-esquema-postgres.ts` | `npm run esquema:postgres`: copia o schema SQLite para `prisma/postgres/schema.prisma` trocando só o tipo de banco |
+| `scripts/testar-postgres.ts` | `npm run test:postgres`: roda os testes num Postgres de teste e volta o cliente para SQLite |
 
 ## Testes
 | Arquivo | Cobre |
@@ -225,6 +258,13 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
 | `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos, lista de aguardando |
 | `testes/unit/vendas.test.ts` | Vendas: dinheiro, o que cada etapa exige, limpeza ao sair da etapa, retornos (aviso uma vez por data, lista de hoje), painel de vendas, configurações de vendas (motivos editáveis, interruptor) |
+| `testes/unit/agendador.test.ts` | Rotinas rodam sozinhas, uma vez, erro não derruba |
+| `testes/unit/producao.test.ts` | Modo simulador: rotas 404 e relógio real em produção |
+| `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
+| `testes/unit/lgpd.test.ts` | Parar de receber, exportar, excluir com registro |
+| `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
+| `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
+| `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |

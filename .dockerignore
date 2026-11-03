@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+/midias
+/uploads
+test-results
+playwright-report
+docs/rodadas/evidencias

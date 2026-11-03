@@ -1,0 +1,287 @@
+// ARQUIVO GERADO por "npm run esquema:postgres" a partir de prisma/schema.prisma. NÃO edite à mão.
+// Esquema único do banco. No computador e nos testes roda em SQLite; para o Railway é copiado para prisma/postgres/ (npm run esquema:postgres).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  login     String   @unique
+  senhaHash String
+  perfil    String // "admin" | "consultor"
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  // Disponibilidade para receber leads novos: online | almoco. Quem está em almoço não recebe lead novo.
+  status    String   @default("online")
+  // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
+  almocoSeq Int      @default(0)
+
+  leads     Lead[]     @relation("consultorLead")
+  visitas   Visita[]
+  bloqueios Bloqueio[]
+}
+
+model Lead {
+  id         String  @id @default(cuid())
+  telefone   String  @unique // E.164, ex.: +5588900000001
+  nomePerfil String? // nome que aparece no perfil do WhatsApp
+  nome       String?
+  avatarCor  Int     @default(0)
+
+  cidade          String?
+  endereco        String?
+  ambientes       String  @default("[]") // JSON string[]
+  exigencias      String  @default("[]") // JSON string[]
+  situacaoImovel  String?
+  prazo           String?
+  investimento    String?
+  pedidosTecnicos String  @default("[]") // JSON string[] (literais)
+  observacoes     String?
+  classificacao   String? // qualificado | curioso | outra_cidade | parceiro | pos_venda | ja_atendido
+  resumo          String?
+
+  etapa         String  @default("novo")
+  etapaAnterior String? // usada pela retomada (RET-02)
+  ordem         Float   @default(0)
+  etiquetas     String  @default("[]") // JSON string[] de códigos
+
+  // Acompanhamento de vendas. Dinheiro em centavos.
+  proximoContatoEm  DateTime? // obrigatório em Orçamento apresentado e Negociação
+  valorOrcamento    Int?
+  valorFechado      Int?
+  motivoPerda       String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
+  concorrente       String? // nome, quando o motivo é "concorrente"
+  alertaContatoPara DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
+
+  consultorId String?
+  consultor   Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
+
+  modoAtendimento  String    @default("bot") // bot | humano | pausado
+  aguardandoHumano Boolean   @default(false)
+  repassadoEm      DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
+  esperandoDesde   DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
+  naoLidas         Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
+  alertaPrazoPara  DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
+  erroBot          String?
+  naoReceberEm     DateTime? // cliente pediu para parar de receber mensagens automáticas (LGPD): sem retomada nem bot
+
+  ultimaMensagemEm     DateTime?
+  ultimaMensagemPrevia String?
+  ultimaMsgClienteEm   DateTime?
+  ultimaMsgLojaEm      DateTime? // bot, consultor ou sistema
+  retomadaEnviadaEm    DateTime?
+  avisoAlmocoSeq       Int? // almoço do consultor em que o aviso ao cliente já foi enviado
+  semRespostaEm        DateTime?
+
+  // Marcas para contar cada evento de métrica só uma vez por lead.
+  marcasMetricas String @default("[]")
+
+  arquivadoEm  DateTime?
+  criadoEm     DateTime
+  atualizadoEm DateTime  @updatedAt
+
+  mensagens     Mensagem[]
+  medidas       Medida[]
+  notas         Nota[]
+  historico     Alteracao[]
+  mudancasEtapa MudancaEtapa[]
+  visitas       Visita[]
+  conversaApi   ConversaApi?
+}
+
+// Cada mudança de etapa do lead (de onde veio, para onde foi, quem moveu). Alimenta a exportação de desempenho.
+// A primeira linha de cada lead tem "de" vazio (criação).
+model MudancaEtapa {
+  id       String   @id @default(cuid())
+  leadId   String
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  de       String?
+  para     String
+  autor    String // bot | sistema | nome do usuário
+  criadoEm DateTime
+
+  @@index([leadId, criadoEm])
+}
+
+model Mensagem {
+  id                String    @id @default(cuid())
+  leadId            String
+  lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autor             String // cliente | bot | consultor | sistema
+  autorNome         String?
+  texto             String?
+  midiaArquivo      String? // nome do arquivo em midias/ (fora da pasta pública)
+  midiaTipo         String?
+  modelo            String? // código do modelo aprovado usado (MSG-02)
+  status            String    @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
+  enviadaEm         DateTime
+  entregueEm        DateTime?
+  lidaEm            DateTime?
+  // Já foi passada ao bot (o progresso é por mensagem, não por horário: o relógio simulado pode mudar).
+  processadaPeloBot Boolean   @default(false)
+  idExterno         String?   @unique // id da mensagem na Meta (wamid): evita processar a mesma mensagem duas vezes
+
+  @@index([leadId, enviadaEm])
+}
+
+// Avisos para quem atende (som, notificação do navegador). A tela consulta só o que veio depois do último `id` que viu.
+// Sem relação com Lead de propósito: o aviso é descartável e some em 1 dia.
+model Alerta {
+  id            Int      @id @default(autoincrement())
+  tipo          String // mensagem | lead_passado | visita_marcada
+  leadId        String
+  leadNome      String
+  consultorId   String? // dono do lead na hora do aviso; sem dono, só o admin recebe
+  consultorNome String?
+  texto         String? // prévia da mensagem ou horário da visita
+  criadoEm      DateTime
+}
+
+// Histórico da conversa no formato da API do Claude. Só cresce (nunca editado).
+model ConversaApi {
+  leadId    String @id
+  lead      Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  mensagens String @default("[]")
+}
+
+model Medida {
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ambiente   String
+  descricao  String
+  fonte      String // texto | foto | planta | audio
+  origem     String   @default("informada pelo cliente")
+  confirmada Boolean  @default(false)
+  criadoEm   DateTime
+}
+
+model Nota {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autorNome String
+  texto     String
+  criadoEm  DateTime
+}
+
+// Registro de quem mudou o quê (FICHA-03).
+model Alteracao {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  autor     String // bot | sistema | nome do usuário
+  descricao String
+  criadoEm  DateTime
+}
+
+model Visita {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  consultorId String
+  consultor   Usuario  @relation(fields: [consultorId], references: [id])
+  inicio      DateTime
+  fim         DateTime
+  status      String   @default("agendada") // agendada | cancelada
+  tipo        String   @default("visita") // visita | apresentacao (apresentação na loja, geralmente tentativa de venda)
+  // Preenchida só enquanto a visita está ativa: impede duas visitas no mesmo horário da loja (regras/agenda.ts).
+  vagaChave   String?  @unique
+  criadoPor   String
+  criadoEm    DateTime
+}
+
+model Bloqueio {
+  id          String   @id @default(cuid())
+  consultorId String
+  consultor   Usuario  @relation(fields: [consultorId], references: [id])
+  inicio      DateTime
+  fim         DateTime
+  motivo      String?
+  criadoEm    DateTime
+}
+
+// Contadores anônimos (MET-03): sem nome, telefone ou texto. Não são apagados com o lead.
+model EventoMetrica {
+  id          String   @id @default(cuid())
+  tipo        String
+  consultorId String?
+  ocorridoEm  DateTime
+
+  @@index([tipo, ocorridoEm])
+}
+
+model Configuracao {
+  chave String @id
+  valor String
+}
+
+// Registro do relógio simulado e das rotinas (RET-04).
+model RegistroRotina {
+  id       String   @id @default(cuid())
+  texto    String
+  criadoEm DateTime
+}
+
+// Instruções de atendimento do bot (o CRM é a fonte; só o admin edita).
+// Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior".
+// Motivos de perda editáveis (Configurações > Vendas). O lead guarda o `codigo`. Motivo em uso não é apagado, só desativado.
+model MotivoPerda {
+  codigo   String   @id
+  nome     String
+  pergunta String? // se preenchida, quem perde o lead precisa responder (ex.: "Qual concorrente?")
+  ordem    Int
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
+}
+
+model Instrucao {
+  id             String    @id @default(cuid())
+  titulo         String
+  texto          String
+  ordem          Int
+  ativa          Boolean   @default(true)
+  anteriorTitulo String?
+  anteriorTexto  String?
+  anteriorEm     DateTime?
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @default(now())
+}
+
+// Uso da API do Claude pelo bot: uma linha por chamada (só contadores, sem texto de cliente).
+model UsoApi {
+  id           Int      @id @default(autoincrement())
+  criadoEm     DateTime
+  entrada      Int
+  saida        Int
+  cacheLeitura Int      @default(0)
+  cacheEscrita Int      @default(0)
+
+  @@index([criadoEm])
+}
+
+// Log dos webhooks recebidos da Meta, para depurar (sem o corpo da mensagem do cliente).
+model LogWebhook {
+  id       Int      @id @default(autoincrement())
+  criadoEm DateTime @default(now())
+  tipo     String // verificacao | mensagem | status | invalido | erro
+  resumo   String
+  ok       Boolean  @default(true)
+
+  @@index([criadoEm])
+}
+
+// Pedidos de exclusão de dados (LGPD): guarda só que foi pedido e quando, sem o conteúdo apagado.
+model PedidoLgpd {
+  id          Int      @id @default(autoincrement())
+  criadoEm    DateTime @default(now())
+  acao        String // exclusao | exportacao
+  quem        String // nome de quem executou
+  telefoneFim String // só os 4 últimos dígitos
+}

@@ -16,6 +16,7 @@ export const COR_ETIQUETA: Record<string, string> = {
   pos_venda: "bg-etiqueta-posvenda text-etiqueta-posvenda-texto",
   ja_atendido: "bg-etiqueta-atendido text-etiqueta-atendido-texto",
   retomada: "bg-etiqueta-retomada text-etiqueta-retomada-texto",
+  nao_receber: "bg-alerta-suave text-alerta",
 };
 
 export const COR_AVATAR = ["bg-avatar-0", "bg-avatar-1", "bg-avatar-2", "bg-avatar-3", "bg-avatar-4", "bg-avatar-5"];
