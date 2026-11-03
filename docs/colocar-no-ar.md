@@ -75,7 +75,7 @@ Se a Meta recusar a "versão da API" (erro de versão no cartão WhatsApp), defi
 - O bot **não vê** vídeo nem documento (só imagem); ele recebe o aviso de que o arquivo chegou.
 
 ## Transcrição de áudio (Whisper)
-- Com `OPENAI_API_KEY`, áudio que o cliente manda vira texto (`[áudio transcrito automaticamente] ...`) e o bot lê esse texto. O **áudio não fica guardado**, só a transcrição. O modelo padrão é o `whisper-1`; a OpenAI tem modelos de transcrição mais novos (variável `OPENAI_TRANSCRICAO_MODELO`): vale comparar.
+- Com `OPENAI_API_KEY`, áudio que o cliente manda vira texto (`[áudio transcrito automaticamente] ...`) e o bot lê esse texto. O **áudio não fica guardado**, só a transcrição. O modelo padrão é o `gpt-4o-mini-transcribe` (escolha do Mateus); dá para trocar pela variável `OPENAI_TRANSCRICAO_MODELO` (ex.: `whisper-1`, `gpt-4o-transcribe`).
 - Aceita recado de voz do WhatsApp (ogg) e áudios mp3, m4a, wav, webm e flac, até 16 MB. Formatos `aac` e `amr` a OpenAI não lista: nesses o sistema avisa que não conseguiu processar.
 - **LGPD:** o áudio do cliente é enviado à OpenAI (empresa dos EUA). Isso já está na política de privacidade (rascunho). Confira com o jurídico e veja nas configurações da sua conta OpenAI por quanto tempo ela guarda os dados da API; não verifiquei isso.
 - Custo: confira o preço por minuto na página de preços da OpenAI. Não verifiquei.

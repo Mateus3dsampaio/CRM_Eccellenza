@@ -6,7 +6,7 @@ import { obterChave } from "./chaves-api";
 // LGPD: isso é compartilhar dado do cliente com um terceiro (fora do Brasil). Está na política de privacidade (regras/privacidade.ts).
 
 export const LIMITE_AUDIO_BYTES = 16 * 1024 * 1024; // o WhatsApp aceita até 16 MB por áudio
-const MODELO_PADRAO = "whisper-1"; // Whisper V2. Dá para trocar por OPENAI_TRANSCRICAO_MODELO (a OpenAI tem modelos de transcrição mais novos)
+const MODELO_PADRAO = "gpt-4o-mini-transcribe"; // escolha do Mateus (04/11/2026), recomendado pelo próprio GPT; não testado com áudio real. Dá para trocar por OPENAI_TRANSCRICAO_MODELO (ex.: whisper-1)
 
 // Formatos que a OpenAI aceita. O WhatsApp manda recado de voz em ogg/opus; "aac" e "amr" a OpenAI não lista.
 const EXTENSOES: Record<string, string> = {

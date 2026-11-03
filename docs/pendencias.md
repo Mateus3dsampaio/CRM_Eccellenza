@@ -30,7 +30,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 ### Decisões e textos para aprovar
 - [ ] Textos dos modelos da Meta (`src/regras/modelos.ts`); sugestão: incluir "Responda PARAR para não receber mais mensagens".
 - [ ] Texto de confirmação do "parar" (`src/regras/optout.ts`).
-- [ ] Política de privacidade (`src/regras/privacidade.ts`): preencher os trechos [entre colchetes] e depois definir `PRIVACIDADE_APROVADA=1`.
+- [ ] Política de privacidade (`src/regras/privacidade.ts`): o Mateus aprovou o texto em 04/11/2026 (inclui "Anthropic ou OpenAI" no atendimento), mas ainda faltam os dados entre colchetes (razão social, CNPJ, base legal). Preencher os trechos [entre colchetes] e depois definir `PRIVACIDADE_APROVADA=1`.
 - [ ] Decidir se "cliente que escreveu primeiro" vale como consentimento (`src/regras/consentimento.ts`).
 - [ ] Limites do bot por cliente: 8 por minuto e 150 por dia (`src/regras/limite-bot.ts`).
 - [ ] Limites de tamanho de arquivo: imagem 5 MB, vídeo 16 MB, documento 25 MB (`src/regras/midia.ts`); DWG e ZIP grandes podem passar disso.
