@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Modelos de interação – Eccellenza</title>
+<style>
+  :root {
+    --bg: #e6e9ed; --panel: #f5f6f8; --papel: #fbfcfd; --ink: #1b2631; --muted: #5c6a78; --line: #cdd4db;
+    --grade: #e3e8ed; --grade2: #d2dae2; --acc: #1b55d6; --acc-ink: #ffffff; --danger: #b3261e;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --curva: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #10161c; --panel: #18212a; --papel: #1b252f; --ink: #e5ecf2; --muted: #94a3b1; --line: #2d3a46;
+      --grade: #222e39; --grade2: #2c3a47; --acc: #6f9bff; --acc-ink: #0b1220; --danger: #ff8a80; }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: light dark; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font);
+    padding: max(24px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom)); }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+  header h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 64ch; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 22px; display: grid; gap: 14px; }
+  .cab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .cab h2 { font-size: 1.05rem; margin: 0; }
+  .selo { font-size: 0.75rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .selo.ok { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 45%, transparent); background: color-mix(in srgb, var(--acc) 8%, transparent); }
+  .desc { margin: 0; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
+  .palco { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  @media (max-width: 600px) { .palco { overflow-x: auto; padding-right: 48px; } }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+  /* ---------- base comum das abas que deslizam ---------- */
+  .tabs { position: relative; display: flex; gap: 2px; width: max-content; }
+  .tab { position: relative; z-index: 1; background: transparent; border: 0; border-radius: 8px; padding: 8px 18px; min-height: 40px;
+    font-size: 0.9375rem; font-weight: 500; color: var(--muted); white-space: nowrap; transition: color 120ms ease-out; }
+  .tab:hover { color: var(--ink); }
+  .ind { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+  .txt { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; }
+  .txt span { position: absolute; display: flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 0.9375rem; font-weight: 500; }
+  .sem-anim, .sem-anim * { transition: none !important; }
+
+  /* A) aba azul afundada */
+  .va .ind, .va .txt { transition: transform 300ms var(--curva), width 300ms var(--curva), clip-path 300ms var(--curva), -webkit-clip-path 300ms var(--curva); }
+  .va .ind { border-radius: 8px;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--acc) 82%, #000), var(--acc) 55%);
+    box-shadow: inset 0 2px 1.5px rgba(0,0,0,0.42), inset 1px 0 1px rgba(0,0,0,0.22), inset -1px 0 1px rgba(0,0,0,0.22), inset 0 -1px 0 rgba(255,255,255,0.2); }
+  .va .txt span { color: var(--acc-ink); padding-top: 1px; text-shadow: 0 1px 1px rgba(0,0,0,0.35); }
+
+  /* B) pílula de vidro */
+  .vb .ind, .vb .txt { transition: transform 300ms var(--curva), width 300ms var(--curva), clip-path 300ms var(--curva), -webkit-clip-path 300ms var(--curva); }
+  .vb .tab[aria-selected="true"] { color: color-mix(in srgb, var(--acc) 88%, #000); }
+  .vb .txt span { color: color-mix(in srgb, var(--acc) 88%, #000); }
+  .vidro { position: absolute; inset: 0; border-radius: 999px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 48%, rgba(255,255,255,0.22) 52%, rgba(255,255,255,0.5) 100%), color-mix(in srgb, var(--acc) 10%, transparent);
+    -webkit-backdrop-filter: blur(8px) saturate(180%); backdrop-filter: blur(8px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.75);
+    box-shadow: 0 1px 1px rgba(16,24,32,0.08), 0 4px 12px rgba(16,24,32,0.14), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 1px rgba(16,24,32,0.08); }
+  .vidro::before { content: ""; position: absolute; left: 8%; right: 8%; top: 1px; height: 45%; border-radius: 999px; background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0)); opacity: 0.75; }
+  .vidro::after { content: ""; position: absolute; left: 15%; right: 15%; bottom: 1px; height: 1px; border-radius: 999px; background: rgba(255,255,255,0.9); filter: blur(0.5px); }
+
+  @media (prefers-color-scheme: dark) {
+    .vidro { background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.12) 100%), color-mix(in srgb, var(--acc) 16%, transparent);
+      border-color: rgba(255,255,255,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 1px rgba(0,0,0,0.3); }
+    .vidro::before { opacity: 0.22; } .vidro::after { background: rgba(255,255,255,0.35); }
+    .vb .tab[aria-selected="true"], .vb .txt span { color: color-mix(in srgb, var(--acc) 70%, #fff); }
+    .va .ind { box-shadow: inset 0 2px 1.5px rgba(0,0,0,0.6), inset 1px 0 1px rgba(0,0,0,0.35), inset -1px 0 1px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.25); }
+    .va .txt span { text-shadow: 0 1px 0 rgba(255,255,255,0.3); }
+  }
+
+  /* 2) mola: passa um pouco do destino e volta */
+  .vm .ind, .vm .txt { transition: transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1), width 520ms cubic-bezier(0.34, 1.56, 0.64, 1), clip-path 520ms cubic-bezier(0.34, 1.56, 0.64, 1), -webkit-clip-path 520ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .vm .ind { border-radius: 999px; background: linear-gradient(to bottom, color-mix(in srgb, var(--acc) 85%, #fff), var(--acc));
+    box-shadow: 0 1px 0 rgba(255,255,255,0.35) inset, 0 3px 8px color-mix(in srgb, var(--acc) 40%, transparent), 0 1px 2px rgba(0,0,0,0.2); }
+  .vm .txt span { color: var(--acc-ink); }
+
+  /* 3) gota que se divide (filtro SVG "goo") */
+  .goo { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: url(#goo); }
+  .goo .gota { position: absolute; left: 0; top: 0; border-radius: 999px; background: var(--acc); }
+  .vg .txt { transition: clip-path 320ms var(--curva), -webkit-clip-path 320ms var(--curva); }
+  .vg .gota { transition-property: transform, width, top, height; transition-timing-function: cubic-bezier(0.45, 0, 0.2, 1); }
+  .vg .txt span { color: var(--acc-ink); }
+
+  /* 1) tecla mecânica */
+  .teclas { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+  .grupo { display: grid; gap: 8px; }
+  .grupo small { color: var(--muted); font-size: 0.75rem; }
+  .linha { display: flex; gap: 8px; }
+  .tecla { --lado: color-mix(in srgb, var(--papel) 62%, #000); --alt: 6px;
+    position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px; border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, #000 6%); background: linear-gradient(to bottom, color-mix(in srgb, var(--papel) 92%, #fff), var(--papel));
+    font-weight: 600; font-size: 0.875rem; color: var(--ink);
+    box-shadow: 0 var(--alt) 0 var(--lado), 0 calc(var(--alt) + 3px) 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.8);
+    transform: translateY(0); margin-bottom: var(--alt);
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out; }
+  .tecla svg { width: 20px; height: 20px; }
+  .tecla:active, .tecla.baixa { transform: translateY(calc(var(--alt) - 1px)); box-shadow: 0 1px 0 var(--lado), 0 2px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5); }
+  .tecla[aria-pressed="true"] { transform: translateY(calc(var(--alt) - 2px)); color: var(--acc);
+    box-shadow: 0 2px 0 var(--lado), 0 3px 4px rgba(0,0,0,0.15), inset 0 2px 3px rgba(0,0,0,0.12); }
+  .tecla.pri { --lado: color-mix(in srgb, var(--acc) 60%, #000); border-color: color-mix(in srgb, var(--acc) 70%, #000);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--acc) 82%, #fff), var(--acc)); color: var(--acc-ink);
+    box-shadow: 0 var(--alt) 0 var(--lado), 0 calc(var(--alt) + 3px) 10px color-mix(in srgb, var(--acc) 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.35); }
+  .tecla.pri:active { box-shadow: 0 1px 0 var(--lado), 0 2px 4px color-mix(in srgb, var(--acc) 30%, transparent), inset 0 1px 0 rgba(255,255,255,0.25); }
+  @media (prefers-color-scheme: dark) { .tecla { box-shadow: 0 var(--alt) 0 var(--lado), 0 calc(var(--alt) + 3px) 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); } }
+
+  /* 4) luz que segue o mouse */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .luz { --mx: 50%; --my: 50%; position: relative; display: grid; gap: 6px; padding: 16px; border-radius: 12px; text-align: left;
+    border: 1px solid var(--line); background: var(--papel); overflow: hidden; }
+  .luz::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 200ms ease-out;
+    background: radial-gradient(220px circle at var(--mx) var(--my), color-mix(in srgb, var(--acc) 16%, transparent), transparent 65%); }
+  .luz::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity 200ms ease-out;
+    background: radial-gradient(160px circle at var(--mx) var(--my), color-mix(in srgb, var(--acc) 85%, transparent), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .luz:hover::before, .luz:hover::after, .luz.acesa::before, .luz.acesa::after { opacity: 1; }
+  .luz svg { width: 26px; height: 26px; color: var(--ink); position: relative; }
+  .luz b, .luz small { position: relative; }
+  .luz small { color: var(--muted); }
+
+  .refazer { justify-self: start; border: 1px solid var(--line); background: var(--papel); border-radius: 8px; padding: 6px 12px; font-size: 0.8125rem; color: var(--muted); }
+
+
+  /* ---------- barras de ícones (baseadas no vídeo "Tab Bar") ---------- */
+  @property --L { syntax: '<length>'; inherits: true; initial-value: 0px; }
+  @property --R { syntax: '<length>'; inherits: true; initial-value: 0px; }
+  .barras { --g1: color-mix(in srgb, var(--acc) 55%, #7c4dff); --g2: color-mix(in srgb, var(--acc) 60%, #19c8ff);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  @media (prefers-color-scheme: dark) { .barras { --g1: #6d4df2; --g2: #1a8fe8; } }   /* no escuro, tons mais fundos: o ícone branco continua legível */
+  .cartao { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+  .cartao h3 { margin: 0; font-size: 0.95rem; }
+  .cartao p { margin: 0; color: var(--muted); font-size: 0.8125rem; }
+  .bi-host { width: 100%; max-width: 300px; margin: 10px auto 4px; }
+  .bi { position: relative; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  :where(.bi) button { background: transparent; border: 0; padding: 0; color: var(--muted); }
+  .bi button svg, .bi-on svg { width: 24px; height: 24px; display: block; }
+  .bi-ic { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .bi-ic > * { display: grid; place-items: center; }
+  .tocar { justify-self: start; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--papel); font-weight: 600; font-size: 0.8125rem; }
+  .tocar:active { transform: scale(0.97); }
+
+  /* barra 1: pílula elástica (duas bordas com tempos diferentes) */
+  .bi1 { height: 64px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); }
+  .bi1.dir-d { transition: --L 420ms cubic-bezier(0.34, 1.35, 0.64, 1) 50ms, --R 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .bi1.dir-e { transition: --L 280ms cubic-bezier(0.22, 1, 0.36, 1), --R 420ms cubic-bezier(0.34, 1.35, 0.64, 1) 50ms; }
+  .bi1 .bi-glow { position: absolute; inset: 0; pointer-events: none; filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--g1) 45%, transparent)); }
+  .bi1 .bi-pill, .bi1 .bi-on { -webkit-clip-path: inset(8px var(--R) 8px var(--L) round 999px); clip-path: inset(8px var(--R) 8px var(--L) round 999px); }
+  .bi1 .bi-pill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--g1), var(--g2)); }
+  .bi1 .bi-on { color: #fff; pointer-events: none; }
+
+  /* barra 2: bojo líquido (a forma é um caminho SVG desenhado a cada quadro) */
+  .bi2 { height: 88px; }
+  .bi2-svg { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--g1) 40%, transparent)); }
+  .bi2 .bi-ic { top: 24px; }
+  .bi2 button { color: #fff; will-change: transform, opacity; }
+
+  /* barra 3: entalhe flutuante */
+  .bi3 { height: 100px; }
+  .bi3-svg { position: absolute; inset: 0; overflow: visible; }
+  .bi3-svg path { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .bi3 .bi-ic { top: 36px; }
+  .bi3 .bi-ic button { will-change: opacity; }
+  .bi3-ball { position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; pointer-events: none;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 6px 16px color-mix(in srgb, var(--g1) 50%, transparent), inset 0 1px 0 rgba(255,255,255,0.35); will-change: transform; }
+  .bi3-ball svg { width: 20px; height: 20px; }
+  .bi3-lb { position: absolute; left: 0; top: 0; width: 80px; margin-left: -40px; text-align: center; font-size: 11px; font-weight: 600; color: var(--ink); pointer-events: none; will-change: transform, opacity; }
+
+  /* barra 5: rótulo que expande */
+  .bi5 { height: 64px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
+  .t5 { display: flex; align-items: center; height: 44px; padding: 0 13px; border-radius: 999px; border: 1px solid transparent; color: var(--muted);
+    transition: background-color 300ms var(--curva), border-color 300ms var(--curva), color 200ms ease-out, transform 90ms ease-out; }
+  .t5:active { transform: scale(0.95); }
+  .t5 .lb { display: block; overflow: hidden; max-width: 0; opacity: 0; margin-left: 0; transition: max-width 320ms var(--curva), opacity 220ms ease-out, margin-left 320ms var(--curva); }
+  .t5 .lb i { display: block; white-space: nowrap; font-style: normal; font-weight: 600; font-size: 0.8125rem; transform: translateX(-10px); transition: transform 320ms var(--curva); }
+  .t5[aria-selected="true"] { color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); border-color: color-mix(in srgb, var(--acc) 45%, transparent); }
+  .t5[aria-selected="true"] .lb { max-width: var(--lw, 90px); opacity: 1; margin-left: 8px; }
+  .t5[aria-selected="true"] .lb i { transform: none; }
+
+  /* ---------- menu de ação rápida em leque (FAB), do vídeo "FAB Fan" ---------- */
+  .fab-host { --g1: color-mix(in srgb, var(--acc) 55%, #7c4dff); --g2: color-mix(in srgb, var(--acc) 60%, #19c8ff);
+    --c0: #6d5be0; --c1: #1e90e6; --c2: #e8366a; --c3: #d99a0b; --c4: #6f68c4;   /* cores dos ícones (claro) */
+    --R: 96px; --fy: 46px;   /* raio do arco e altura do centro do botão principal */
+    position: relative; width: 100%; max-width: 300px; height: 200px; margin: 6px auto 0; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  @media (prefers-color-scheme: dark) { .fab-host { --g1: #6d4df2; --g2: #1a8fe8; --c0: #8b7cf6; --c1: #38b6ff; --c2: #ff5c8a; --c3: #f2c14e; --c4: #b3acf0; } }
+  .fab-brilho { position: absolute; left: 50%; bottom: calc(var(--fy) - 70px); width: 300px; height: 230px; margin-left: -150px; pointer-events: none; opacity: 0; transition: opacity 260ms ease-out;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--g1) 34%, transparent), transparent); }
+  .fab-host.aberto .fab-brilho { opacity: 1; }
+  .fab-main { position: absolute; left: 50%; bottom: calc(var(--fy) - 28px); width: 56px; height: 56px; margin-left: -28px; padding: 0; border: 0; border-radius: 50%; z-index: 2; color: #fff;
+    display: grid; place-items: center; background: linear-gradient(160deg, var(--g1), var(--g2));
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--g1) 55%, transparent), inset 0 1px 0 rgba(255,255,255,0.35); transition: transform 120ms ease-out; }
+  .fab-main:active { transform: scale(0.93); }
+  .fab-main svg { width: 26px; height: 26px; transition: transform 320ms var(--curva); }
+  .fab-host.aberto .fab-main svg { transform: rotate(45deg); }
+  .fab-itens { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .fi { --do: calc(var(--i) * 34ms); --dc: calc((4 - var(--i)) * 26ms);   /* abre da esquerda p/ direita; fecha ao contrário e mais rápido */
+    position: absolute; left: 50%; bottom: var(--fy); width: 0; height: 0;
+    transform: rotate(calc(var(--ang) * 0.35)); transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1) var(--dc); }
+  .fr { transform: translateY(0); transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1) var(--dc); }
+  .fc { transform: rotate(calc(var(--ang) * -0.35)); transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1) var(--dc); }   /* contra-gira: o ícone nunca fica torto */
+  .fs { position: absolute; left: -21px; top: -21px; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; color: var(--c); opacity: 0; transform: scale(0.2);
+    background: color-mix(in srgb, var(--ink) 7%, var(--panel)); border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transition: transform 160ms ease-out var(--dc), opacity 120ms ease-out var(--dc); }
+  .fs svg { width: 20px; height: 20px; }
+  .fab-host.aberto .fi { transform: rotate(var(--ang)); transition: transform 520ms var(--curva) var(--do); }
+  .fab-host.aberto .fr { transform: translateY(calc(var(--R) * -1)); transition: transform 480ms cubic-bezier(0.34, 1.5, 0.64, 1) var(--do); }   /* passa um pouco e volta */
+  .fab-host.aberto .fc { transform: rotate(calc(var(--ang) * -1)); transition: transform 520ms var(--curva) var(--do); }
+  .fab-host.aberto .fs { opacity: 1; transform: scale(1); pointer-events: auto; transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--do), opacity 160ms ease-out var(--do); }
+  .fs:active { transform: scale(0.92) !important; }
+  .cartao .fab-saida { text-align: center; max-width: none; min-height: 1.4em; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="goo"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter>
+</svg>
+<main>
+  <header>
+    <h1>Modelos de interação</h1>
+    <p>Os estilos aprovados e as propostas novas, para clicar e comparar. Clique nas abas de um lado para o outro e repare no caminho, não só na chegada. No fim da página, quatro barras de ícones e um menu de ação rápida, baseados em vídeos de referência.</p>
+  </header>
+
+  <section>
+    <div class="cab"><h2>A · Aba azul afundada</h2><span class="selo ok">Aprovado · Metalon V1.07</span></div>
+    <p class="desc">Uma única aba azul em baixo relevo desliza por trás do texto. O texto fica branco só onde o azul está. 300 ms, freada longa.</p>
+    <div class="palco"><div class="tabs va" data-tipo="a"></div></div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>B · Pílula de vidro</h2><span class="selo ok">Aprovado · Metalon V1.08</span></div>
+    <p class="desc">Pílula translúcida com reflexo de luz no topo. No caminho ela estica e achata como uma gota, e volta ao formato ao chegar.</p>
+    <div class="palco"><div class="tabs vb" data-tipo="b"></div></div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>1 · Tecla mecânica</h2><span class="selo">Novo</span></div>
+    <p class="desc">Botões com a lateral visível embaixo, como teclas de teclado. Ao clicar, afundam até a base. Os que estão ligados ficam meio afundados.</p>
+    <div class="palco">
+      <div class="teclas">
+        <div class="grupo"><small>Ferramenta (só uma ligada)</small>
+          <div class="linha" id="ferramentas">
+            <button type="button" class="tecla" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l11.5 8-5.2 1.2-2.4 5.3z" fill="currentColor" fill-opacity="0.12"/></svg>Selecionar</button>
+            <button type="button" class="tecla" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4.5L16.5 4l3.5 3.5L8.5 19z"/><path d="M14 6.5l3.5 3.5"/></svg>Perfil</button>
+            <button type="button" class="tecla" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7v10M20 7v10M4 12h16"/><path d="M8 9.5L4.5 12 8 14.5M16 9.5l3.5 2.5-3.5 2.5"/></svg>Cota</button>
+          </div>
+        </div>
+        <div class="grupo"><small>Liga e desliga</small>
+          <div class="linha"><button type="button" class="tecla" id="t-grade" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16" stroke-opacity="0.7"/></svg>Grade</button></div>
+        </div>
+        <div class="grupo"><small>Ação principal</small>
+          <div class="linha"><button type="button" class="tecla pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg>Gerar orçamento</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>2 · Mola</h2><span class="selo">Novo</span></div>
+    <p class="desc">A pílula tem "peso": passa um pouquinho do destino e volta, como se estivesse presa num elástico. 520 ms.</p>
+    <div class="palco"><div class="tabs vm" data-tipo="m"></div></div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>3 · Gota que se divide</h2><span class="selo">Novo · testar no iPhone</span></div>
+    <p class="desc">A cor sai esticando como um fio de líquido: a frente da gota chega primeiro e o resto vem atrás, até se juntar. Usa filtro SVG; no Safari do iPhone precisa ser testado.</p>
+    <div class="palco"><div class="tabs vg" data-tipo="g"></div></div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>4 · Luz que segue o mouse</h2><span class="selo">Novo · só no PC</span></div>
+    <p class="desc">Um brilho suave acompanha o ponteiro por cima do card e acende a borda perto dele, como luz batendo numa superfície. No celular, acende onde você toca.</p>
+    <div class="cards">
+      <button type="button" class="luz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM8 12h8M8 16h5"/></svg><b>Dados do projeto</b><small>Cliente, ambientes e cor</small></button>
+      <button type="button" class="luz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h10M10 12h10M10 18h10"/><circle cx="5.5" cy="6" r="1.3"/><circle cx="5.5" cy="12" r="1.3"/><circle cx="5.5" cy="18" r="1.3"/></svg><b>Lista de corte</b><small>Peças e medidas</small></button>
+      <button type="button" class="luz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg><b>Orçamento</b><small>PDF para o cliente</small></button>
+    </div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>Barras de ícones · do vídeo de referência</h2><span class="selo">Novo · 1, 2, 3 e 5</span></div>
+    <p class="desc">Quatro jeitos de trocar de aba numa barra só de ícones. Toque nos ícones de cada barra, ou use o botão para tocar a mesma sequência nas quatro ao mesmo tempo e comparar o caminho.</p>
+    <button type="button" class="tocar" id="tocar-seq"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>Tocar sequência nas quatro</button>
+    <div class="barras">
+      <div class="cartao"><h3>1 · Pílula elástica</h3><p>Uma pílula violeta-ciano pula para a aba tocada, esticando enquanto desliza: a borda da frente chega primeiro e a de trás alcança com um leve estalo de mola.</p><div class="bi-host" data-bar="1"></div></div>
+      <div class="cartao"><h3>2 · Bojo líquido</h3><p>A barra toda é colorida e tem um bojo em cima da aba ativa. Ao trocar, o bojo se espalha como líquido pelo topo, levantando os ícones do caminho, e se junta na aba nova.</p><div class="bi-host" data-bar="2"></div></div>
+      <div class="cartao"><h3>3 · Entalhe flutuante</h3><p>Uma bolinha sai do entalhe, salta por cima da barra e pousa na aba nova, onde o entalhe se forma de novo. O nome da aba aparece embaixo da bolinha.</p><div class="bi-host" data-bar="3"></div></div>
+      <div class="cartao"><h3>5 · Rótulo que expande</h3><p>A aba ativa vira uma pílula com o nome; as outras encolhem para só o ícone. O texto desliza para dentro e para fora.</p><div class="bi-host" data-bar="5"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="cab"><h2>Menu de ação rápida · FAB em leque</h2><span class="selo">Novo · do vídeo</span></div>
+    <p class="desc">Para poucos casos específicos que a pessoa repete toda hora (ex.: no CRM, anotar, anexar foto, gravar áudio, marcar o local). O + vira × e cinco botões saem do centro e abrem em arco, um depois do outro. Ao fechar, voltam na ordem contrária e mais rápido. Toque no botão azul.</p>
+    <div class="cartao">
+      <div class="fab-host" id="fab">
+        <div class="fab-brilho" aria-hidden="true"></div>
+        <div class="fab-itens" id="fab-itens">
+        <div class="fi" style="--i:0; --ang:-72deg"><div class="fr"><div class="fc"><button type="button" class="fs" style="--c:var(--c0)" title="Foto" aria-label="Foto" data-nome="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="6.5" width="17" height="12" rx="2.5" fill="currentColor" fill-opacity="0.1"/><circle cx="12" cy="12.5" r="3.2"/><path d="M8.5 6.5l1-2h5l1 2" stroke-opacity="0.6"/></svg></button></div></div></div>
+        <div class="fi" style="--i:1; --ang:-36deg"><div class="fr"><div class="fc"><button type="button" class="fs" style="--c:var(--c1)" title="Anotar" aria-label="Anotar" data-nome="Anotar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4.5L16.5 4l3.5 3.5L8.5 19z" fill="currentColor" fill-opacity="0.1"/><path d="M14 6.5l3.5 3.5" stroke-opacity="0.6"/></svg></button></div></div></div>
+        <div class="fi" style="--i:2; --ang:0deg"><div class="fr"><div class="fc"><button type="button" class="fs" style="--c:var(--c2)" title="Galeria" aria-label="Galeria" data-nome="Galeria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="currentColor" fill-opacity="0.1"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4" stroke-opacity="0.8"/></svg></button></div></div></div>
+        <div class="fi" style="--i:3; --ang:36deg"><div class="fr"><div class="fc"><button type="button" class="fs" style="--c:var(--c3)" title="Gravar áudio" aria-label="Gravar áudio" data-nome="Gravar áudio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="currentColor" fill-opacity="0.1"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v2.5M9 20.5h6" stroke-opacity="0.8"/></svg></button></div></div></div>
+        <div class="fi" style="--i:4; --ang:72deg"><div class="fr"><div class="fc"><button type="button" class="fs" style="--c:var(--c4)" title="Local" aria-label="Local" data-nome="Local"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z" fill="currentColor" fill-opacity="0.1"/><circle cx="12" cy="10" r="2.3"/></svg></button></div></div></div>
+        </div>
+        <button type="button" class="fab-main" id="fab-main" aria-expanded="false" aria-label="Ações rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <p class="desc fab-saida" id="fab-saida" aria-live="polite">Toque no + para abrir.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const ROTULOS = ['Modelos', 'Estrutura', 'Ferramentas', 'Orçamento'];
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // monta as abas e liga o clique (troca aria-selected)
+  document.querySelectorAll('.tabs').forEach((tabs) => {
+    tabs.setAttribute('role', 'tablist');
+    tabs.innerHTML = ROTULOS.map((r, i) => '<button type="button" class="tab" role="tab" aria-selected="' + (i === 0) + '">' + r + '</button>').join('');
+    tabs.addEventListener('click', (e) => {
+      const b = e.target.closest('.tab'); if (!b) return;
+      tabs.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t === b)));
+    });
+    deslizar(tabs, tabs.dataset.tipo);
+  });
+
+  // indicador que desliza + camada de texto recortada (padrão do agente designer)
+  function deslizar(tabs, tipo) {
+    const todas = [...tabs.querySelectorAll('.tab')];
+    const F = { a: [0, 0], b: [5, 3], m: [5, 3], g: [5, 3] }[tipo]; // folga vertical, horizontal
+    const redondo = tipo !== 'a';
+    let ind, vidro, gotas = [];
+    if (tipo === 'g') {
+      const goo = document.createElement('div'); goo.className = 'goo'; goo.setAttribute('aria-hidden', 'true');
+      // várias gotas com tempos escalonados: a da frente chega primeiro, as de trás vêm puxando um "fio" que se junta no destino
+      // 12 camadas: cada uma um pouco mais lenta e mais fina que a anterior, para o fio sair contínuo e afinando aos poucos
+      const N = 12;
+      gotas = Array.from({ length: N }, (_, i) => N - 1 - i).map((k) => { // a mais lenta (k maior) fica atrás
+        const d = document.createElement('div'); d.className = 'gota';
+        d.style.transitionDuration = (320 + k * 24) + 'ms';
+        d.dataset.enc = (k * 0.75).toFixed(2);
+        goo.appendChild(d); return d; });
+      tabs.prepend(goo);
+    } else {
+      ind = document.createElement('div'); ind.className = 'ind'; ind.setAttribute('aria-hidden', 'true');
+      if (tipo === 'b') { vidro = document.createElement('div'); vidro.className = 'vidro'; ind.appendChild(vidro); }
+      tabs.prepend(ind);
+    }
+    const txt = document.createElement('div'); txt.className = 'txt'; txt.setAttribute('aria-hidden', 'true');
+    const copias = todas.map((t) => { const s = document.createElement('span'); s.textContent = t.textContent; txt.appendChild(s); return s; });
+    tabs.appendChild(txt);
+    let atual = null;
+    const pos = (el, t) => {
+      const enc = +(el.dataset.enc || 0); // gotas de trás um pouco mais finas: o fio afina como líquido
+      el.style.transform = 'translateX(' + (t.offsetLeft + F[1]) + 'px)';
+      el.style.top = (t.offsetTop + F[0] + enc) + 'px';
+      el.style.width = (t.offsetWidth - 2 * F[1]) + 'px';
+      el.style.height = (t.offsetHeight - 2 * F[0] - 2 * enc) + 'px';
+    };
+    const atualizar = (animar) => {
+      tabs.classList.toggle('sem-anim', !animar);
+      const W = tabs.scrollWidth, H = tabs.offsetHeight;
+      txt.style.width = W + 'px'; txt.style.height = H + 'px';
+      todas.forEach((t, i) => Object.assign(copias[i].style, { left: t.offsetLeft + 'px', top: t.offsetTop + 'px', width: t.offsetWidth + 'px', height: t.offsetHeight + 'px' }));
+      const t = tabs.querySelector('.tab[aria-selected="true"]'); if (!t) return;
+      if (ind) pos(ind, t); gotas.forEach((g) => pos(g, t));
+      const clip = 'inset(' + (t.offsetTop + F[0]) + 'px ' + (W - t.offsetLeft - t.offsetWidth + F[1]) + 'px ' + (H - t.offsetTop - t.offsetHeight + F[0]) + 'px ' + (t.offsetLeft + F[1]) + 'px round ' + (redondo ? '999px' : '8px') + ')';
+      txt.style.webkitClipPath = clip; txt.style.clipPath = clip;
+      if (tipo === 'b' && animar && atual && atual !== t && !calmo && vidro.animate) {
+        vidro.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.14,0.84)', offset: 0.3 }, { transform: 'scale(0.97,1.04)', offset: 0.75 }, { transform: 'scale(1,1)' }], { duration: 340, easing: 'ease-out' });
+      }
+      atual = t;
+      if (!animar) requestAnimationFrame(() => tabs.classList.remove('sem-anim'));
+    };
+    todas.forEach((t) => new MutationObserver(() => atualizar(true)).observe(t, { attributes: true, attributeFilter: ['aria-selected'] }));
+    if (window.ResizeObserver) { const ro = new ResizeObserver(() => atualizar(false)); todas.forEach((t) => ro.observe(t)); }
+    if (document.fonts) document.fonts.ready.then(() => atualizar(false));
+    atualizar(false);
+  }
+
+  // 1) tecla mecânica: só uma ferramenta ligada; grade liga e desliga
+  const ferr = document.getElementById('ferramentas');
+  ferr.addEventListener('click', (e) => {
+    const b = e.target.closest('.tecla'); if (!b) return;
+    ferr.querySelectorAll('.tecla').forEach((t) => t.setAttribute('aria-pressed', String(t === b)));
+  });
+  const grade = document.getElementById('t-grade');
+  grade.addEventListener('click', () => grade.setAttribute('aria-pressed', String(grade.getAttribute('aria-pressed') !== 'true')));
+
+  // 4) luz que segue o ponteiro (no toque, acende onde tocou)
+  document.querySelectorAll('.luz').forEach((c) => {
+    const mover = (e) => { const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); };
+    c.addEventListener('pointermove', mover);
+    c.addEventListener('pointerdown', (e) => { mover(e); if (e.pointerType !== 'mouse') { c.classList.add('acesa'); setTimeout(() => c.classList.remove('acesa'), 700); } });
+  });
+})();
+</script>
+
+<script>
+/* barras de ícones: recriadas do zero a partir do que se vê no vídeo (o ritmo é aproximado) */
+(function () {
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ABAS = [['home', 'Início'], ['search', 'Buscar'], ['heart', 'Curtidas'], ['user', 'Perfil']];
+  const IC = {
+    home: '<path d="M3.5 11.5L12 4l8.5 7.5"/><path d="M5.5 10v9a1 1 0 001 1h11a1 1 0 001-1v-9"/><path d="M10 20v-5h4v5" stroke-opacity="0.6"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.2 4.2"/>',
+    heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0112 7.3a4.2 4.2 0 017.5 2.5C19.5 15.4 12 20 12 20z" fill="currentColor" fill-opacity="0.1"/>',
+    user: '<circle cx="12" cy="8.3" r="3.6" fill="currentColor" fill-opacity="0.1"/><path d="M5 20c0-3.7 3.1-6 7-6s7 2.3 7 6"/>',
+  };
+  const svgI = (k) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + IC[k] + '</svg>';
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const suave = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const sino = (u) => { u = Math.abs(u); return u >= 1 ? 0 : Math.pow(0.5 * (1 + Math.cos(Math.PI * u)), 0.7); }; // forma de sino com topo largo
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // anima uma mola: x acelera até o alvo e passa um pouco antes de assentar
+  function motor(passo) {
+    let raf = 0, ult = 0;
+    const loop = (t) => { const dt = clamp((t - ult) / 1000, 0, 1 / 30); ult = t; raf = passo(dt) ? requestAnimationFrame(loop) : 0; };
+    return { acordar() { if (!raf) { ult = performance.now(); raf = requestAnimationFrame(loop); } } };
+  }
+  const mola = (e, alvo, dt, k, c) => { e.v += (k * (alvo - e.x) - c * e.v) * dt; e.x += e.v * dt; };
+
+  // contorno da barra: topo, base, cantos de raio r, e um "perfil" que sobe (negativo) ou desce (positivo) a borda de cima
+  function contorno(W, topo, base, r, perfil, finos) {
+    const canto = (x) => (x < r ? r - Math.sqrt(r * r - (r - x) * (r - x)) : x > W - r ? r - Math.sqrt(r * r - (x - (W - r)) * (x - (W - r))) : 0);
+    let d = 'M0,' + (base - r);
+    for (let x = 0; x < W; x += (finos && x >= finos[0] && x <= finos[1] ? 0.4 : 3)) d += 'L' + x.toFixed(2) + ',' + (topo + canto(x) + perfil(x)).toFixed(2);
+    d += 'L' + W + ',' + (topo + r + perfil(W)).toFixed(2) + 'L' + W + ',' + (base - r);
+    return d + 'A' + r + ',' + r + ' 0 0 1 ' + (W - r) + ',' + base + 'L' + r + ',' + base + 'A' + r + ',' + r + ' 0 0 1 0,' + (base - r) + 'Z';
+  }
+  const botao = (i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-label', ABAS[i][1]); b.title = ABAS[i][1]; b.innerHTML = svgI(ABAS[i][0]); return b; };
+
+  /* ===== 1 · pílula elástica ===== */
+  function barra1(host) {
+    host.innerHTML = '<div class="bi bi1 sem-anim" role="tablist"><div class="bi-ic bi-base"></div><div class="bi-glow"><div class="bi-pill"></div></div><div class="bi-ic bi-on" aria-hidden="true"></div></div>';
+    const el = host.firstChild, base = el.querySelector('.bi-base'), on = el.querySelector('.bi-on');
+    ABAS.forEach((a, i) => { const b = botao(i); b.addEventListener('click', () => ir(i)); base.appendChild(b); const s = document.createElement('span'); s.innerHTML = svgI(a[0]); on.appendChild(s); });
+    let atual = 0;
+    function pos(i, animar) {
+      const W = el.clientWidth, tw = W / 4, pad = 6;
+      el.classList.toggle('sem-anim', !animar || calmo);
+      if (animar) { el.classList.toggle('dir-d', i > atual); el.classList.toggle('dir-e', i < atual); }
+      el.style.setProperty('--L', (i * tw + pad) + 'px'); el.style.setProperty('--R', (W - (i + 1) * tw + pad) + 'px');
+      [...base.children].forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
+      atual = i;
+    }
+    function ir(i) { pos(i, true); }
+    if (window.ResizeObserver) new ResizeObserver(() => pos(atual, false)).observe(el);
+    pos(0, false);
+    return { ir };
+  }
+
+  /* ===== 2 · bojo líquido ===== */
+  function barra2(host) {
+    host.innerHTML = '<div class="bi bi2" role="tablist"><svg class="bi2-svg" aria-hidden="true"><defs><linearGradient id="bi2g" gradientUnits="userSpaceOnUse" y1="0" y2="0"><stop offset="0" style="stop-color:var(--g1)"/><stop offset="1" style="stop-color:var(--g2)"/></linearGradient></defs><path fill="url(#bi2g)"/></svg><div class="bi-ic"></div></div>';
+    const el = host.firstChild, svg = el.querySelector('svg'), path = el.querySelector('path'), grad = el.querySelector('linearGradient'), ic = el.querySelector('.bi-ic');
+    const btns = ABAS.map((a, i) => { const b = botao(i); b.addEventListener('click', () => ir(i)); ic.appendChild(b); return b; });
+    const H = 88, TOPO = 24, R = 18, PAD = 14;
+    // cúpula: círculo de raio RD com o centro DESCE px abaixo da linha de cima da barra, e um arco de concordância (raio RC) tangente ao círculo e à linha
+    const RD = 20, DESCE = 4, RC = 9, H0 = RD - DESCE;
+    const DX = Math.sqrt((RD + RC) * (RD + RC) - (RC + DESCE) * (RC + DESCE));   // onde o arco encosta na linha da barra (distância ao centro)
+    const DT = DX * RD / (RD + RC);                                              // onde o arco encosta na cúpula
+    const forma = (d) => d >= DX ? 0 : d >= DT ? RC - Math.sqrt(Math.max(0, RC * RC - (d - DX) * (d - DX))) : -DESCE + Math.sqrt(Math.max(0, RD * RD - d * d));
+    let W = 300, alvo = 0, est = { x: 0, v: 0 };
+    ic.style.padding = '0 ' + PAD + 'px';   // os ícones ficam alinhados com o centro do bojo
+    const cx = (i) => PAD + (i + 0.5) * (W - 2 * PAD) / 4;
+    function desenhar() {
+      const s = Math.min(1, Math.abs(est.v) / 900), sy = 1 - 0.5 * s, sx = 1 + 0.9 * s, dir = Math.sign(est.v);
+      const sxl = sx * (dir > 0 ? 1 + 0.9 * s : 1), sxr = sx * (dir < 0 ? 1 + 0.9 * s : 1);   // o lado de trás se arrasta
+      const bojo = (x) => { const d = x - est.x; return sy * forma(Math.abs(d) / (d < 0 ? sxl : sxr)); };   // a forma toda estica junto: continua tangente à barra
+      path.setAttribute('d', contorno(W, TOPO, H, R, (x) => -bojo(x), [est.x - sxl * DX - 2, est.x + sxr * DX + 2]));
+      btns.forEach((b, i) => { const p = bojo(cx(i)) / H0, q = Math.min(1, p);
+        b.style.transform = 'translateY(' + (-p * 13).toFixed(2) + 'px) scale(' + (1 + 0.22 * q).toFixed(3) + ')'; b.style.opacity = (0.72 + 0.28 * q).toFixed(3); });
+    }
+    const m = motor((dt) => { mola(est, cx(alvo), dt, 170, 19); desenhar(); const fim = Math.abs(est.v) < 2 && Math.abs(est.x - cx(alvo)) < 0.3; if (fim) { est.x = cx(alvo); est.v = 0; desenhar(); } return !fim; });
+    function medir() { W = el.clientWidth; svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); grad.setAttribute('x1', 0); grad.setAttribute('x2', W); est.x = cx(alvo); est.v = 0; desenhar(); }
+    function ir(i) { alvo = i; btns.forEach((b, k) => b.setAttribute('aria-selected', String(k === i))); if (calmo) { est.x = cx(i); est.v = 0; desenhar(); } else m.acordar(); }
+    if (window.ResizeObserver) new ResizeObserver(medir).observe(el);
+    medir(); btns[0].setAttribute('aria-selected', 'true');
+    return { ir };
+  }
+
+  /* ===== 3 · entalhe flutuante ===== */
+  function barra3(host) {
+    host.innerHTML = '<div class="bi bi3" role="tablist"><svg class="bi3-svg" aria-hidden="true"><path/></svg><div class="bi-ic"></div><div class="bi3-ball" aria-hidden="true"></div><div class="bi3-lb"></div></div>';
+    const el = host.firstChild, svg = el.querySelector('svg'), path = el.querySelector('path'), ic = el.querySelector('.bi-ic'), bola = el.querySelector('.bi3-ball'), rot = el.querySelector('.bi3-lb');
+    const btns = ABAS.map((a, i) => { const b = botao(i); b.addEventListener('click', () => ir(i)); ic.appendChild(b); return b; });
+    const H = 100, TOPO = 36, R = 18, D = 27, RW = 27, SALTO = 14, PAD = 14;
+    let W = 300, ativo = 0, naBola = 0, x0 = 0, x1 = 0, est = { x: 0, v: 0 };
+    ic.style.padding = '0 ' + PAD + 'px';
+    const cx = (i) => PAD + (i + 0.5) * (W - 2 * PAD) / 4;
+    const corte = (u) => { u = Math.abs(u); return u >= 1 ? 0 : Math.pow(1 - Math.pow(u, 2.3), 0.56); };   // corte quase circular
+    function desenhar() {
+      const prog = x1 === x0 ? 1 : clamp((est.x - x0) / (x1 - x0), 0, 1);
+      const salto = SALTO * Math.pow(Math.sin(Math.PI * prog), 0.6);
+      const k = 1 - suave(0, 0.45 * SALTO, salto);                       // o entalhe some enquanto a bolinha está no ar
+      if (prog >= 0.5 && naBola !== ativo) { naBola = ativo; bola.innerHTML = svgI(ABAS[ativo][0]); rot.textContent = ABAS[ativo][1]; }
+      path.setAttribute('d', contorno(W, TOPO, H, R, (x) => k * D * corte((x - est.x) / RW)));
+      bola.style.transform = 'translate(' + (est.x - 20).toFixed(2) + 'px,' + (TOPO + 3 - 20 - salto).toFixed(2) + 'px)';
+      bola.firstChild.style.transform = 'scale(' + Math.min(1, 0.2 + 0.8 * Math.abs(1 - 2 * prog)).toFixed(3) + ')';
+      rot.style.transform = 'translate(' + est.x.toFixed(2) + 'px,' + (TOPO + 39) + 'px)'; rot.style.opacity = (k * k).toFixed(3);
+      btns.forEach((b, i) => { b.style.opacity = suave(16, 42, Math.abs(cx(i) - est.x)).toFixed(3); });
+    }
+    const m = motor((dt) => { mola(est, x1, dt, 210, 17); desenhar(); const fim = Math.abs(est.v) < 2 && Math.abs(est.x - x1) < 0.3; if (fim) { est.x = x1; est.v = 0; x0 = x1; desenhar(); } return !fim; });
+    function medir() { W = el.clientWidth; svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); x0 = x1 = est.x = cx(ativo); est.v = 0; naBola = ativo; bola.innerHTML = svgI(ABAS[ativo][0]); rot.textContent = ABAS[ativo][1]; desenhar(); }
+    function ir(i) { if (i === ativo) return; x0 = est.x; ativo = i; x1 = cx(i); btns.forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
+      if (calmo) { est.x = x0 = x1; est.v = 0; naBola = -1; desenhar(); } else m.acordar(); }
+    if (window.ResizeObserver) new ResizeObserver(medir).observe(el);
+    medir(); btns[0].setAttribute('aria-selected', 'true');
+    return { ir };
+  }
+
+  /* ===== 5 · rótulo que expande ===== */
+  function barra5(host) {
+    host.innerHTML = '<div class="bi bi5" role="tablist"></div>';
+    const el = host.firstChild;
+    const bs = ABAS.map((a, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 't5'; b.setAttribute('role', 'tab'); b.setAttribute('aria-label', a[1]);
+      b.innerHTML = svgI(a[0]) + '<span class="lb"><i>' + a[1] + '</i></span>'; b.addEventListener('click', () => ir(i)); el.appendChild(b); return b; });
+    const medir = () => bs.forEach((b) => b.style.setProperty('--lw', Math.ceil(b.querySelector('i').scrollWidth) + 'px'));
+    function ir(i) { bs.forEach((b, k) => b.setAttribute('aria-selected', String(k === i))); }
+    medir(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(medir);
+    ir(0);
+    return { ir };
+  }
+
+  const barras = [barra1, barra2, barra3, barra5].map((f, k) => f(document.querySelector('.bi-host[data-bar="' + [1, 2, 3, 5][k] + '"]')));
+  // mesma sequência do vídeo: Buscar, Curtidas, Início, Perfil
+  let seq = 0, timer = 0;
+  document.getElementById('tocar-seq').addEventListener('click', () => {
+    clearTimeout(timer); seq = 0;
+    const passo = () => { barras.forEach((b) => b.ir([1, 2, 0, 3][seq])); seq++; if (seq < 4) timer = setTimeout(passo, 1100); };
+    barras.forEach((b) => b.ir(0)); timer = setTimeout(passo, 700);
+  });
+})();
+</script>
+
+<script>
+/* menu de ação rápida em leque: só liga/desliga a classe "aberto"; o movimento é todo CSS */
+(function () {
+  const host = document.getElementById('fab'), main = document.getElementById('fab-main'), itens = document.getElementById('fab-itens'), saida = document.getElementById('fab-saida');
+  const abrir = (ab) => { host.classList.toggle('aberto', ab); main.setAttribute('aria-expanded', String(ab)); if ('inert' in itens) itens.inert = !ab; };
+  main.addEventListener('click', (e) => { e.stopPropagation(); abrir(!host.classList.contains('aberto')); });
+  host.querySelectorAll('.fs').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); saida.textContent = 'Você tocou em: ' + b.dataset.nome; abrir(false); }));
+  document.addEventListener('click', () => abrir(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') abrir(false); });
+  abrir(false);
+})();
+</script>
+</body>
+</html>

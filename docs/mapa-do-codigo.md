@@ -232,4 +232,4 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Fora do código
 - `agente/complemento-crm.md`: regras do CRM para o bot (vale sobre as instruções). `agente/loja.md`: dados comerciais (cópia do projeto do WhatsApp). `agente/instrucoes/`: só a carga inicial.
 - `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
-- `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios). `.claude/agents` e `.claude/skills`: revisores e comandos.
+- `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.
