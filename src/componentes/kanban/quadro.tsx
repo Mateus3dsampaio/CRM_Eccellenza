@@ -184,8 +184,8 @@ export function Quadro() {
       {/* Barra de busca e filtros */}
       <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="mr-auto text-xl font-semibold tracking-tight sm:mr-2">Atendimentos</h1>
-          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-sm sm:flex-1 sm:basis-auto">
+          <h1 className="sr-only">Atendimentos</h1>
+          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-xs sm:flex-1 sm:basis-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-texto-fraco" aria-hidden />
             <input
               type="search"
@@ -196,7 +196,41 @@ export function Quadro() {
               className={juntar(classeEntrada, "pl-9")}
             />
           </div>
-          <div className="hidden items-center rounded-controle bg-superficie shadow-card md:flex" role="group" aria-label="Zoom do quadro">
+          {/* Filtros rápidos na mesma linha da busca: o quadro ganha altura (pedido da revisão de design). */}
+          <button
+            onClick={() => setSoEsperando((v) => !v)}
+            aria-pressed={soEsperando}
+            className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soEsperando ? "bg-alerta text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+          >
+            <Clock className="size-4" aria-hidden />
+            Esperando resposta
+            <span className="tabular-nums">({totalEsperando})</span>
+          </button>
+          {!ehAdmin && (
+            <button
+              onClick={() => setSoMeus((v) => !v)}
+              aria-pressed={soMeus}
+              className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soMeus ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+            >
+              <UserRound className="size-4" aria-hidden />
+              Meus leads
+            </button>
+          )}
+          {ehAdmin && (
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por consultor">
+              {[{ id: "", nome: "Todos" }, ...(dados?.consultores ?? [])].map((c) => (
+                <button
+                  key={c.id || "todos"}
+                  onClick={() => setConsultor(c.id)}
+                  aria-pressed={consultor === c.id}
+                  className={juntar("inline-flex min-h-toque items-center rounded-controle px-3 text-sm font-medium shadow-card", consultor === c.id ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
+                >
+                  {c.nome}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="hidden items-center rounded-controle bg-superficie shadow-card md:ml-auto md:flex" role="group" aria-label="Zoom do quadro">
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
               disabled={indiceZoom <= 0}
@@ -232,41 +266,6 @@ export function Quadro() {
             </Botao>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtros rápidos">
-          <button
-            onClick={() => setSoEsperando((v) => !v)}
-            aria-pressed={soEsperando}
-            className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soEsperando ? "bg-alerta text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
-          >
-            <Clock className="size-4" aria-hidden />
-            Esperando resposta
-            <span className="tabular-nums">({totalEsperando})</span>
-          </button>
-          {!ehAdmin && (
-            <button
-              onClick={() => setSoMeus((v) => !v)}
-              aria-pressed={soMeus}
-              className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium shadow-card", soMeus ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
-            >
-              <UserRound className="size-4" aria-hidden />
-              Meus leads
-            </button>
-          )}
-        </div>
-        {ehAdmin && (
-          <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por consultor">
-            {[{ id: "", nome: "Todos" }, ...(dados?.consultores ?? [])].map((c) => (
-              <button
-                key={c.id || "todos"}
-                onClick={() => setConsultor(c.id)}
-                aria-pressed={consultor === c.id}
-                className={juntar("inline-flex min-h-toque items-center rounded-controle px-3 text-sm font-medium shadow-card", consultor === c.id ? "bg-marca text-sobre-marca" : "bg-superficie text-texto-suave hover:bg-superficie-suave")}
-              >
-                {c.nome}
-              </button>
-            ))}
-          </div>
-        )}
         {filtrosAbertos && (
           <div className="grid animate-surgir gap-2 rounded-card border border-borda bg-superficie p-3 shadow-painel sm:grid-cols-4">
             <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">

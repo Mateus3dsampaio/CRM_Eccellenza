@@ -35,13 +35,15 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
   const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   return (
     <>
-      <div className="flex items-start gap-3 pr-8">
+      <div className="flex items-start gap-3">
         <Avatar nome={card.nome} cor={card.avatarCor} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate font-semibold text-texto">{card.nome}</p>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5">
-              {card.aguardandoHumano && <Sino />}
+          <div className="flex items-start gap-2">
+            {/* Nome em até 2 linhas: é a informação mais importante do card. */}
+            <p className="min-w-0 flex-1 break-words font-semibold leading-snug text-texto line-clamp-2">{card.nome}</p>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {/* Quando o card já diz "esperando há X", o sino repetiria o aviso. */}
+              {card.aguardandoHumano && !espera.esperando && <Sino />}
               <span className="text-xs text-texto-fraco">{card.horario}</span>
             </span>
           </div>
