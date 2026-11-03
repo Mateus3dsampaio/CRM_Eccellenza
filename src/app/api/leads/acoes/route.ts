@@ -3,12 +3,13 @@ import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, etiquetaValida } from "@/regras/etapas";
-import { alterarEtiqueta, arquivarLeads, excluirLeads, moverEtapa } from "@/servicos/leads";
+import { dadosDeVenda, esquemaDadosDeVenda } from "@/lib/esquema-venda";
+import { alterarEtiqueta, arquivarLeads, conferirMudanca, excluirLeads, moverEtapa } from "@/servicos/leads";
 
 const ids = z.array(z.string().min(1).max(40)).min(1).max(500);
 
 const esquema = z.discriminatedUnion("acao", [
-  z.object({ acao: z.literal("mover"), ids, etapa: z.enum(CODIGOS_ETAPA as [string, ...string[]]) }),
+  z.object({ acao: z.literal("mover"), ids, etapa: z.enum(CODIGOS_ETAPA as [string, ...string[]]), dados: esquemaDadosDeVenda.optional() }),
   z.object({ acao: z.literal("arquivar"), ids }),
   z.object({ acao: z.literal("excluir"), ids }),
   z.object({ acao: z.literal("etiqueta"), ids, etiqueta: z.string(), ativa: z.boolean() }),
@@ -22,7 +23,9 @@ export const POST = rota(async (req: Request) => {
 
   switch (corpo.acao) {
     case "mover":
-      for (const id of corpo.ids) await moverEtapa(id, corpo.etapa as never, usuario.nome);
+      // Confere todos antes de mexer em qualquer um: lote com um card sem os dados não move metade.
+      for (const id of corpo.ids) await conferirMudanca(id, corpo.etapa as never, dadosDeVenda(corpo.dados));
+      for (const id of corpo.ids) await moverEtapa(id, corpo.etapa as never, usuario.nome, { dados: dadosDeVenda(corpo.dados) });
       return { ok: true };
     case "arquivar":
       await exigirUsuario("arquivar_lead");

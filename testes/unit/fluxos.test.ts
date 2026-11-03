@@ -158,9 +158,9 @@ describe("funil e arquivamento (MET-02, AGENDA-02)", () => {
     const [v1, v2] = await horariosLivresParaLead(lead.id, 2);
     await agendarVisita({ leadId: lead.id, inicio: v1.inicio, autor: "teste" });
     await agendarVisita({ leadId: lead.id, inicio: v2.inicio, autor: "teste" });
-    await moverEtapa(lead.id, "fechado", "teste");
+    await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
     await moverEtapa(lead.id, "novo", "teste");
-    await moverEtapa(lead.id, "fechado", "teste");
+    await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
     for (const tipo of ["etapa_novo", "etapa_pronto", "etapa_visita", "etapa_orcamento", "etapa_fechado", "visita_agendada"]) expect(await contar(tipo)).toBe(1);
   });
 

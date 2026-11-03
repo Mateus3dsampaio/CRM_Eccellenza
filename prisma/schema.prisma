@@ -50,6 +50,13 @@ model Lead {
   ordem          Float   @default(0)
   etiquetas      String  @default("[]") // JSON string[] de códigos
 
+  // Acompanhamento de vendas. Dinheiro em centavos.
+  proximoContatoEm DateTime? // obrigatório em Orçamento apresentado e Negociação
+  valorOrcamento   Int?
+  valorFechado     Int?
+  motivoPerda      String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
+  concorrente      String? // nome, quando o motivo é "concorrente"
+
   consultorId    String?
   consultor      Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
 

@@ -73,7 +73,7 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
     await alterarEtiqueta(leadId, "retomada", false, "sistema");
     await registrarUmaVez(leadId, "retomada_voltou");
     if (lead.etapa === "sem_resposta" && lead.etapaAnterior) {
-      await moverEtapa(leadId, etapaOuErro(lead.etapaAnterior), "sistema");
+      await moverEtapa(leadId, etapaOuErro(lead.etapaAnterior), "sistema", { semExigencias: true });
     }
   }
   await avisarAlmocoSeNecessario(leadId);

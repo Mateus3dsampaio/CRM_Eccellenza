@@ -2,10 +2,11 @@ import { z } from "zod";
 import { naoEncontrado, rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { exigirUsuario } from "@/lib/sessao";
-import { CODIGOS_CLASSIFICACAO } from "@/regras/etapas";
+import { dadosDeVenda, esquemaDadosDeVenda } from "@/lib/esquema-venda";
+import { CODIGOS_CLASSIFICACAO, type CodigoEtapa } from "@/regras/etapas";
 import { fichaDoLead } from "@/servicos/consultas";
 import { registrarAlteracao } from "@/servicos/historico";
-import { atualizarCampos, atualizarResumo, restaurarLead } from "@/servicos/leads";
+import { atualizarCampos, atualizarResumo, moverEtapa, restaurarLead } from "@/servicos/leads";
 import { marcarMudanca } from "@/lib/versao";
 
 type Contexto = { params: Promise<{ id: string }> };
@@ -34,6 +35,7 @@ const esquemaEdicao = z
     consultorId: z.string().max(40).nullable().optional(),
     classificacao: z.enum(CODIGOS_CLASSIFICACAO as [string, ...string[]]).nullable().optional(),
     restaurar: z.boolean().optional(),
+    venda: esquemaDadosDeVenda.optional(),
   })
   .strict();
 
@@ -43,13 +45,15 @@ export const PATCH = rota(async (req: Request, { params }: Contexto) => {
   const { id } = await params;
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) naoEncontrado();
-  const { classificacao, restaurar, ...campos } = esquemaEdicao.parse(await req.json());
+  const { classificacao, restaurar, venda, ...campos } = esquemaEdicao.parse(await req.json());
   if (restaurar) await restaurarLead(id, usuario.nome);
   if (campos.consultorId) {
     const existe = await db.usuario.findFirst({ where: { id: campos.consultorId, perfil: "consultor" } });
     if (!existe) campos.consultorId = undefined;
   }
   await atualizarCampos(id, campos, usuario.nome, "substituir");
+  // Trocar a data do retorno, o valor ou o motivo sem mudar de etapa.
+  if (venda) await moverEtapa(id, lead.etapa as CodigoEtapa, usuario.nome, { dados: dadosDeVenda(venda) });
   if (classificacao !== undefined && classificacao !== lead.classificacao) {
     await db.lead.update({ where: { id }, data: { classificacao } });
     await registrarAlteracao(id, usuario.nome, `Alterou a classificação para "${classificacao ?? "sem classificação"}"`);
