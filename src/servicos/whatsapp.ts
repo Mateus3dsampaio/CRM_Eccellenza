@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
 import { TAMANHO_MAXIMO, tipoImagemValido } from "@/lib/midias";
+import { LIMITE_AUDIO_BYTES, tipoAudioAceito, transcreverAudio, transcricaoConfigurada } from "./transcricao";
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
-import { extrairEventos, type MensagemRecebida, type StatusRecebido } from "@/regras/whatsapp";
+import { extrairEventos, PREFIXO_AUDIO, type MensagemRecebida, type StatusRecebido } from "@/regras/whatsapp";
 import { ErroConversa, receberMensagemCliente } from "./conversa";
 
 // Integração com a API oficial do WhatsApp (Meta). Nada aqui roda sem as variáveis de ambiente.
@@ -23,6 +24,8 @@ const fim = (tel: string) => tel.replace(/\D/g, "").slice(-4);
 export interface ResultadoEnvio {
   ok: boolean;
   id?: string;
+  /** wa_id que a Meta devolveu (o número como ela o conhece). */
+  waId?: string;
   erro?: string;
 }
 
@@ -41,41 +44,43 @@ export async function enviarPelaMeta(params: { para: string; texto?: string; mod
       body: JSON.stringify(corpo),
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     });
-    const json = (await resposta.json().catch(() => ({}))) as { messages?: { id?: string }[]; error?: { code?: number; message?: string } };
+    const json = (await resposta.json().catch(() => ({}))) as { messages?: { id?: string }[]; contacts?: { wa_id?: string }[]; error?: { code?: number; message?: string } };
     if (!resposta.ok || !json.messages?.[0]?.id) {
       // Só o código do erro vai para o log: a mensagem da Meta pode trazer dados do cliente.
       const erro = `a Meta recusou o envio (HTTP ${resposta.status}, código ${json.error?.code ?? "?"})`;
       await registrarLogWebhook("envio", `Envio para …${fim(para)}: ${erro}`, false);
       return { ok: false, erro };
     }
-    return { ok: true, id: json.messages[0].id };
+    return { ok: true, id: json.messages[0].id, waId: json.contacts?.[0]?.wa_id };
   } catch {
     await registrarLogWebhook("envio", `Envio para …${fim(para)}: sem resposta da Meta`, false);
     return { ok: false, erro: "sem resposta da Meta" };
   }
 }
 
-/** Baixa a imagem que o cliente mandou (2 passos: pede o endereço, depois baixa com o token). */
-export async function baixarMidiaDaMeta(midiaId: string): Promise<{ dados: Buffer; tipo: string } | null> {
+/** Baixa a imagem ou o áudio que o cliente mandou (2 passos: pede o endereço, depois baixa com o token). */
+export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "audio" = "imagem"): Promise<{ dados: Buffer; tipo: string } | null> {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return null;
+  const limite = tipoMidia === "audio" ? LIMITE_AUDIO_BYTES : TAMANHO_MAXIMO;
+  const aceito = tipoMidia === "audio" ? tipoAudioAceito : tipoImagemValido;
   try {
     const cabecalho = { Authorization: `Bearer ${cfg.token}` };
     const info = await fetch(`https://graph.facebook.com/${cfg.versaoApi}/${encodeURIComponent(midiaId)}`, { headers: cabecalho, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
     const meta = (await info.json()) as { url?: string; mime_type?: string };
     if (!info.ok || !meta.url || !meta.mime_type) return null;
-    // Só baixa de servidor da Meta/Facebook (evita o webhook ser usado para fazer o servidor visitar outro lugar).
+    // Só baixa de servidor da Meta/Facebook, por https (evita o webhook ser usado para fazer o servidor visitar outro lugar).
     const destino = new URL(meta.url);
     if (destino.protocol !== "https:" || !/(^|\.)(facebook\.com|fbcdn\.net|fbsbx\.com|whatsapp\.net|facebook\.net)$/.test(destino.hostname)) return null;
     const tipo = meta.mime_type.split(";")[0];
-    if (!tipoImagemValido(tipo)) return null;
+    if (!aceito(tipo)) return null;
     // "manual": se a Meta redirecionar para outro lugar, o token NÃO vai junto (seria vazamento).
     const arquivo = await fetch(destino, { headers: cabecalho, redirect: "manual", signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
     if (!arquivo.ok) return null;
     const declarado = Number(arquivo.headers.get("content-length"));
-    if (Number.isFinite(declarado) && declarado > TAMANHO_MAXIMO) return null;
+    if (Number.isFinite(declarado) && declarado > limite) return null;
     const dados = Buffer.from(await arquivo.arrayBuffer());
-    if (dados.length > TAMANHO_MAXIMO) return null;
+    if (dados.length > limite) return null;
     return { dados, tipo };
   } catch {
     return null;
@@ -103,6 +108,22 @@ async function aplicarStatus(s: StatusRecebido) {
   await marcarMudanca();
 }
 
+/** Áudio do cliente: vira texto (Whisper) quando a transcrição está ligada; senão o texto avisa que não deu para ouvir. */
+async function textoDoAudio(m: MensagemRecebida): Promise<string | null> {
+  if (!m.midiaId || !transcricaoConfigurada()) return m.texto; // mensagem padrão de "não consigo ouvir"
+  const audio = await baixarMidiaDaMeta(m.midiaId, "audio");
+  if (!audio) return "[o cliente enviou um áudio que o sistema não conseguiu processar]";
+  const falado = await transcreverAudio(audio.dados, audio.tipo);
+  if (!falado) {
+    await registrarLogWebhook("mensagem", `Áudio de …${fim(m.telefone)} não pôde ser transcrito`, false);
+    return "[o cliente enviou um áudio que o sistema não conseguiu transcrever]";
+  }
+  // Só o tamanho vai para o log, nunca o que o cliente disse.
+  await registrarLogWebhook("mensagem", `Áudio de …${fim(m.telefone)} transcrito (${Math.ceil(audio.dados.length / 1024)} KB)`);
+  return `${PREFIXO_AUDIO}${falado}`;
+}
+
+/** Grava uma mensagem recebida. Lança só em erro inesperado (banco fora do ar...): aí o evento fica para ser reprocessado. */
 async function aplicarMensagem(m: MensagemRecebida) {
   // A Meta reenvia quando não recebe 200 a tempo: a mesma mensagem nunca é processada duas vezes.
   if (await db.mensagem.findUnique({ where: { idExterno: m.idExterno }, select: { id: true } })) {
@@ -111,14 +132,16 @@ async function aplicarMensagem(m: MensagemRecebida) {
   }
   let imagem: { dados: Buffer; tipo: string } | null = null;
   let texto = m.texto;
-  if (m.midiaId) {
+  if (m.tipo === "audio") {
+    texto = await textoDoAudio(m);
+  } else if (m.midiaId) {
     imagem = await baixarMidiaDaMeta(m.midiaId);
     if (!imagem) texto = [texto, "[o cliente enviou uma imagem que o sistema não conseguiu baixar]"].filter(Boolean).join(" ");
   }
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
     try {
-      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, imagem, idExterno: m.idExterno });
+      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, imagem, idExterno: m.idExterno, waId: m.telefone });
       await registrarLogWebhook("mensagem", `Mensagem (${m.tipo}) de …${fim(m.telefone)} recebida`);
       return;
     } catch (erro) {
@@ -126,22 +149,77 @@ async function aplicarMensagem(m: MensagemRecebida) {
       // Só é "repetida" se essa mensagem da Meta realmente já está gravada.
       if (conflito && (await db.mensagem.findUnique({ where: { idExterno: m.idExterno }, select: { id: true } }))) return;
       if (conflito && tentativa === 1) continue;
-      const motivo = erro instanceof ErroConversa ? erro.message : "erro inesperado";
-      await registrarLogWebhook("erro", `Mensagem de …${fim(m.telefone)} não processada: ${motivo}`, false);
-      return;
+      if (erro instanceof ErroConversa) {
+        await registrarLogWebhook("erro", `Mensagem de …${fim(m.telefone)} não processada: ${erro.message}`, false);
+        return; // problema da própria mensagem (ex.: telefone inválido): tentar de novo não resolve
+      }
+      throw erro;
     }
   }
 }
 
-/** Processa o que a Meta mandou. Nunca lança: o webhook já respondeu 200 e erro vai para o log. */
+/** Lê e aplica um payload da Meta. Lança em erro inesperado (quem chama decide se tenta de novo). */
+async function processarCorpo(payload: unknown): Promise<void> {
+  const eventos = extrairEventos(payload);
+  for (const s of eventos.statuses) await aplicarStatus(s);
+  for (const m of eventos.mensagens) await aplicarMensagem(m);
+}
+
+/** Processa um payload sem lançar (erro vai para o log). Usado em testes e onde não há caixa de entrada. */
 export async function processarWebhook(payload: unknown): Promise<void> {
   try {
-    const eventos = extrairEventos(payload);
-    for (const s of eventos.statuses) await aplicarStatus(s);
-    for (const m of eventos.mensagens) await aplicarMensagem(m);
+    await processarCorpo(payload);
   } catch {
     await registrarLogWebhook("erro", "Falha ao processar um webhook", false);
   }
+}
+
+const MAX_TENTATIVAS_EVENTO = 5;
+
+/** O webhook grava o evento ANTES de responder 200. Se o servidor reiniciar depois, a rotina reprocessa. */
+export async function guardarEvento(corpo: string): Promise<number> {
+  const e = await db.eventoWebhook.create({ data: { corpo, criadoEm: await agora() } });
+  return e.id;
+}
+
+/** Processa um evento guardado. Marca como feito se deu certo; senão conta a tentativa (no máximo 5, depois desiste e avisa no log). */
+// Eventos que este processo está processando agora: a rotina não os pega de novo (áudio pode demorar, e ele iria 2 vezes à OpenAI).
+// Vale para uma instância só (o caso do Railway com 1 réplica); a mensagem em si nunca duplica porque o id da Meta é único.
+const emProcessamento = new Set<number>();
+
+export async function processarEventoGuardado(id: number): Promise<void> {
+  if (emProcessamento.has(id)) return;
+  emProcessamento.add(id);
+  try {
+    const evento = await db.eventoWebhook.findUnique({ where: { id } });
+    if (!evento || evento.processadoEm) return;
+    try {
+      await processarCorpo(JSON.parse(evento.corpo));
+      // O corpo traz o texto do cliente: depois de processado não precisa mais ficar guardado (LGPD).
+      await db.eventoWebhook.update({ where: { id }, data: { processadoEm: await agora(), corpo: "" } });
+    } catch {
+      const tentativas = evento.tentativas + 1;
+      const desistiu = tentativas >= MAX_TENTATIVAS_EVENTO;
+      await db.eventoWebhook.update({ where: { id }, data: { tentativas, ...(desistiu ? { processadoEm: await agora(), corpo: "" } : {}) } });
+      await registrarLogWebhook("erro", desistiu ? "Evento da Meta descartado depois de 5 tentativas" : `Evento da Meta falhou (tentativa ${tentativas}); vai tentar de novo`, false);
+    }
+  } finally {
+    emProcessamento.delete(id);
+  }
+}
+
+/** Rotina (a cada minuto): reprocessa eventos que ficaram pendentes (mais de 5 minutos sem terminar) e apaga os antigos. */
+export async function reprocessarEventosPendentes(): Promise<number> {
+  const quando = await agora();
+  const pendentes = await db.eventoWebhook.findMany({
+    where: { processadoEm: null, criadoEm: { lt: new Date(quando.getTime() - 5 * 60_000) } },
+    orderBy: { id: "asc" },
+    take: 50,
+  });
+  for (const e of pendentes) await processarEventoGuardado(e.id);
+  // As linhas já processadas só guardam o registro (sem corpo); somem em 2 dias.
+  await db.eventoWebhook.deleteMany({ where: { processadoEm: { lt: new Date(quando.getTime() - 2 * 24 * 3600_000) } } });
+  return pendentes.length;
 }
 
 export async function ultimosLogs(limite = 30) {

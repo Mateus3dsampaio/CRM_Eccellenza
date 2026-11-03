@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Info, Send } from "lucide-react";
+import { ORIGENS_CONSENTIMENTO } from "@/regras/consentimento";
 import { MODELOS } from "@/regras/modelos";
 import { normalizarTelefone, formatarTelefone } from "@/regras/telefone";
 import { chamarApi, useAviso, useDados } from "./dados";
@@ -15,6 +16,8 @@ interface Consulta {
   telefone?: string;
   lead?: { id: string; nome: string } | null;
   janelaAberta?: boolean;
+  naoReceber?: boolean;
+  temConsentimento?: boolean;
 }
 
 // Nova mensagem para qualquer número, sem contato salvo (MSG-01 a MSG-04). Sempre um número por vez.
@@ -24,11 +27,14 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
   const [consulta, setConsulta] = useState<Consulta | null>(null);
   const [texto, setTexto] = useState("");
   const [modelo, setModelo] = useState("");
+  const [consentimento, setConsentimento] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState<{ leadId: string; mensagemId: string } | null>(null);
 
   const formatoOk = normalizarTelefone(telefone) !== null;
   const livre = !!consulta?.janelaAberta;
+  const bloqueado = !!consulta?.naoReceber; // pediu para parar: nenhum modelo
+  const precisaConsentimento = !!modelo && !consulta?.temConsentimento && !bloqueado;
 
   useEffect(() => {
     if (!formatoOk) return;
@@ -47,6 +53,7 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
     setConsulta(null);
     setTexto("");
     setModelo("");
+    setConsentimento("");
     setEnviado(null);
   }
 
@@ -55,7 +62,7 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
     try {
       const r = await chamarApi<{ leadId: string; mensagemId: string }>("/api/nova-mensagem", {
         method: "POST",
-        json: { telefone, texto: livre && !modelo ? texto : undefined, modelo: modelo || undefined },
+        json: { telefone, texto: livre && !modelo ? texto : undefined, modelo: modelo || undefined, consentimento: precisaConsentimento && consentimento ? consentimento : undefined },
       });
       setEnviado(r);
       avisar("Mensagem enviada (simulada).");
@@ -66,7 +73,7 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
     }
   }
 
-  const podeEnviar = formatoOk && consulta?.valido && (modelo || (livre && texto.trim()));
+  const podeEnviar = formatoOk && consulta?.valido && ((modelo && !bloqueado && (!precisaConsentimento || consentimento)) || (!modelo && livre && texto.trim()));
 
   return (
     <Modal
@@ -120,6 +127,15 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
             </div>
           )}
 
+          {bloqueado && (
+            <div className="flex gap-2 rounded-controle bg-alerta-suave p-3 text-sm text-alerta">
+              <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>
+                <strong>Este cliente pediu para parar de receber mensagens.</strong> Modelos estão bloqueados. Só dá para responder com texto livre se ele escrever de novo (dentro de 24h).
+              </p>
+            </div>
+          )}
+
           <Campo rotulo="Modelo aprovado" dica="Modelos fictícios do simulador (PROVISÓRIO, textos ainda não aprovados pelo Mateus).">
             <select className={classeEntrada} value={modelo} onChange={(e) => setModelo(e.target.value)}>
               <option value="">{livre ? "Sem modelo (texto livre)" : "Escolha um modelo"}</option>
@@ -130,6 +146,18 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
               ))}
             </select>
           </Campo>
+          {precisaConsentimento && (
+            <Campo rotulo="Como o cliente autorizou receber mensagens da loja?" dica="A Meta exige o consentimento do cliente para mensagens que começam pela loja. Fica registrado na ficha.">
+              <select className={classeEntrada} value={consentimento} onChange={(e) => setConsentimento(e.target.value)}>
+                <option value="">Escolha…</option>
+                {ORIGENS_CONSENTIMENTO.map((o) => (
+                  <option key={o.codigo} value={o.codigo}>
+                    {o.nome}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          )}
           {modelo ? (
             <p className="rounded-controle bg-superficie-suave p-3 text-sm text-texto-suave">{MODELOS.find((m) => m.codigo === modelo)?.texto}</p>
           ) : (

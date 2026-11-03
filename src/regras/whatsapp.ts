@@ -25,7 +25,7 @@ export interface MensagemRecebida {
   telefone: string; // só dígitos, como a Meta manda (ex.: 5588999990000)
   nomePerfil: string | null;
   texto: string | null;
-  midiaId: string | null; // imagem: id para baixar
+  midiaId: string | null; // imagem ou áudio: id para baixar
   tipo: string;
 }
 
@@ -44,6 +44,9 @@ type Json = Record<string, unknown>;
 const obj = (v: unknown): Json => (v && typeof v === "object" ? (v as Json) : {});
 const lista = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const texto = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
+
+/** Começo do texto de um áudio transcrito. Quem lê o texto (ex.: pedido de PARAR) tira este prefixo antes de comparar. */
+export const PREFIXO_AUDIO = "[áudio transcrito automaticamente] ";
 
 // PROVISÓRIO: texto que o bot "lê" quando o cliente manda algo que o sistema ainda não entende. O Mateus pode trocar.
 const NAO_ENTENDIDO: Record<string, string> = {
@@ -79,6 +82,10 @@ export function extrairEventos(payload: unknown): EventosWebhook {
         else if (tipo === "image") {
           midiaId = texto(obj(msg.image).id);
           conteudo = texto(obj(msg.image).caption);
+        } else if (tipo === "audio") {
+          // O texto abaixo é o que vale se a transcrição estiver desligada ou falhar (servicos/whatsapp.ts).
+          midiaId = texto(obj(msg.audio).id);
+          conteudo = NAO_ENTENDIDO.audio;
         } else if (tipo === "button") conteudo = texto(obj(msg.button).text);
         else if (tipo === "interactive") {
           const i = obj(msg.interactive);

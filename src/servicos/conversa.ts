@@ -10,6 +10,7 @@ import { obterOuCriarLead } from "./leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "./mensagens";
 import { liberarPedidoParar, registrarPedidoParar } from "./lgpd";
 import { pediuParaParar } from "@/regras/optout";
+import { PREFIXO_AUDIO } from "@/regras/whatsapp";
 
 export class ErroConversa extends Error {}
 
@@ -21,6 +22,8 @@ export async function receberMensagemCliente(params: {
   imagem?: { dados: Buffer; tipo: string } | null;
   /** Id da mensagem na Meta (WhatsApp real). Evita processar a mesma mensagem duas vezes. */
   idExterno?: string | null;
+  /** Número como a Meta o conhece (wa_id). Guardado para as respostas irem para o formato certo. */
+  waId?: string | null;
 }) {
   const telefone = normalizarTelefone(params.telefone);
   if (!telefone) throw new ErroConversa("Telefone inválido.");
@@ -35,10 +38,11 @@ export async function receberMensagemCliente(params: {
       throw new ErroConversa(erro instanceof Error ? erro.message : "Imagem inválida.");
     }
   }
-  const lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null);
+  const lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null, params.waId ?? null);
   await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined);
   // LGPD: pedido claro para parar. Registra, confirma e não chama o bot.
-  if (!midia && pediuParaParar(texto)) {
+  // (Áudio transcrito também vale: "parar" falado em voz alta é um pedido.)
+  if (!midia && pediuParaParar(texto?.startsWith(PREFIXO_AUDIO) ? texto.slice(PREFIXO_AUDIO.length) : texto)) {
     await registrarPedidoParar(lead.id);
     return { leadId: lead.id, respostas: [] as string[] };
   }

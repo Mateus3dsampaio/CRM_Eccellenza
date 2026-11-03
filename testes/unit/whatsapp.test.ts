@@ -77,7 +77,7 @@ describe("regras do webhook", () => {
     expect(e.mensagens.map((m) => [m.idExterno, m.texto, m.midiaId])).toEqual([
       ["m1", "Oi", null],
       ["m2", "planta", "midia9"],
-      ["m3", expect.stringContaining("áudio"), null],
+      ["m3", expect.stringContaining("áudio"), "a1"],
       ["m4", "Sim", null],
     ]);
     expect(e.mensagens[0].nomePerfil).toBe("Ana");
@@ -168,6 +168,7 @@ describe("webhook no sistema", () => {
   it("envio recusado pela Meta vira 'falhou' e o log não traz o token", async () => {
     vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: { code: 131047, message: "Re-engagement" } }), { status: 400 }));
     const lead = await obterOuCriarLead("+5588999993333", "Carla");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     const m = await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", modelo: "retomada" });
     expect(m.status).toBe("falhou");
     const logs = await db.logWebhook.findMany();
@@ -182,6 +183,7 @@ describe("webhook no sistema", () => {
       return new Response(JSON.stringify({ messages: [{ id: "wamid.T" }] }), { status: 200 });
     });
     const lead = await obterOuCriarLead("+5588999994444", "Dani");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", modelo: "retomada" });
     expect(corpo).toMatchObject({ type: "template", template: { name: "retomada", language: { code: "pt_BR" } } });
   });
@@ -225,6 +227,7 @@ describe("proteções do WhatsApp real", () => {
       return new Response("{}");
     });
     const lead = await obterOuCriarLead("+5588999996666", "Fictício");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     const m = await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", modelo: "retomada" });
     expect(chamou).toBe(false);
     expect(m.idExterno).toBeNull();
@@ -271,6 +274,7 @@ describe("produção sem chaves da Meta", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("WHATSAPP_TOKEN", "");
     const lead = await obterOuCriarLead("+5588999995555", "Edu");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     const m = await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", modelo: "retomada" });
     expect(m.status).toBe("falhou");
   });

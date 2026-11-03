@@ -60,6 +60,9 @@ describe("janela de 24h no envio (MSG-02)", () => {
   it("bloqueia texto livre fora da janela e aceita modelo", async () => {
     const lead = await obterOuCriarLead("+5588900002222");
     await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", texto: "Olá" })).rejects.toThrow(/24h/);
+    // Modelo é mensagem iniciada pela loja: precisa de consentimento registrado.
+    await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "primeiro_contato" })).rejects.toThrow(/consentimento|aceitou/);
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "primeiro_contato" })).resolves.toBeTruthy();
     await registrarMensagemCliente(lead.id, "Oi");
     await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", texto: "Olá" })).resolves.toBeTruthy();
@@ -68,6 +71,7 @@ describe("janela de 24h no envio (MSG-02)", () => {
   });
   it("número sem WhatsApp fica com status falhou (MSG-03)", async () => {
     const lead = await obterOuCriarLead("+5588900000000");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     const m = await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "primeiro_contato" });
     expect(m.status).toBe("falhou");
   });

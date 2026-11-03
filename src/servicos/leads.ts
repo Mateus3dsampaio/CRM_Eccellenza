@@ -5,6 +5,7 @@ import { apagarMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
+import { variantesTelefone } from "@/regras/telefone";
 import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
 import { motivosDePerda, regrasDeVendas } from "./vendas";
 import { ETAPAS_FUNIL, etapaValida, nomeEtapa, nomeEtiqueta, type CodigoEtapa } from "@/regras/etapas";
@@ -12,18 +13,24 @@ import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
 import { gerarResumo } from "./resumo";
 
-export async function obterOuCriarLead(telefone: string, nomePerfil?: string | null) {
-  const existente = await db.lead.findUnique({ where: { telefone } });
+/** Acha o lead pelo telefone nas duas formas do Brasil (com e sem o 9): é a mesma pessoa. */
+export async function acharLeadPorTelefone(telefone: string) {
+  return db.lead.findFirst({ where: { telefone: { in: variantesTelefone(telefone) } }, orderBy: { criadoEm: "asc" } });
+}
+
+export async function obterOuCriarLead(telefone: string, nomePerfil?: string | null, waId?: string | null) {
+  const existente = await acharLeadPorTelefone(telefone);
   if (existente) {
-    if (nomePerfil && !existente.nomePerfil) {
-      return db.lead.update({ where: { id: existente.id }, data: { nomePerfil } });
-    }
-    return existente;
+    const dados: { nomePerfil?: string; waId?: string } = {};
+    if (nomePerfil && !existente.nomePerfil) dados.nomePerfil = nomePerfil;
+    if (waId && waId !== existente.waId) dados.waId = waId;
+    return Object.keys(dados).length ? db.lead.update({ where: { id: existente.id }, data: dados }) : existente;
   }
   const quando = await agora();
   const lead = await db.lead.create({
     data: {
       telefone,
+      waId: waId ?? null,
       nomePerfil: nomePerfil ?? null,
       avatarCor: Math.floor(Math.random() * 6),
       criadoEm: quando,
@@ -284,10 +291,16 @@ export async function excluirLeads(ids: string[]): Promise<number> {
   let total = 0;
   for (const id of ids) {
     const midias = await db.mensagem.findMany({ where: { leadId: id, midiaArquivo: { not: null } }, select: { midiaArquivo: true } });
+    const dono = await db.lead.findUnique({ where: { id }, select: { telefone: true, waId: true } });
     const r = await db.lead.deleteMany({ where: { id } });
     if (!r.count) continue;
     // O aviso guarda a prévia da mensagem do cliente e não tem ligação com o lead: sai junto (LGPD).
     await db.alerta.deleteMany({ where: { leadId: id } });
+    // Eventos da Meta ainda não processados trazem o telefone e o texto do cliente: saem também.
+    if (dono) {
+      const numeros = [...variantesTelefone(dono.telefone).map((t) => t.replace(/\D/g, "")), ...(dono.waId ? [dono.waId] : [])];
+      await db.eventoWebhook.deleteMany({ where: { OR: numeros.map((n) => ({ corpo: { contains: n } })) } });
+    }
     total += r.count;
     for (const m of midias) if (m.midiaArquivo) await apagarMidia(m.midiaArquivo);
   }

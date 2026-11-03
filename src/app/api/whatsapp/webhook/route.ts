@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { assinaturaValida, responderVerificacao } from "@/regras/whatsapp";
-import { processarWebhook, registrarLogWebhook } from "@/servicos/whatsapp";
+import { guardarEvento, processarEventoGuardado, registrarLogWebhook } from "@/servicos/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   return new Response(desafio, { status: 200, headers: { "Content-Type": "text/plain" } });
 }
 
-/** Mensagens e status. Responde 200 logo (a Meta reenvia se demorar) e processa em seguida. */
+/** Mensagens e status. Grava o evento, responde 200 logo (a Meta reenvia se demorar) e processa em seguida. */
 export async function POST(req: Request) {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return new Response("WhatsApp não configurado.", { status: 503 });
@@ -35,13 +35,20 @@ export async function POST(req: Request) {
     console.warn("[whatsapp] chamada recusada: assinatura inválida"); // sem gravar no banco: rota pública
     return new Response("Assinatura inválida.", { status: 401 });
   }
-  let payload: unknown;
   try {
-    payload = JSON.parse(corpo);
+    JSON.parse(corpo);
   } catch {
     console.warn("[whatsapp] chamada com JSON inválido");
     return new Response("JSON inválido.", { status: 400 });
   }
-  after(() => processarWebhook(payload));
+  // Grava ANTES de responder: se o servidor cair agora, a rotina reprocessa. Se nem gravar deu, responde erro e a Meta tenta de novo.
+  let id: number;
+  try {
+    id = await guardarEvento(corpo);
+  } catch {
+    console.error("[whatsapp] não consegui gravar o evento");
+    return new Response("Erro ao gravar.", { status: 500 });
+  }
+  after(() => processarEventoGuardado(id));
   return new Response("ok", { status: 200 });
 }

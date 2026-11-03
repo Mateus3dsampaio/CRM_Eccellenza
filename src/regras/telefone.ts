@@ -41,3 +41,18 @@ export function simularSemWhatsapp(e164: string): boolean {
 export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | null; telefone: string }): string {
   return lead.nome || lead.nomePerfil || formatarTelefone(lead.telefone);
 }
+
+/**
+ * Brasil: o 9º dígito. Muitos números ainda são conhecidos pelo WhatsApp SEM o 9 (a Meta devolve o "wa_id" nesse formato),
+ * enquanto a loja costuma digitar COM o 9. Devolve o número nas duas formas, para achar o mesmo cliente nas duas.
+ * Outros países e números que não parecem celular brasileiro voltam como vieram.
+ */
+export function variantesTelefone(e164: string): string[] {
+  const m = /^\+55(\d{2})(9?)([6-9]\d{7})$/.exec(e164);
+  if (!m) return [e164];
+  const [, ddd, nove, resto] = m;
+  const com = `+55${ddd}9${resto}`;
+  const sem = `+55${ddd}${resto}`;
+  // O número digitado vem primeiro.
+  return nove ? [com, sem] : [sem, com];
+}

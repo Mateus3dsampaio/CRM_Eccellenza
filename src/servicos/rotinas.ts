@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
+import { temConsentimento } from "@/regras/consentimento";
 import { deveExcluirArquivado, DIAS_ARQUIVADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
 import { formatarDataHora } from "@/regras/tempo";
@@ -9,7 +10,7 @@ import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
-import { limparLogsAntigos } from "./whatsapp";
+import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
 export interface ResultadoRotinas {
   retomadas: number;
@@ -41,6 +42,8 @@ async function executar(): Promise<ResultadoRotinas> {
   for (const lead of leads) {
     const acao = avaliarRetomada({ ...lead, temVisitaFutura: lead.visitas.length > 0 }, quando);
     if (acao === "enviar_retomada") {
+      // Retomada é mensagem iniciada pela loja: só com consentimento (regras/consentimento.ts).
+      if (!temConsentimento(lead)) continue;
       // Marca antes de enviar: garante uma retomada só, mesmo se o envio falhar.
       const r = await db.lead.updateMany({ where: { id: lead.id, retomadaEnviadaEm: null }, data: { retomadaEnviadaEm: quando } });
       if (!r.count) continue;
@@ -60,6 +63,7 @@ async function executar(): Promise<ResultadoRotinas> {
   if (vencidos.length) resultado.excluidos = await excluirLeads(vencidos);
 
   await limparLogsAntigos();
+  await reprocessarEventosPendentes();
 
   // O relógio simulado pode ter andado: confere os prazos de espera.
   await avisarPrazosVermelhos();

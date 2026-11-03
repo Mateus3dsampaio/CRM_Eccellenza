@@ -62,14 +62,17 @@ model Lead {
   consultorId String?
   consultor   Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
 
-  modoAtendimento  String    @default("bot") // bot | humano | pausado
-  aguardandoHumano Boolean   @default(false)
-  repassadoEm      DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
-  esperandoDesde   DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
-  naoLidas         Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
-  alertaPrazoPara  DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
-  erroBot          String?
-  naoReceberEm     DateTime? // cliente pediu para parar de receber mensagens automáticas (LGPD): sem retomada nem bot
+  modoAtendimento     String    @default("bot") // bot | humano | pausado
+  aguardandoHumano    Boolean   @default(false)
+  repassadoEm         DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
+  esperandoDesde      DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
+  naoLidas            Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
+  alertaPrazoPara     DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
+  erroBot             String?
+  naoReceberEm        DateTime? // cliente pediu para parar de receber mensagens automáticas (LGPD): sem retomada nem bot
+  waId                String? // número como a Meta o conhece (no Brasil pode vir sem o 9): é para ele que a loja envia
+  consentimentoEm     DateTime? // quando alguém registrou que o cliente aceitou receber mensagens da loja (modelos, fora das 24h)
+  consentimentoOrigem String? // cliente_iniciou | formulario | balcao | outro
 
   ultimaMensagemEm     DateTime?
   ultimaMensagemPrevia String?
@@ -284,4 +287,16 @@ model PedidoLgpd {
   acao        String // exclusao | exportacao
   quem        String // nome de quem executou
   telefoneFim String // só os 4 últimos dígitos
+}
+
+// Caixa de entrada do webhook da Meta: o evento é gravado ANTES de responder 200 e processado depois.
+// Se o servidor reiniciar no meio, a rotina reprocessa (a mensagem não se perde nem entra duas vezes).
+model EventoWebhook {
+  id           Int       @id @default(autoincrement())
+  criadoEm     DateTime
+  corpo        String // JSON enviado pela Meta (traz o texto do cliente: apagado depois de 2 dias)
+  processadoEm DateTime?
+  tentativas   Int       @default(0)
+
+  @@index([processadoEm, criadoEm])
 }

@@ -14,6 +14,7 @@ export async function limparBanco() {
   await db.usoApi.deleteMany();
   await db.logWebhook.deleteMany();
   await db.pedidoLgpd.deleteMany();
+  await db.eventoWebhook.deleteMany();
 }
 
 export async function criarConsultores() {

@@ -5,6 +5,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
 import { buscarModelo } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
+import { temConsentimento } from "@/regras/consentimento";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { modoSimulador } from "@/lib/modo";
 import { whatsappRealAtivo } from "@/lib/whatsapp-config";
@@ -113,6 +114,9 @@ export async function enviarMensagemLoja(params: {
   if (params.modelo) {
     const modelo = buscarModelo(params.modelo);
     if (!modelo) throw new Error("Modelo de mensagem não encontrado.");
+    // Modelo é mensagem iniciada pela loja: nunca para quem pediu para parar, e só com consentimento registrado.
+    if (lead.naoReceberEm) throw new Error("Este cliente pediu para parar de receber mensagens: não dá para enviar modelo.");
+    if (!temConsentimento(lead)) throw new Error("Não há registro de que este cliente aceitou receber mensagens da loja. Registre como ele autorizou antes de enviar o modelo.");
     texto = modelo.texto;
   } else if (!janelaAberta(lead.ultimaMsgClienteEm, quando)) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
@@ -123,9 +127,11 @@ export async function enviarMensagemLoja(params: {
   let falhou: boolean;
   let idExterno: string | undefined;
   if (whatsappRealAtivo()) {
-    const envio = await enviarPelaMeta({ para: lead.telefone, texto, modelo: params.modelo });
+    // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
+    const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo });
     falhou = !envio.ok;
     idExterno = envio.id;
+    if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });
   } else {
     falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone);
   }

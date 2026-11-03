@@ -5,10 +5,12 @@ import { montarZip } from "@/lib/zip";
 import { PASTA_MIDIAS } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
+import { ORIGENS_CONSENTIMENTO, type OrigemConsentimento } from "@/regras/consentimento";
 import { TEXTO_CONFIRMA_PARAR } from "@/regras/optout";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
+import { registrarLogWebhook } from "./whatsapp";
 
 const fim = (telefone: string) => telefone.replace(/\D/g, "").slice(-4);
 
@@ -29,7 +31,20 @@ export async function registrarPedidoParar(leadId: string): Promise<void> {
   if (!r.count) return;
   await alterarEtiqueta(leadId, "nao_receber", true, "sistema");
   await registrarAlteracao(leadId, "sistema", "Cliente pediu para parar de receber mensagens automáticas");
-  await enviarMensagemLoja({ leadId, autor: "sistema", autorNome: "Sistema", texto: TEXTO_CONFIRMA_PARAR });
+  try {
+    await enviarMensagemLoja({ leadId, autor: "sistema", autorNome: "Sistema", texto: TEXTO_CONFIRMA_PARAR });
+  } catch {
+    // A confirmação é um cuidado a mais: se não puder sair (ex.: fora da janela de 24h), o pedido continua valendo.
+    await registrarLogWebhook("erro", "Confirmação de 'parar' não pôde ser enviada (o pedido foi registrado)", false);
+  }
+  await marcarMudanca();
+}
+
+/** Alguém registra que o cliente aceitou receber mensagens da loja (necessário para modelos fora das 24h). */
+export async function registrarConsentimento(leadId: string, origem: OrigemConsentimento, quem: string): Promise<void> {
+  await db.lead.update({ where: { id: leadId }, data: { consentimentoEm: await agora(), consentimentoOrigem: origem } });
+  const nome = ORIGENS_CONSENTIMENTO.find((o) => o.codigo === origem)?.nome ?? origem;
+  await registrarAlteracao(leadId, quem, `Registrou consentimento para mensagens da loja: ${nome}`);
   await marcarMudanca();
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "crm-eccellenza",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "scripts": {
     "dev": "next dev -H 127.0.0.1",
@@ -26,6 +26,7 @@
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",
     "next": "^16.4.3",
+    "openai": "^7.48.0",
     "react": "^19.3.1",
     "react-currency-input-field": "^4.0.14",
     "react-dom": "^19.3.1",
