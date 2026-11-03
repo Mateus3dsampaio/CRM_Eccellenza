@@ -5,6 +5,7 @@ import { DIA } from "@/regras/tempo";
 import { faltaParaMover, formatarReais, lerDataHoraLocal, lerReais, partirDataHoraLocal, situacaoDoRetorno } from "@/regras/vendas";
 import { alertasDesde, avisarRetornos } from "@/servicos/alertas";
 import { retornosDeHoje } from "@/servicos/consultas";
+import { dadosDoPainel } from "@/servicos/painel";
 import { conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { criarConsultores, limparBanco } from "./ajuda";
 
@@ -174,5 +175,54 @@ describe("retornos e avisos (Bloco 2, tarefa 7)", () => {
     expect(lista.map((l) => l.situacao)).toEqual(["atrasado", "hoje", "sem_data"]);
     expect(lista.map((l) => l.id)).not.toContain(futuro);
     expect((await retornosDeHoje(admin)).map((l) => l.id)).toContain(doOutro);
+  });
+});
+
+describe("painel de vendas (Bloco 2, tarefa 8)", () => {
+  beforeEach(limparBanco);
+  const amanha = () => new Date(Date.now() + DIA);
+
+  it("soma em negociação (agora) e vendido (no período), por vendedor, e conta os motivos de perda", async () => {
+    const [a, b] = await criarConsultores();
+    const novo = async (tel: string, dono: string) => {
+      const l = await obterOuCriarLead(tel, "X");
+      await db.lead.update({ where: { id: l.id }, data: { consultorId: dono } });
+      return l.id;
+    };
+    const o1 = await novo("+5588900000301", a.id);
+    await moverEtapa(o1, "orcamento", "t", { dados: { proximoContatoEm: amanha(), valorOrcamento: 162100 } });
+    const o2 = await novo("+5588900000302", a.id);
+    await moverEtapa(o2, "negociacao", "t", { dados: { proximoContatoEm: amanha(), valorOrcamento: 100000 } });
+    const o3 = await novo("+5588900000303", b.id);
+    await moverEtapa(o3, "orcamento", "t", { dados: { proximoContatoEm: amanha() } }); // sem valor
+    const f1 = await novo("+5588900000304", a.id);
+    await moverEtapa(f1, "fechado", "t", { dados: { valorFechado: 250000 } });
+    const f2 = await novo("+5588900000305", b.id);
+    await moverEtapa(f2, "fechado", "t", { dados: { valorFechado: 50000 } });
+    const p1 = await novo("+5588900000306", a.id);
+    await moverEtapa(p1, "perdido", "t", { dados: { motivoPerda: "concorrente", concorrente: "Todeschini" } });
+    const p2 = await novo("+5588900000307", a.id);
+    await moverEtapa(p2, "perdido", "t", { dados: { motivoPerda: "preco" } });
+
+    const geral = (await dadosDoPainel({ atalho: "hoje" })).vendas;
+    expect(geral.emNegociacao).toEqual({ quantidade: 3, total: 262100, semValor: 1 });
+    expect(geral.vendido).toEqual({ quantidade: 2, total: 300000 });
+    expect(geral.perdidos.quantidade).toBe(2);
+    expect(geral.perdidos.motivos.map((m) => [m.codigo, m.total])).toEqual([["preco", 1], ["concorrente", 1]]);
+    expect(geral.perdidos.motivos.find((m) => m.codigo === "concorrente")?.concorrentes).toEqual(["Todeschini"]);
+
+    const doA = (await dadosDoPainel({ atalho: "hoje", vendedorId: a.id })).vendas;
+    expect(doA.emNegociacao.total).toBe(262100);
+    expect(doA.vendido.total).toBe(250000);
+    expect((await dadosDoPainel({ atalho: "hoje", vendedorId: b.id })).vendas.vendido.total).toBe(50000);
+  });
+
+  it("venda fechada fora do período não entra no total vendido", async () => {
+    const [a] = await criarConsultores();
+    const l = await obterOuCriarLead("+5588900000308", "Y");
+    await db.lead.update({ where: { id: l.id }, data: { consultorId: a.id } });
+    await moverEtapa(l.id, "fechado", "t", { dados: { valorFechado: 99900 } });
+    await db.mudancaEtapa.updateMany({ where: { leadId: l.id, para: "fechado" }, data: { criadoEm: new Date(Date.now() - 40 * DIA) } });
+    expect((await dadosDoPainel({ atalho: "hoje" })).vendas.vendido).toEqual({ quantidade: 0, total: 0 });
   });
 });

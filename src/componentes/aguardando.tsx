@@ -43,7 +43,7 @@ export function BotaoAguardando() {
         aria-label={rotulo}
         title={rotulo}
         className={juntar(
-          "inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium shadow-card transition active:scale-[0.97]",
+          "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium sm:gap-2 sm:px-3 shadow-card transition active:scale-[0.97]",
           total > 0 ? "bg-alerta text-sobre-marca hover:opacity-90" : "bg-superficie-suave text-texto-suave hover:text-texto",
         )}
       >

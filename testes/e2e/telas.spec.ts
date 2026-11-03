@@ -71,6 +71,7 @@ test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info)
   const janela = page.getByRole("dialog", { name: /Perdido/ });
   await janela.getByRole("combobox").selectOption("concorrente");
   await expect(janela.getByLabel("Qual concorrente?")).toBeVisible();
+  await page.waitForTimeout(400);
   await page.screenshot({ path: `${PASTA}/${info.project.name}-janela-perdido.png` });
   await janela.getByRole("button", { name: "Cancelar" }).click();
   await expect(coluna.getByText(nome).first()).toBeVisible();

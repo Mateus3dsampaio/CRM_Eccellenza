@@ -7,6 +7,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
 import { AlertTriangle, CalendarCheck, CalendarClock, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
 import { ETAPAS } from "@/regras/etapas";
+import { formatarReais } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
 import { Avatar, Etiqueta, Sino } from "../ui";
@@ -19,6 +20,13 @@ export interface AcoesCard {
   removerEtiqueta: (id: string, etiqueta: string) => void;
   arquivar: (id: string) => void;
   excluir?: (id: string) => void;
+}
+
+/** Valor mostrado no card: orçamento em Orçamento/Negociação, valor fechado em Fechado. Vazio nas outras etapas. */
+function valorDoCard(card: CardKanban): string {
+  if (card.etapa === "fechado") return card.valorFechado ? `Fechado ${formatarReais(card.valorFechado)}` : "";
+  if (card.etapa === "orcamento" || card.etapa === "negociacao") return card.valorOrcamento ? `Orçamento ${formatarReais(card.valorOrcamento)}` : "";
+  return "";
 }
 
 /** Informações do card (KAN-02). */
@@ -57,6 +65,12 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
         <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_ESPERA[espera.faixa])}>
           <Clock className="size-3.5 shrink-0" aria-hidden />
           esperando há {espera.texto}
+        </p>
+      )}
+      {valorDoCard(card) && (
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-pilula bg-superficie-suave px-2.5 py-0.5 text-xs font-semibold tabular-nums text-texto">
+          <CircleDollarSign className="size-3.5" aria-hidden />
+          {valorDoCard(card)}
         </p>
       )}
       {retorno && (

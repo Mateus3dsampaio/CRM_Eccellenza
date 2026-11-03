@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
+import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
 import { useDados } from "../dados";
 import { juntar } from "../estilos";
@@ -20,6 +21,11 @@ interface DadosPainel {
   funil: { tipo: string; nome: string; total: number }[];
   tempos: { geral: EstatisticaTempo; consultor: EstatisticaTempo; primeiraResposta: EstatisticaTempo & { aguardando: number }; bot: EstatisticaTempo; semResposta: number };
   visitasPorConsultor: { nome: string; total: number }[];
+  vendas: {
+    emNegociacao: { quantidade: number; total: number; semValor: number };
+    vendido: { quantidade: number; total: number };
+    perdidos: { quantidade: number; motivos: { codigo: string; nome: string; total: number; concorrentes: string[] }[] };
+  };
 }
 
 interface Filtro {
@@ -134,6 +140,42 @@ export function Painel() {
               {dados.tempos.semResposta.toLocaleString("pt-BR")} {dados.tempos.semResposta === 1 ? "vez em que o cliente escreveu e ninguém respondeu" : "vezes em que o cliente escreveu e ninguém respondeu"} (não entram na média). O tempo corre o dia todo, inclusive à noite e aos domingos.
             </p>
           )}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Total em negociação</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Orçamento ou Negociação, agora
+                {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
+              </p>
+            </div>
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Total vendido</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums text-sucesso">{formatarReais(dados.vendas.vendido.total)}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
+              </p>
+            </div>
+            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel sm:col-span-2 lg:col-span-1">
+              <p className="text-sm text-texto-suave">Motivos de perda</p>
+              {dados.vendas.perdidos.quantidade === 0 ? (
+                <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {dados.vendas.perdidos.motivos.map((m) => (
+                    <li key={m.codigo} className="text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span>{m.nome}</span>
+                        <span className="tabular-nums font-medium">{m.total}</span>
+                      </div>
+                      {m.concorrentes.length > 0 && <p className="text-xs text-texto-fraco">{m.concorrentes.join(", ")}</p>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">

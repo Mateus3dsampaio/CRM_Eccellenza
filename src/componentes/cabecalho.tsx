@@ -42,7 +42,7 @@ export function Cabecalho() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-borda bg-superficie/95 backdrop-blur">
-        <div className="mx-auto flex h-topo max-w-[1800px] items-center gap-3 px-4">
+        <div className="mx-auto flex h-topo max-w-[1800px] items-center gap-2 px-3 sm:gap-3 sm:px-4">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight text-marca">
             <span className="inline-flex size-toque items-center justify-center rounded-controle bg-marca text-sm font-bold text-sobre-marca">E</span>
             <span className="hidden sm:inline">Eccellenza</span>
@@ -63,7 +63,7 @@ export function Cabecalho() {
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             {agora && (
               <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave 2xl:inline-flex">
                 <Clock className="size-3.5" aria-hidden />
@@ -82,7 +82,7 @@ export function Cabecalho() {
               <span className="sr-only sm:hidden">Nova mensagem</span>
             </button>
             <span
-              className="inline-flex size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca 2xl:hidden"
+              className="hidden size-toque items-center justify-center rounded-full bg-marca-suave text-xs font-semibold text-marca sm:inline-flex 2xl:hidden"
               title={`${usuario.nome} (${usuario.perfil === "admin" ? "Administrador" : "Consultor"})`}
             >
               {usuario.nome.slice(0, 1)}

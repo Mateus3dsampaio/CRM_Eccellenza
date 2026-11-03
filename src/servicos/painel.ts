@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { resolverPeriodoPainel, datasDosAtalhos } from "@/regras/painel";
+import { CODIGOS_MOTIVO, ETAPAS_COM_RETORNO, nomeMotivo } from "@/regras/vendas";
 import { estatisticaDeTempos, primeiraRespostaDoConsultor, temposDoConsultor, turnosDoCliente } from "@/regras/tempo-resposta";
 
 // Painel (MET-01/02). Sem vendedor escolhido: contadores anônimos (valem mesmo para leads excluídos).
@@ -111,6 +112,8 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     funil = FUNIL.map(([tipo, nome], i) => ({ tipo, nome, total: alcance.filter((a) => a >= i).length }));
   }
 
+  const vendas = await vendasDoPeriodo(inicio, fim, vendedor?.id);
+
   return {
     de: periodo.de,
     ate: periodo.ate,
@@ -121,10 +124,45 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     vendedorNome: vendedor?.nome ?? null,
     indicadores,
     funil,
+    vendas,
     tempos,
     visitasPorConsultor: consultores.map((c) => ({
       nome: c.nome,
       total: eventos.filter((e) => e.tipo === "visita_agendada" && e.consultorId === c.id && e.ocorridoEm >= inicio && e.ocorridoEm < fim).length,
     })),
+  };
+}
+
+/**
+ * Vendas (Bloco 2). "Em negociação" é a situação de agora: valor do orçamento dos leads em Orçamento apresentado e Negociação.
+ * "Vendido" e "perdidos" são do período: leads cuja última entrada em Fechado/Perdido caiu dentro das datas.
+ * Dinheiro em centavos. Leads excluídos somem (o valor vem do lead); arquivados continuam contando.
+ */
+async function vendasDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
+  const dono = vendedorId ? { consultorId: vendedorId } : {};
+  const abertos = await db.lead.findMany({ where: { ...dono, arquivadoEm: null, etapa: { in: ETAPAS_COM_RETORNO } }, select: { valorOrcamento: true } });
+  const encerrados = await db.lead.findMany({
+    where: { ...dono, etapa: { in: ["fechado", "perdido"] } },
+    select: { etapa: true, valorFechado: true, motivoPerda: true, concorrente: true, mudancasEtapa: { where: { para: { in: ["fechado", "perdido"] } }, select: { para: true, criadoEm: true } } },
+  });
+  const noPeriodo = (l: (typeof encerrados)[number]) => {
+    const quando = Math.max(0, ...l.mudancasEtapa.filter((m) => m.para === l.etapa).map((m) => m.criadoEm.getTime()));
+    return quando >= inicio.getTime() && quando < fim.getTime();
+  };
+  const fechados = encerrados.filter((l) => l.etapa === "fechado" && noPeriodo(l));
+  const perdidos = encerrados.filter((l) => l.etapa === "perdido" && noPeriodo(l));
+  const motivos = [...CODIGOS_MOTIVO, "sem_motivo"].map((codigo) => {
+    const lista = perdidos.filter((l) => (CODIGOS_MOTIVO as string[]).includes(l.motivoPerda ?? "") ? l.motivoPerda === codigo : codigo === "sem_motivo");
+    return {
+      codigo,
+      nome: codigo === "sem_motivo" ? "Sem motivo registrado" : nomeMotivo(codigo),
+      total: lista.length,
+      concorrentes: codigo === "concorrente" ? [...new Set(lista.map((l) => l.concorrente?.trim()).filter((c): c is string => !!c))] : [],
+    };
+  });
+  return {
+    emNegociacao: { quantidade: abertos.length, total: abertos.reduce((s, l) => s + (l.valorOrcamento ?? 0), 0), semValor: abertos.filter((l) => !l.valorOrcamento).length },
+    vendido: { quantidade: fechados.length, total: fechados.reduce((s, l) => s + (l.valorFechado ?? 0), 0) },
+    perdidos: { quantidade: perdidos.length, motivos: motivos.filter((m) => m.total > 0) },
   };
 }

@@ -113,7 +113,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
 | `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
-| `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil e tempo de resposta (bot e consultor) |
+| `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita, hora do retorno) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarRetornos`: avisa o dono do lead (e o admin) na hora do próximo contato, uma vez por data marcada. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
@@ -158,7 +158,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Menu superior (inclui o contador "X aguardando você") |
+| `src/componentes/cabecalho.tsx` | Menu superior (inclui "Retornos de hoje" e o contador "X aguardando você"; no celular tem que caber em 375px sem rolar para o lado) |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
@@ -175,7 +175,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados |
 | `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") |
-| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera, "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado) |
+| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera, "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado) |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro |
 | `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
@@ -183,7 +183,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar pela ficha |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda |
-| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), tempo médio de resposta, funil |
+| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
@@ -217,7 +217,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
 | `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos, lista de aguardando |
-| `testes/unit/vendas.test.ts` | Vendas: dinheiro, o que cada etapa exige, limpeza ao sair da etapa, retornos (aviso uma vez por data, lista de hoje) |
+| `testes/unit/vendas.test.ts` | Vendas: dinheiro, o que cada etapa exige, limpeza ao sair da etapa, retornos (aviso uma vez por data, lista de hoje), painel de vendas |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
