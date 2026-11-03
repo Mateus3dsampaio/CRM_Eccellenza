@@ -6,6 +6,7 @@ import { faltaParaMover, formatarReais, lerDataHoraLocal, lerReais, partirDataHo
 import { alertasDesde, avisarRetornos } from "@/servicos/alertas";
 import { retornosDeHoje } from "@/servicos/consultas";
 import { dadosDoPainel } from "@/servicos/painel";
+import { criarMotivo, definirExigirContatoNegociacao, editarMotivo, excluirMotivo, motivosDePerda, reordenarMotivos } from "@/servicos/vendas";
 import { conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { criarConsultores, limparBanco } from "./ajuda";
 
@@ -209,7 +210,7 @@ describe("painel de vendas (Bloco 2, tarefa 8)", () => {
     expect(geral.vendido).toEqual({ quantidade: 2, total: 300000 });
     expect(geral.perdidos.quantidade).toBe(2);
     expect(geral.perdidos.motivos.map((m) => [m.codigo, m.total])).toEqual([["preco", 1], ["concorrente", 1]]);
-    expect(geral.perdidos.motivos.find((m) => m.codigo === "concorrente")?.concorrentes).toEqual(["Todeschini"]);
+    expect(geral.perdidos.motivos.find((m) => m.codigo === "concorrente")?.detalhes).toEqual(["Todeschini"]);
 
     const doA = (await dadosDoPainel({ atalho: "hoje", vendedorId: a.id })).vendas;
     expect(doA.emNegociacao.total).toBe(262100);
@@ -224,5 +225,62 @@ describe("painel de vendas (Bloco 2, tarefa 8)", () => {
     await moverEtapa(l.id, "fechado", "t", { dados: { valorFechado: 99900 } });
     await db.mudancaEtapa.updateMany({ where: { leadId: l.id, para: "fechado" }, data: { criadoEm: new Date(Date.now() - 40 * DIA) } });
     expect((await dadosDoPainel({ atalho: "hoje" })).vendas.vendido).toEqual({ quantidade: 0, total: 0 });
+  });
+});
+
+describe("configurar vendas (Bloco 2, tarefa 9)", () => {
+  beforeEach(limparBanco);
+
+  it("começa com os 5 motivos de fábrica, na ordem", async () => {
+    expect((await motivosDePerda()).map((m) => m.nome)).toEqual(["Preço", "Prazo", "Concorrente", "Desistiu", "Outro"]);
+  });
+
+  it("Negociação deixa de exigir o próximo contato quando o admin desliga; Orçamento continua exigindo", async () => {
+    const lead = await obterOuCriarLead("+5588900000401");
+    await expect(moverEtapa(lead.id, "negociacao", "t")).rejects.toThrow(/próximo contato/);
+    await definirExigirContatoNegociacao(false);
+    await moverEtapa(lead.id, "negociacao", "t");
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("negociacao");
+    const outro = await obterOuCriarLead("+5588900000402");
+    await expect(moverEtapa(outro.id, "orcamento", "t")).rejects.toThrow(/próximo contato/);
+    // Sem data e sem obrigação: não vira cobrança na lista de hoje.
+    expect((await retornosDeHoje(admin)).map((l) => l.id)).not.toContain(lead.id);
+    await definirExigirContatoNegociacao(true);
+    expect((await retornosDeHoje(admin)).map((l) => l.id)).toContain(lead.id);
+  });
+
+  const admin = { id: "admin", perfil: "admin" };
+
+  it("motivo novo, com pergunta, vale ao perder; renomear não perde o histórico", async () => {
+    await criarMotivo({ nome: "Sem crédito", pergunta: "Qual banco?" });
+    const novo = (await motivosDePerda()).find((m) => m.nome === "Sem crédito")!;
+    const lead = await obterOuCriarLead("+5588900000403");
+    await expect(moverEtapa(lead.id, "perdido", "t", { dados: { motivoPerda: novo.codigo } })).rejects.toThrow(/Qual banco/);
+    await moverEtapa(lead.id, "perdido", "t", { dados: { motivoPerda: novo.codigo, concorrente: "Banco X" } });
+    await editarMotivo(novo.codigo, { nome: "Crédito negado" });
+    const painel = (await dadosDoPainel({ atalho: "hoje" })).vendas.perdidos.motivos;
+    expect(painel).toEqual([{ codigo: novo.codigo, nome: "Crédito negado", total: 1, detalhes: ["Banco X"] }]);
+  });
+
+  it("motivo desativado não pode ser escolhido, mas continua nos números; em uso não se exclui", async () => {
+    const preco = (await motivosDePerda()).find((m) => m.codigo === "preco")!;
+    const lead = await obterOuCriarLead("+5588900000404");
+    await moverEtapa(lead.id, "perdido", "t", { dados: { motivoPerda: "preco" } });
+    await editarMotivo("preco", { ativo: false });
+    const outro = await obterOuCriarLead("+5588900000405");
+    await expect(moverEtapa(outro.id, "perdido", "t", { dados: { motivoPerda: "preco" } })).rejects.toThrow(/motivo/);
+    expect((await dadosDoPainel({ atalho: "hoje" })).vendas.perdidos.motivos.find((m) => m.codigo === "preco")?.total).toBe(1);
+    await expect(excluirMotivo(preco.codigo)).rejects.toThrow(/Desative/);
+    await excluirMotivo("outro"); // sem uso: pode
+    expect((await motivosDePerda()).map((m) => m.codigo)).not.toContain("outro");
+  });
+
+  it("reordena, recusa nome repetido e não deixa ficar sem nenhum motivo ativo", async () => {
+    await reordenarMotivos(["outro", "desistiu"]);
+    expect((await motivosDePerda()).map((m) => m.codigo).slice(0, 3)).toEqual(["outro", "desistiu", "preco"]);
+    await expect(criarMotivo({ nome: " preço " })).rejects.toThrow(/Já existe/);
+    await expect(criarMotivo({ nome: "  " })).rejects.toThrow(/nome/);
+    for (const c of ["preco", "prazo", "concorrente", "desistiu"]) await editarMotivo(c, { ativo: false });
+    await expect(editarMotivo("outro", { ativo: false })).rejects.toThrow(/pelo menos um/);
   });
 });

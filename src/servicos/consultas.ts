@@ -4,7 +4,8 @@ import { agora } from "@/lib/relogio";
 import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
-import { ETAPAS_COM_RETORNO, situacaoDoRetorno } from "@/regras/vendas";
+import { ETAPAS_COM_RETORNO, exigeRetorno, situacaoDoRetorno } from "@/regras/vendas";
+import { exigirContatoNegociacao } from "./vendas";
 import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
 import { statusEfetivo } from "./mensagens";
 
@@ -52,7 +53,10 @@ export async function retornosDeHoje(usuario: { id: string; perfil: string }) {
     },
     include: { consultor: { select: { id: true, nome: true } } },
   });
+  const regras = { exigirContatoNegociacao: await exigirContatoNegociacao() };
   return leads
+    // Lead sem retorno marcado só entra na lista quando a etapa exige o retorno; senão não há o que cobrar.
+    .filter((l) => l.proximoContatoEm || exigeRetorno(l.etapa as never, regras))
     .map((l) => ({
       id: l.id,
       nome: nomeExibicao(l),

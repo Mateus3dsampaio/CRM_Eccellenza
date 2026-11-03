@@ -26,13 +26,15 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Regras da agenda (horário, duração, vagas) | `src/regras/agenda.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Sem resposta" | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
 | Modelos de mensagem / janela de 24h | `src/regras/modelos.ts`, `src/regras/janela24h.ts` |
+| Motivos de perda e se Negociação exige próximo contato | Tela: `src/componentes/configuracoes/vendas.tsx`. Regras e gravação: `src/servicos/vendas.ts` + `src/regras/vendas.ts` (`faltaParaMover`). A janela de mover e a ficha leem de `/api/vendas/regras` |
 | Retornos (próximo contato, "Retornos de hoje", destaque no card) | `src/regras/vendas.ts` (`situacaoDoRetorno`) + `src/servicos/consultas.ts` (`retornosDeHoje`) + `src/servicos/alertas.ts` (`avisarRetornos`) + `src/componentes/retornos.tsx` |
 | Avisos (som, notificação do navegador, número na aba) | Quando nasce o aviso: `src/servicos/alertas.ts` (chamado por `mensagens`, `agenda` e `bot/executor`). Texto: `src/regras/alertas.ts`. Tela: `src/componentes/alertas/` |
 | Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
-| O que a exportação de desempenho leva | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
+| O que a exportação de desempenho leva | `src/servicos/vendas.ts` | Configurações de vendas: motivos de perda (carga inicial, criar, editar, reordenar, excluir só se sem uso) e o interruptor "Negociação exige próximo contato" (padrão ligado). `regrasDeVendas` entrega o que o `moverEtapa` confere |
+| `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
 | Tabelas do banco | `prisma/schema.prisma` (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
 
 ## Banco (`prisma/schema.prisma`)
@@ -47,8 +49,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `Visita`, `Bloqueio` | Agenda: visitas e bloqueios de horário |
 | `EventoMetrica` | Contadores anônimos do painel |
 | `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
-| `Configuracao` | Pares chave/valor (modo de distribuição, layout da ficha, versão dos dados, segredo da sessão) |
+| `Configuracao` | Pares chave/valor (modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
+| `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
 | `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
 
 ## Telas (`src/app/(app)`)
@@ -92,6 +95,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/midias/[nome]/route.ts` | Serve fotos/plantas (só logado) | `lib/midias` |
 | `src/app/api/configuracoes/route.ts` | Dados da tela de Configurações (inclui o período padrão da exportação) | `configuracoes`, `distribuicao` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
+| `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
+| `src/app/api/vendas/regras/route.ts` | Regras de vendas e motivos para a janela de mover, a ficha e o card (qualquer usuário logado) | `vendas` |
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
 | `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
 | `src/app/api/configuracoes/layout-ficha/route.ts` | Layout padrão da ficha (chave `layout_ficha` em `Configuracao`) | `regras/layout-ficha` |
@@ -123,7 +128,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Regras puras (`src/regras`)
 | Arquivo | Regra |
 |---|---|
-| `src/regras/vendas.ts` | Acompanhamento de vendas: motivos de perda, dinheiro (centavos ↔ "R$ 1.621,00"), o que cada etapa exige para receber o card (próximo contato, valor fechado, motivo da perda), data/hora de Fortaleza e situação do retorno (hoje, atrasado, sem data) |
+| `src/regras/vendas.ts` | Acompanhamento de vendas: motivos de fábrica (carga inicial), dinheiro (centavos ↔ "R$ 1.621,00"), o que cada etapa exige para receber o card (próximo contato, valor fechado, motivo da perda; Negociação conforme o interruptor), data/hora de Fortaleza e situação do retorno (hoje, atrasado, sem data) |
 | `src/regras/etapas.ts` | Colunas do kanban, etiquetas, classificações, cidades atendidas |
 | `src/regras/agenda.ts` | Horário da loja, duração, vagas (PROVISÓRIO) |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para "Sem resposta" |
@@ -165,6 +170,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/alertas/som.ts` | Som feito no navegador (sem arquivo de áudio) |
 | `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
+| `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (próximo contato + valor do orçamento, valor fechado, motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
 | `src/componentes/tema.tsx` | Tema claro/escuro |
@@ -186,7 +192,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
+| `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera e equipe |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
 
@@ -217,7 +224,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
 | `testes/unit/espera.test.ts` | Espera do cliente: faixas, ordem das colunas, não lidas, fim da espera, prazos, lista de aguardando |
-| `testes/unit/vendas.test.ts` | Vendas: dinheiro, o que cada etapa exige, limpeza ao sair da etapa, retornos (aviso uma vez por data, lista de hoje), painel de vendas |
+| `testes/unit/vendas.test.ts` | Vendas: dinheiro, o que cada etapa exige, limpeza ao sair da etapa, retornos (aviso uma vez por data, lista de hoje), painel de vendas, configurações de vendas (motivos editáveis, interruptor) |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |

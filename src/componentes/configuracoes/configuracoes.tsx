@@ -9,6 +9,7 @@ import { juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
+import { VendasConfig } from "./vendas";
 
 interface Dados {
   equipe: { id: string; nome: string; login: string; perfil: string; ativo: boolean; status: string }[];
@@ -21,7 +22,7 @@ interface Dados {
 export function Configuracoes() {
   const avisar = useAviso();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
-  const [aba, setAba] = useState<"geral" | "instrucoes" | "exportar">("geral");
+  const [aba, setAba] = useState<"geral" | "vendas" | "instrucoes" | "exportar">("geral");
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
     try {
@@ -41,10 +42,11 @@ export function Configuracoes() {
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
-      <div role="tablist" aria-label="Seções das configurações" className="flex gap-1 border-b border-borda">
+      <div role="tablist" aria-label="Seções das configurações" className="rolagem-fina flex gap-1 overflow-x-auto border-b border-borda">
         {(
           [
             ["geral", "Geral"],
+            ["vendas", "Vendas"],
             ["instrucoes", "Instruções de atendimento"],
             ["exportar", "Exportar desempenho"],
           ] as const
@@ -54,14 +56,16 @@ export function Configuracoes() {
             role="tab"
             aria-selected={aba === codigo}
             onClick={() => setAba(codigo)}
-            className={juntar("-mb-px min-h-toque border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca" : "border-transparent text-texto-suave hover:text-texto")}
+            className={juntar("-mb-px min-h-toque shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca" : "border-transparent text-texto-suave hover:text-texto")}
           >
             {rotulo}
           </button>
         ))}
       </div>
 
-      {aba === "instrucoes" ? (
+      {aba === "vendas" ? (
+        <VendasConfig />
+      ) : aba === "instrucoes" ? (
         <InstrucoesAtendimento />
       ) : aba === "exportar" ? (
         dados ? <ExportarDesempenho equipe={dados.equipe} periodoPadrao={dados.periodoExportacao} /> : <Carregando linhas={2} />

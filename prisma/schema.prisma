@@ -228,6 +228,16 @@ model RegistroRotina {
 
 // Instruções de atendimento do bot (o CRM é a fonte; só o admin edita).
 // Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior".
+// Motivos de perda editáveis (Configurações > Vendas). O lead guarda o `codigo`. Motivo em uso não é apagado, só desativado.
+model MotivoPerda {
+  codigo   String   @id
+  nome     String
+  pergunta String? // se preenchida, quem perde o lead precisa responder (ex.: "Qual concorrente?")
+  ordem    Int
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
+}
+
 model Instrucao {
   id             String    @id @default(cuid())
   titulo         String

@@ -10,6 +10,7 @@ export async function limparBanco() {
   await db.registroRotina.deleteMany();
   await db.configuracao.deleteMany();
   await db.instrucao.deleteMany();
+  await db.motivoPerda.deleteMany();
 }
 
 export async function criarConsultores() {

@@ -5,7 +5,8 @@ import { apagarMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
-import { ETAPAS_COM_RETORNO, faltaParaMover, formatarReais, nomeMotivo, type DadosDeVenda } from "@/regras/vendas";
+import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
+import { motivosDePerda, regrasDeVendas } from "./vendas";
 import { ETAPAS_FUNIL, etapaValida, nomeEtapa, nomeEtiqueta, type CodigoEtapa } from "@/regras/etapas";
 import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
@@ -50,12 +51,16 @@ export interface OpcoesMover {
 export async function conferirMudanca(leadId: string, etapa: CodigoEtapa, dados: DadosDeVenda) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   if (lead.etapa === etapa) return;
-  const falta = faltaParaMover(etapa, {
-    proximoContatoEm: dados.proximoContatoEm ?? lead.proximoContatoEm,
-    valorFechado: dados.valorFechado ?? lead.valorFechado,
-    motivoPerda: dados.motivoPerda ?? lead.motivoPerda,
-    concorrente: dados.concorrente ?? lead.concorrente,
-  });
+  const falta = faltaParaMover(
+    etapa,
+    {
+      proximoContatoEm: dados.proximoContatoEm ?? lead.proximoContatoEm,
+      valorFechado: dados.valorFechado ?? lead.valorFechado,
+      motivoPerda: dados.motivoPerda ?? lead.motivoPerda,
+      concorrente: dados.concorrente ?? lead.concorrente,
+    },
+    await regrasDeVendas(lead.motivoPerda),
+  );
   if (falta) throw new ErroHttp(400, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${falta}`);
 }
 
@@ -63,7 +68,7 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   const dados = opcoes.dados ?? {};
   if (lead.etapa === etapa) {
-    if (Object.keys(dados).length) await gravarDadosDeVenda(lead, dados, autor);
+    if (Object.keys(dados).length) await gravarDadosDeVenda(lead, dados, autor, await regrasDeVendas(lead.motivoPerda));
     return lead;
   }
   // O que vale é o que veio agora, ou o que já estava gravado (ex.: mudou de Orçamento para Negociação).
@@ -73,10 +78,12 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
     motivoPerda: dados.motivoPerda ?? lead.motivoPerda,
     concorrente: dados.concorrente ?? lead.concorrente,
   };
+  const regras = await regrasDeVendas(lead.motivoPerda);
   if (!opcoes.semExigencias) {
-    const falta = faltaParaMover(etapa, final);
+    const falta = faltaParaMover(etapa, final, regras);
     if (falta) throw new ErroHttp(400, falta);
   }
+  const pergunta = regras.motivos.find((m) => m.codigo === final.motivoPerda)?.pergunta ?? null;
   const quando = await agora();
   const vaiTerRetorno = ETAPAS_COM_RETORNO.includes(etapa);
   const atualizado = await db.lead.update({
@@ -91,7 +98,7 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
       valorOrcamento: dados.valorOrcamento === undefined ? lead.valorOrcamento : dados.valorOrcamento,
       valorFechado: etapa === "fechado" ? final.valorFechado : lead.etapa === "fechado" ? null : lead.valorFechado,
       motivoPerda: etapa === "perdido" ? final.motivoPerda : lead.etapa === "perdido" ? null : lead.motivoPerda,
-      concorrente: etapa === "perdido" && final.motivoPerda === "concorrente" ? final.concorrente?.trim() || null : lead.etapa === "perdido" || etapa === "perdido" ? null : lead.concorrente,
+      concorrente: etapa === "perdido" && pergunta ? final.concorrente?.trim() || null : lead.etapa === "perdido" || etapa === "perdido" ? null : lead.concorrente,
     },
   });
   // Funil (MET-02): ao avançar, conta também as etapas do funil que o card pulou (ex.: Novo → Visita conta "Pronto").
@@ -99,25 +106,25 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
   const posicao = etapa === "negociacao" ? ETAPAS_FUNIL.indexOf("orcamento") : (ETAPAS_FUNIL as string[]).indexOf(etapa);
   for (const passou of ETAPAS_FUNIL.slice(0, posicao + 1)) await registrarUmaVez(leadId, `etapa_${passou}`, lead.consultorId);
   if (etapa === "sem_resposta") await registrarUmaVez(leadId, "sem_resposta");
-  await registrarAlteracao(leadId, autor, `Moveu de "${nomeEtapa(lead.etapa)}" para "${nomeEtapa(etapa)}"${detalheDaMudanca(etapa, atualizado)}`);
+  await registrarAlteracao(leadId, autor, `Moveu de "${nomeEtapa(lead.etapa)}" para "${nomeEtapa(etapa)}"${detalheDaMudanca(etapa, atualizado, await motivosDePerda())}`);
   await db.mudancaEtapa.create({ data: { leadId, de: lead.etapa, para: etapa, autor, criadoEm: quando } });
   await marcarMudanca();
   return atualizado;
 }
 
-function detalheDaMudanca(etapa: CodigoEtapa, lead: { motivoPerda: string | null; concorrente: string | null; valorFechado: number | null }): string {
-  if (etapa === "perdido") return ` (motivo: ${nomeMotivo(lead.motivoPerda)}${lead.concorrente ? ` – ${lead.concorrente}` : ""})`;
+function detalheDaMudanca(etapa: CodigoEtapa, lead: { motivoPerda: string | null; concorrente: string | null; valorFechado: number | null }, motivos: { codigo: string; nome: string }[]): string {
+  if (etapa === "perdido") return ` (motivo: ${nomeMotivo(lead.motivoPerda, motivos)}${lead.concorrente ? ` – ${lead.concorrente}` : ""})`;
   if (etapa === "fechado" && lead.valorFechado) return ` (${formatarReais(lead.valorFechado)})`;
   return "";
 }
 
 /** Edita só os dados de venda de um lead que já está na etapa (ex.: trocar a data do retorno ou o valor). */
-async function gravarDadosDeVenda(lead: Lead, dados: DadosDeVenda, autor: string) {
+async function gravarDadosDeVenda(lead: Lead, dados: DadosDeVenda, autor: string, regras: RegrasDeVendas) {
   const data: Record<string, unknown> = {};
   const mudou: string[] = [];
   if (dados.proximoContatoEm !== undefined && ETAPAS_COM_RETORNO.includes(lead.etapa as CodigoEtapa)) {
-    if (!dados.proximoContatoEm) throw new ErroHttp(400, "Informe a data e a hora do próximo contato.");
-    data.proximoContatoEm = dados.proximoContatoEm;
+    if (!dados.proximoContatoEm && exigeRetorno(lead.etapa as CodigoEtapa, regras)) throw new ErroHttp(400, "Informe a data e a hora do próximo contato.");
+    data.proximoContatoEm = dados.proximoContatoEm ?? null;
     mudou.push("próximo contato");
   }
   if (dados.valorOrcamento !== undefined) {
@@ -130,10 +137,11 @@ async function gravarDadosDeVenda(lead: Lead, dados: DadosDeVenda, autor: string
     mudou.push("valor fechado");
   }
   if (dados.motivoPerda !== undefined && lead.etapa === "perdido") {
-    const falta = faltaParaMover("perdido", { motivoPerda: dados.motivoPerda, concorrente: dados.concorrente ?? lead.concorrente });
+    const falta = faltaParaMover("perdido", { motivoPerda: dados.motivoPerda, concorrente: dados.concorrente ?? lead.concorrente }, regras);
     if (falta) throw new ErroHttp(400, falta);
+    const pergunta = regras.motivos.find((m) => m.codigo === dados.motivoPerda)?.pergunta;
     data.motivoPerda = dados.motivoPerda;
-    data.concorrente = dados.motivoPerda === "concorrente" ? (dados.concorrente ?? lead.concorrente)?.trim() : null;
+    data.concorrente = pergunta ? (dados.concorrente ?? lead.concorrente)?.trim() : null;
     mudou.push("motivo da perda");
   }
   if (!mudou.length) return;

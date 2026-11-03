@@ -3,7 +3,8 @@
 import CurrencyInput from "react-currency-input-field";
 import { useState } from "react";
 import { nomeEtapa, type CodigoEtapa } from "@/regras/etapas";
-import { faltaParaMover, lerDataHoraLocal, MOTIVOS_PERDA, partirDataHoraLocal } from "@/regras/vendas";
+import { faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
+import { regrasParaConferir, retornoObrigatorio, useRegrasVendas } from "./regras";
 import { Botao, Campo, classeEntrada, Modal } from "../ui";
 
 /** Dados de venda como a API recebe (data em ISO, dinheiro em centavos). */
@@ -65,15 +66,22 @@ export function JanelaMudanca({
   const [concorrente, setConcorrente] = useState(atuais.concorrente ?? "");
   const [erro, setErro] = useState("");
 
+  const regras = useRegrasVendas();
   const comRetorno = etapa === "orcamento" || etapa === "negociacao";
+  const retornoExigido = retornoObrigatorio(regras, etapa);
+  // Motivos que dá para escolher agora (o que o lead já tem continua na lista, mesmo desativado).
+  const motivosDisponiveis = regras.motivos.filter((m) => m.ativo || m.codigo === atuais.motivoPerda);
+  const perguntaDoMotivo = motivosDisponiveis.find((m) => m.codigo === motivo)?.pergunta ?? null;
 
   function confirmar() {
     const quando = lerDataHoraLocal(data, hora);
-    const falta = faltaParaMover(etapa, { proximoContatoEm: quando, valorFechado, motivoPerda: motivo, concorrente });
+    // Retorno opcional (Negociação com o interruptor desligado): pode ficar vazio, mas não pela metade.
+    if (comRetorno && !retornoExigido && (data || hora) && !quando) return setErro("Preencha a data e a hora do próximo contato, ou deixe os dois em branco.");
+    const falta = faltaParaMover(etapa, { proximoContatoEm: quando, valorFechado, motivoPerda: motivo, concorrente }, regrasParaConferir(regras, atuais.motivoPerda));
     if (falta) return setErro(falta);
-    if (comRetorno) aoConfirmar({ proximoContatoEm: (quando as Date).toISOString(), ...(valorOrcamento ? { valorOrcamento } : {}) });
+    if (comRetorno) aoConfirmar({ ...(quando ? { proximoContatoEm: quando.toISOString() } : {}), ...(valorOrcamento ? { valorOrcamento } : {}) });
     else if (etapa === "fechado") aoConfirmar({ valorFechado: valorFechado as number });
-    else aoConfirmar({ motivoPerda: motivo, ...(motivo === "concorrente" ? { concorrente: concorrente.trim() } : {}) });
+    else aoConfirmar({ motivoPerda: motivo, ...(perguntaDoMotivo ? { concorrente: concorrente.trim() } : {}) });
   }
 
   return (
@@ -90,11 +98,11 @@ export function JanelaMudanca({
         {comRetorno && (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <Campo rotulo="Próximo contato em">
-                <input type="date" className={classeEntrada} value={data} onChange={(e) => setData(e.target.value)} required />
+              <Campo rotulo={retornoExigido ? "Próximo contato em" : "Próximo contato em (opcional)"}>
+                <input type="date" className={classeEntrada} value={data} onChange={(e) => setData(e.target.value)} required={retornoExigido} />
               </Campo>
               <Campo rotulo="Hora">
-                <input type="time" className={classeEntrada} value={hora} onChange={(e) => setHora(e.target.value)} required />
+                <input type="time" className={classeEntrada} value={hora} onChange={(e) => setHora(e.target.value)} required={retornoExigido} />
               </Campo>
             </div>
             <Campo rotulo="Valor do orçamento (opcional)">
@@ -114,15 +122,15 @@ export function JanelaMudanca({
             <Campo rotulo="Motivo da perda">
               <select className={classeEntrada} value={motivo} onChange={(e) => setMotivo(e.target.value)} required>
                 <option value="">Escolha...</option>
-                {MOTIVOS_PERDA.map((m) => (
+                {motivosDisponiveis.map((m) => (
                   <option key={m.codigo} value={m.codigo}>
                     {m.nome}
                   </option>
                 ))}
               </select>
             </Campo>
-            {motivo === "concorrente" && (
-              <Campo rotulo="Qual concorrente?">
+            {perguntaDoMotivo && (
+              <Campo rotulo={perguntaDoMotivo}>
                 <input className={classeEntrada} value={concorrente} maxLength={120} onChange={(e) => setConcorrente(e.target.value)} required />
               </Campo>
             )}

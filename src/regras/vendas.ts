@@ -3,19 +3,39 @@
 import type { CodigoEtapa } from "./etapas";
 import { DIA, dataLocal, inicioDoDiaLocal, partesLocais } from "./tempo";
 
-export const MOTIVOS_PERDA = [
-  { codigo: "preco", nome: "Preço" },
-  { codigo: "prazo", nome: "Prazo" },
-  { codigo: "concorrente", nome: "Concorrente" },
-  { codigo: "desistiu", nome: "Desistiu" },
-  { codigo: "outro", nome: "Outro" },
-] as const;
+/** Motivos de perda de fábrica: só a carga inicial. Depois o admin edita em Configurações > Vendas. */
+export const MOTIVOS_PADRAO: { codigo: string; nome: string; pergunta: string | null }[] = [
+  { codigo: "preco", nome: "Preço", pergunta: null },
+  { codigo: "prazo", nome: "Prazo", pergunta: null },
+  { codigo: "concorrente", nome: "Concorrente", pergunta: "Qual concorrente?" },
+  { codigo: "desistiu", nome: "Desistiu", pergunta: null },
+  { codigo: "outro", nome: "Outro", pergunta: null },
+];
 
-export type MotivoPerda = (typeof MOTIVOS_PERDA)[number]["codigo"];
-export const CODIGOS_MOTIVO = MOTIVOS_PERDA.map((m) => m.codigo) as MotivoPerda[];
+export interface MotivoDePerda {
+  codigo: string;
+  nome: string;
+  pergunta: string | null;
+  ativo: boolean;
+}
 
-export function nomeMotivo(codigo: string | null | undefined): string {
-  return MOTIVOS_PERDA.find((m) => m.codigo === codigo)?.nome ?? (codigo || "Sem motivo");
+/** Regras que o admin configura e que o servidor confere ao mover o card. */
+export interface RegrasDeVendas {
+  /** Negociação exige "Próximo contato em". Orçamento apresentado sempre exige. */
+  exigirContatoNegociacao: boolean;
+  /** Motivos que podem ser escolhidos agora. */
+  motivos: { codigo: string; pergunta: string | null }[];
+}
+
+export const REGRAS_PADRAO: RegrasDeVendas = { exigirContatoNegociacao: true, motivos: MOTIVOS_PADRAO };
+
+export function nomeMotivo(codigo: string | null | undefined, motivos: { codigo: string; nome: string }[]): string {
+  return motivos.find((m) => m.codigo === codigo)?.nome ?? "Sem motivo registrado";
+}
+
+/** Essa etapa exige o próximo contato (com as regras de agora)? */
+export function exigeRetorno(etapa: CodigoEtapa, regras: Pick<RegrasDeVendas, "exigirContatoNegociacao"> = REGRAS_PADRAO): boolean {
+  return etapa === "orcamento" || (etapa === "negociacao" && regras.exigirContatoNegociacao);
 }
 
 /** Etapas em que o lead tem um retorno marcado ("Próximo contato em"). */
@@ -61,12 +81,13 @@ export interface DadosDeVenda {
  * Confere se o lead pode ir para a etapa, juntando o que veio agora com o que já está gravado.
  * Devolve a mensagem de erro (em português) ou null se está tudo certo.
  */
-export function faltaParaMover(etapa: CodigoEtapa, final: DadosDeVenda): string | null {
-  if (ETAPAS_COM_RETORNO.includes(etapa) && !final.proximoContatoEm) return "Informe a data e a hora do próximo contato.";
+export function faltaParaMover(etapa: CodigoEtapa, final: DadosDeVenda, regras: RegrasDeVendas = REGRAS_PADRAO): string | null {
+  if (exigeRetorno(etapa, regras) && !final.proximoContatoEm) return "Informe a data e a hora do próximo contato.";
   if (etapa === "fechado" && !final.valorFechado) return "Informe o valor fechado.";
   if (etapa === "perdido") {
-    if (!final.motivoPerda || !CODIGOS_MOTIVO.includes(final.motivoPerda as MotivoPerda)) return "Informe o motivo da perda.";
-    if (final.motivoPerda === "concorrente" && !final.concorrente?.trim()) return "Informe qual foi o concorrente.";
+    const motivo = regras.motivos.find((m) => m.codigo === final.motivoPerda);
+    if (!motivo) return "Informe o motivo da perda.";
+    if (motivo.pergunta && !final.concorrente?.trim()) return `Responda: ${motivo.pergunta}`;
   }
   return null;
 }

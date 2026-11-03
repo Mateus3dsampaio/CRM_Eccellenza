@@ -9,6 +9,7 @@ import { ETAPAS_COM_RETORNO, formatarReais, situacaoDoRetorno, type SituacaoReto
 import type { retornosDeHoje } from "@/servicos/consultas";
 import { useDados } from "./dados";
 import { useAgoraDoServidor } from "./espera";
+import { retornoObrigatorio, useRegrasVendas } from "./vendas/regras";
 import { juntar } from "./estilos";
 import { useUsuario } from "./usuario";
 
@@ -36,8 +37,11 @@ const dois = (n: number) => String(n).padStart(2, "0");
 /** Situação do retorno de um lead. Só existe em Orçamento e Negociação; nas outras etapas devolve null. */
 export function useSituacaoRetorno(etapa: string, proximoContatoEm: string | null): SituacaoDoCard | null {
   const agora = useAgoraDoServidor();
+  const regras = useRegrasVendas();
   if (!(ETAPAS_COM_RETORNO as string[]).includes(etapa)) return null;
   const situacao = situacaoDoRetorno(proximoContatoEm, agora);
+  // Sem data só vira cobrança ("defina o próximo contato") onde a data é obrigatória.
+  if (situacao === "sem_data" && !retornoObrigatorio(regras, etapa)) return null;
   return { situacao, texto: textoDoRetorno(situacao, proximoContatoEm) };
 }
 

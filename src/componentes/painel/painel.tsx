@@ -24,7 +24,7 @@ interface DadosPainel {
   vendas: {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
-    perdidos: { quantidade: number; motivos: { codigo: string; nome: string; total: number; concorrentes: string[] }[] };
+    perdidos: { quantidade: number; motivos: { codigo: string; nome: string; total: number; detalhes: string[] }[] };
   };
 }
 
@@ -169,7 +169,7 @@ export function Painel() {
                         <span>{m.nome}</span>
                         <span className="tabular-nums font-medium">{m.total}</span>
                       </div>
-                      {m.concorrentes.length > 0 && <p className="text-xs text-texto-fraco">{m.concorrentes.join(", ")}</p>}
+                      {m.detalhes.length > 0 && <p className="text-xs text-texto-fraco">{m.detalhes.join(", ")}</p>}
                     </li>
                   ))}
                 </ul>

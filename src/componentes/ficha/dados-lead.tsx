@@ -11,6 +11,7 @@ import { juntar } from "../estilos";
 import { Botao, Campo, Etiqueta, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
 import { JanelaMudanca } from "../vendas/janela-mudanca";
+import { useRegrasVendas } from "../vendas/regras";
 import { AgendarVisita } from "./agendar";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
@@ -27,6 +28,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 /** Retorno marcado, valores e motivo da perda, conforme a etapa. Só aparece nas etapas que têm esses dados. */
 function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => void }) {
   const podeEditar = usePode("editar_lead");
+  const { motivos } = useRegrasVendas();
   if (!(ETAPAS_QUE_PEDEM_DADOS as string[]).includes(ficha.etapa)) return null;
   const linhas: [string, string][] = [];
   if (ficha.etapa === "orcamento" || ficha.etapa === "negociacao") {
@@ -34,7 +36,7 @@ function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => v
     linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
   }
   if (ficha.etapa === "fechado") linhas.push(["Valor fechado", formatarReais(ficha.valorFechado) || "não informado"]);
-  if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
+  if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda, motivos)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
   return (
     <div className="sm:col-span-2 rounded-controle bg-superficie-suave p-3">
       <dl>

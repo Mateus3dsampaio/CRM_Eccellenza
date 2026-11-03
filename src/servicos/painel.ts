@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { resolverPeriodoPainel, datasDosAtalhos } from "@/regras/painel";
-import { CODIGOS_MOTIVO, ETAPAS_COM_RETORNO, nomeMotivo } from "@/regras/vendas";
+import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
+import { motivosDePerda } from "./vendas";
 import { estatisticaDeTempos, primeiraRespostaDoConsultor, temposDoConsultor, turnosDoCliente } from "@/regras/tempo-resposta";
 
 // Painel (MET-01/02). Sem vendedor escolhido: contadores anônimos (valem mesmo para leads excluídos).
@@ -151,13 +152,16 @@ async function vendasDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
   };
   const fechados = encerrados.filter((l) => l.etapa === "fechado" && noPeriodo(l));
   const perdidos = encerrados.filter((l) => l.etapa === "perdido" && noPeriodo(l));
-  const motivos = [...CODIGOS_MOTIVO, "sem_motivo"].map((codigo) => {
-    const lista = perdidos.filter((l) => (CODIGOS_MOTIVO as string[]).includes(l.motivoPerda ?? "") ? l.motivoPerda === codigo : codigo === "sem_motivo");
+  // Motivos na ordem do admin (inclusive os desativados, que ainda têm lead). Código que não existe mais cai em "Sem motivo registrado".
+  const cadastrados = await motivosDePerda();
+  const conhecidos = new Set(cadastrados.map((m) => m.codigo));
+  const motivos = [...cadastrados.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta })), { codigo: "sem_motivo", nome: "Sem motivo registrado", pergunta: null }].map((m) => {
+    const lista = perdidos.filter((l) => (conhecidos.has(l.motivoPerda ?? "") ? l.motivoPerda === m.codigo : m.codigo === "sem_motivo"));
     return {
-      codigo,
-      nome: codigo === "sem_motivo" ? "Sem motivo registrado" : nomeMotivo(codigo),
+      codigo: m.codigo,
+      nome: m.nome,
       total: lista.length,
-      concorrentes: codigo === "concorrente" ? [...new Set(lista.map((l) => l.concorrente?.trim()).filter((c): c is string => !!c))] : [],
+      detalhes: m.pergunta ? [...new Set(lista.map((l) => l.concorrente?.trim()).filter((c): c is string => !!c))] : [],
     };
   });
   return {

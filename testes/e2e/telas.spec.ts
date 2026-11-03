@@ -61,6 +61,43 @@ test("Retornos de hoje: lista no topo e card atrasado destacado", async ({ page 
   await page.screenshot({ path: `${PASTA}/${info.project.name}-retornos.png` });
 });
 
+test("Configurações > Vendas: cria motivo, aparece na janela de Perdido e o interruptor da Negociação muda a janela", async ({ page }, info) => {
+  await entrar(page);
+  await page.goto("/configuracoes");
+  await page.getByRole("tab", { name: "Vendas" }).click();
+  await page.getByRole("button", { name: "Novo motivo" }).click();
+  await page.getByLabel("Nome do motivo").fill("Sem crédito (teste)");
+  await page.getByLabel("Pergunta extra (opcional)").fill("Qual banco?");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText("Sem crédito (teste)")).toBeVisible();
+  await semRolagemLateral(page);
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-config-vendas.png`, fullPage: true });
+  // Desliga a exigência em Negociação: a janela passa a dizer "(opcional)".
+  const caixa = page.getByRole("checkbox", { name: /Exigir "Próximo contato em"/ });
+  await caixa.uncheck();
+  await expect(page.getByText(/Desligado:/)).toBeVisible();
+  await page.goto("/");
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
+  const coluna = page.getByRole("region", { name: "Novo / bot atendendo" });
+  const nome = (await coluna.locator("[data-card] p.font-semibold").first().textContent())!;
+  await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Negociação" }).click();
+  await expect(page.getByRole("dialog", { name: /Negociação/ }).getByText("Próximo contato em (opcional)")).toBeVisible();
+  await page.getByRole("dialog", { name: /Negociação/ }).getByRole("button", { name: "Cancelar" }).click();
+  await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Perdido" }).click();
+  await page.getByRole("dialog", { name: /Perdido/ }).getByRole("combobox").selectOption({ label: "Sem crédito (teste)" });
+  await expect(page.getByRole("dialog", { name: /Perdido/ }).getByLabel("Qual banco?")).toBeVisible();
+  await page.getByRole("dialog", { name: /Perdido/ }).getByRole("button", { name: "Cancelar" }).click();
+  // Devolve as configurações ao que eram.
+  await page.goto("/configuracoes");
+  await page.getByRole("tab", { name: "Vendas" }).click();
+  await page.getByRole("checkbox", { name: /Exigir "Próximo contato em"/ }).check();
+  await page.getByRole("button", { name: "Excluir Sem crédito (teste)" }).click();
+  await page.getByRole("dialog", { name: "Excluir motivo" }).getByRole("button", { name: "Excluir" }).click();
+  await expect(page.getByText("Sem crédito (teste)")).toHaveCount(0);
+});
+
 test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info) => {
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
