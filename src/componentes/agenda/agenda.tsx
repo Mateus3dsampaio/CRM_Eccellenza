@@ -12,6 +12,7 @@ import { COR_AVATAR, juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
 import { AgendarVisita } from "../ficha/agendar";
 import { useUsuario } from "../usuario";
+import { useGaveta } from "../ficha/gaveta";
 
 interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: TipoCompromisso }
 
@@ -28,6 +29,7 @@ interface DadosAgenda { visao: "dia" | "semana"; de: string; ate: string; agora:
 
 // Agenda própria (AGENDA-01/03): visão de dia e de semana, visitas e bloqueios por consultor.
 export function Agenda() {
+  const gaveta = useGaveta();
   const avisar = useAviso();
   const usuario = useUsuario();
   // Consultor vê todas as agendas, mas só altera a própria; o admin altera todas.
@@ -238,7 +240,7 @@ export function Agenda() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/lead/${visitaAberta.leadId}`} className="inline-flex min-h-toque items-center rounded-controle border border-borda px-4 text-sm font-medium hover:bg-superficie-suave">Abrir ficha</Link>
+              <Link href={gaveta.hrefDe(visitaAberta.leadId)} scroll={false} onClick={() => setVisitaAberta(null)} className="inline-flex min-h-toque items-center rounded-controle border border-borda px-4 text-sm font-medium hover:bg-superficie-suave">Abrir ficha</Link>
               {minha(visitaAberta.consultorId) ? (
                 <>
                   <Botao onClick={() => { setRemarcar({ leadId: visitaAberta.leadId, tipo: visitaAberta.tipo }); setVisitaAberta(null); }}>Remarcar</Botao>

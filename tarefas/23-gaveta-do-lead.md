@@ -2,7 +2,7 @@
 
 Primeira da série de layout e organização (tarefas 23 a 33), aprovada pelo Mateus em 04/11/2026 depois da revisão de uso. **Nenhuma tarefa da série cria função nova**: só muda onde as coisas ficam e como se chega a elas. Branch: `claude/gallant-fermi-z6vt65`; o Mateus testa e faz o merge se gostar.
 
-**Status: a fazer.**
+**Status: feito em 04/11/2026.** Decisões na implementação: fechar e trocar de card usam `replace` na URL (voltar do navegador não reabre a gaveta); Esc não fecha a gaveta se houver uma janela (modal) aberta dentro dela; o sino (configurações de aviso) não aponta para lead, então não mudou.
 
 ## Problema
 Clicar num card troca de página e o kanban some. Para olhar três clientes seguidos o consultor vai e volta três vezes. O "←" da ficha sempre volta ao kanban, mesmo quando a pessoa veio da Agenda ou de Arquivados.

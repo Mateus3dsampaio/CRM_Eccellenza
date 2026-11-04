@@ -118,6 +118,19 @@ test("ficha do lead, agenda, painel, simulador e arquivados abrem sem quebrar", 
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Apresentação agendada/ }).click();
   await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
+  // Tarefa 23: o card abre a gaveta por cima do kanban, com ?lead= na URL (F5 reabre).
+  const gaveta = page.getByRole("complementary", { name: "Gaveta do lead" });
+  await expect(gaveta.getByText("Resumo para o consultor")).toBeVisible();
+  await expect(page).toHaveURL(/\?lead=/);
+  await page.reload();
+  await expect(page.getByRole("complementary", { name: "Gaveta do lead" }).getByText("Resumo para o consultor")).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-gaveta.png` });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("complementary", { name: "Gaveta do lead" })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/\?lead=/);
+  await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
+  await page.getByRole("complementary", { name: "Gaveta do lead" }).getByRole("link", { name: "Abrir ficha completa" }).click();
+  await page.waitForURL(/\/lead\//);
   if (info.project.name === "celular") await page.getByRole("tab", { name: "Ficha" }).click();
   await expect(page.getByText("Resumo para o consultor")).toBeVisible();
   await semRolagemLateral(page);

@@ -12,6 +12,7 @@ import { useAgoraDoServidor } from "./espera";
 import { retornoObrigatorio, useRegrasVendas } from "./vendas/regras";
 import { juntar } from "./estilos";
 import { useUsuario } from "./usuario";
+import { useGaveta } from "./ficha/gaveta";
 
 export type LeadComRetorno = Awaited<ReturnType<typeof retornosDeHoje>>[number];
 
@@ -70,6 +71,7 @@ export const CLASSE_TEXTO_RETORNO: Record<SituacaoRetorno, string> = {
 
 /** Botão "Retornos de hoje" no topo; ao clicar, abre a lista (RET-02). */
 export function BotaoRetornos() {
+  const gaveta = useGaveta();
   const leads = useRetornos();
   const nomesEtapas = useNomesEtapas();
   const ehAdmin = useUsuario().perfil === "admin";
@@ -128,7 +130,7 @@ export function BotaoRetornos() {
             <ul className="rolagem-fina max-h-[60vh] divide-y divide-borda overflow-y-auto">
               {leads.map((l) => (
                 <li key={l.id}>
-                  <Link href={`/lead/${l.id}`} onClick={() => setAberto(false)} className="block px-4 py-3 hover:bg-superficie-suave">
+                  <Link href={gaveta.hrefDe(l.id)} scroll={false} onClick={() => setAberto(false)} className="block px-4 py-3 hover:bg-superficie-suave">
                     <p className="flex items-center justify-between gap-2 text-sm font-semibold">
                       <span className="truncate">{l.nome}</span>
                       {l.valorOrcamento ? <span className="shrink-0 text-xs font-medium text-texto-suave">{formatarReais(l.valorOrcamento)}</span> : null}

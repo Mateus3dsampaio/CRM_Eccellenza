@@ -16,6 +16,7 @@ import { Avatar, Etiqueta, Sino } from "../ui";
 import { CLASSE_CARD_RETORNO, CLASSE_TEXTO_RETORNO, useSituacaoRetorno } from "../retornos";
 import { CLASSE_CARD_ESPERA, CLASSE_TEXTO_ESPERA, useSituacaoEspera } from "../espera";
 import { BolinhaNaoLidas } from "./bolinha";
+import { useGaveta } from "../ficha/gaveta";
 
 export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
@@ -182,6 +183,8 @@ export function Card({
   const nomesEtapas = useNomesEtapas();
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
   const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
+  const gaveta = useGaveta();
+  const abertoNaGaveta = gaveta.aberto === card.id;
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
   const refBotao = useRef<HTMLButtonElement>(null);
@@ -247,6 +250,8 @@ export function Card({
         card.decisao ? "ring-2 ring-alerta" : retorno && CLASSE_CARD_RETORNO[retorno.situacao],
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
+        // Card aberto na gaveta: nível "selecionado" (docs/design.md).
+        abertoNaGaveta && "ring-2 ring-marca shadow-card-hover",
       )}
     >
       {selecionando ? (
@@ -255,7 +260,7 @@ export function Card({
           <ConteudoCard card={card} />
         </button>
       ) : (
-        <Link href={`/lead/${card.id}`} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
+        <Link href={gaveta.hrefDe(card.id)} replace={gaveta.aberto !== null} scroll={false} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
           <ConteudoCard card={card} />
         </Link>
       )}

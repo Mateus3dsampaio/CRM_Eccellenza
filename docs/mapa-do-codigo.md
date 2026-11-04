@@ -21,6 +21,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Quero mudar… | Arquivos |
 |---|---|
 | O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): as numeradas são coladas pelo Mateus do repositório de instruções dele (o projeto não tem cópia) e o Manual do CRM (fixo, fora da numeração) ensina as ferramentas. Sem instrução ativa o bot não atende e passa o cliente ao consultor (`src/bot/atendimento.ts`). Montagem do prompt: `src/bot/prompt.ts` |
+| Abrir a ficha de um lead a partir de uma tela (card, lista, agenda) | Use `useGaveta().hrefDe(id)` (`src/componentes/ficha/gaveta.tsx`), nunca `/lead/ID` direto: abre a gaveta na tela atual. Só "Abrir ficha completa" vai para `/lead/[id]` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração da visita e da medição, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
@@ -84,7 +85,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/manifest.ts` | App instalável (PWA): nome, cores e ícones (`public/icone-*.png`, `public/apple-touch-icon.png`, o "E" azul provisório). Sem service worker e sem avisos de propósito (decisão do Mateus). No iPhone: Safari > Compartilhar > Adicionar à Tela de Início |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
 | `src/app/(app)/page.tsx` | Kanban |
-| `src/app/(app)/lead/[id]/page.tsx` | Ficha do lead |
+| `src/app/(app)/lead/[id]/page.tsx` | Ficha completa do lead (dados, medidas, notas, histórico). O dia a dia usa a gaveta (`componentes/ficha/gaveta.tsx`) |
 | `src/app/(app)/agenda/page.tsx` | Agenda |
 | `src/app/(app)/painel/page.tsx` | Painel de métricas. Só admin (consultor volta ao Kanban; o menu também esconde o link) |
 | `src/app/(app)/simulador/page.tsx` | Simulador (chat do cliente fictício) |
@@ -257,6 +258,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante de decisão pendente (abre a janela de decisão; card com borda vermelha), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro |
+| `src/componentes/ficha/gaveta.tsx` | Gaveta do lead (tarefa 23): `ProvedorGaveta` (no layout) lê `?lead=ID` da URL e abre um painel à direita com resumo, conversa e etapa, por cima de qualquer tela; `useGaveta().hrefDe(id)` é o link que todo card/lista usa para abrir (kanban, agenda, arquivados, retornos, esperando, galeria). "Abrir ficha completa" leva a `/lead/[id]`. Fechar usa `replace` para "voltar" não reabrir |
 | `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
 | `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar) Bloco "Medição e visita à loja" (chave `visita` na grade) e bloco de apresentação; escolher Medição/Apresentação na etapa abre a agenda. |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |

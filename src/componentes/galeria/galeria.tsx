@@ -11,6 +11,7 @@ import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
+import { useGaveta } from "../ficha/gaveta";
 
 const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
   { codigo: "", nome: "Tudo" },
@@ -21,6 +22,7 @@ const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
 
 /** Galeria do vendedor: imagens, vídeos e documentos (PDF, Word, Excel, DWG, ZIP) dos leads dele (o admin vê todos). Fica no sistema; dá para baixar cada arquivo. */
 export function Galeria() {
+  const gaveta = useGaveta();
   const avisar = useAviso();
   const podeApagar = usePode("apagar_midia");
   const [tipo, setTipo] = useState<"" | FamiliaMidia>("");
@@ -117,7 +119,7 @@ export function Galeria() {
                           <ExternalLink className="size-3.5" aria-hidden /> Abrir
                         </a>
                       )}
-                      <Link href={`/lead/${i.leadId}`} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Ver a conversa">
+                      <Link href={gaveta.hrefDe(i.leadId)} scroll={false} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Ver a conversa">
                         <MessageSquare className="size-3.5" aria-hidden /> Conversa
                       </Link>
                       {podeApagar && (
