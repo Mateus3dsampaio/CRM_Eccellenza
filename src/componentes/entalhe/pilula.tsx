@@ -169,8 +169,6 @@ const ESTILO_VIDRO: CSSProperties = {
   willChange: "transform, width",
   // Vidro líquido escuro: reflexo claro em cima, fundo ardósia translúcido, borda fina e sombra funda.
   background: "linear-gradient(180deg, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0.06) 45%, rgb(255 255 255 / 0.1) 100%), rgb(52 66 86 / 0.7)",
-  backdropFilter: "blur(12px) saturate(1.6)",
-  WebkitBackdropFilter: "blur(12px) saturate(1.6)",
   border: "1px solid rgb(255 255 255 / 0.16)",
   boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.38), inset 0 -1px 0 rgb(0 0 0 / 0.35), inset 0 0 14px rgb(255 255 255 / 0.05), 0 3px 6px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.5)",
 };
