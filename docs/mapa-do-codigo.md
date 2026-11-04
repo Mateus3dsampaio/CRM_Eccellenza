@@ -106,7 +106,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/leads/[id]/notas/route.ts` | Notas internas | `historico` |
 | `src/app/api/leads/acoes/route.ts` | Mover (com os dados de venda; confere o lote todo antes), arquivar, excluir em lote (exclusão grava o registro LGPD) | `leads`, `lgpd` |
 | `src/app/api/arquivados/route.ts` | Lista de arquivados | `consultas`, `rotinas` |
-| `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios | `agenda`, `consultas` |
+| `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios; com `livresPara` (+ `diaLivre`), horários livres em torno do dia escolhido | `agenda`, `consultas` |
 | `src/app/api/painel/route.ts` | Métricas (atalho ou datas, filtro de vendedor). Só admin (`ver_metricas`; consultor recebe 403) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG). Acha o cliente com ou sem o 9; modelo exige consentimento (pede como o cliente autorizou) e não vale para quem pediu para parar | `conversa`, `leads`, `lgpd`, `consultas` |
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
@@ -154,7 +154,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/leads.ts` | Criar lead (acha o mesmo cliente com e sem o 9: `acharLeadPorTelefone`), mover etapa (recusa se faltar próximo contato, valor fechado ou motivo da perda; `conferirMudanca` só confere, sem gravar; também troca data/valores sem mudar de etapa), etiquetas, campos, arquivar, restaurar, excluir |
 | `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja (envio real pela Meta quando as chaves existem; senão simulado; em produção sem chaves a mensagem fica "falhou"), status (entregue/lido: o real vem do webhook). Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
 | `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
-| `src/servicos/agenda.ts` | Horários livres por tipo de compromisso, agendar (move o card: `etapaAoAgendar`), cancelar (volta para Em qualificação), bloqueios |
+| `src/servicos/agenda.ts` | Horários livres por tipo de compromisso (`horariosLivresEmTorno`: dia escolhido no calendário, véspera e dia seguinte, sem o limite de dias à frente), agendar (move o card: `etapaAoAgendar`), cancelar (volta para Em qualificação), bloqueios |
 | `src/servicos/conversao-funil.ts` | Conversão única das colunas antigas (Visita agendada, Orçamento apresentado, Sem resposta) para as novas, rodada ao subir o servidor |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço (só muda por clique), `transferirLeads` (todos os leads em andamento de um consultor para outro) e `transferirLead` (um lead só), ambos com registro na ficha |
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
@@ -257,7 +257,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar) Bloco "Medição e visita à loja" (chave `visita` na grade) e bloco de apresentação; escolher Medição/Apresentação na etapa abre a agenda. |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/lembrete.tsx` | Bloco Lembrete da ficha (tarefa 22): data, hora e nota opcional em qualquer etapa aberta; concluir apaga. Em Negociação é o próximo contato (obrigatório conforme o interruptor) |
-| `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo |
+| `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo . Calendário para escolher qualquer data futura (até 12 meses) e, ao lado, os horários livres da véspera, do dia escolhido e do dia seguinte |
+| `src/componentes/ficha/calendario.tsx` | `Calendario`: calendário de um mês para escolher o dia (bloqueia dias passados e dias em que a loja fecha) e utilitários de data "AAAA-MM-DD" |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) Cor e ícone por tipo; compromisso longo (medição) aparece em todas as horas que ocupa. |
 | `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |

@@ -15,7 +15,7 @@ import {
   type TipoCompromisso,
 } from "@/regras/agenda";
 import { ETAPAS, type CodigoEtapa } from "@/regras/etapas";
-import { formatarVisitaCurta } from "@/regras/tempo";
+import { formatarVisitaCurta, inicioDoDiaLocal, somarDias } from "@/regras/tempo";
 import { regrasDaAgenda } from "./configuracoes";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
@@ -54,6 +54,35 @@ export async function horariosLivresParaLead(leadId: string, limite = 3, aPartir
   const { de, ate } = janelaDeAgendamento(quando, regras);
   const consultores = await consultoresAtivos();
   return horariosLivres({ agora: quando, consultores, ocupados: await ocupados(de, ate, { leadId, tipo }), consultorPreferido: lead?.consultorId, limite, aPartirDe, regras, tipo });
+}
+
+/**
+ * Horários livres do dia escolhido no calendário, com o dia anterior e o seguinte (para o consultor comparar).
+ * Sem dia escolhido, centra no primeiro dia com horário livre. Vale para qualquer data futura (o limite de
+ * `diasAFrente` é só da lista automática). `primeiroDia` = primeiro dia que pode ser marcado (o calendário bloqueia antes).
+ */
+export async function horariosLivresEmTorno(leadId: string, tipo: TipoCompromisso = "visita", dia?: Date | null) {
+  const quando = await agora();
+  const regras = await regrasDaAgenda();
+  const primeiroDia = janelaDeAgendamento(quando, regras).de;
+  let centro = dia ? inicioDoDiaLocal(dia) : null;
+  if (!centro) {
+    const [primeira] = await horariosLivresParaLead(leadId, 1, undefined, tipo);
+    centro = primeira ? inicioDoDiaLocal(primeira.inicio) : primeiroDia;
+  }
+  const periodo = { de: somarDias(centro, -1), ate: somarDias(centro, 2) };
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { consultorId: true } });
+  const livres = horariosLivres({
+    agora: quando,
+    consultores: await consultoresAtivos(),
+    ocupados: await ocupados(periodo.de, periodo.ate, { leadId, tipo }),
+    consultorPreferido: lead?.consultorId,
+    limite: Number.POSITIVE_INFINITY,
+    regras,
+    tipo,
+    periodo,
+  });
+  return { centro, primeiroDia, livres };
 }
 
 const ORDEM_ETAPA = Object.fromEntries(ETAPAS.map((e, i) => [e.codigo, i])) as Record<CodigoEtapa, number>;

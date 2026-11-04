@@ -152,6 +152,8 @@ export function horariosLivres(params: {
   aPartirDe?: Date;
   regras?: RegrasAgenda;
   tipo?: TipoCompromisso;
+  /** Período escolhido na tela (calendário). Sem ele vale a janela de `diasAFrente`. Nunca começa antes do próximo dia aberto. */
+  periodo?: { de: Date; ate: Date };
 }): Vaga[] {
   const { agora, ocupados, limite = 20 } = params;
   const r = params.regras ?? REGRAS_AGENDA_PADRAO;
@@ -159,7 +161,9 @@ export function horariosLivres(params: {
   const consultores = params.consultorPreferido && params.consultores.includes(params.consultorPreferido)
     ? [params.consultorPreferido, ...params.consultores.filter((c) => c !== params.consultorPreferido)]
     : params.consultores;
-  const { de, ate } = janelaDeAgendamento(agora, r);
+  const janela = janelaDeAgendamento(agora, r);
+  const de = params.periodo ? new Date(Math.max(params.periodo.de.getTime(), janela.de.getTime())) : janela.de;
+  const ate = params.periodo?.ate ?? janela.ate;
   const resultado: Vaga[] = [];
   for (let dia = de; dia.getTime() < ate.getTime() && resultado.length < limite; dia = somarDias(dia, 1)) {
     const p = partesLocais(dia);
