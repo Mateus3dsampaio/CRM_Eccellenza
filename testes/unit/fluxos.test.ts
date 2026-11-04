@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import { PASTA_MIDIAS } from "@/lib/midias";
 import { avancarRelogio, agora } from "@/lib/relogio";
 import { lerLista } from "@/lib/json";
-import { DIA, HORA } from "@/regras/tempo";
+import { DIA, HORA, chaveDia, inicioDoDiaLocal, somarDias } from "@/regras/tempo";
 import { janelaDeAgendamento } from "@/regras/agenda";
-import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresParaLead } from "@/servicos/agenda";
+import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresEmTorno, horariosLivresParaLead } from "@/servicos/agenda";
 import { converterFunilAntigo } from "@/servicos/conversao-funil";
 import { motivosDePerda } from "@/servicos/vendas";
 import { dadosDoPainel } from "@/servicos/painel";
@@ -114,6 +114,36 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     await expect(agendarVisita({ leadId: lead.id, inicio, autor: "teste" })).rejects.toThrow(/livre/);
     await agendarVisita({ leadId: lead.id, inicio: livres[0].inicio, autor: "teste", tipo: "apresentacao" });
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("apresentacao");
+  });
+});
+
+describe("calendário da janela de agendar", () => {
+  it("escolhe uma data além dos dias à frente e traz a véspera, o dia e o dia seguinte, sem limite de quantidade", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900004545");
+    const regras = await regrasDaAgenda();
+    // Uma quarta-feira ~40 dias à frente (muito além dos 14 dias padrão).
+    let alvo = somarDias(inicioDoDiaLocal(await agora()), regras.diasAFrente + 26);
+    while (new Date(alvo.getTime() - 3 * HORA).getUTCDay() !== 3) alvo = somarDias(alvo, 1);
+    const r = await horariosLivresEmTorno(lead.id, "medicao", alvo);
+    expect(chaveDia(r.centro)).toBe(chaveDia(alvo));
+    const dias = new Set(r.livres.map((v) => chaveDia(v.inicio)));
+    expect(dias).toEqual(new Set([chaveDia(somarDias(alvo, -1)), chaveDia(alvo), chaveDia(somarDias(alvo, 1))]));
+    // Medição de 2h das 8h às 18h: 8h a 16h nos três dias úteis.
+    expect(r.livres).toHaveLength(27);
+    const m = r.livres.find((v) => chaveDia(v.inicio) === chaveDia(alvo))!;
+    await agendarVisita({ leadId: lead.id, inicio: m.inicio, consultorId: m.consultorId, autor: "teste", tipo: "medicao" });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("medicao");
+  });
+  it("sem dia escolhido centra no primeiro dia livre e nunca oferece antes do primeiro dia possível", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900004646");
+    const r = await horariosLivresEmTorno(lead.id, "apresentacao");
+    const [primeira] = await horariosLivresParaLead(lead.id, 1, undefined, "apresentacao");
+    expect(chaveDia(r.centro)).toBe(chaveDia(primeira.inicio));
+    expect(r.livres.every((v) => v.inicio.getTime() >= r.primeiroDia.getTime())).toBe(true);
+    const passado = await horariosLivresEmTorno(lead.id, "apresentacao", somarDias(await agora(), -10));
+    expect(passado.livres).toHaveLength(0);
   });
 });
 

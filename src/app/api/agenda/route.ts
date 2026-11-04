@@ -5,14 +5,15 @@ import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { TIPOS_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { podeEditarAgendaDe } from "@/regras/permissoes";
-import { HORA, dataLocal, inicioDaSemanaLocal, inicioDoDiaLocal, lerChaveDia, somarDias } from "@/regras/tempo";
-import { agendarVisita, cancelarVisita, criarBloqueio, ErroAgenda, horariosLivresParaLead, removerBloqueio } from "@/servicos/agenda";
+import { HORA, chaveDia, dataLocal, inicioDaSemanaLocal, inicioDoDiaLocal, lerChaveDia, somarDias } from "@/regras/tempo";
+import { agendarVisita, cancelarVisita, criarBloqueio, ErroAgenda, horariosLivresEmTorno, removerBloqueio } from "@/servicos/agenda";
 import { regrasDaAgenda } from "@/servicos/configuracoes";
 import { dadosDaAgenda } from "@/servicos/consultas";
 
 export const dynamic = "force-dynamic";
 
-// GET ?visao=dia|semana&data=AAAA-MM-DD (AGENDA-01). Com livresPara=<lead>&tipo=visita|medicao|apresentacao: horários livres do compromisso.
+// GET ?visao=dia|semana&data=AAAA-MM-DD (AGENDA-01). Com livresPara=<lead>&tipo=visita|medicao|apresentacao[&diaLivre=AAAA-MM-DD]:
+// horários livres do compromisso no dia escolhido, na véspera e no dia seguinte (sem diaLivre, em torno do primeiro dia livre).
 export const GET = rota(async (req: Request) => {
   await exigirUsuario();
   const params = new URL(req.url).searchParams;
@@ -29,9 +30,18 @@ export const GET = rota(async (req: Request) => {
     agora: (await agora()).toISOString(),
     regras: await regrasDaAgenda(),
     ...(await dadosDaAgenda(de, ate)),
-    livres: livresPara ? (await horariosLivresParaLead(livresPara, 30, undefined, tipo)).map((v) => ({ inicio: v.inicio.toISOString(), consultorId: v.consultorId })) : undefined,
+    ...(livresPara ? await livresDoCalendario(livresPara, tipo, lerChaveDia(params.get("diaLivre") ?? "")) : {}),
   };
 });
+
+async function livresDoCalendario(leadId: string, tipo: TipoCompromisso, dia: Date | null) {
+  const r = await horariosLivresEmTorno(leadId, tipo, dia);
+  return {
+    centroLivres: chaveDia(r.centro),
+    primeiroDia: chaveDia(r.primeiroDia),
+    livres: r.livres.map((v) => ({ inicio: v.inicio.toISOString(), consultorId: v.consultorId })),
+  };
+}
 
 const dataHora = z.object({ dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), hora: z.number().int().min(0).max(23) });
 function paraData({ dia, hora }: z.infer<typeof dataHora>): Date {
