@@ -239,7 +239,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
 | `src/componentes/alertas/push.ts` | Lado do navegador do Web Push: registrar `/sw.js`, pedir permissão, assinar, ligar/desligar, pausar ao sair do CRM e renovar ao abrir (quem já ligou neste navegador) |
 | `src/componentes/alertas/som.ts` | Som feito no navegador (sem arquivo de áudio) |
-| `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
+| `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo (com retorno vencendo, pisca em âmbar: `animate-chamar` em `tokens.css`) e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
 | `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (Negociação: próximo contato + valor do orçamento; valor fechado; motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
@@ -251,7 +251,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). |
-| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
+| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro |
 | `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |

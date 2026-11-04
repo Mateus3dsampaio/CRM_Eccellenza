@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, CalendarCheck, CalendarClock, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CalendarClock, CalendarX, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { formatarReais } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
@@ -122,6 +122,12 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
           </span>
         )}
       </div>
+      {card.semData && (
+        <p className="mt-2 inline-flex animate-piscar items-center gap-1.5 rounded-pilula bg-alerta px-2.5 py-0.5 text-xs font-bold text-sobre-cor" title="Este card está numa coluna de compromisso, mas não há data marcada na agenda.">
+          <CalendarX className="size-3.5" aria-hidden />
+          Sem data – marque na agenda
+        </p>
+      )}
       {card.visita && (
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-pilula bg-sucesso-suave px-2.5 py-0.5 text-xs font-medium text-sucesso">
           <CalendarCheck className="size-3.5" aria-hidden />

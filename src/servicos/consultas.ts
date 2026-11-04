@@ -5,6 +5,7 @@ import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
+import { etapaComAgenda } from "@/regras/etapas";
 import { ETAPAS_COM_RETORNO, exigeRetorno, situacaoDoRetorno } from "@/regras/vendas";
 import { exigirContatoNegociacao } from "./vendas";
 import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
@@ -77,7 +78,7 @@ export async function cardsDoKanban() {
     where: { arquivadoEm: null },
     include: {
       consultor: { select: { id: true, nome: true } },
-      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, take: 1 },
+      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, select: { inicio: true, tipo: true } },
       notas: { select: { texto: true } },
     },
   });
@@ -113,6 +114,8 @@ export async function cardsDoKanban() {
       modo: l.modoAtendimento,
       consultor: l.consultor,
       // Próximo compromisso marcado, com o tipo (ex.: "Apresentação qua 05/11 10h").
+      // Card em Medição/Apresentação agendada sem o compromisso daquela coluna marcado (ex.: voltou de Perdido): etiqueta "Sem data".
+      semData: etapaComAgenda(l.etapa) && !l.visitas.some((v) => v.tipo === l.etapa),
       visita: visita ? `${NOMES_COMPROMISSO[visita.tipo as TipoCompromisso] ?? "Visita"} ${formatarVisitaCurta(visita.inicio)}` : null,
       // Texto para a busca (nome, telefone e dados da ficha).
       busca: [nome, l.telefone, formatarTelefone(l.telefone), l.cidade, l.endereco, ambientes.join(" "), lerLista(l.exigencias).join(" "), l.situacaoImovel, l.prazo, l.investimento, lerLista(l.pedidosTecnicos).join(" "), l.observacoes, l.resumo, l.notas.map((n) => n.texto).join(" ")]
