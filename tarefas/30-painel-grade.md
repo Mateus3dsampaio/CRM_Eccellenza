@@ -1,6 +1,6 @@
 # Tarefa 30 – Painel: grade que fecha
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** "Clientes que faltaram" foi para "Conversão da agenda" (3 cards); "Motivos de perda" fechou a grade 3×3 de "Leads no período"; os dois valores em R$ ficaram maiores. Botão "Exportar" (admin) abre a exportação de desempenho numa janela aqui no Painel.
 
 ## Problema
 Nove cards pequenos em grade de 4 deixam um órfão sozinho na terceira linha. "Motivos de perda" ocupa um terço da linha de resultado e quase sempre está vazio.

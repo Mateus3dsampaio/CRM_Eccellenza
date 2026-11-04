@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, FileArchive, Minus } from "lucide-react";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
 import { useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
-import { Carregando, EstadoErro, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
+import { ExportarDesempenho } from "../configuracoes/exportar-desempenho";
 import { useUsuario } from "../usuario";
 
 interface DadosPainel {
@@ -69,6 +70,12 @@ export function Painel() {
   const ate = filtro.atalho ? (dados?.ate ?? "") : filtro.ate;
   const mudarData = (campo: "de" | "ate", valor: string) => setFiltro({ ...filtro, atalho: null, de, ate, [campo]: valor });
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
+  // Exportar desempenho (tarefa 30): saiu de Configurações; é uma ação do painel, só do admin. Dados só ao abrir a janela.
+  const [exportar, setExportar] = useState(false);
+  const { dados: dadosExportar } = useDados<{ equipe: { id: string; nome: string; perfil: string; ativo: boolean }[]; periodoExportacao: { de: string; ate: string } }>(exportar ? "/api/configuracoes" : null);
+  // "Clientes que faltaram" fica junto da conversão da agenda (é sobre compromisso marcado), não entre os leads do período.
+  const faltaram = dados?.indicadores.find((i) => i.tipo === "nao_compareceu");
+  const indicadoresDoPeriodo = dados?.indicadores.filter((i) => i.tipo !== "nao_compareceu") ?? [];
   const maiorConsultor = Math.max(1, ...(dados?.apresentacoesPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
@@ -102,6 +109,11 @@ export function Painel() {
             </select>
           </label>
         )}
+        {admin && (
+          <Botao className="ml-auto" onClick={() => setExportar(true)} icone={<FileArchive className="size-4" aria-hidden />} title="Exportar desempenho do vendedor (.zip)">
+            Exportar
+          </Botao>
+        )}
       </div>
       {dados && (
         <p className="text-sm text-texto-suave">
@@ -118,23 +130,41 @@ export function Painel() {
       ) : dados ? (
         <>
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Resultado</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
               <p className="text-sm text-texto-suave">Total em negociação</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
+              <p className="mt-1 text-4xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Apresentação agendada ou Negociação, agora
                 {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
               </p>
             </div>
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
               <p className="text-sm text-texto-suave">Total vendido</p>
-              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}>{formatarReais(dados.vendas.vendido.total)}</p>
+              <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}>{formatarReais(dados.vendas.vendido.total)}</p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
               </p>
             </div>
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel sm:col-span-2 lg:col-span-1">
+          </div>
+
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Leads no período</h2>
+          {/* 8 contadores + motivos de perda = 9 cards: grade de 3 fecha sem card órfão (tarefa 30). */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {indicadoresDoPeriodo.map((i) => {
+              const v = variacao(i.tipo, i.atual, i.anterior);
+              return (
+                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                  <p className="text-sm text-texto-suave">{i.nome}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums">{i.atual.toLocaleString("pt-BR")}</p>
+                  <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
+                    {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
+                    {v.texto}
+                  </p>
+                </div>
+              );
+            })}
+            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
               <p className="text-sm text-texto-suave">Motivos de perda</p>
               {dados.vendas.perdidos.quantidade === 0 ? (
                 <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
@@ -154,25 +184,8 @@ export function Painel() {
             </section>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Leads no período</h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {dados.indicadores.map((i) => {
-              const v = variacao(i.tipo, i.atual, i.anterior);
-              return (
-                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
-                  <p className="text-sm text-texto-suave">{i.nome}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{i.atual.toLocaleString("pt-BR")}</p>
-                  <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
-                    {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
-                    {v.texto}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Conversão da agenda</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             {(
               [
                 ["Medições que viraram apresentação", dados.conversoes.medicoesComApresentacao, dados.conversoes.medicoes, "medição marcada no período"],
@@ -190,6 +203,20 @@ export function Painel() {
                 </div>
               </div>
             ))}
+            {faltaram && (() => {
+              const v = variacao(faltaram.tipo, faltaram.atual, faltaram.anterior);
+              return (
+                <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                  <p className="text-sm text-texto-suave">{faltaram.nome}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums">{faltaram.atual.toLocaleString("pt-BR")}</p>
+                  <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
+                    {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
+                    {v.texto}
+                  </p>
+                  <p className="mt-1 text-xs text-texto-fraco">medição ou apresentação marcada em que o cliente não apareceu</p>
+                </div>
+              );
+            })()}
           </div>
 
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>
@@ -262,6 +289,9 @@ export function Painel() {
           </div>
         </>
       ) : null}
+      <Modal aberto={exportar} aoFechar={() => setExportar(false)} titulo="Exportar desempenho" largura="max-w-2xl">
+        {dadosExportar ? <ExportarDesempenho equipe={dadosExportar.equipe} periodoPadrao={dadosExportar.periodoExportacao} /> : <Carregando linhas={2} />}
+      </Modal>
     </div>
   );
 }

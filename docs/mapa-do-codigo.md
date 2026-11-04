@@ -267,7 +267,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo . Calendário para escolher qualquer data futura (até 12 meses) e, ao lado, os horários livres da véspera, do dia escolhido e do dia seguinte |
 | `src/componentes/ficha/calendario.tsx` | `Calendario`: calendário de um mês para escolher o dia (bloqueia dias passados e dias em que a loja fecha) e utilitários de data "AAAA-MM-DD" |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) Cor e ícone por tipo; compromisso longo (medição) aparece em todas as horas que ocupa. |
-| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
+| `src/componentes/painel/painel.tsx` | Painel de métricas (grade 3×3 de leads + conversão da agenda com "Clientes que faltaram", botão "Exportar" do admin abre `exportar-desempenho` numa janela, tarefa 30): atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
@@ -281,7 +281,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
-| `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
+| `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
