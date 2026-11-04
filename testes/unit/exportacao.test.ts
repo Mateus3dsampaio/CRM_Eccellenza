@@ -101,7 +101,7 @@ describe("exportação do vendedor", () => {
     await registrarMensagemCliente(lead.id, "Oi, quero uma cozinha");
     await avancarRelogio(2 * MIN);
     await enviarMensagemLoja({ leadId: lead.id, autor: "bot", texto: "Olá! Qual o ambiente?" });
-    await moverEtapa(lead.id, "pronto", "bot");
+    await moverEtapa(lead.id, "qualificacao", "bot");
     await avancarRelogio(HORA);
     await registrarMensagemCliente(lead.id, "É a cozinha, 3 metros");
     await avancarRelogio(30 * MIN);
@@ -126,7 +126,7 @@ describe("exportação do vendedor", () => {
     expect(texto).toContain("consultor_tempo_mediano_min,30.0");
     expect(texto).toContain("bot_tempo_mediano_min,2.0");
     expect(texto).toContain("chegaram_em_qualificacao,1");
-    expect(texto).toContain("IA atendendo > Aguardando consultor > Em qualificação");
+    expect(texto).toContain("IA atendendo > Em qualificação");
     expect(texto).not.toContain("+5588900007777");
     expect(texto).not.toContain("Fulano Secreto");
   });

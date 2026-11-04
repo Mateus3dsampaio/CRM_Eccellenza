@@ -173,7 +173,7 @@ describe("bot sem instruções cadastradas", () => {
     expect(r.respostas).toEqual([]);
     expect(r.erro).toMatch(/sem instruções/);
     const depois = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(depois).toMatchObject({ etapa: "pronto", modoAtendimento: "pausado", aguardandoHumano: true });
+    expect(depois).toMatchObject({ etapa: "qualificacao", modoAtendimento: "pausado", aguardandoHumano: true });
     expect(depois.erroBot).toMatch(/sem instruções/);
     expect(await db.usoApi.count()).toBe(0);
   });

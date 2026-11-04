@@ -52,7 +52,8 @@ model Lead {
   etiquetas     String  @default("[]") // JSON string[] de códigos
 
   // Acompanhamento de vendas. Dinheiro em centavos.
-  proximoContatoEm  DateTime? // obrigatório em Orçamento apresentado e Negociação
+  proximoContatoEm  DateTime? // lembrete/retorno em qualquer etapa aberta; obrigatório em Negociação (interruptor)
+  lembreteNota      String? // nota do lembrete (tarefa 22); some junto com proximoContatoEm
   valorOrcamento    Int?
   valorFechado      Int?
   motivoPerda       String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)

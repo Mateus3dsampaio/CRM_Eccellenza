@@ -4,7 +4,7 @@ import CurrencyInput from "react-currency-input-field";
 import { useState } from "react";
 import { type CodigoEtapa } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
-import { ETAPAS_COM_RETORNO, faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
+import { faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
 import { regrasParaConferir, retornoObrigatorio, useRegrasVendas } from "./regras";
 import { Botao, Campo, classeEntrada, Modal } from "../ui";
 
@@ -69,7 +69,8 @@ export function JanelaMudanca({
   const [erro, setErro] = useState("");
 
   const regras = useRegrasVendas();
-  const comRetorno = ETAPAS_COM_RETORNO.includes(etapa);
+  // Só Negociação pede o próximo contato ao mover; nas outras etapas o lembrete é anotado na ficha (tarefa 22).
+  const comRetorno = etapa === "negociacao";
   // Valor do orçamento só faz sentido depois da apresentação (Negociação); em qualificação ainda não há orçamento.
   const comValor = etapa === "negociacao";
   const retornoExigido = retornoObrigatorio(regras, etapa);

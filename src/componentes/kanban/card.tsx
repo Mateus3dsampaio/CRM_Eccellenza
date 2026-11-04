@@ -78,7 +78,10 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
       {retorno && (
         <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_RETORNO[retorno.situacao])}>
           <CalendarClock className="size-3.5 shrink-0" aria-hidden />
-          Retorno {retorno.texto}
+          <span className="truncate" title={card.lembreteNota ?? undefined}>
+            Retorno {retorno.texto}
+            {card.lembreteNota && <span className="font-normal text-texto-suave"> · {card.lembreteNota}</span>}
+          </span>
         </p>
       )}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-10 text-xs text-texto-suave">
@@ -100,12 +103,18 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
             {card.investimento}
           </span>
         )}
-        {card.consultor && (
+        {card.consultor ? (
           <span className="inline-flex items-center gap-1">
             <UserRound className="size-3.5" aria-hidden />
             {card.consultor.nome}
           </span>
-        )}
+        ) : card.modo !== "bot" ? (
+          // Bot repassou e nenhum consultor estava disponível: o lead espera na fila até alguém ficar online.
+          <span className="inline-flex items-center gap-1 rounded-pilula bg-aviso-suave px-2 py-0.5 font-medium text-aviso">
+            <UserRound className="size-3.5" aria-hidden />
+            Na fila – sem consultor
+          </span>
+        ) : null}
         {card.modo === "humano" && (
           <span className="inline-flex items-center gap-1 text-marca-texto">
             <Headset className="size-3.5" aria-hidden />

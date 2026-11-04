@@ -57,7 +57,7 @@ describe("painel por vendedor e tempo de resposta", () => {
     await registrarMensagemCliente(leadA.id, "Oi");
     await avancarRelogio(2 * MIN);
     await enviarMensagemLoja({ leadId: leadA.id, autor: "bot", texto: "Olá!" });
-    await moverEtapa(leadA.id, "pronto", "bot");
+    await moverEtapa(leadA.id, "qualificacao", "bot");
     await db.lead.update({ where: { id: leadA.id }, data: { aguardandoHumano: true, repassadoEm: await agora() } });
     await avancarRelogio(HORA);
     await registrarMensagemCliente(leadA.id, "Quero uma visita");
@@ -89,13 +89,13 @@ describe("painel por vendedor e tempo de resposta", () => {
     expect(deA.tempos.primeiraResposta.aguardando).toBe(0);
     expect(deA.indicadores.find((i) => i.tipo === "recebidos")?.atual).toBe(1);
     expect(deA.indicadores.find((i) => i.tipo === "atendidos")?.atual).toBe(1);
-    // Chegou até "Em qualificação": passou por IA atendendo e Aguardando consultor também.
-    expect(deA.funil.map((f) => f.total)).toEqual([1, 1, 1, 0, 0]);
+    // Chegou até "Em qualificação": passou por IA atendendo também.
+    expect(deA.funil.map((f) => f.total)).toEqual([1, 1, 0, 0]);
 
     const deB = await dadosDoPainel({ atalho: "hoje", vendedorId: b.id });
     expect(deB.tempos.consultor.mediaSegundos).toBe(10 * 60);
     expect(deB.tempos.bot.quantidade).toBe(0);
-    expect(deB.funil.map((f) => f.total)).toEqual([1, 0, 0, 0, 0]);
+    expect(deB.funil.map((f) => f.total)).toEqual([1, 0, 0, 0]);
   });
 
   it("período fora da conversa fica vazio e vendedor inexistente dá erro", async () => {

@@ -82,7 +82,8 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
             naoLidas: Math.max(lead.naoLidas, 1),
           },
         });
-        if (lead.etapa === "novo") await moverEtapa(leadId, "pronto", "bot");
+        // Tarefa 22: sem "Aguardando consultor"; o card vai direto para Em qualificação, já com o vendedor do rodízio (ou na fila).
+        if (lead.etapa === "novo") await moverEtapa(leadId, "qualificacao", "bot");
         // Só avisa na primeira vez: repasse repetido de um lead que já espera não é novidade.
         if (!lead.aguardandoHumano) await registrarAlerta({ tipo: "lead_passado", leadId });
         await registrarAlteracao(leadId, "bot", `Passou para o consultor${motivo ? ` (${motivo})` : ""}; bot pausado nesta conversa`);

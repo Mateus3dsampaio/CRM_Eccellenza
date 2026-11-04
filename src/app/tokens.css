@@ -48,7 +48,6 @@
 
   /* Barras das colunas do kanban (cores do modelo) */
   --color-etapa-novo: #8fb2ff;
-  --color-etapa-pronto: #6fd6ff;
   --color-etapa-qualificacao: #f2b84b;
   --color-etapa-medicao: #5fd3c4;
   --color-etapa-apresentacao: #c49bff;
@@ -112,6 +111,7 @@
   --animate-surgir: surgir 160ms ease-out;
   --animate-brilho: brilho 1.4s ease-in-out infinite;
   --animate-respirar: respirar 2.6s ease-in-out infinite;
+  --animate-chamar: chamar 1.6s ease-in-out infinite;
 
   @keyframes surgir {
     from { opacity: 0; transform: translateY(4px); }
@@ -127,6 +127,11 @@
       box-shadow: 0 0 22px 3px color-mix(in srgb, var(--color-alerta) 55%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
       filter: brightness(1.12);
     }
+  }
+  /* Botão "Retornos de hoje" com retorno vencendo: pulsa na cor da marca para chamar atenção (tarefa 22). */
+  @keyframes chamar {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-marca) 0%, transparent); filter: brightness(1); }
+    50% { box-shadow: 0 0 18px 4px color-mix(in srgb, var(--color-marca) 70%, transparent); filter: brightness(1.18); }
   }
   @keyframes brilho {
     0%, 100% { opacity: 1; }

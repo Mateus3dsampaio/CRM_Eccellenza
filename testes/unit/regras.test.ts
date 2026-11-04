@@ -45,7 +45,7 @@ describe("retomada (RET-01/03)", () => {
   it("não age em leads arquivados, fora do Novo, com o consultor ou com visita marcada", () => {
     const depois = new Date(base.getTime() + 5 * DIA);
     expect(avaliarRetomada({ ...lead, etapa: "fechado" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, etapa: "pronto" }, depois)).toBeNull();
+    expect(avaliarRetomada({ ...lead, etapa: "qualificacao" }, depois)).toBeNull();
     expect(avaliarRetomada({ ...lead, etapa: "visita" }, depois)).toBeNull();
     expect(avaliarRetomada({ ...lead, arquivadoEm: base }, depois)).toBeNull();
     expect(avaliarRetomada({ ...lead, modoAtendimento: "pausado" }, depois)).toBeNull();

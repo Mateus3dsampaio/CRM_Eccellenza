@@ -15,11 +15,12 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 - **BOT-06 (E1)** Erro ou falta de chave da API não derruba o sistema: aparece um aviso claro e a conversa fica marcada "aguardando humano".
 
 ## KAN – kanban
-- **KAN-01 (E1)** Colunas (funil aprovado pelo Mateus em 04/11/2026, tarefa 21): IA atendendo · Aguardando consultor · Em qualificação · Medição agendada · Apresentação agendada · Negociação · Fechado · Perdido. Cada coluna mostra o contador. Exigências ao receber o card: Em qualificação pede o próximo contato; Medição e Apresentação só com o compromisso marcado na agenda (arrastar abre a janela de agendar); Negociação pede próximo contato (conforme Configurações > Vendas) e valor do orçamento opcional; Fechado pede o valor do contrato; Perdido pede o motivo. Sem setinha de avançar (decisão do Mateus).
+- **KAN-01 (E1)** Colunas (funil aprovado pelo Mateus em 04/11/2026, tarefas 21 e 22): IA atendendo · Em qualificação · Medição agendada · Apresentação agendada · Negociação · Fechado · Perdido. Cada coluna mostra o contador. Sem "Aguardando consultor": o bot repassa direto para Em qualificação, já com o vendedor do rodízio; sem consultor disponível o card fica na fila com a etiqueta "Na fila – sem consultor". Exigências ao receber o card: Em qualificação não pede nada; Medição e Apresentação só com o compromisso marcado na agenda (arrastar abre a janela de agendar); Negociação pede próximo contato (conforme Configurações > Vendas) e valor do orçamento opcional; Fechado pede o valor do contrato; Perdido pede o motivo. Sem setinha de avançar (decisão do Mateus).
+- **KAN-06 (E1)** Lembrete na ficha (tarefa 22): data, hora e nota opcional em qualquer etapa aberta (ex.: "pediu para chamar daqui a 30 dias"). Aparece no card e em "Retornos de hoje" no dia, com aviso na hora; o botão de retornos pulsa quando há retorno para hoje ou atrasado. Concluir apaga; Fechado e Perdido apagam. Em Negociação o lembrete é o próximo contato.
 - **KAN-02 (E1)** Card mostra: foto/avatar, nome, horário da última mensagem, prévia da última mensagem, cidade, ambientes, investimento informado, etiquetas e um sino quando o cliente aguarda resposta humana.
 - **KAN-03 (E1)** Arrastar e soltar entre colunas no computador; no celular, toque longo para arrastar **e** alternativa por menu "Mover para...".
 - **KAN-04 (E1)** Etiquetas coloridas: Outra cidade, Arquiteto/parceiro, Pós-venda, Já atendido, Retomada enviada. Filtro por etiqueta, consultor e cidade. Busca por nome, telefone e texto da ficha.
-- **KAN-05 (E1)** O bot move o card de IA atendendo para Aguardando consultor ao passar o lead (ele não agenda); o movimento aparece na tela sem recarregar.
+- **KAN-05 (E1)** O bot move o card de IA atendendo para Em qualificação ao passar o lead (ele não agenda); o movimento aparece na tela sem recarregar.
 - **KAN-06 (E2)** Coreografia de arrastar descrita em `docs/design.md` (parte 2).
 
 ## FICHA – lead pronto para o consultor
@@ -61,7 +62,7 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 
 ## MET – painel
 - **MET-01 (E1)** Por semana e por mês: apresentações agendadas (métrica principal), medições agendadas, leads novos, qualificados, curiosos, outras cidades, arquitetos/parceiros, retomadas que voltaram, apresentações por consultor. Conversão da agenda: medições que viraram apresentação e apresentações que viraram venda. "Parou de responder" aparece nos motivos de perda.
-- **MET-02 (E1)** Funil: IA atendendo → Aguardando consultor → Em qualificação → Apresentação agendada → Fechado, com taxa de conversão entre etapas. Medição conta como Em qualificação (é opcional) e Negociação como Apresentação.
+- **MET-02 (E1)** Funil: IA atendendo → Em qualificação → Apresentação agendada → Fechado, com taxa de conversão entre etapas. Medição conta como Em qualificação (é opcional) e Negociação como Apresentação.
 - **MET-03 (E1)** Contadores anônimos (sem nome, telefone ou texto) preservados após exclusões.
 
 ## USR – usuários

@@ -1,7 +1,6 @@
 // Classes de cor por código (o Tailwind precisa das classes escritas por extenso).
 export const COR_ETAPA: Record<string, string> = {
   novo: "bg-etapa-novo",
-  pronto: "bg-etapa-pronto",
   qualificacao: "bg-etapa-qualificacao",
   medicao: "bg-etapa-medicao",
   apresentacao: "bg-etapa-apresentacao",
