@@ -5,7 +5,7 @@ export type Acao = "excluir_lead" | "arquivar_lead" | "editar_lead" | "ver_metri
 
 const PERMISSOES: Record<Perfil, Acao[]> = {
   admin: ["excluir_lead", "arquivar_lead", "editar_lead", "ver_metricas", "gerir_agenda", "enviar_mensagem", "remover_medida", "configurar", "apagar_midia"],
-  consultor: ["arquivar_lead", "editar_lead", "ver_metricas", "gerir_agenda", "enviar_mensagem"],
+  consultor: ["arquivar_lead", "editar_lead", "gerir_agenda", "enviar_mensagem"],
 };
 
 export function pode(perfil: string, acao: Acao): boolean {

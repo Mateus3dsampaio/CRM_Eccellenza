@@ -70,6 +70,11 @@ describe("permissões (LIMP-05, USR-02)", () => {
     expect(pode("consultor", "arquivar_lead")).toBe(true);
     expect(pode("desconhecido", "arquivar_lead")).toBe(false);
   });
+
+  it("o Painel é só do administrador (decisão do Mateus 05/11/2026)", () => {
+    expect(pode("admin", "ver_metricas")).toBe(true);
+    expect(pode("consultor", "ver_metricas")).toBe(false);
+  });
 });
 
 describe("agenda (AGENDA-02)", () => {

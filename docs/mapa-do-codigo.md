@@ -83,7 +83,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/(app)/page.tsx` | Kanban |
 | `src/app/(app)/lead/[id]/page.tsx` | Ficha do lead |
 | `src/app/(app)/agenda/page.tsx` | Agenda |
-| `src/app/(app)/painel/page.tsx` | Painel de métricas |
+| `src/app/(app)/painel/page.tsx` | Painel de métricas. Só admin (consultor volta ao Kanban; o menu também esconde o link) |
 | `src/app/(app)/simulador/page.tsx` | Simulador (chat do cliente fictício) |
 | `src/app/(app)/galeria/page.tsx` | Galeria de imagens, vídeos e PDFs |
 | `src/app/privacidade/page.tsx` | Política de privacidade PÚBLICA (sem login; a Meta e os clientes abrem). Rascunho até `PRIVACIDADE_APROVADA=1`; contato em `PRIVACIDADE_CONTATO` |
@@ -106,7 +106,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/leads/acoes/route.ts` | Mover (com os dados de venda; confere o lote todo antes), arquivar, excluir em lote (exclusão grava o registro LGPD) | `leads`, `lgpd` |
 | `src/app/api/arquivados/route.ts` | Lista de arquivados | `consultas`, `rotinas` |
 | `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios | `agenda`, `consultas` |
-| `src/app/api/painel/route.ts` | Métricas (atalho ou datas, vendedor só para admin) | `painel` |
+| `src/app/api/painel/route.ts` | Métricas (atalho ou datas, filtro de vendedor). Só admin (`ver_metricas`; consultor recebe 403) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG). Acha o cliente com ou sem o 9; modelo exige consentimento (pede como o cliente autorizou) e não vale para quem pediu para parar | `conversa`, `leads`, `lgpd`, `consultas` |
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
 | `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |

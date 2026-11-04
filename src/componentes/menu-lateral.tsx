@@ -29,7 +29,9 @@ const ALTURA_ITEM = 42; // px
 export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const caminho = usePathname();
   const podeConfigurar = usePode("configurar");
-  const links = simulador ? LINKS : LINKS.filter((l) => l.href !== "/simulador");
+  const podeVerPainel = usePode("ver_metricas");
+  // O Painel é só do administrador; o simulador só aparece no modo simulador.
+  const links = LINKS.filter((l) => (simulador || l.href !== "/simulador") && (podeVerPainel || l.href !== "/painel"));
   const [mini, setMini] = useState(false);
 
   // Começa encolhido em telas estreitas; depois vale a escolha da pessoa.
