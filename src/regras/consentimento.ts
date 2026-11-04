@@ -3,7 +3,7 @@
 // "avisos" (ver docs/colocar-no-ar.md). Esta regra só deixa a decisão num lugar.
 
 /**
- * PROVISÓRIO, decisão do Mateus (com o jurídico): o cliente que escreveu primeiro conta como consentimento?
+ * Decisão do Mateus em 05/11/2026: o cliente que escreveu primeiro conta como consentimento (a revisão jurídica da LGPD segue aberta).
  * true  = sim (mais simples; a retomada continua funcionando para quem conversou com a loja).
  * false = não (só vale o consentimento registrado por uma pessoa; a retomada para de funcionar até haver esse registro).
  */

@@ -62,8 +62,8 @@ export const ROTULO_TIPO: Record<string, string> = {
 // Extensões de documento que valem mesmo quando o navegador ou a Meta não informam (ou informam um tipo genérico) o tipo certo.
 const EXTENSOES_DE_DOCUMENTO = ["pdf", "doc", "docx", "xls", "xlsx", "dwg", "zip"];
 
-// Tamanho máximo por arquivo. PROVISÓRIO: o de imagem é o que já existia (5 MB); para vídeo e documento coloquei um teto
-// seguro para o disco. Os limites da própria Meta para vídeo e documento NÃO foram conferidos.
+// Tamanho máximo por arquivo, aprovado pelo Mateus em 05/11/2026 (imagem 5 MB, vídeo 16 MB, documento 25 MB). Ele conferiu na Meta
+// os tipos e limites do envio e a Meta aceitou tudo.
 export const LIMITES_BYTES: Record<FamiliaMidia, number> = { imagem: 5 * 1024 * 1024, video: 16 * 1024 * 1024, documento: 25 * 1024 * 1024 };
 
 /** Teto de bytes de arquivos dentro de uma exportação (.zip montado na memória do servidor). */

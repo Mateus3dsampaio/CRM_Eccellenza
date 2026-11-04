@@ -17,7 +17,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Gerar o token permanente (permissões `whatsapp_business_messaging` e `whatsapp_business_management`). Gerado e colado no Railway em 04/11/2026. Validade "Nunca expira" escolhida pelo Mateus (04/11/2026). Houve vários tokens gerados; se um dia o envio falhar com erro de token, conferir se o colado no Railway é o de "Nunca expira".
 - [ ] Criar e aprovar os modelos de mensagem na Meta, com o mesmo nome do código (`retomada`, `primeiro_contato`, `lembrete_visita`), pt_BR, sem variáveis.
 - [x] Cadastrar o webhook (`SEU-ENDEREÇO/api/whatsapp/webhook`) e assinar o campo `messages` (só depois do Railway no ar). Feito em 04/11/2026 (`https://crmeccellenza-production.up.railway.app/api/whatsapp/webhook`).
-- [ ] Conferir na página oficial da Meta: tipos aceitos no ENVIO (**DWG e ZIP são incertos**), limites de tamanho de vídeo e documento, versão atual da API (`WHATSAPP_API_VERSION`, padrão `v23.0`), se o app precisa estar em modo "Live".
+- [x] Conferir na página oficial da Meta: tipos aceitos no ENVIO (**DWG e ZIP são incertos**), limites de tamanho de vídeo e documento, versão atual da API (`WHATSAPP_API_VERSION`, padrão `v23.0`), se o app precisa estar em modo "Live". Feito pelo Mateus em 05/11/2026: a Meta aceitou tudo.
 
 ### Railway
 - [x] Criar o projeto (Hobby) e conectar o repositório / branch (branch `main`, 04/11/2026).
@@ -27,25 +27,25 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`). Feito em 04/11/2026.
 - [x] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway. Feito em 04/11/2026 (o login continuou funcionando).
 - [x] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway. Confirmado pelo Mateus em 04/11/2026.
-- [ ] Ligar e confirmar o backup do Postgres. **Confirmado em 04/11/2026: no plano Hobby o Railway só mostra backups existentes; criar backup, agendar e recuperação por ponto no tempo exigem o plano Pro.** Hoje não existe backup de nada: decidir entre plano Pro, ou rotina própria de `pg_dump` enviada para um armazenamento externo. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia.
+- [ ] Ligar e confirmar o backup do Postgres. **Confirmado em 04/11/2026: no plano Hobby o Railway só mostra backups existentes; criar backup, agendar e recuperação por ponto no tempo exigem o plano Pro.** Hoje não existe backup de nada: decidir entre plano Pro, ou rotina própria de `pg_dump` enviada para um armazenamento externo. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia. **Decisão (Mateus, 05/11/2026): começa no plano Hobby e migra para o Pro depois; quando migrar, ligar o backup e decidir sobre o Volume.** (Item fica aberto até a migração.)
 
 ### Decisões e textos para aprovar
-- [ ] Textos dos modelos da Meta (`src/regras/modelos.ts`); sugestão: incluir "Responda PARAR para não receber mais mensagens".
-- [ ] Texto de confirmação do "parar" (`src/regras/optout.ts`).
-- [ ] Política de privacidade (`src/regras/privacidade.ts`): o Mateus aprovou o texto em 04/11/2026 (inclui "Anthropic ou OpenAI" no atendimento), e os dados (razão social, CNPJ, e-mail, prazos) já estão no texto; base legal ficou de fora por decisão dele. Falta: (1) o Mateus conferir o texto final em `/privacidade`; (2) `PRIVACIDADE_APROVADA=1` definido no Railway (Mateus, 04/11/2026); (3) conferir se o telefone (88) 98213-5125 é o mesmo número cadastrado na Meta; (4) rotina dos 180 dias feita (04/11/2026, `servicos/rotinas.ts`); o Mateus sabe que o painel de vendas perde o histórico de quem foi excluído.
-- [ ] Decidir se "cliente que escreveu primeiro" vale como consentimento (`src/regras/consentimento.ts`).
-- [ ] Limites do bot por cliente: 8 por minuto e 150 por dia (`src/regras/limite-bot.ts`).
-- [ ] Limites de tamanho de arquivo: imagem 5 MB, vídeo 16 MB, documento 25 MB (`src/regras/midia.ts`); DWG e ZIP grandes podem passar disso.
-- [ ] Revisão jurídica da LGPD, em especial o áudio enviado à OpenAI e o aviso de privacidade.
+- [x] Textos dos modelos da Meta (`src/regras/modelos.ts`); sugestão: incluir "Responda PARAR para não receber mais mensagens". Aprovado em 05/11/2026, com "Responda PARAR" nos três textos. Falta criar os modelos na Meta com o texto de `src/regras/modelos.ts`.
+- [x] Texto de confirmação do "parar" (`src/regras/optout.ts`). Aprovado em 05/11/2026.
+- [x] Política de privacidade (`src/regras/privacidade.ts`): o Mateus aprovou o texto em 04/11/2026 (inclui "Anthropic ou OpenAI" no atendimento), e os dados (razão social, CNPJ, e-mail, prazos) já estão no texto; base legal ficou de fora por decisão dele. Mateus: "está feito" (05/11/2026). Falta só (1) conferir o texto final em `/privacidade`, se ainda não conferiu; (2) `PRIVACIDADE_APROVADA=1` definido no Railway (Mateus, 04/11/2026); (3) conferir se o telefone (88) 98213-5125 é o mesmo número cadastrado na Meta; (4) rotina dos 180 dias feita (04/11/2026, `servicos/rotinas.ts`); o Mateus sabe que o painel de vendas perde o histórico de quem foi excluído. Mateus informou em 05/11/2026 que a conferência do texto, do telefone e do `PRIVACIDADE_APROVADA=1` está feita.
+- [x] Decidir se "cliente que escreveu primeiro" vale como consentimento (`src/regras/consentimento.ts`). Decidido em 05/11/2026: vale.
+- [x] Limites do bot por cliente: 8 por minuto e 150 por dia (`src/regras/limite-bot.ts`). Aprovado em 05/11/2026.
+- [x] Limites de tamanho de arquivo: imagem 5 MB, vídeo 16 MB, documento 25 MB (`src/regras/midia.ts`); DWG e ZIP grandes podem passar disso. Aprovado em 05/11/2026.
+- [x] Revisão jurídica da LGPD, em especial o áudio enviado à OpenAI e o aviso de privacidade. Mateus: feito (05/11/2026).
 - [ ] (Opcional) Colar no bot a instrução sobre áudio transcrito (texto sugerido no `docs/colocar-no-ar.md`).
 
 ## B. Do Claude (código)
 - [x] **Tela de usuários** (Configurações > Geral > Equipe: criar, editar, nova senha, desativar, transferir leads) e **"trocar minha senha"** no cabeçalho (04/11/2026). Senha: 6+ caracteres com letra, número e maiúscula. Limitação conhecida: trocar a senha não derruba a sessão aberta (12 h); desativar derruba na hora (decisão do Mateus: não precisa agora).
 - [ ] Isolamento de arquivos entre vendedores (a galeria é só um filtro; hoje qualquer logado abre qualquer arquivo se souber o nome). Decidir primeiro se os vendedores devem ver conversas uns dos outros, porque a ficha hoje mostra.
 - [ ] Lead duplicado se uma mensagem com o 9 (digitada na loja) e outra sem (vinda do webhook) chegarem exatamente juntas (`obterOuCriarLead`).
-- [ ] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual).
+- [x] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual). Corrigido em 05/11/2026: o evento fica pendente e é reaplicado em 2 s, 10 s e 1 min.
 - [ ] Status "falhou" vindo da Meta não desfaz `ultimaMsgLojaEm`.
-- [ ] Opcional: mandar PDF ao Claude para o bot ler (hoje o bot só vê imagem).
+- [x] Opcional: mandar PDF ao Claude para o bot ler (hoje o bot só vê imagem). Feito em 05/11/2026: PDF de até 5 MB entra como documento (só no Claude; o GPT recebe aviso). Limite de 5 MB PROVISÓRIO.
 - [ ] Dívida: a rota de arquivos lê o arquivo inteiro a cada pedido (usar `createReadStream` com Range).
 
 ## C. Nunca foi testado de verdade (conferir no primeiro deploy)

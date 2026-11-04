@@ -15,7 +15,7 @@ import { db } from "@/lib/db";
 import { assinaturaValida, extrairEventos, responderVerificacao } from "@/regras/whatsapp";
 import { enviarMensagemLoja, statusEfetivo } from "@/servicos/mensagens";
 import { obterOuCriarLead } from "@/servicos/leads";
-import { processarWebhook } from "@/servicos/whatsapp";
+import { guardarEvento, processarEventoGuardado, processarWebhook } from "@/servicos/whatsapp";
 import { limparBanco } from "./ajuda";
 
 const SEGREDO = "segredo-do-app";
@@ -163,6 +163,28 @@ describe("webhook no sistema", () => {
     expect(atual.lidaEm).not.toBeNull();
     // O status mostrado na tela é o real, não o simulado.
     expect(statusEfetivo({ autor: "consultor", status: "enviado", enviadaEm: new Date(Date.now() - 60_000), lidaEm: null }, new Date())).toBe("enviado");
+  });
+
+  it("status que chega antes de a mensagem estar gravada não se perde: o evento fica pendente e é aplicado na nova tentativa", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const lead = await obterOuCriarLead("+5588999992244", "Dora");
+      const id = await guardarEvento(JSON.stringify(payloadStatus("wamid.CORRIDA", "delivered")));
+      await processarEventoGuardado(id);
+      let evento = await db.eventoWebhook.findUniqueOrThrow({ where: { id } });
+      expect(evento.processadoEm).toBeNull(); // a mensagem ainda não existe: espera
+      expect(evento.tentativas).toBe(1);
+      // A mensagem é gravada (o envio terminou) e a tentativa seguinte aplica o status.
+      const m = await db.mensagem.create({ data: { leadId: lead.id, autor: "consultor", texto: "oi", enviadaEm: new Date(), status: "enviado", idExterno: "wamid.CORRIDA" } });
+      await vi.advanceTimersByTimeAsync(2_500);
+      await vi.waitFor(async () => {
+        evento = await db.eventoWebhook.findUniqueOrThrow({ where: { id } });
+        expect(evento.processadoEm).not.toBeNull();
+      });
+      expect((await db.mensagem.findUniqueOrThrow({ where: { id: m.id } })).status).toBe("entregue");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("envio recusado pela Meta vira 'falhou' e o log não traz o token", async () => {

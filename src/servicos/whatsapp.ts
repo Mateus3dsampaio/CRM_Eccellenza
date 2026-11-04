@@ -130,14 +130,14 @@ export async function baixarMidiaDaMeta(midiaId: string, tipoMidia: "imagem" | "
 
 const STATUS: Record<StatusRecebido["status"], "enviado" | "entregue" | "lido" | "falhou"> = { sent: "enviado", delivered: "entregue", read: "lido", failed: "falhou" };
 
+/** O status ("entregue", "lido") chegou antes de a mensagem estar gravada no CRM: tenta de novo daqui a pouco, em vez de perder. */
+class StatusAdiado extends Error {}
+
 async function aplicarStatus(s: StatusRecebido) {
   const quando = await agora();
   const novo = STATUS[s.status];
   const atual = await db.mensagem.findUnique({ where: { idExterno: s.idExterno } });
-  if (!atual) {
-    await registrarLogWebhook("status", `Status "${s.status}" de uma mensagem que não está no CRM`);
-    return;
-  }
+  if (!atual) throw new StatusAdiado(s.status);
   // A Meta pode entregar fora de ordem: nunca volta de "lido" para "entregue".
   const ordem = { enviado: 0, entregue: 1, lido: 2, falhou: 3 } as const;
   if (ordem[atual.status as keyof typeof ordem] >= ordem[novo]) return;
@@ -208,20 +208,32 @@ async function aplicarMensagem(m: MensagemRecebida) {
 /** Lê e aplica um payload da Meta. Lança em erro inesperado (quem chama decide se tenta de novo). */
 async function processarCorpo(payload: unknown): Promise<void> {
   const eventos = extrairEventos(payload);
-  for (const s of eventos.statuses) await aplicarStatus(s);
+  let adiados = 0;
+  for (const s of eventos.statuses) {
+    try {
+      await aplicarStatus(s);
+    } catch (erro) {
+      if (!(erro instanceof StatusAdiado)) throw erro;
+      adiados++;
+    }
+  }
   for (const m of eventos.mensagens) await aplicarMensagem(m);
+  // Só depois de tratar o resto: quem chama tenta o payload de novo (o que já foi aplicado não duplica).
+  if (adiados) throw new StatusAdiado(`${adiados} status sem mensagem no CRM`);
 }
 
 /** Processa um payload sem lançar (erro vai para o log). Usado em testes e onde não há caixa de entrada. */
 export async function processarWebhook(payload: unknown): Promise<void> {
   try {
     await processarCorpo(payload);
-  } catch {
-    await registrarLogWebhook("erro", "Falha ao processar um webhook", false);
+  } catch (erro) {
+    if (erro instanceof StatusAdiado) await registrarLogWebhook("status", "Status de uma mensagem que não está no CRM");
+    else await registrarLogWebhook("erro", "Falha ao processar um webhook", false);
   }
 }
 
 const MAX_TENTATIVAS_EVENTO = 5;
+const ESPERAS_STATUS_ADIADO = [2_000, 10_000, 60_000]; // ms
 
 /** O webhook grava o evento ANTES de responder 200. Se o servidor reiniciar depois, a rotina reprocessa. */
 export async function guardarEvento(corpo: string): Promise<number> {
@@ -244,10 +256,20 @@ export async function processarEventoGuardado(id: number): Promise<void> {
       await processarCorpo(JSON.parse(evento.corpo));
       // O corpo traz o texto do cliente: depois de processado não precisa mais ficar guardado (LGPD).
       await db.eventoWebhook.update({ where: { id }, data: { processadoEm: await agora(), corpo: "" } });
-    } catch {
+    } catch (erro) {
       const tentativas = evento.tentativas + 1;
       const desistiu = tentativas >= MAX_TENTATIVAS_EVENTO;
       await db.eventoWebhook.update({ where: { id }, data: { tentativas, ...(desistiu ? { processadoEm: await agora(), corpo: "" } : {}) } });
+      if (erro instanceof StatusAdiado) {
+        // Corrida normal: a Meta avisa "entregue" enquanto o CRM ainda grava a mensagem enviada. Tenta de novo em 2 s, 10 s e 1 min
+        // (depois disso a rotina da caixa de entrada pega).
+        if (desistiu) await registrarLogWebhook("status", "Status de uma mensagem que não está no CRM (descartado)");
+        else if (tentativas <= ESPERAS_STATUS_ADIADO.length) {
+          const espera = setTimeout(() => void processarEventoGuardado(id), ESPERAS_STATUS_ADIADO[tentativas - 1]);
+          espera.unref?.();
+        }
+        return;
+      }
       await registrarLogWebhook("erro", desistiu ? "Evento da Meta descartado depois de 5 tentativas" : `Evento da Meta falhou (tentativa ${tentativas}); vai tentar de novo`, false);
     }
   } finally {

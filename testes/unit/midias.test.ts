@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { apagarMidia, lerMidia, PASTA_MIDIAS, salvarMidia, tamanhoDaMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
+import { PDF_MAX_BYTES_PARA_BOT } from "@/regras/limite-bot";
 import { pode } from "@/regras/permissoes";
 import { DIAS_MIDIA_ATE_APAGAR, extensaoBloqueada, formatarTamanho, rotuloDoArquivo, TIPO_GENERICO, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, rotuloDoTipo, tipoDoArquivo, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
 import { DIA } from "@/regras/tempo";
@@ -174,6 +175,21 @@ const entrada = (id: string, tipo: string, corpo: object, de = "5588999991111") 
   entry: [{ changes: [{ value: { contacts: [{ wa_id: de, profile: { name: "Ana" } }], messages: [{ id, from: de, type: tipo, ...corpo }] } }] }],
 });
 
+// O cliente da API do bot é reaproveitado entre testes e guarda o `fetch` da primeira vez: por isso o corpo das chamadas vai sempre para a mesma lista.
+const CORPOS_API: string[] = [];
+function fingirApi(): string[] {
+  CORPOS_API.length = 0;
+  vi.stubGlobal("fetch", async (entrada: string | URL | Request, init?: RequestInit) => {
+    const url = typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
+    if (url.includes("anthropic")) {
+      CORPOS_API.push(String(init?.body));
+      return new Response(JSON.stringify({ id: "msg_1", type: "message", role: "assistant", model: "x", content: [{ type: "text", text: "Recebi!" }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ messages: [{ id: `wamid.${Math.random()}` }] }), { status: 200 });
+  });
+  return CORPOS_API;
+}
+
 describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
   beforeEach(limparBanco);
 
@@ -275,28 +291,40 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
     expect(docs.itens.map((i) => i.rotulo).sort()).toEqual(["RAR", "TXT", "PPTX", "Word"].sort());
   });
 
-  it("o bot não recebe PDF nem vídeo como imagem (só um aviso de que chegou)", async () => {
+  it("o bot lê PDF pequeno (bloco document); PDF grande demais vira só aviso", async () => {
     metaConfigurada();
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
-    const corpos: string[] = [];
-    vi.stubGlobal("fetch", async (entrada: string | URL | Request, init?: RequestInit) => {
-      const url = typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
-      if (url.includes("anthropic")) {
-        corpos.push(String(init?.body));
-        return new Response(JSON.stringify({ id: "msg_1", type: "message", role: "assistant", model: "x", content: [{ type: "text", text: "Recebi!" }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { "content-type": "application/json" } });
-      }
-      return new Response(JSON.stringify({ messages: [{ id: `wamid.${Math.random()}` }] }), { status: 200 });
-    });
+    const corpos = fingirApi();
+    const { responderCliente } = await import("@/bot/atendimento");
+    const pequeno = await obterOuCriarLead("+5588999993344", "Dani");
+    await registrarMensagemCliente(pequeno.id, null, { arquivo: await guardar(pdf(), "application/pdf"), tipo: "application/pdf", nome: "planta.pdf", bytes: 10 });
+    expect((await responderCliente(pequeno.id)).erro).toBeUndefined();
+    expect(corpos[0]).toContain('"type":"document"');
+    expect(corpos[0]).toContain('"media_type":"application/pdf"');
+    expect(corpos[0]).toContain("planta.pdf");
+
+    const grande = await obterOuCriarLead("+5588999993355", "Edu");
+    await registrarMensagemCliente(grande.id, null, { arquivo: await guardar(pdf(PDF_MAX_BYTES_PARA_BOT), "application/pdf"), tipo: "application/pdf", nome: "enorme.pdf", bytes: 10 });
+    corpos.length = 0;
+    expect((await responderCliente(grande.id)).erro).toBeUndefined();
+    expect(corpos[0]).not.toContain('"type":"document"');
+    expect(corpos[0]).toContain("você não consegue ver o conteúdo");
+  });
+
+  it("o bot não recebe vídeo nem Word como imagem (só um aviso de que chegou)", async () => {
+    metaConfigurada();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
+    const corpos = fingirApi();
     const lead = await obterOuCriarLead("+5588999993333", "Beto");
-    const nome = await guardar(pdf(), "application/pdf");
-    await registrarMensagemCliente(lead.id, null, { arquivo: nome, tipo: "application/pdf", nome: "projeto.pdf", bytes: 10 });
+    const nome = await guardar(zip(), DOCX);
+    await registrarMensagemCliente(lead.id, null, { arquivo: nome, tipo: DOCX, nome: "projeto.docx", bytes: 10 });
     const { responderCliente } = await import("@/bot/atendimento");
     const r = await responderCliente(lead.id);
     expect(r.erro).toBeUndefined();
     expect(corpos.length).toBeGreaterThan(0);
     expect(corpos[0]).not.toContain('"type":"image"');
-    expect(corpos[0]).toContain("um PDF");
-    expect(corpos[0]).toContain("projeto.pdf");
+    expect(corpos[0]).toContain("um documento Word");
+    expect(corpos[0]).toContain("projeto.docx");
   });
 });
 

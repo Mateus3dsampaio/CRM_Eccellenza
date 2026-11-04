@@ -37,7 +37,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | O que a exportação de desempenho leva | `src/servicos/vendas.ts` | Configurações de vendas: motivos de perda (carga inicial, criar, editar, reordenar, excluir só se sem uso) e o interruptor "Negociação exige próximo contato" (padrão ligado). `regrasDeVendas` entrega o que o `moverEtapa` confere |
 | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
 | WhatsApp real (receber, enviar, status, mídia) | Regras puras: `src/regras/whatsapp.ts`. Chamadas à Meta e processamento: `src/servicos/whatsapp.ts`. Rota: `src/app/api/whatsapp/webhook/route.ts`. Chaves: `src/lib/whatsapp-config.ts` (variáveis de ambiente). O envio pelo bot/consultor passa por `enviarMensagemLoja` em `src/servicos/mensagens.ts` |
-| Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (valores PROVISÓRIOS) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
+| Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados; PDF que o bot lê até 5 MB, PROVISÓRIO) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
 | `src/regras/privacidade.ts` | Texto da política de privacidade (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
@@ -163,7 +163,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/metricas.ts` | Contadores anônimos |
 | `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Sem resposta", limpeza de arquivados (30 dias; quem está em Fechado espera 180 dias) e exclusão de clientes que fecharam 180 dias depois do fechamento (com registro LGPD), limpeza de logs antigos, relógio (também confere os prazos vermelhos) |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
-| `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
+| `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), status "entregue"/"lido" que chega antes da mensagem estar gravada fica pendente e é reaplicado (2 s, 10 s, 1 min, depois a rotina), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
 | `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API): `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
 | `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo do GPT (PROVISÓRIO `gpt-5.5`, editável na tela). Chaves `bot_provedor` e `bot_modelo_openai` em `Configuracao` |
@@ -195,8 +195,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
 | `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
-| `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (PROVISÓRIO: 8 e 150) |
-| `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (PROVISÓRIO) |
+| `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) e tamanho máximo do PDF que o bot lê (5 MB, PROVISÓRIO) |
+| `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
 | `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
 | `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
@@ -205,7 +205,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Bot (`src/bot`)
 | Arquivo | Faz |
 |---|---|
-| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato |
+| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O PDF do cliente de até 5 MB entra como bloco `document` (só o Claude lê; o GPT recebe um aviso); imagem entra como bloco `image` |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções ativas do banco. Não lê mais nenhum arquivo |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação |

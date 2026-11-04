@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { lerMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
-import { avaliarLimiteDoBot } from "@/regras/limite-bot";
+import { avaliarLimiteDoBot, pdfCabeParaOBot } from "@/regras/limite-bot";
 import { descricaoDoTipo } from "@/regras/midia";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
@@ -108,7 +108,16 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
 
   for (const m of novas) {
     if (m.autor === "cliente") {
-      // Vídeo e documento (PDF, Word, Excel, DWG) ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
+      // PDF pequeno o bot lê (bloco "document" da API do Claude).
+      if (m.midiaArquivo && m.midiaTipo === "application/pdf") {
+        const dados = await lerMidia(m.midiaArquivo).catch(() => null);
+        if (dados && pdfCabeParaOBot(dados.length)) {
+          blocos.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: dados.toString("base64") } });
+          blocos.push({ type: "text", text: `<cliente>[enviou o PDF acima${m.midiaNome ? `, chamado "${escapar(m.midiaNome)}"` : ""}]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
+          continue;
+        }
+      }
+      // Vídeo e os outros documentos (Word, Excel, DWG, ZIP; PDF grande demais) ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
       if (m.midiaArquivo && m.midiaTipo && !m.midiaTipo.startsWith("image/")) {
         const rotulo = descricaoDoTipo(m.midiaTipo);
         blocos.push({ type: "text", text: `<cliente>[enviou ${rotulo}${m.midiaNome ? ` chamado "${escapar(m.midiaNome)}"` : ""}; o sistema guardou o arquivo para o consultor, mas você não consegue ver o conteúdo]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });

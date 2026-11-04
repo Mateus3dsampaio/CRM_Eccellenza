@@ -31,5 +31,5 @@ export function pediuParaParar(texto: string | null | undefined): boolean {
   return PEDIDOS.includes(normalizar(texto));
 }
 
-// PROVISÓRIO: texto proposto, o Mateus aprova antes de valer (vai para o cliente final).
+// Texto aprovado pelo Mateus em 05/11/2026.
 export const TEXTO_CONFIRMA_PARAR = "Tudo bem! Você não vai mais receber mensagens automáticas nossas. Se mudar de ideia, é só nos chamar por aqui.";

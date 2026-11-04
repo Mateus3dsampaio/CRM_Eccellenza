@@ -91,3 +91,10 @@ describe("bot com GPT", () => {
     expect(r.erro).not.toContain("sk-openai");
   });
 });
+
+describe("PDF e o GPT", () => {
+  it("o bloco document vira um aviso de texto (só o Claude lê PDF)", () => {
+    const m = paraMensagensOpenAI("S", [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: "AAA" } }, { type: "text", text: "<cliente>[enviou o PDF acima]</cliente>" }] }]);
+    expect(m[1]).toMatchObject({ role: "user", content: [{ type: "text", text: expect.stringContaining("não consegue ler") }, { type: "text" }] });
+  });
+});
