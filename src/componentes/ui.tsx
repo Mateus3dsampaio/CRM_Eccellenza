@@ -2,6 +2,7 @@
 
 import { Bell, Check, CheckCheck, Inbox, Loader2, X, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { nomeEtiqueta } from "@/regras/etapas";
 import { COR_AVATAR, COR_ETIQUETA, juntar } from "./estilos";
 
@@ -193,3 +194,67 @@ export function Campo({ rotulo, children, dica }: { rotulo: string; children: Re
 
 export const classeEntrada =
   "w-full min-h-toque rounded-controle border border-borda bg-superficie px-3 py-2 text-sm text-texto placeholder:text-texto-fraco focus:border-marca focus:outline-none focus-visible:outline-none focus:ring-3 focus:ring-marca/25";
+
+/**
+ * Popover ancorado num botão (tarefa 27): o conteúdo abre logo abaixo do `gatilho`, fecha com Esc e clique fora.
+ * No celular vira uma folha que sobe de baixo. Quem usa controla `aberto`.
+ */
+export function Popover({
+  aberto,
+  aoFechar,
+  gatilho,
+  titulo,
+  children,
+  largura = "sm:w-80",
+  alinhar = "direita",
+}: {
+  aberto: boolean;
+  aoFechar: () => void;
+  gatilho: ReactNode;
+  titulo: string;
+  children: ReactNode;
+  largura?: string;
+  alinhar?: "esquerda" | "direita";
+}) {
+  const raiz = useRef<HTMLDivElement>(null);
+  const refFechar = useRef(aoFechar);
+  useEffect(() => {
+    refFechar.current = aoFechar;
+  });
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent | TouchEvent) => !raiz.current?.contains(e.target as Node) && refFechar.current();
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && refFechar.current();
+    document.addEventListener("mousedown", fora);
+    document.addEventListener("touchstart", fora);
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("mousedown", fora);
+      document.removeEventListener("touchstart", fora);
+      document.removeEventListener("keydown", tecla);
+    };
+  }, [aberto]);
+  return (
+    <div ref={raiz} className="relative">
+      {gatilho}
+      {aberto && (
+        <>
+          {/* Celular: fundo escurecido atrás da folha. */}
+          {typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[49] bg-texto/40 sm:hidden" aria-hidden onMouseDown={aoFechar} />, document.body)}
+          <div
+            role="dialog"
+            aria-label={titulo}
+            className={juntar(
+              "fixed inset-x-0 bottom-0 z-50 animate-surgir rounded-t-painel border border-borda bg-superficie p-4 shadow-flutuante sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:mt-2 sm:rounded-painel",
+              alinhar === "direita" ? "sm:right-0" : "sm:left-0",
+              largura,
+            )}
+          >
+            <p className="mb-3 text-sm font-semibold">{titulo}</p>
+            {children}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

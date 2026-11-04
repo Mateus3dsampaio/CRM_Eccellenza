@@ -228,7 +228,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Componentes (`src/componentes`)
 | Arquivo | Faz |
 |---|---|
-| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
+| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro `Popover` (tarefa 27): conteúdo ancorado num botão, fecha com Esc/clique fora, folha de baixo no celular |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) Toasts (tarefa 25): canto inferior direito, até 3 visíveis + "e mais N", somem sozinhos (ok/erro 6 s, alerta 15 s), pausa com o mouse, botão de ação opcional (`avisar(texto, tipo, { acao })`) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações ("Retornos N", "Esperando N" com texto a partir de 1280px, Nova mensagem, avisos, menu do avatar). No celular tem que caber em 375px sem rolar para o lado |
@@ -255,7 +255,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/decisao.tsx` | Janela de decisão da data vencida (medição feita/remarcar/desistiu; fechou/negociando/não veio/desistiu; fechou/ainda negociando/não fechou). Cada botão abre a janela que já existe (agenda ou dados da etapa) |
-| `src/componentes/kanban/quadro.tsx` | Abre a janela de decisão pela etiqueta do card. Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). |
+| `src/componentes/kanban/quadro.tsx` | Abre a janela de decisão pela etiqueta do card. Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads"; etiqueta/cidade/zoom num popover, filtros ligados viram chips com "x", tarefa 27; Fechado/Perdido recolhidas e zoom automático, tarefa 24) Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). |
 | `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante de decisão pendente (abre a janela de decisão; card com borda vermelha), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro: níveis fixos ou "auto" (padrão, tarefa 24), que `zoomParaCaber` calcula para as colunas abertas caberem na tela (mínimo 75%) |

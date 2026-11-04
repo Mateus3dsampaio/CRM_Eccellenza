@@ -1,6 +1,6 @@
 # Tarefa 27 – Filtros do kanban em popover com chips
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** Decisão: o zoom (−/%/+ e "Ajustar à tela") foi para dentro do popover de filtros como "Tamanho dos cards"; a barra ficou com busca, Esperando resposta, consultores, chips dos filtros ligados, Filtros e Selecionar. `Popover` genérico novo em `ui.tsx` (vira folha de baixo no celular).
 
 ## Problema
 A linha de filtros já tem busca, "Esperando resposta", chips de consultor, zoom, Filtros e Selecionar. Clicar em "Filtros" abre uma segunda linha inteira com dois selects e "Limpar filtros". Dois níveis para pouca coisa.

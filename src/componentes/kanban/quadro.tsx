@@ -14,6 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CheckSquare, ChevronsLeftRight, Clock, Filter, Minus, Pencil, Plus, Scan, Search, Trash2, Archive, UserRound, X } from "lucide-react";
+import { nomeEtiqueta } from "@/regras/etapas";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, etapaComAgenda, type CodigoEtapa, type EtapaComAgenda } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
 import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
@@ -21,7 +22,7 @@ import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
 import { AvisoMidias } from "../midias/aviso-midias";
-import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, Popover, classeEntrada } from "../ui";
 import { usePode, useUsuario } from "../usuario";
 import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "../ficha/agendar";
@@ -275,7 +276,7 @@ export function Quadro() {
       <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="sr-only">Atendimentos</h1>
-          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-xs sm:flex-1 sm:basis-auto">
+          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-[15rem] sm:flex-1 sm:basis-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-texto-fraco" aria-hidden />
             <input
               type="search"
@@ -320,7 +321,59 @@ export function Quadro() {
               ))}
             </div>
           )}
-          <div className="hidden items-center rounded-controle bg-superficie shadow-card md:ml-auto md:flex" role="group" aria-label="Zoom do quadro">
+          {/* Filtros ligados viram chips com "x" (tarefa 27): dá para ver o que está filtrando sem abrir nada. */}
+          {etiqueta && <ChipFiltro rotulo={`Etiqueta: ${nomeEtiqueta(etiqueta)}`} aoRemover={() => setEtiqueta("")} />}
+          {cidade && <ChipFiltro rotulo={`Cidade: ${cidade}`} aoRemover={() => setCidade("")} />}
+          {!ehAdmin && consultor && <ChipFiltro rotulo={`Consultor: ${consultores.find(([id]) => id === consultor)?.[1] ?? ""}`} aoRemover={() => setConsultor("")} />}
+          <div className="md:ml-auto" />
+          <Popover
+            aberto={filtrosAbertos}
+            aoFechar={() => setFiltrosAbertos(false)}
+            titulo="Filtros do quadro"
+            largura="sm:w-96"
+            gatilho={
+              <Botao onClick={() => setFiltrosAbertos((f) => !f)} aria-expanded={filtrosAbertos} icone={<Filter className="size-4" aria-hidden />}>
+                Filtros{filtrosAtivos ? ` · ${filtrosAtivos}` : ""}
+              </Botao>
+            }
+          >
+            <div className="grid gap-3">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-texto-suave">Etiqueta</span>
+                <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">
+                  <option value="">Todas as etiquetas</option>
+                  {ETIQUETAS.map((e) => (
+                    <option key={e.codigo} value={e.codigo}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!ehAdmin && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-texto-suave">Consultor</span>
+                  <select className={classeEntrada} value={consultor} onChange={(e) => setConsultor(e.target.value)} aria-label="Filtrar por consultor">
+                    <option value="">Todos os consultores</option>
+                    {consultores.map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-texto-suave">Cidade</span>
+                <select className={classeEntrada} value={cidade} onChange={(e) => setCidade(e.target.value)} aria-label="Filtrar por cidade">
+                  <option value="">Todas as cidades</option>
+                  {cidades.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="hidden items-center justify-between gap-2 border-t border-borda pt-3 md:flex">
+                <span className="text-xs font-medium text-texto-suave">Tamanho dos cards</span>
+          <div className="flex items-center rounded-controle bg-superficie-suave" role="group" aria-label="Zoom do quadro">
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
               disabled={indiceZoom <= 0}
@@ -352,9 +405,20 @@ export function Quadro() {
               <Scan className="size-4" aria-hidden />
             </button>
           </div>
-          <Botao onClick={() => setFiltrosAbertos((f) => !f)} aria-expanded={filtrosAbertos} icone={<Filter className="size-4" aria-hidden />}>
-            Filtros{filtrosAtivos ? ` (${filtrosAtivos})` : ""}
-          </Botao>
+              </div>
+              <Botao
+                variante="fantasma"
+                onClick={() => {
+                  setEtiqueta("");
+                  setConsultor("");
+                  setCidade("");
+                }}
+                disabled={!filtrosAtivos}
+              >
+                Limpar filtros
+              </Botao>
+            </div>
+          </Popover>
           {selecionando ? (
             <Botao variante="fantasma" onClick={sairSelecao} icone={<X className="size-4" aria-hidden />}>
               Cancelar seleção
@@ -365,45 +429,6 @@ export function Quadro() {
             </Botao>
           )}
         </div>
-        {filtrosAbertos && (
-          <div className="grid animate-surgir gap-2 rounded-card border border-borda bg-superficie p-3 shadow-painel sm:grid-cols-4">
-            <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">
-              <option value="">Todas as etiquetas</option>
-              {ETIQUETAS.map((e) => (
-                <option key={e.codigo} value={e.codigo}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-            {!ehAdmin && (
-            <select className={classeEntrada} value={consultor} onChange={(e) => setConsultor(e.target.value)} aria-label="Filtrar por consultor">
-              <option value="">Todos os consultores</option>
-              {consultores.map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-            )}
-            <select className={classeEntrada} value={cidade} onChange={(e) => setCidade(e.target.value)} aria-label="Filtrar por cidade">
-              <option value="">Todas as cidades</option>
-              {cidades.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <Botao
-              variante="fantasma"
-              onClick={() => {
-                setEtiqueta("");
-                setConsultor("");
-                setCidade("");
-              }}
-              disabled={!filtrosAtivos}
-            >
-              Limpar filtros
-            </Botao>
-          </div>
-        )}
         {selecionando && (
           <div className="flex flex-wrap items-center gap-2 rounded-card bg-marca-suave p-2 pl-4 text-sm">
             <span className="font-medium text-marca-texto">{selecionados.size} selecionado(s)</span>
@@ -545,6 +570,18 @@ export function Quadro() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** Chip de filtro ligado, com "x" para tirar (tarefa 27). */
+function ChipFiltro({ rotulo, aoRemover }: { rotulo: string; aoRemover: () => void }) {
+  return (
+    <span className="inline-flex min-h-toque items-center gap-1 rounded-pilula bg-marca-suave pl-3 pr-1.5 text-sm font-medium text-marca-texto">
+      {rotulo}
+      <button type="button" onClick={aoRemover} className="inline-flex size-7 items-center justify-center rounded-full hover:bg-marca/20" aria-label={`Tirar o filtro ${rotulo}`}>
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </span>
   );
 }
 
