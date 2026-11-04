@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, BarChart3, CalendarDays, Images, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
 import { juntar } from "./estilos";
 import { Entalhe } from "./entalhe/entalhe";
 import { usePode } from "./usuario";
 
+// Grupos (tarefa 32): 1 = trabalho do dia, 2 = arquivo, 3 = ferramenta de teste. Um traço separa os grupos no menu.
 export const LINKS = [
-  { href: "/", rotulo: "Kanban", icone: KanbanSquare },
-  { href: "/agenda", rotulo: "Agenda", icone: CalendarDays },
-  { href: "/painel", rotulo: "Painel", icone: BarChart3 },
-  { href: "/galeria", rotulo: "Galeria", icone: Images },
-  { href: "/simulador", rotulo: "Simulador", icone: Smartphone },
-  { href: "/arquivados", rotulo: "Arquivados", icone: Archive },
+  { href: "/", rotulo: "Kanban", icone: KanbanSquare, grupo: 1 },
+  { href: "/agenda", rotulo: "Agenda", icone: CalendarDays, grupo: 1 },
+  { href: "/painel", rotulo: "Painel", icone: BarChart3, grupo: 1 },
+  { href: "/galeria", rotulo: "Galeria", icone: Images, grupo: 1 },
+  { href: "/arquivados", rotulo: "Arquivados", icone: Archive, grupo: 2 },
+  { href: "/simulador", rotulo: "Simulador", icone: Smartphone, grupo: 3 },
 ];
 export const LINK_CONFIG = {
   href: "/configuracoes",
@@ -67,6 +68,12 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const movelRef = useRef<HTMLDivElement>(null);
   const itensMovelRef = useRef<(HTMLElement | null)[]>([]);
   const rotuloClasse = juntar("whitespace-nowrap transition-opacity duration-150 ease-out", mini && "pointer-events-none opacity-0");
+  // Com os traços entre grupos, a posição do indicador vem do próprio item ativo (não é mais múltiplo da altura).
+  const [topoAtivo, setTopoAtivo] = useState(0);
+  useLayoutEffect(() => {
+    const el = itensRef.current[indiceLinks];
+    if (el) setTopoAtivo(el.offsetTop);
+  }, [indiceLinks, links.length]);
 
   return (
     <>
@@ -98,22 +105,25 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
               className="afundado pointer-events-none absolute inset-x-0 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
               style={{
                 height: ALTURA_ITEM,
-                transform: `translateY(${indiceLinks * (ALTURA_ITEM + 2)}px)`,
+                transform: `translateY(${topoAtivo}px)`,
               }}
             />
           )}
-          {links.map(({ href, rotulo, icone: Icone }, i) => (
+          {links.map(({ href, rotulo, icone: Icone, grupo }, i) => (
             <Link
               key={href}
+              data-grupo={grupo}
+              // Traço antes do primeiro item de cada grupo novo (menu aberto: borda; encolhido: espaço maior).
+              style={{ height: ALTURA_ITEM, ...(i > 0 && links[i - 1].grupo !== grupo ? { marginTop: mini ? 10 : 14 } : {}) }}
               ref={(el) => {
                 itensRef.current[i] = el;
               }}
               href={href}
               title={rotulo}
               aria-current={ativo(href) ? "page" : undefined}
-              style={{ height: ALTURA_ITEM }}
               className={juntar(
                 "relative z-10 flex items-center gap-3 rounded-controle px-[11px] text-sm font-medium transition-colors duration-150",
+                i > 0 && links[i - 1].grupo !== grupo && !mini && "antes-traco",
                 ativo(href) ? "text-sobre-marca" : "text-texto-suave hover:text-texto",
               )}
             >

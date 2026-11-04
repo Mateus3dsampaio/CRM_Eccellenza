@@ -1,6 +1,6 @@
 # Tarefa 32 – Menu lateral: ordem e grupos
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** O traço é desenhado acima do primeiro item de cada grupo (`.antes-traco` em `globals.css`); encolhido vira só um espaço maior. O indicador deslizante passou a medir a posição real do item ativo.
 
 ## O que fazer
 - Ordem por frequência de uso, em três grupos separados por um traço fino:
