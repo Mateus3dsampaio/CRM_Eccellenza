@@ -15,12 +15,13 @@ import {
   type TipoCompromisso,
 } from "@/regras/agenda";
 import { ETAPAS, type CodigoEtapa } from "@/regras/etapas";
+import { venceu } from "@/regras/decisao";
 import { formatarVisitaCurta, inicioDoDiaLocal, somarDias } from "@/regras/tempo";
 import { regrasDaAgenda } from "./configuracoes";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { atualizarResumo, moverEtapa } from "./leads";
-import { registrarUmaVez } from "./metricas";
+import { registrarEvento, registrarUmaVez } from "./metricas";
 
 export class ErroAgenda extends Error {}
 
@@ -147,6 +148,12 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
 
   await db.lead.update({ where: { id: lead.id }, data: { consultorId } });
   await registrarUmaVez(lead.id, EVENTO_DO_TIPO[tipo], consultorId);
+  // Remarcar medição ou apresentação depois que a data venceu = o compromisso não aconteceu (cliente faltou). Conta no Painel.
+  const faltou = tipo !== "visita" ? anteriores.find((v) => venceu(v.inicio, quando)) : undefined;
+  if (faltou) {
+    await registrarEvento("nao_compareceu", faltou.consultorId);
+    await registrarAlteracao(lead.id, params.autor, `Cliente não compareceu à ${nomeTipo} de ${formatarVisitaCurta(faltou.inicio)}`);
+  }
   await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} ${nomeTipo}: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
   // AGENDA-04: medição e apresentação movem o card (sem voltar etapas mais avançadas).
   const destino = etapaAoAgendar(lead.etapa, tipo);

@@ -133,9 +133,10 @@ export function BotaoRetornos() {
                       <span className="truncate">{l.nome}</span>
                       {l.valorOrcamento ? <span className="shrink-0 text-xs font-medium text-texto-suave">{formatarReais(l.valorOrcamento)}</span> : null}
                     </p>
-                    <p className={juntar("mt-0.5 inline-flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_RETORNO[l.situacao])}>
+                    <p className={juntar("mt-0.5 inline-flex flex-wrap items-center gap-1 text-xs", l.decisao ? "font-bold text-alerta" : "font-medium", CLASSE_TEXTO_RETORNO[l.situacao])}>
                       <CalendarClock className="size-3.5" aria-hidden />
-                      {textoDoRetorno(l.situacao, l.proximoContatoEm)}
+                      {/* Decisão pendente (data vencida) no lugar do texto do retorno: é o que o vendedor precisa resolver. */}
+                      {l.decisao ?? textoDoRetorno(l.situacao, l.proximoContatoEm)}
                       <span className="font-normal text-texto-fraco">
                         · {nomesEtapas.nome(l.etapa)}
                         {ehAdmin && ` · ${l.consultor ? l.consultor.nome : "sem consultor"}`}

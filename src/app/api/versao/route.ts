@@ -2,7 +2,7 @@ import { rota } from "@/lib/api";
 import { agora } from "@/lib/relogio";
 import { exigirUsuario } from "@/lib/sessao";
 import { versaoAtual } from "@/lib/versao";
-import { avisarPrazosVermelhos, avisarRetornos } from "@/servicos/alertas";
+import { avisarDecisoesVencidas, avisarPrazosVermelhos, avisarRetornos } from "@/servicos/alertas";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +13,6 @@ export const GET = rota(async () => {
   // Se a checagem falhar, a atualização das telas não pode parar junto.
   await avisarPrazosVermelhos().catch((erro) => console.error("[versao] falha ao checar prazos de espera:", erro));
   await avisarRetornos().catch((erro) => console.error("[versao] falha ao checar retornos:", erro));
+  await avisarDecisoesVencidas().catch((erro) => console.error("[versao] falha ao checar decisões vencidas:", erro));
   return { versao: await versaoAtual(), agora: (await agora()).toISOString() };
 });

@@ -42,6 +42,7 @@ interface Filtro {
 const SENTIDO_DO_INDICADOR: Record<string, "mais_e_melhor" | "menos_e_melhor" | "neutro"> = {
   curioso: "neutro",
   outra_cidade: "neutro",
+  nao_compareceu: "menos_e_melhor", // cliente que faltou à medição/apresentação: subir é ruim
 };
 
 function variacao(tipo: string, atual: number, anterior: number) {

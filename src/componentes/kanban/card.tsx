@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, CalendarCheck, CalendarClock, CalendarX, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CalendarClock, CalendarX, Gavel, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { formatarReais } from "@/regras/vendas";
+import { ETIQUETA_DECISAO } from "@/regras/decisao";
+import { formatarVisitaCurta } from "@/regras/tempo";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
 import { Avatar, Etiqueta, Sino } from "../ui";
@@ -20,6 +22,8 @@ export interface AcoesCard {
   removerEtiqueta: (id: string, etiqueta: string) => void;
   arquivar: (id: string) => void;
   excluir?: (id: string) => void;
+  /** Abre a janela de decisão (data vencida: medição, apresentação ou retorno da Negociação). */
+  decidir?: (id: string) => void;
 }
 
 /** Valor mostrado no card: orçamento em Orçamento/Negociação, valor fechado em Fechado. Vazio nas outras etapas. */
@@ -64,7 +68,8 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
         </div>
       </div>
       {espera.esperando && (
-        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_ESPERA[espera.faixa])}>
+        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", espera.faixa === "vermelho" ? "font-bold text-texto" : CLASSE_TEXTO_ESPERA[espera.faixa])}>
+          {/* No card vermelho vivo, o texto vermelho sumiria: vai em branco e negrito. */}
           <Clock className="size-3.5 shrink-0" aria-hidden />
           esperando há {espera.texto}
         </p>
@@ -239,7 +244,7 @@ export function Card({
       className={juntar(
         "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
         CLASSE_CARD_ESPERA[faixa],
-        retorno && CLASSE_CARD_RETORNO[retorno.situacao],
+        card.decisao ? "ring-2 ring-alerta" : retorno && CLASSE_CARD_RETORNO[retorno.situacao],
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
       )}
@@ -253,6 +258,22 @@ export function Card({
         <Link href={`/lead/${card.id}`} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
           <ConteudoCard card={card} />
         </Link>
+      )}
+
+      {card.decisao && (
+        // Data vencida: o vendedor precisa decidir (pedido do Mateus 04/11/2026). Fora do link da ficha para não abrir as duas coisas.
+        <button
+          type="button"
+          onClick={() => acoes.decidir?.(card.id)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          disabled={selecionando || !acoes.decidir}
+          title={`Venceu em ${formatarVisitaCurta(new Date(card.decisao.venceuEm))}. Clique para decidir.`}
+          className="mr-10 mt-2 inline-flex animate-piscar items-center gap-1.5 rounded-pilula bg-alerta px-2.5 py-0.5 text-left text-xs font-bold text-sobre-cor transition hover:brightness-110 disabled:cursor-default"
+        >
+          <Gavel className="size-3.5 shrink-0" aria-hidden />
+          {ETIQUETA_DECISAO[card.decisao.tipo]}
+        </button>
       )}
 
       {card.etiquetas.length > 0 && (

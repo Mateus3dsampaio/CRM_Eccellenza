@@ -17,6 +17,7 @@ export type TipoEvento =
   | "visita_agendada"
   | "medicao_agendada"
   | "apresentacao_agendada"
+  | "nao_compareceu"
   | `etapa_${string}`;
 
 export async function registrarEvento(tipo: TipoEvento, consultorId?: string | null, quando?: Date): Promise<void> {
