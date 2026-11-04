@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Lock, Plus, Presentation } from "lucide-reac
 import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda } from "@/regras/agenda";
 import { DIA, chaveDia, formatarData, formatarDiaLongo, formatarDiaSemana, formatarHora, lerChaveDia, partesLocais, somarDias } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
-import { AbasEntalhe } from "../entalhe/abas";
+import { Abas } from "../entalhe/abas";
 import { primeiraMaiuscula } from "../texto";
 import { COR_AVATAR, juntar } from "../estilos";
 import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
@@ -94,7 +94,7 @@ export function Agenda() {
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="sr-only">Agenda</h1>
-        <AbasEntalhe
+        <Abas
           itens={[
             { codigo: "dia", rotulo: "Dia" },
             { codigo: "semana", rotulo: "Semana" },

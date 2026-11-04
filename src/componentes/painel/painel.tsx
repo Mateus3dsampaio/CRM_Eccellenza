@@ -6,7 +6,7 @@ import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
 import { useDados } from "../dados";
-import { AbasEntalhe } from "../entalhe/abas";
+import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Carregando, EstadoErro, classeEntrada } from "../ui";
 import { useUsuario } from "../usuario";
@@ -74,7 +74,7 @@ export function Painel() {
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="sr-only">Painel</h1>
-        <AbasEntalhe
+        <Abas
           itens={ATALHOS_PAINEL.map((a) => ({ codigo: a.codigo, rotulo: a.nome }))}
           valor={filtro.atalho}
           aoMudar={(codigo) => setFiltro({ ...filtro, atalho: codigo })}

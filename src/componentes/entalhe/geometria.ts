@@ -72,3 +72,46 @@ export function molaPasso(e: { x: number; v: number }, alvo: number, dt: number,
   e.v += (rigidez * (alvo - e.x) - amortecimento * e.v) * dt;
   e.x += e.v * dt;
 }
+
+/* ---------- Bojo líquido (modelo da referência, barra 2): a barra é colorida e ganha uma cúpula sobre a aba ativa ---------- */
+
+const RD = 20; // raio da cúpula
+const DESCE = 4; // o centro da cúpula fica 4 px abaixo da linha de cima da barra
+const RC = 9; // arco de concordância entre a cúpula e a barra
+/** Quanto a cúpula sobe acima da barra (px). */
+export const ALTURA_BOJO = RD - DESCE;
+/** Distância do centro até onde o bojo encosta de novo na barra. */
+export const MEIA_BASE_BOJO = Math.sqrt((RD + RC) * (RD + RC) - (RC + DESCE) * (RC + DESCE));
+const DT = (MEIA_BASE_BOJO * RD) / (RD + RC);
+
+/** Altura da cúpula (px, para cima) a `d` px do centro. Zero além da base. */
+export function formaDoBojo(d: number): number {
+  const a = Math.abs(d);
+  if (a >= MEIA_BASE_BOJO) return 0;
+  if (a >= DT) return RC - Math.sqrt(Math.max(0, RC * RC - (a - MEIA_BASE_BOJO) * (a - MEIA_BASE_BOJO)));
+  return -DESCE + Math.sqrt(Math.max(0, RD * RD - a * a));
+}
+
+/** Estica o bojo conforme a velocidade: mais comprido e mais baixo, com o lado de trás se arrastando. `plato` = meia-largura reta do topo (abas de texto são largas). */
+export function esticarBojo(v: number): { sy: number; sxl: number; sxr: number } {
+  const s = Math.min(1, Math.abs(v) / 900);
+  const sx = 1 + 0.9 * s;
+  const dir = Math.sign(v);
+  return { sy: 1 - 0.5 * s, sxl: sx * (dir > 0 ? 1 + 0.9 * s : 1), sxr: sx * (dir < 0 ? 1 + 0.9 * s : 1) };
+}
+
+/** Altura do bojo no ponto `x` (a forma toda estica junto, então continua encostando na barra sem quina). */
+export function alturaDoBojoEm(x: number, centro: number, plato: number, e: { sy: number; sxl: number; sxr: number }): number {
+  const d = x - centro;
+  const a = Math.max(0, Math.abs(d) - plato);
+  return e.sy * formaDoBojo(a / (d < 0 ? e.sxl : e.sxr));
+}
+
+/** Contorno da barra inteira (cantos de raio `r`) com o bojo subindo a borda de cima; `fino` = faixa onde amostrar mais (a curva). */
+export function contornoDaBarra(largura: number, topo: number, base: number, r: number, perfil: (x: number) => number, fino?: [number, number]): string {
+  const canto = (x: number) => (x < r ? r - Math.sqrt(r * r - (r - x) * (r - x)) : x > largura - r ? r - Math.sqrt(r * r - (x - (largura - r)) * (x - (largura - r))) : 0);
+  let d = `M0,${base - r}`;
+  for (let x = 0; x < largura; x += fino && x >= fino[0] && x <= fino[1] ? 0.5 : 3) d += `L${x.toFixed(1)},${(topo + canto(x) - perfil(x)).toFixed(2)}`;
+  d += `L${largura},${(topo + r - perfil(largura)).toFixed(2)}L${largura},${base - r}`;
+  return `${d}A${r},${r} 0 0 1 ${largura - r},${base}L${r},${base}A${r},${r} 0 0 1 0,${base - r}Z`;
+}

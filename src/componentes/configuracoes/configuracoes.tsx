@@ -7,7 +7,7 @@ import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
-import { AbasEntalhe } from "../entalhe/abas";
+import { Abas } from "../entalhe/abas";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
 import { ExportarDesempenho } from "./exportar-desempenho";
@@ -60,7 +60,7 @@ export function Configuracoes() {
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
-      <AbasEntalhe itens={ABAS} valor={aba} aoMudar={setAba} rotuloAria="Seções das configurações" />
+      <Abas itens={ABAS} valor={aba} aoMudar={setAba} rotuloAria="Seções das configurações" />
 
       {aba === "vendas" ? (
         <VendasConfig />

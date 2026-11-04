@@ -12,7 +12,7 @@ import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, N
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
-import { AbasEntalhe } from "../entalhe/abas";
+import { Abas } from "../entalhe/abas";
 import { COR_ETAPA, juntar } from "../estilos";
 import { Avatar, Botao, Carregando, EstadoErro, Modal, Sino, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
@@ -236,7 +236,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       ) : (
         <>
           {/* Celular: abas */}
-          <AbasEntalhe itens={abas.map((a) => ({ codigo: a.id, rotulo: a.rotulo }))} valor={aba} aoMudar={setAba} rotuloAria="Seções da ficha" />
+          <Abas itens={abas.map((a) => ({ codigo: a.id, rotulo: a.rotulo }))} valor={aba} aoMudar={setAba} rotuloAria="Seções da ficha" />
           {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{blocos.conversa}</div>}
           {aba === "ficha" && (
             <div className="space-y-4">

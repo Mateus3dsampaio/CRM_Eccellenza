@@ -7,7 +7,7 @@ import { formatarTamanho, type FamiliaMidia } from "@/regras/midia";
 import { formatarDataHora } from "@/regras/tempo";
 import type { Galeria as DadosGaleria, ItemDaGaleria } from "@/servicos/midias";
 import { chamarApi, useAviso, useDados } from "../dados";
-import { AbasEntalhe } from "../entalhe/abas";
+import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
@@ -46,7 +46,7 @@ export function Galeria() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <AbasEntalhe
+        <Abas
           itens={FILTROS.map((f) => ({ codigo: f.codigo || "tudo", rotulo: f.nome }))}
           valor={tipo || "tudo"}
           aoMudar={(c) => {
