@@ -16,7 +16,11 @@ export const LINKS = [
   { href: "/simulador", rotulo: "Simulador", icone: Smartphone },
   { href: "/arquivados", rotulo: "Arquivados", icone: Archive },
 ];
-export const LINK_CONFIG = { href: "/configuracoes", rotulo: "Configurações", icone: Settings };
+export const LINK_CONFIG = {
+  href: "/configuracoes",
+  rotulo: "Configurações",
+  icone: Settings,
+};
 
 const CHAVE_MINI = "menu-mini";
 const ALTURA_ITEM = 42; // px
@@ -57,6 +61,9 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const indice = itensDesktop.findIndex((l) => ativo(l.href));
   const asideRef = useRef<HTMLElement>(null);
   const itensRef = useRef<(HTMLElement | null)[]>([]);
+  const indiceLinks = links.findIndex((l) => ativo(l.href));
+  const movelRef = useRef<HTMLDivElement>(null);
+  const itensMovelRef = useRef<(HTMLElement | null)[]>([]);
   const rotuloClasse = juntar("whitespace-nowrap transition-opacity duration-150 ease-out", mini && "pointer-events-none opacity-0");
 
   return (
@@ -70,13 +77,29 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
         )}
       >
         <Link href="/" className="flex items-center gap-2.5 px-1 pb-3" aria-label="Eccellenza – início">
-          <span className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca" style={{ boxShadow: "0 3px 0 var(--color-marca-lado), inset 0 1px 0 rgb(255 255 255 / 0.35)" }}>
+          <span
+            className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca"
+            style={{
+              boxShadow: "0 3px 0 var(--color-marca-lado), inset 0 1px 0 rgb(255 255 255 / 0.35)",
+            }}
+          >
             E
           </span>
           <span className={juntar("font-semibold text-marca-texto", rotuloClasse)}>Eccellenza</span>
         </Link>
 
         <nav className="relative grid grid-cols-[minmax(0,1fr)] gap-0.5" aria-label="Principal">
+          {/* Menu aberto: o indicador afundado desliza. Menu encolhido: entra o entalhe flutuante (mais abaixo). */}
+          {!mini && indiceLinks >= 0 && (
+            <div
+              aria-hidden
+              className="afundado pointer-events-none absolute inset-x-0 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
+              style={{
+                height: ALTURA_ITEM,
+                transform: `translateY(${indiceLinks * (ALTURA_ITEM + 2)}px)`,
+              }}
+            />
+          )}
           {links.map(({ href, rotulo, icone: Icone }, i) => (
             <Link
               key={href}
@@ -118,7 +141,10 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
               }}
               title={LINK_CONFIG.rotulo}
               aria-current={ativo(LINK_CONFIG.href) ? "page" : undefined}
-              className={juntar("flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm transition", !ativo(LINK_CONFIG.href) && "text-texto-suave hover:bg-superficie hover:text-texto")}
+              className={juntar(
+                "flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm transition",
+                !ativo(LINK_CONFIG.href) ? "text-texto-suave hover:bg-superficie hover:text-texto" : !mini && "afundado",
+              )}
             >
               <Settings className="size-5 shrink-0" aria-hidden />
               <span className={rotuloClasse}>{LINK_CONFIG.rotulo}</span>
@@ -126,41 +152,69 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           )}
         </div>
 
-        <Entalhe
-          raiz={asideRef}
-          itens={itensRef}
-          indice={indice}
-          orientacao="vertical"
-          fundo="var(--color-fundo)"
-          classePilula="flex items-center gap-3 px-[11px] text-sm font-medium"
-          conteudo={(i) => {
-            const item = itensDesktop[i];
-            if (!item) return null;
-            const Icone = item.icone;
-            return (
-              <>
-                <Icone className="size-5 shrink-0" aria-hidden />
-                <span className={rotuloClasse}>{item.rotulo}</span>
-              </>
-            );
-          }}
-        />
+        {mini && (
+          <Entalhe
+            raiz={asideRef}
+            itens={itensRef}
+            indice={indice}
+            orientacao="vertical"
+            fundo="var(--color-fundo)"
+            classePilula="flex items-center gap-3 px-[11px] text-sm font-medium"
+            conteudo={(i) => {
+              const item = itensDesktop[i];
+              if (!item) return null;
+              const Icone = item.icone;
+              return (
+                <>
+                  <Icone className="size-5 shrink-0" aria-hidden />
+                  <span className={rotuloClasse}>{item.rotulo}</span>
+                </>
+              );
+            }}
+          />
+        )}
       </aside>
 
-      {/* Navegação inferior no celular */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid border-t border-borda bg-lateral md:hidden" style={{ gridTemplateColumns: `repeat(${todos.length}, minmax(0, 1fr))` }} aria-label="Principal (celular)">
-        {todos.map(({ href, rotulo, icone: Icone }) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={ativo(href) ? "page" : undefined}
-            className={juntar("flex min-h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium", ativo(href) ? "text-marca-texto" : "text-texto-suave")}
-          >
-            <Icone className="size-5" aria-hidden />
-            {rotulo}
-          </Link>
-        ))}
-      </nav>
+      {/* Navegação inferior no celular: a bolinha sai do entalhe e pousa no item ativo. O espaço de cima é transparente e não pega clique. */}
+      <div ref={movelRef} className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pt-8 md:hidden">
+        <nav
+          className="pointer-events-auto grid border-t border-borda bg-lateral"
+          style={{
+            gridTemplateColumns: `repeat(${todos.length}, minmax(0, 1fr))`,
+          }}
+          aria-label="Principal (celular)"
+        >
+          {todos.map(({ href, rotulo, icone: Icone }, i) => (
+            <Link
+              key={href}
+              ref={(el) => {
+                itensMovelRef.current[i] = el;
+              }}
+              href={href}
+              aria-current={ativo(href) ? "page" : undefined}
+              className={juntar("flex min-h-[60px] flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors", ativo(href) ? "text-marca-texto" : "text-texto-suave")}
+            >
+              <Icone data-icone className="size-5" aria-hidden />
+              {href === LINK_CONFIG.href ? "Config." : rotulo}
+            </Link>
+          ))}
+        </nav>
+        <Entalhe
+          raiz={movelRef}
+          itens={itensMovelRef}
+          indice={todos.findIndex((l) => ativo(l.href))}
+          orientacao="horizontal"
+          variante="bola"
+          soIcone
+          borda={32}
+          fundo="var(--color-fundo)"
+          classePilula="flex items-center justify-center"
+          conteudo={(i) => {
+            const Icone = todos[i]?.icone;
+            return Icone ? <Icone className="size-5" aria-hidden /> : null;
+          }}
+        />
+      </div>
     </>
   );
 }

@@ -9,7 +9,19 @@ const AJUSTES = {
   horizontal: { u0: -9, u1: 21, folga: 5, margem: 12, raio: 14, salto: 9 },
   // Menu na vertical: a pílula ocupa a linha inteira do item; o entalhe abre pela borda da direita.
   vertical: { u0: 0, u1: 0, folga: 5, margem: 6, raio: 12, salto: 10 },
+  // Barra de baixo do celular (modelo da referência): bolinha de 40 px que sai de um entalhe redondo.
+  bola: { u0: -17, u1: 23, folga: 4, margem: 8, raio: 30, salto: 14, comprimento: 40 },
 } as const;
+
+interface Ajuste {
+  u0: number;
+  u1: number;
+  folga: number;
+  margem: number;
+  raio: number;
+  salto: number;
+  comprimento?: number;
+}
 
 const RIGIDEZ = 210;
 const AMORTECIMENTO = 17;
@@ -29,6 +41,10 @@ interface Props {
   /** Item selecionado; -1 esconde tudo. */
   indice: number;
   orientacao: Orientacao;
+  /** `bola`: pílula redonda só com ícone, entalhe redondo (barra de baixo do celular). Só na horizontal. */
+  variante?: "bola";
+  /** Quando o item tem `[data-icone]`, só ele some sob a pílula (o texto do item fica). */
+  soIcone?: boolean;
   /** Horizontal: px do topo de `raiz` até a borda de cima da barra (espaço para a pílula subir). */
   borda?: number;
   /** O que vai escrito dentro da pílula (o item que ela está carregando). */
@@ -42,9 +58,9 @@ interface Props {
  * Entalhe flutuante: a pílula sai do entalhe, salta por cima da barra e pousa no item novo, onde o entalhe se abre de novo.
  * Desenha por cima dos itens (sem capturar clique) e anima direto no DOM, sem re-renderizar a tela a cada quadro.
  */
-export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, classePilula, fundo = "var(--color-fundo)" }: Props) {
+export function Entalhe({ raiz, itens, indice, orientacao, variante, soIcone, borda = 0, conteudo, classePilula, fundo = "var(--color-fundo)" }: Props) {
   const vertical = orientacao === "vertical";
-  const ajuste = AJUSTES[orientacao];
+  const ajuste: Ajuste = AJUSTES[variante ?? orientacao];
   const svgRef = useRef<SVGSVGElement>(null);
   const preencherRef = useRef<SVGPathElement>(null);
   const linhaRef = useRef<SVGPathElement>(null);
@@ -70,12 +86,22 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
   });
   // Sempre a versão mais nova das props, para o laço de animação não ficar com valores velhos.
   const props = useRef({ vertical, ajuste, borda, orientacao });
+  const soIconeRef = useRef(!!soIcone);
   const irParaRef = useRef<(i: number) => void>(() => {});
   const medirRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const est = e.current;
     const { orientacao: o } = props.current;
+
+    function limparItens() {
+      itens.current.forEach((el) => {
+        if (!el) return;
+        el.style.opacity = "";
+        const icone = el.querySelector<HTMLElement>("[data-icone]");
+        if (icone) icone.style.opacity = "";
+      });
+    }
 
     function desenhar() {
       const { vertical: v, ajuste: aj, borda: b } = props.current;
@@ -85,7 +111,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
         if (pilula) pilula.style.opacity = "0";
         if (preencherRef.current) preencherRef.current.setAttribute("d", "");
         if (linhaRef.current) linhaRef.current.setAttribute("d", "");
-        itens.current.forEach((el) => el && (el.style.opacity = ""));
+        limparItens();
         return;
       }
       const prog = progresso(est.c.x, est.c0, est.c1);
@@ -96,7 +122,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
         setNaPilula(est.ativo);
       }
       const borda = v ? est.largura : b;
-      const comp = Math.max(est.l.x, 1);
+      const comp = Math.max(aj.comprimento ?? est.l.x, 1);
       const profundidade = (m.u1 + aj.folga) * abertura;
       const { preencher, linha } = caminhoDoEntalhe(o, borda, est.c.x, comp / 2 + aj.margem, profundidade, aj.raio);
       preencherRef.current?.setAttribute("d", preencher);
@@ -127,7 +153,8 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
         if (!el || !md) return;
         const a = md.c - md.l / 2;
         const sobra = Math.max(0, Math.min(fim, a + md.l) - Math.max(ini, a));
-        el.style.opacity = (1 - suave(0.1, 0.6, sobra / md.l)).toFixed(3);
+        const alvo = soIconeRef.current ? (el.querySelector<HTMLElement>("[data-icone]") ?? el) : el;
+        alvo.style.opacity = (1 - suave(0.1, 0.6, sobra / md.l)).toFixed(3);
       });
     }
 
@@ -222,6 +249,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
 
     return () => {
       obs?.disconnect();
+      limparItens();
       window.removeEventListener("resize", medir);
       if (est.quadro) cancelAnimationFrame(est.quadro);
       est.quadro = 0;
@@ -238,6 +266,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
   // Texto, contagem ou largura dos itens mudaram: mede de novo (só acompanha, não anima).
   useLayoutEffect(() => {
     props.current = { vertical, ajuste, borda, orientacao };
+    soIconeRef.current = !!soIcone;
     medirRef.current();
   });
 
@@ -256,7 +285,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, borda = 0, conteudo, 
           top: 0,
           opacity: 0,
           overflow: "hidden",
-          borderRadius: "var(--radius-controle)",
+          borderRadius: variante === "bola" ? "50%" : "var(--radius-controle)",
           background: "linear-gradient(180deg, var(--color-marca-forte), var(--color-marca))",
           boxShadow: "0 3px 0 var(--color-marca-lado), 0 8px 14px rgb(63 116 236 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.3)",
           color: "var(--color-sobre-marca)",

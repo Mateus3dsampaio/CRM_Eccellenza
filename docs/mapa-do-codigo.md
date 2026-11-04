@@ -217,7 +217,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, trocar minha senha, sair). No celular tem que caber em 375px sem rolar para o lado |
-| `src/componentes/menu-lateral.tsx` | Menu lateral (computador) com o entalhe flutuante entre os itens (inclui Configurações) e opção de encolher (guarda a escolha); no celular vira a barra de baixo |
+| `src/componentes/menu-lateral.tsx` | Menu lateral (computador): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
 | `src/componentes/entalhe/geometria.ts` | Contas puras do entalhe flutuante (modelo `docs/referencia/modelos_interacao.html`, barra 3): salto, abertura, forma do recorte e caminho SVG, nas duas orientações, e a mola |
 | `src/componentes/entalhe/entalhe.tsx` | `Entalhe`: desenha por cima da barra o recorte e a pílula que salta e pousa no item novo (anima direto no DOM; respeita "reduzir movimento") |
 | `src/componentes/entalhe/abas.tsx` | `AbasEntalhe`: PADRÃO de qualquer escolha de abas ou filtro de uma opção só (Configurações, Galeria, Painel, Agenda, ficha no celular). Use no lugar de botões `role="tab"` soltos |
