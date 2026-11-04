@@ -112,8 +112,9 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
       ordem: -quando.getTime(),
       etapaAnterior: opcoes.guardarAnterior ? lead.etapa : lead.etapaAnterior,
       semRespostaEm: parouDeResponder ? quando : lead.semRespostaEm,
-      // O retorno marcado só vale em Em qualificação/Negociação (nas colunas com agenda, o compromisso é o próximo contato).
+      // O lembrete/retorno acompanha o lead nas etapas abertas; Fechado e Perdido apagam a data e a nota.
       proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : null,
+      lembreteNota: vaiTerRetorno && final.proximoContatoEm ? (dados.lembreteNota === undefined ? lead.lembreteNota : dados.lembreteNota?.trim() || null) : null,
       valorOrcamento: dados.valorOrcamento === undefined ? lead.valorOrcamento : dados.valorOrcamento,
       valorFechado: etapa === "fechado" ? final.valorFechado : lead.etapa === "fechado" ? null : lead.valorFechado,
       motivoPerda: etapa === "perdido" ? final.motivoPerda : lead.etapa === "perdido" ? null : lead.motivoPerda,
@@ -145,7 +146,13 @@ async function gravarDadosDeVenda(lead: Lead, dados: DadosDeVenda, autor: string
   if (dados.proximoContatoEm !== undefined && ETAPAS_COM_RETORNO.includes(lead.etapa as CodigoEtapa)) {
     if (!dados.proximoContatoEm && exigeRetorno(lead.etapa as CodigoEtapa, regras)) throw new ErroHttp(400, "Informe a data e a hora do próximo contato.");
     data.proximoContatoEm = dados.proximoContatoEm ?? null;
-    mudou.push("próximo contato");
+    // Concluir o lembrete (sem data) apaga a nota junto.
+    if (!dados.proximoContatoEm) data.lembreteNota = null;
+    mudou.push(dados.proximoContatoEm ? "lembrete" : "lembrete (concluído)");
+  }
+  if (dados.lembreteNota !== undefined && data.proximoContatoEm !== null && (dados.proximoContatoEm ?? lead.proximoContatoEm)) {
+    data.lembreteNota = dados.lembreteNota?.trim() || null;
+    if (!mudou.some((m) => m.startsWith("lembrete"))) mudou.push("nota do lembrete");
   }
   if (dados.valorOrcamento !== undefined) {
     data.valorOrcamento = dados.valorOrcamento;

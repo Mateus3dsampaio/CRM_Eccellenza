@@ -49,19 +49,19 @@ async function main() {
     exigencias?: string[]; pedidos?: string[]; etiquetas?: string[]; classificacao?: string; consultor?: string; aguardando?: boolean; modo?: string;
     msgs: Msg[]; visita?: Date; tipoVisita?: "visita" | "medicao" | "apresentacao"; criadoDiasAtras: number;
     // Vendas (centavos). retornoEmMin: minutos a partir de agora (negativo = já passou).
-    retornoEmMin?: number; valorOrcamento?: number; valorFechado?: number; motivoPerda?: string; concorrente?: string;
+    retornoEmMin?: number; lembreteNota?: string; valorOrcamento?: number; valorFechado?: number; motivoPerda?: string; concorrente?: string;
   }[] = [
     { tel: "+5588900000101", nome: "Ana Souza", etapa: "novo", criadoDiasAtras: 0, ambientes: ["cozinha"],
       msgs: [["cliente", "Oi, quero fazer minha cozinha", 40], ["bot", "Oi, Ana, tudo bem? 😊 Qual ambiente você tem interesse em fazer?", 39], ["cliente", "cozinha", 30], ["bot", "Certo! E o projeto será em qual cidade?", 29]] },
     { tel: "+5588900000102", nome: "Carlos Bezerra", etapa: "novo", cidade: "Crato", ambientes: ["cozinha", "quarto de casal"], criadoDiasAtras: 0,
       msgs: [["cliente", "Quero cozinha e quarto de casal", 120], ["bot", "Certo! E o projeto será em qual cidade?", 119], ["cliente", "Crato", 100], ["bot", "Certo. Você já tem um projeto ou planta com as medidas, ou prefere que a gente desenvolva o projeto para você?", 99]] },
-    { tel: "+5588900000103", nome: "Fernanda Lima", etapa: "pronto", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], investimento: "R$ 20–30 mil", situacao: "apartamento pronto", prazo: "mudança em 2 meses",
+    { tel: "+5588900000103", nome: "Fernanda Lima", etapa: "qualificacao", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], investimento: "R$ 20–30 mil", situacao: "apartamento pronto", prazo: "mudança em 2 meses",
       classificacao: "qualificado", consultor: rafael.id, aguardando: true, modo: "pausado", criadoDiasAtras: 1,
       msgs: [["cliente", "Quero fazer a cozinha do apartamento", 1500], ["bot", "Ok, entendi seu projeto! Vou passar para nosso consultor seguir com seu orçamento, tudo bem?", 1400], ["cliente", "Pode sim", 1390]] },
-    { tel: "+5588900000104", nome: "Arq. Juliana Moreira", etapa: "pronto", cidade: "Juazeiro do Norte", ambientes: ["casa completa"], etiquetas: ["parceiro"], classificacao: "parceiro",
+    { tel: "+5588900000104", nome: "Arq. Juliana Moreira", etapa: "qualificacao", cidade: "Juazeiro do Norte", ambientes: ["casa completa"], etiquetas: ["parceiro"], classificacao: "parceiro",
       consultor: beatriz.id, aguardando: true, modo: "pausado", criadoDiasAtras: 2,
       msgs: [["cliente", "Sou arquiteta, tenho um cliente que quer fechar a casa toda.", 2900], ["bot", "Certo! Vou passar seu contato para um dos nossos consultores, que vai falar com você em seguida.", 2899]] },
-    { tel: "+5588900000105", nome: "Roberto Alves", etapa: "pronto", cidade: "Iguatu", ambientes: ["cozinha"], etiquetas: ["outra_cidade"], classificacao: "outra_cidade",
+    { tel: "+5588900000105", nome: "Roberto Alves", etapa: "qualificacao", cidade: "Iguatu", ambientes: ["cozinha"], etiquetas: ["outra_cidade"], classificacao: "outra_cidade",
       consultor: rafael.id, aguardando: true, modo: "pausado", criadoDiasAtras: 2,
       msgs: [["cliente", "Quero cozinha, é em Iguatu.", 2800], ["bot", "Certo! Vou passar seu contato para um dos nossos consultores, que vai falar com você em seguida.", 2799]] },
     { tel: "+5588900000106", nome: "Patrícia Gomes", etapa: "apresentacao", tipoVisita: "apresentacao", valorOrcamento: 4_200_000, cidade: "Barbalha", ambientes: ["cozinha", "área gourmet"], exigencias: ["cores claras", "cooktop na ilha"],
@@ -71,7 +71,7 @@ async function main() {
     { tel: "+5588900000107", nome: "Marcos Tavares", etapa: "medicao", tipoVisita: "medicao", cidade: "Juazeiro do Norte", ambientes: ["closet"], classificacao: "qualificado", consultor: rafael.id, modo: "humano",
       visita: proximoDiaUtil(3, 8), criadoDiasAtras: 4, msgs: [["consultor", "Marcos, combinado: vou até sua casa fazer a medição do closet.", 4000], ["cliente", "Combinado, até lá", 3990]] },
     { tel: "+5588900000115", nome: "Bruno Teixeira", etapa: "qualificacao", tipoVisita: "visita", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], situacao: "casa pronta", classificacao: "qualificado", consultor: rafael.id, modo: "humano",
-      visita: proximoDiaUtil(1, 16), retornoEmMin: 24 * 60, criadoDiasAtras: 1,
+      visita: proximoDiaUtil(1, 16), retornoEmMin: 24 * 60, lembreteNota: "Confirmar se vai trazer a planta da cozinha", criadoDiasAtras: 1,
       msgs: [["consultor", "Bruno, pode passar aqui na loja para conhecer os acabamentos e trazer a planta.", 700], ["cliente", "Passo aí amanhã à tarde.", 650]] },
     { tel: "+5588900000108", nome: "Luciana Ribeiro", etapa: "negociacao", cidade: "Crato", ambientes: ["cozinha", "lavanderia"], investimento: "R$ 35 mil", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 8, retornoEmMin: 120, valorOrcamento: 3_500_000,
       msgs: [["consultor", "Luciana, obrigado pela visita! Qualquer dúvida sobre o orçamento estou por aqui.", 6000], ["cliente", "Obrigada! Vou conversar com meu marido.", 5900]] },
@@ -85,7 +85,7 @@ async function main() {
       msgs: [["cliente", "Quero um guarda-roupa", 12960], ["bot", "Certo! E o projeto será em qual cidade?", 12959], ["bot", "Oi! Passando para saber se você ainda tem interesse no seu projeto de móveis planejados. Se quiser, é só responder por aqui que seguimos com o atendimento. 😊", 8640]] },
     { tel: "+5588900000113", nome: "Antônio Pereira", etapa: "perdido", motivoPerda: "parou_de_responder", criadoDiasAtras: 12,
       msgs: [["cliente", "Quanto custa uma cozinha?", 17000], ["bot", "O orçamento é personalizado para cada projeto. Qual ambiente você tem interesse em fazer?", 16999]] },
-    { tel: "+5588900000114", nome: "Rita de Cássia", etapa: "pronto", cidade: "Juazeiro do Norte", etiquetas: ["pos_venda"], classificacao: "pos_venda", consultor: beatriz.id, aguardando: true, modo: "pausado", criadoDiasAtras: 0,
+    { tel: "+5588900000114", nome: "Rita de Cássia", etapa: "qualificacao", cidade: "Juazeiro do Norte", etiquetas: ["pos_venda"], classificacao: "pos_venda", consultor: beatriz.id, aguardando: true, modo: "pausado", criadoDiasAtras: 0,
       msgs: [["cliente", "Comprei com vocês, quando vem a montagem?", 15], ["bot", "Certo! Vou passar seu contato para um dos nossos consultores, que vai falar com você em seguida.", 14]] },
   ];
 
@@ -113,7 +113,7 @@ async function main() {
         proximoContatoEm: e.retornoEmMin !== undefined ? new Date(agora.getTime() + e.retornoEmMin * 60_000) : null,
         // Retorno que já passou no seed não gera aviso ao abrir o CRM; só aparece como atrasado.
         alertaContatoPara: e.retornoEmMin !== undefined && e.retornoEmMin < 0 ? new Date(agora.getTime() + e.retornoEmMin * 60_000) : null,
-        valorOrcamento: e.valorOrcamento, valorFechado: e.valorFechado, motivoPerda: e.motivoPerda, concorrente: e.concorrente,
+        lembreteNota: e.lembreteNota, valorOrcamento: e.valorOrcamento, valorFechado: e.valorFechado, motivoPerda: e.motivoPerda, concorrente: e.concorrente,
         repassadoEm: e.consultor && e.etapa !== "novo" ? new Date(Math.min(agora.getTime(), criadoEm.getTime() + 30 * 60_000)) : null,
         retomadaEnviadaEm: e.etiquetas?.includes("retomada") ? new Date(agora.getTime() - 8640 * 60_000) : null,
         ultimaMensagemEm: ultimaEm, ultimaMensagemPrevia: ultima[1].slice(0, 140),
@@ -153,7 +153,7 @@ async function main() {
     await db.lead.update({ where: { id: lead.id }, data: { marcasMetricas: JSON.stringify(e.visita ? [...eventos, eventoAgenda] : eventos) } });
     // Histórico de etapas de exemplo: nasce em "novo" e anda pelo funil até a etapa atual (usado pela exportação e pelo Painel por vendedor).
     // Medição só aparece no caminho de quem está nela (quem tem planta vai direto à apresentação).
-    const ordem = ["pronto", "qualificacao", "medicao", "apresentacao", "negociacao", "fechado"];
+    const ordem = ["qualificacao", "medicao", "apresentacao", "negociacao", "fechado"];
     const ate = ordem.indexOf(e.etapa);
     const caminho = ["novo", ...(ate >= 0 ? ordem.slice(0, ate + 1).filter((x) => x !== "medicao" || e.etapa === "medicao") : e.etapa === "perdido" ? ["perdido"] : [])];
     for (const [k, para] of caminho.entries()) {

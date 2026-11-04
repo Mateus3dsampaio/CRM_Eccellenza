@@ -100,7 +100,7 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     const [outra] = (await horariosLivresParaLead(leadOk.id, 2)).slice(1);
     await agendarVisita({ leadId: leadOk.id, inicio: outra.inicio, autor: "teste", tipo: "apresentacao" });
     expect(await db.eventoMetrica.count({ where: { tipo: "apresentacao_agendada" } })).toBe(1);
-    expect(await db.eventoMetrica.count({ where: { tipo: "etapa_pronto" } })).toBe(1);
+    expect(await db.eventoMetrica.count({ where: { tipo: "etapa_qualificacao" } })).toBe(1);
   });
   it("horário bloqueado nunca é oferecido e agendar move o card", async () => {
     const [a, b] = await criarConsultores();
@@ -194,7 +194,10 @@ describe("novo funil com a agenda (tarefa 21)", () => {
     await db.lead.update({ where: { id: l1.id }, data: { etapa: "visita" } });
     await db.lead.update({ where: { id: l2.id }, data: { etapa: "orcamento" } });
     await db.lead.update({ where: { id: l3.id }, data: { etapa: "sem_resposta", etapaAnterior: "novo" } });
-    expect(await converterFunilAntigo()).toBe(3);
+    const l4 = await obterOuCriarLead("+5588900005009");
+    await db.lead.update({ where: { id: l4.id }, data: { etapa: "pronto" } });
+    expect(await converterFunilAntigo()).toBe(4);
+    expect(await etapa(l4.id)).toBe("qualificacao");
     expect([await etapa(l1.id), await etapa(l2.id), await etapa(l3.id)]).toEqual(["apresentacao", "negociacao", "perdido"]);
     expect((await db.lead.findUniqueOrThrow({ where: { id: l3.id } })).motivoPerda).toBe("parou_de_responder");
     expect(await converterFunilAntigo()).toBe(0);
@@ -315,7 +318,7 @@ describe("funil e arquivamento (MET-02, AGENDA-02)", () => {
     await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
     await moverEtapa(lead.id, "novo", "teste");
     await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
-    for (const tipo of ["etapa_novo", "etapa_pronto", "etapa_qualificacao", "etapa_apresentacao", "etapa_fechado", "apresentacao_agendada"]) expect(await contar(tipo)).toBe(1);
+    for (const tipo of ["etapa_novo", "etapa_qualificacao", "etapa_apresentacao", "etapa_fechado", "apresentacao_agendada"]) expect(await contar(tipo)).toBe(1);
     expect(await contar("etapa_medicao")).toBe(0);
   });
 

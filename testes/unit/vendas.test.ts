@@ -35,7 +35,8 @@ describe("dinheiro (Bloco 2)", () => {
     expect(partirDataHoraLocal("2026-11-10T17:30:00.000Z")).toEqual({ data: "2026-11-10", hora: "14:30" });
   });
   it("o que cada etapa exige", () => {
-    expect(faltaParaMover("qualificacao", {})).toMatch(/próximo contato/);
+    expect(faltaParaMover("qualificacao", {})).toBeNull();
+    expect(faltaParaMover("negociacao", {})).toMatch(/próximo contato/);
     expect(faltaParaMover("negociacao", { proximoContatoEm: retorno })).toBeNull();
     expect(faltaParaMover("fechado", {})).toMatch(/valor fechado/);
     expect(faltaParaMover("perdido", {})).toMatch(/motivo/);
@@ -49,15 +50,43 @@ describe("dinheiro (Bloco 2)", () => {
 describe("mover etapa com dados de venda (Bloco 2)", () => {
   beforeEach(limparBanco);
 
-  it("recusa Em qualificação sem data e aceita com data", async () => {
+  it("Em qualificação não pede data (tarefa 22); Negociação recusa sem data e aceita com data", async () => {
     const lead = await obterOuCriarLead("+5588900000101");
-    await expect(moverEtapa(lead.id, "qualificacao", "Ana")).rejects.toThrow(/próximo contato/);
-    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("novo");
-    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 162100 } });
+    await moverEtapa(lead.id, "qualificacao", "Ana");
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("qualificacao");
+    await expect(moverEtapa(lead.id, "negociacao", "Ana")).rejects.toThrow(/próximo contato/);
+    await moverEtapa(lead.id, "negociacao", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 162100 } });
     const a = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(a.etapa).toBe("qualificacao");
+    expect(a.etapa).toBe("negociacao");
     expect(a.proximoContatoEm?.toISOString()).toBe(retorno.toISOString());
     expect(a.valorOrcamento).toBe(162100);
+  });
+
+  it("lembrete em qualquer etapa aberta: com nota, aparece em Retornos de hoje, sobrevive à mudança de etapa e some ao concluir ou fechar", async () => {
+    const [a] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900000109");
+    await db.lead.update({ where: { id: lead.id }, data: { consultorId: a.id } });
+    await moverEtapa(lead.id, "qualificacao", "Ana");
+    const hoje = new Date(Date.now() + 60_000);
+    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: hoje, lembreteNota: " pediu para chamar depois do dia 15 " } });
+    let l = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect(l.lembreteNota).toBe("pediu para chamar depois do dia 15");
+    const lista = await retornosDeHoje({ id: a.id, perfil: "consultor" });
+    expect(lista.find((x) => x.id === lead.id)?.lembreteNota).toBe("pediu para chamar depois do dia 15");
+    // Mudar de etapa aberta mantém o lembrete.
+    await db.visita.create({ data: { leadId: lead.id, consultorId: a.id, inicio: new Date(Date.now() + DIA), fim: new Date(Date.now() + DIA + 3_600_000), tipo: "medicao", criadoPor: "t", criadoEm: new Date() } });
+    await moverEtapa(lead.id, "medicao", "Ana");
+    l = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect([l.proximoContatoEm?.toISOString(), l.lembreteNota]).toEqual([hoje.toISOString(), "pediu para chamar depois do dia 15"]);
+    // Concluir apaga data e nota.
+    await moverEtapa(lead.id, "medicao", "Ana", { dados: { proximoContatoEm: null } });
+    l = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect([l.proximoContatoEm, l.lembreteNota]).toEqual([null, null]);
+    // Fechar apaga o lembrete.
+    await moverEtapa(lead.id, "medicao", "Ana", { dados: { proximoContatoEm: hoje, lembreteNota: "x" } });
+    await moverEtapa(lead.id, "fechado", "Ana", { dados: { valorFechado: 100000 } });
+    l = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect([l.proximoContatoEm, l.lembreteNota]).toEqual([null, null]);
   });
 
   it("de Em qualificação para Negociação mantém a data; para Fechado exige o valor e limpa a data", async () => {
@@ -80,7 +109,7 @@ describe("mover etapa com dados de venda (Bloco 2)", () => {
     await moverEtapa(lead.id, "perdido", "Ana", { dados: { motivoPerda: "concorrente", concorrente: " Todeschini " } });
     const p = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect([p.motivoPerda, p.concorrente]).toEqual(["concorrente", "Todeschini"]);
-    await moverEtapa(lead.id, "pronto", "Ana");
+    await moverEtapa(lead.id, "qualificacao", "Ana");
     const v = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect([v.motivoPerda, v.concorrente]).toEqual([null, null]);
   });
@@ -235,14 +264,14 @@ describe("configurar vendas (Bloco 2, tarefa 9)", () => {
     expect((await motivosDePerda()).map((m) => m.nome)).toEqual(["Preço", "Prazo", "Concorrente", "Desistiu", "Parou de responder", "Outro"]);
   });
 
-  it("Negociação deixa de exigir o próximo contato quando o admin desliga; Em qualificação continua exigindo", async () => {
+  it("Negociação deixa de exigir o próximo contato quando o admin desliga; Em qualificação nunca exige", async () => {
     const lead = await obterOuCriarLead("+5588900000401");
     await expect(moverEtapa(lead.id, "negociacao", "t")).rejects.toThrow(/próximo contato/);
     await definirExigirContatoNegociacao(false);
     await moverEtapa(lead.id, "negociacao", "t");
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("negociacao");
     const outro = await obterOuCriarLead("+5588900000402");
-    await expect(moverEtapa(outro.id, "qualificacao", "t")).rejects.toThrow(/próximo contato/);
+    await moverEtapa(outro.id, "qualificacao", "t");
     // Sem data e sem obrigação: não vira cobrança na lista de hoje.
     expect((await retornosDeHoje(admin)).map((l) => l.id)).not.toContain(lead.id);
     await definirExigirContatoNegociacao(true);

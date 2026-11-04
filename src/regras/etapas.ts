@@ -2,7 +2,7 @@
 // com o projeto pronto. Estes são os nomes de fábrica; o admin pode renomear cada coluna no Kanban (servicos/etapas.ts).
 export const ETAPAS = [
   { codigo: "novo", nome: "IA atendendo" },
-  { codigo: "pronto", nome: "Aguardando consultor" },
+  // Sem "Aguardando consultor" (decisão do Mateus 04/11/2026): o bot repassa direto para cá, já com o vendedor do rodízio.
   { codigo: "qualificacao", nome: "Em qualificação" },
   { codigo: "medicao", nome: "Medição agendada" },
   { codigo: "apresentacao", nome: "Apresentação agendada" },
@@ -67,10 +67,10 @@ export const ETAPAS_LIMPAVEIS: CodigoEtapa[] = ["perdido"];
  * Etapas do funil (MET-02), na ordem. Medição fica fora (é opcional: quem tem planta vai direto à apresentação)
  * e conta como "Em qualificação"; Negociação conta como "Apresentação" (vem depois dela, e quem fecha no dia pula).
  */
-export const ETAPAS_FUNIL: CodigoEtapa[] = ["novo", "pronto", "qualificacao", "apresentacao", "fechado"];
+export const ETAPAS_FUNIL: CodigoEtapa[] = ["novo", "qualificacao", "apresentacao", "fechado"];
 
 /** Etapa do funil em que cada coluna conta. Fora do funil (Perdido): não tem. */
-export const POSICAO_NO_FUNIL: Partial<Record<CodigoEtapa, number>> = { novo: 0, pronto: 1, qualificacao: 2, medicao: 2, apresentacao: 3, negociacao: 3, fechado: 4 };
+export const POSICAO_NO_FUNIL: Partial<Record<CodigoEtapa, number>> = { novo: 0, qualificacao: 1, medicao: 1, apresentacao: 2, negociacao: 2, fechado: 3 };
 
 /** Etapas que só recebem o card com o compromisso marcado na agenda (o tipo do compromisso tem o mesmo código). */
 export const ETAPAS_COM_AGENDA = ["medicao", "apresentacao"] as const;
@@ -80,8 +80,8 @@ export function etapaComAgenda(etapa: string): etapa is EtapaComAgenda {
   return (ETAPAS_COM_AGENDA as readonly string[]).includes(etapa);
 }
 
-/** Códigos de antes da tarefa 21 → coluna nova (conversão única dos bancos que já existiam). */
-export const ETAPAS_ANTIGAS: Record<string, CodigoEtapa> = { visita: "apresentacao", orcamento: "negociacao", sem_resposta: "perdido" };
+/** Códigos de colunas que saíram → coluna nova (conversão única dos bancos que já existiam; "pronto" saiu na tarefa 22). */
+export const ETAPAS_ANTIGAS: Record<string, CodigoEtapa> = { visita: "apresentacao", orcamento: "negociacao", sem_resposta: "perdido", pronto: "qualificacao" };
 
 // Etiquetas (KAN-04).
 export const ETIQUETAS = [

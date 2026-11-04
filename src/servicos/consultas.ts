@@ -39,8 +39,8 @@ export async function leadsAguardando(usuario: { id: string; perfil: string }) {
 const PESO_RETORNO = { atrasado: 0, hoje: 1, sem_data: 2, futuro: 3 } as const;
 
 /**
- * "Retornos de hoje": leads em Orçamento/Negociação com retorno hoje ou atrasado, mais os que ainda não têm retorno marcado
- * (dados antigos). O consultor vê os seus; o admin vê todos. Atrasados primeiro, depois por hora.
+ * "Retornos de hoje": leads abertos com lembrete/retorno hoje ou atrasado (qualquer etapa aberta, tarefa 22), mais os de
+ * Negociação sem data quando a data é obrigatória. O consultor vê os seus; o admin vê todos. Atrasados primeiro, depois por hora.
  */
 export async function retornosDeHoje(usuario: { id: string; perfil: string }) {
   const quando = await agora();
@@ -63,6 +63,7 @@ export async function retornosDeHoje(usuario: { id: string; perfil: string }) {
       nome: nomeExibicao(l),
       etapa: l.etapa,
       proximoContatoEm: l.proximoContatoEm?.toISOString() ?? null,
+      lembreteNota: l.lembreteNota,
       situacao: situacaoDoRetorno(l.proximoContatoEm, quando),
       valorOrcamento: l.valorOrcamento,
       consultor: l.consultor,
@@ -102,6 +103,7 @@ export async function cardsDoKanban() {
       investimento: l.investimento,
       etiquetas: lerLista(l.etiquetas),
       proximoContatoEm: l.proximoContatoEm?.toISOString() ?? null,
+      lembreteNota: l.lembreteNota,
       valorOrcamento: l.valorOrcamento,
       valorFechado: l.valorFechado,
       motivoPerda: l.motivoPerda,
@@ -160,6 +162,7 @@ export async function fichaDoLead(id: string) {
     resumo: lead.resumo,
     etapa: lead.etapa,
     proximoContatoEm: lead.proximoContatoEm?.toISOString() ?? null,
+    lembreteNota: lead.lembreteNota,
     valorOrcamento: lead.valorOrcamento,
     valorFechado: lead.valorFechado,
     motivoPerda: lead.motivoPerda,

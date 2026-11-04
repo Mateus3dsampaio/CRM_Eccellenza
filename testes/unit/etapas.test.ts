@@ -54,9 +54,9 @@ describe("nomes das colunas (serviço)", () => {
 
   it("o histórico do lead usa o nome atual da coluna", async () => {
     await criarConsultores();
-    await definirNomeDaEtapa("pronto", "Com o consultor");
+    await definirNomeDaEtapa("qualificacao", "Com o consultor");
     const lead = await obterOuCriarLead("+5588999990001", "Teste");
-    await moverEtapa(lead.id, "pronto", "Mateus", { semExigencias: true });
+    await moverEtapa(lead.id, "qualificacao", "Mateus", { semExigencias: true });
     const registro = await db.alteracao.findFirst({ where: { leadId: lead.id, descricao: { contains: "Moveu de" } } });
     expect(registro?.descricao).toContain('para "Com o consultor"');
   });

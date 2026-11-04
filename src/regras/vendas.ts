@@ -25,7 +25,7 @@ export interface MotivoDePerda {
 
 /** Regras que o admin configura e que o servidor confere ao mover o card. */
 export interface RegrasDeVendas {
-  /** Negociação exige "Próximo contato em". Em qualificação sempre exige. */
+  /** Negociação exige "Próximo contato em" (interruptor em Configurações > Vendas). */
   exigirContatoNegociacao: boolean;
   /** Motivos que podem ser escolhidos agora. */
   motivos: { codigo: string; pergunta: string | null }[];
@@ -39,11 +39,17 @@ export function nomeMotivo(codigo: string | null | undefined, motivos: { codigo:
 
 /** Essa etapa exige o próximo contato (com as regras de agora)? */
 export function exigeRetorno(etapa: CodigoEtapa, regras: Pick<RegrasDeVendas, "exigirContatoNegociacao"> = REGRAS_PADRAO): boolean {
-  return etapa === "qualificacao" || (etapa === "negociacao" && regras.exigirContatoNegociacao);
+  return etapa === "negociacao" && regras.exigirContatoNegociacao;
 }
 
-/** Etapas em que o lead tem um retorno marcado ("Próximo contato em"). Em Medição/Apresentação o compromisso na agenda é o próximo contato. */
-export const ETAPAS_COM_RETORNO: CodigoEtapa[] = ["qualificacao", "negociacao"];
+/**
+ * Etapas em que o lead pode ter um lembrete/retorno ("Próximo contato em", com nota opcional): todas as abertas.
+ * Só Negociação pode exigir; nas outras é o lembrete que o vendedor anota na ficha (tarefa 22). Fechado e Perdido apagam.
+ */
+export const ETAPAS_COM_RETORNO: CodigoEtapa[] = ["novo", "qualificacao", "medicao", "apresentacao", "negociacao"];
+
+/** Tamanho máximo da nota do lembrete. */
+export const NOTA_LEMBRETE_MAX = 200;
 
 /** Valor máximo aceito: R$ 100 milhões (evita número absurdo por engano). */
 export const VALOR_MAXIMO_CENTAVOS = 100_000_000 * 100;
@@ -75,6 +81,8 @@ export function lerReais(texto: string | null | undefined): number | null {
 
 export interface DadosDeVenda {
   proximoContatoEm?: Date | null;
+  /** Nota do lembrete (ex.: "pediu para chamar depois do dia 15"). Some junto com a data. */
+  lembreteNota?: string | null;
   valorOrcamento?: number | null;
   valorFechado?: number | null;
   motivoPerda?: string | null;
@@ -97,7 +105,7 @@ export function faltaParaMover(etapa: CodigoEtapa, final: DadosDeVenda, regras: 
 }
 
 /** Etapas que pedem dados ao receber o card (a tela abre a janela). Medição e Apresentação abrem a janela de agendar. */
-export const ETAPAS_QUE_PEDEM_DADOS: CodigoEtapa[] = ["qualificacao", "negociacao", "fechado", "perdido"];
+export const ETAPAS_QUE_PEDEM_DADOS: CodigoEtapa[] = ["negociacao", "fechado", "perdido"];
 
 /** "2026-11-10" + "14:30" (horário de Fortaleza) → instante. Inválido: null. */
 export function lerDataHoraLocal(data: string, hora: string): Date | null {

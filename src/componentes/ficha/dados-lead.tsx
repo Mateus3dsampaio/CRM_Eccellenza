@@ -5,7 +5,6 @@ import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2,
 import { useNomesEtapas } from "../etapas";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { CLASSIFICACOES, ETIQUETAS, etapaComAgenda, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
-import { formatarVisitaCurta } from "@/regras/tempo";
 import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -15,6 +14,7 @@ import { usePode } from "../usuario";
 import { JanelaMudanca } from "../vendas/janela-mudanca";
 import { useRegrasVendas } from "../vendas/regras";
 import { AgendarVisita } from "./agendar";
+import { Lembrete } from "./lembrete";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
 
@@ -33,9 +33,7 @@ function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => v
   const { motivos } = useRegrasVendas();
   if (!(ETAPAS_QUE_PEDEM_DADOS as string[]).includes(ficha.etapa)) return null;
   const linhas: [string, string][] = [];
-  if (ficha.etapa === "qualificacao" || ficha.etapa === "negociacao") {
-    linhas.push(["Próximo contato", ficha.proximoContatoEm ? formatarVisitaCurta(new Date(ficha.proximoContatoEm)) : "não definido"]);
-  }
+  // A data do próximo contato aparece no bloco Lembrete, logo abaixo (tarefa 22).
   if (ficha.etapa === "negociacao") linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
   if (ficha.etapa === "fechado") linhas.push(["Valor fechado", formatarReais(ficha.valorFechado) || "não informado"]);
   if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda, motivos)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
@@ -202,7 +200,6 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
                 ))}
               </select>
             </Campo>
-            <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
             <Campo rotulo="Consultor responsável" dica={souAdmin ? undefined : "Só o administrador transfere o lead para outro consultor."}>
               <select className={classeEntrada} value={ficha.consultor?.id ?? ""} disabled={!souAdmin} onChange={(e) => e.target.value && void transferir(e.target.value)}>
                 {!ficha.consultor && <option value="">Sem consultor</option>}
@@ -245,6 +242,8 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
                 </select>
               </div>
             </div>
+            <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
+            <Lembrete ficha={ficha} salvar={salvar} />
           </div>
         </Painel>
     ),

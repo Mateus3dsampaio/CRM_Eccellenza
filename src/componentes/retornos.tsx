@@ -34,7 +34,7 @@ export interface SituacaoDoCard {
 
 const dois = (n: number) => String(n).padStart(2, "0");
 
-/** Situação do retorno de um lead. Só existe em Orçamento e Negociação; nas outras etapas devolve null. */
+/** Situação do lembrete/retorno de um lead nas etapas abertas; em Fechado e Perdido devolve null. */
 export function useSituacaoRetorno(etapa: string, proximoContatoEm: string | null): SituacaoDoCard | null {
   const agora = useAgoraDoServidor();
   const regras = useRegrasVendas();
@@ -106,7 +106,8 @@ export function BotaoRetornos() {
         title={rotulo}
         className={juntar(
           "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium sm:gap-2 sm:px-3 shadow-card transition active:scale-[0.97]",
-          urgentes > 0 ? "bg-marca text-sobre-marca hover:bg-marca-forte" : "bg-superficie-suave text-texto-suave hover:text-texto",
+          // Com retorno para hoje ou atrasado, o botão pulsa para chamar atenção (pedido do Mateus, tarefa 22).
+          urgentes > 0 ? "animate-chamar bg-marca text-sobre-marca hover:bg-marca-forte" : "bg-superficie-suave text-texto-suave hover:text-texto",
         )}
       >
         <CalendarClock className="size-4" aria-hidden />
@@ -140,6 +141,7 @@ export function BotaoRetornos() {
                         {ehAdmin && ` · ${l.consultor ? l.consultor.nome : "sem consultor"}`}
                       </span>
                     </p>
+                    {l.lembreteNota && <p className="mt-0.5 line-clamp-2 text-xs text-texto-suave">{l.lembreteNota}</p>}
                   </Link>
                 </li>
               ))}
