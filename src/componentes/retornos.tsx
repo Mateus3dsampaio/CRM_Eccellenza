@@ -106,8 +106,8 @@ export function BotaoRetornos() {
         title={rotulo}
         className={juntar(
           "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium sm:gap-2 sm:px-3 shadow-card transition active:scale-[0.97]",
-          // Com retorno para hoje ou atrasado, o botão pulsa para chamar atenção (pedido do Mateus, tarefa 22).
-          urgentes > 0 ? "animate-chamar bg-marca text-sobre-marca hover:bg-marca-forte" : "bg-superficie-suave text-texto-suave hover:text-texto",
+          // Com retorno para hoje ou atrasado, o botão pisca em âmbar para chamar atenção (pedido do Mateus, tarefa 22).
+          urgentes > 0 ? "animate-chamar bg-aviso font-bold text-sobre-cor ring-2 ring-aviso/50 ring-offset-2 ring-offset-fundo hover:brightness-110" : "bg-superficie-suave text-texto-suave hover:text-texto",
         )}
       >
         <CalendarClock className="size-4" aria-hidden />

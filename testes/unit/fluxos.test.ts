@@ -10,6 +10,7 @@ import { janelaDeAgendamento } from "@/regras/agenda";
 import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresEmTorno, horariosLivresParaLead } from "@/servicos/agenda";
 import { converterFunilAntigo } from "@/servicos/conversao-funil";
 import { motivosDePerda } from "@/servicos/vendas";
+import { cardsDoKanban } from "@/servicos/consultas";
 import { dadosDoPainel } from "@/servicos/painel";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
@@ -136,6 +137,22 @@ describe("cliente volta a falar depois de Perdido", () => {
     // Mensagens seguintes não mexem mais no card.
     await registrarMensagemCliente(lead.id, "Pode ser sábado");
     expect((await ficha(lead.id)).etapa).toBe("apresentacao");
+  });
+  it("volta para Apresentação sem compromisso: card mostra Sem data até marcar na agenda", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900007005");
+    await moverEtapa(lead.id, "apresentacao", "teste", { semExigencias: true });
+    await moverEtapa(lead.id, "perdido", "Ana", { semExigencias: true });
+    await registrarMensagemCliente(lead.id, "Oi, ainda quero");
+    const card = async () => (await cardsDoKanban()).find((c) => c.id === lead.id)!;
+    expect(await card()).toMatchObject({ etapa: "apresentacao", semData: true });
+    // Visita à loja não conta como data da apresentação.
+    const [v] = await horariosLivresParaLead(lead.id, 1);
+    await agendarVisita({ leadId: lead.id, inicio: v.inicio, autor: "teste", tipo: "visita" });
+    expect((await card()).semData).toBe(true);
+    const [ap] = await horariosLivresParaLead(lead.id, 1, new Date(v.inicio.getTime() + DIA), "apresentacao");
+    await agendarVisita({ leadId: lead.id, inicio: ap.inicio, autor: "teste", tipo: "apresentacao" });
+    expect((await card()).semData).toBe(false);
   });
   it("card que já estava em Perdido antes da regra volta pelo histórico", async () => {
     const lead = await obterOuCriarLead("+5588900007003");
