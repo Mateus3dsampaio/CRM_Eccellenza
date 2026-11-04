@@ -15,7 +15,7 @@ import { AVISO_ALMOCO } from "@/regras/almoco";
 import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
 import { definirModoDistribuicao, definirRegrasDaAgenda, regrasDaAgenda } from "@/servicos/configuracoes";
 import { definirStatusConsultor, distribuirFila, escolherProximoConsultor } from "@/servicos/distribuicao";
-import { arquivarLeads, conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
+import { arquivarLeads, conferirMudanca, excluirLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
 import { receberMensagemCliente } from "@/servicos/conversa";
@@ -114,6 +114,45 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     await expect(agendarVisita({ leadId: lead.id, inicio, autor: "teste" })).rejects.toThrow(/livre/);
     await agendarVisita({ leadId: lead.id, inicio: livres[0].inicio, autor: "teste", tipo: "apresentacao" });
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("apresentacao");
+  });
+});
+
+describe("cliente volta a falar depois de Perdido", () => {
+  const ficha = (id: string) => db.lead.findUniqueOrThrow({ where: { id } });
+
+  it("movido para Perdido pelo consultor em Em qualificação: volta para Em qualificação", async () => {
+    const lead = await obterOuCriarLead("+5588900007001");
+    await moverEtapa(lead.id, "qualificacao", "teste", { semExigencias: true });
+    await moverEtapa(lead.id, "perdido", "Ana", { semExigencias: true, dados: { motivoPerda: "preco" } });
+    await registrarMensagemCliente(lead.id, "Oi, ainda tenho interesse");
+    expect(await ficha(lead.id)).toMatchObject({ etapa: "qualificacao", motivoPerda: null });
+  });
+  it("estava em Apresentação agendada: volta para Apresentação agendada", async () => {
+    const lead = await obterOuCriarLead("+5588900007002");
+    await moverEtapa(lead.id, "apresentacao", "teste", { semExigencias: true });
+    await moverEtapa(lead.id, "perdido", "Ana", { semExigencias: true });
+    await registrarMensagemCliente(lead.id, "Podemos remarcar?");
+    expect((await ficha(lead.id)).etapa).toBe("apresentacao");
+    // Mensagens seguintes não mexem mais no card.
+    await registrarMensagemCliente(lead.id, "Pode ser sábado");
+    expect((await ficha(lead.id)).etapa).toBe("apresentacao");
+  });
+  it("card que já estava em Perdido antes da regra volta pelo histórico", async () => {
+    const lead = await obterOuCriarLead("+5588900007003");
+    await db.lead.update({ where: { id: lead.id }, data: { etapa: "perdido", etapaAnterior: "novo" } });
+    await db.mudancaEtapa.create({ data: { leadId: lead.id, de: "medicao", para: "perdido", autor: "Ana", criadoEm: await agora() } });
+    await registrarMensagemCliente(lead.id, "Oi");
+    expect((await ficha(lead.id)).etapa).toBe("medicao");
+  });
+  it("Perdido e excluído: se falar de novo, começa do zero no atendimento do bot", async () => {
+    const lead = await obterOuCriarLead("+5588900007004");
+    await moverEtapa(lead.id, "apresentacao", "teste", { semExigencias: true });
+    await moverEtapa(lead.id, "perdido", "Ana", { semExigencias: true });
+    await excluirLeads([lead.id]);
+    const novo = await obterOuCriarLead("+5588900007004");
+    await registrarMensagemCliente(novo.id, "Oi, quero um orçamento");
+    expect(novo.id).not.toBe(lead.id);
+    expect(await ficha(novo.id)).toMatchObject({ etapa: "novo", modoAtendimento: "bot", etapaAnterior: null });
   });
 });
 

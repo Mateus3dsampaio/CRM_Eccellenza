@@ -1,4 +1,3 @@
-import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
@@ -15,7 +14,7 @@ import { whatsappRealAtivo } from "@/lib/whatsapp-config";
 import { enviarPelaMeta } from "./whatsapp";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
-import { alterarEtiqueta, moverEtapa, etapaOuErro } from "./leads";
+import { alterarEtiqueta, etapaAntesDoPerdido, moverEtapa } from "./leads";
 import { registrarUmaVez } from "./metricas";
 
 export type AutorLoja = "bot" | "consultor" | "sistema";
@@ -81,11 +80,10 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
   if (lerLista(lead.etiquetas).includes("retomada")) {
     await alterarEtiqueta(leadId, "retomada", false, "sistema");
     await registrarUmaVez(leadId, "retomada_voltou");
-    // Foi para Perdido por ter parado de responder (rotina): volta para onde estava.
-    if (lead.etapa === "perdido" && lead.motivoPerda === MOTIVO_PAROU_DE_RESPONDER && lead.etapaAnterior) {
-      await moverEtapa(leadId, etapaOuErro(lead.etapaAnterior), "sistema", { semExigencias: true });
-    }
   }
+  // Card em Perdido (por qualquer motivo, movido pelo consultor ou pela rotina): o cliente voltou a falar, o card volta
+  // para a coluna em que estava (decisão do Mateus 04/11/2026). Lead excluído não passa aqui: a mensagem cria um lead novo.
+  if (lead.etapa === "perdido") await moverEtapa(leadId, await etapaAntesDoPerdido(lead), "sistema", { semExigencias: true });
   await avisarAlmocoSeNecessario(leadId);
   await marcarMudanca();
   return mensagem;
