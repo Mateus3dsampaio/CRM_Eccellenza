@@ -113,8 +113,8 @@ export function BotaoRetornos() {
         )}
       >
         <CalendarClock className="size-4" aria-hidden />
+        <span className="hidden whitespace-nowrap xl:inline">Retornos</span>
         <span className="tabular-nums">{total}</span>
-        <span className="hidden whitespace-nowrap 2xl:inline">retornos de hoje</span>
       </button>
 
       {aberto && (

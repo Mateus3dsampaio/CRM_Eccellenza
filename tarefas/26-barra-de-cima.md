@@ -1,6 +1,6 @@
 # Tarefa 26 – Barra de cima: rótulos e menu do avatar
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** Os rótulos aparecem a partir de 1280px ("Retornos 2", "Esperando 5"); abaixo, ícone + número com tooltip.
 
 ## Problema
 Dois botões coloridos só com ícone e número (amarelo = retornos de hoje, vermelho = esperando resposta) não dizem o que são. "Trocar senha" e "Sair" ocupam a barra o dia inteiro sem precisar.

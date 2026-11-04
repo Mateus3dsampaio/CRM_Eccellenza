@@ -49,8 +49,8 @@ export function BotaoAguardando() {
         )}
       >
         <BellRing className="size-4" aria-hidden />
+        <span className="hidden whitespace-nowrap xl:inline">Esperando</span>
         <span className="tabular-nums">{total}</span>
-        <span className="hidden whitespace-nowrap 2xl:inline">aguardando {ehAdmin ? "resposta" : "você"}</span>
       </button>
 
       {aberto && (
