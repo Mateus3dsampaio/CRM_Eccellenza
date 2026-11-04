@@ -60,3 +60,6 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] OpenAI: transcrição de áudio real. Sem `OPENAI_API_KEY` o áudio chega e o bot avisa o cliente que ainda não atende áudio (comportamento confirmado em 04/11/2026); falta colocar a chave e testar a transcrição.
 - [ ] Navegador: vídeo avançando e voltando, abrir imagem e vídeo em outra aba (CSP), anexar arquivo. Galeria funcionando e vídeo recebido (04/11/2026).
 - [ ] Tela, ponta a ponta, com o celular do Mateus.
+
+## D. Ideias para depois (anotadas pelo Mateus)
+- [ ] **Bloquear o vendedor com decisão vencida** (04/11/2026): enquanto ele tiver data vencida sem decisão (medição ou apresentação que passou, retorno da Negociação vencido), não recebe lead novo na distribuição. Mateus gostou, mas não quer agora: começar só com a cobrança (etiqueta, janela de decisão e aviso ao admin) e endurecer se não funcionar. Cuidado: não travar quem está de folga.

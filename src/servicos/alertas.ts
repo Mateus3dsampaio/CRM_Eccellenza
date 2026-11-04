@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { DIAS_ALERTA_GUARDADO, type TipoAlerta } from "@/regras/alertas";
 import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
-import { formatarHora } from "@/regras/tempo";
+import { formatarHora, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
+import { decisaoPendente, ETIQUETA_DECISAO } from "@/regras/decisao";
 import { esperaDoLead, faixaDeEspera, minutosEsperando, textoDeEspera } from "@/regras/espera";
 import { nomeExibicao } from "@/regras/telefone";
 import { DIA } from "@/regras/tempo";
@@ -114,6 +115,38 @@ export async function avisarRetornos(): Promise<number> {
     });
     if (!reservado.count) continue;
     await registrarAlerta({ tipo: "retorno", leadId: lead.id, texto: formatarHora(marcado) });
+    avisados++;
+  }
+  if (avisados) await marcarMudanca();
+  return avisados;
+}
+
+/**
+ * Data vencida sem decisão do vendedor (medição ou apresentação que passou, retorno da Negociação vencido): avisa o dono do
+ * lead e o admin na virada do dia, e de novo a cada dia enquanto ninguém decidir. A marca do dia é gravada antes do aviso
+ * (duas telas ao mesmo tempo não duplicam).
+ */
+export async function avisarDecisoesVencidas(): Promise<number> {
+  const quando = await agora();
+  const hoje = inicioDoDiaLocal(quando);
+  const leads = await db.lead.findMany({
+    where: {
+      arquivadoEm: null,
+      etapa: { in: ["medicao", "apresentacao", "negociacao"] },
+      OR: [{ alertaDecisaoEm: null }, { alertaDecisaoEm: { lt: hoje } }],
+    },
+    select: { id: true, etapa: true, proximoContatoEm: true, alertaDecisaoEm: true, visitas: { where: { status: "agendada" }, select: { tipo: true, inicio: true } } },
+  });
+  let avisados = 0;
+  for (const lead of leads) {
+    const decisao = decisaoPendente(lead, lead.visitas, quando);
+    if (!decisao) continue;
+    const reservado = await db.lead.updateMany({
+      where: { id: lead.id, OR: [{ alertaDecisaoEm: null }, { alertaDecisaoEm: { lt: hoje } }] },
+      data: { alertaDecisaoEm: quando },
+    });
+    if (!reservado.count) continue;
+    await registrarAlerta({ tipo: "decisao_vencida", leadId: lead.id, texto: `${ETIQUETA_DECISAO[decisao.tipo]} (${formatarVisitaCurta(decisao.venceuEm)}).` });
     avisados++;
   }
   if (avisados) await marcarMudanca();

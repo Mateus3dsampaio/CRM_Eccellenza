@@ -20,6 +20,8 @@ const TIPOS_PAINEL = [
   ["outra_cidade", "Outras cidades"],
   ["parceiro", "Arquitetos/parceiros"],
   ["retomada_voltou", "Retomadas que voltaram"],
+  // Medição ou apresentação remarcada depois que a data passou (o cliente faltou).
+  ["nao_compareceu", "Clientes que faltaram"],
 ] as const;
 
 export interface PedidoPainel {
@@ -98,6 +100,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     indicadores = [
       indicador("apresentacao_agendada", "Apresentações agendadas"),
       indicador("medicao_agendada", "Medições agendadas"),
+      indicador("nao_compareceu", "Clientes que faltaram"),
       { tipo: "recebidos", nome: "Leads recebidos", atual: atual.recebidos, anterior: anterior.recebidos },
       { tipo: "atendidos", nome: "Leads atendidos", atual: atual.atendidos, anterior: anterior.atendidos },
     ];

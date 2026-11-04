@@ -41,6 +41,9 @@
   --color-check-lido: #5bb4f0;
   --color-alerta: #f2766f;
   --color-alerta-suave: #3b1c1f;
+  /* Card que passou do prazo de resposta: vermelho vivo (pedido do Mateus 04/11/2026), igual em todos os temas. */
+  --color-alerta-vivo: #ff2e2e;
+  --color-alerta-card: color-mix(in srgb, #ff2e2e 32%, #1a0b0c);
   --color-aviso: #f0b04a;
   --color-aviso-suave: #3a2c12;
   --color-sucesso: #4fd184;
@@ -110,7 +113,7 @@
 
   --animate-surgir: surgir 160ms ease-out;
   --animate-brilho: brilho 1.4s ease-in-out infinite;
-  --animate-respirar: respirar 2.6s ease-in-out infinite;
+  --animate-respirar: respirar 1s ease-in-out infinite;
   --animate-chamar: chamar 1s ease-in-out infinite;
   --animate-piscar: piscar 1s ease-in-out infinite;
 
@@ -120,13 +123,14 @@
   }
   /* Card vermelho (cliente esperando além do prazo): halo que "respira". Só sombra e brilho, sem mexer na posição (o arrastar usa transform). */
   @keyframes respirar {
+    /* Mesmo ritmo do botão "Retornos de hoje" (1s), com halo vermelho vivo. Só sombra e brilho: o arrastar usa transform. */
     0%, 100% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-alerta) 0%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-alerta-vivo) 0%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
       filter: brightness(1);
     }
     50% {
-      box-shadow: 0 0 22px 3px color-mix(in srgb, var(--color-alerta) 55%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
-      filter: brightness(1.12);
+      box-shadow: 0 0 24px 6px color-mix(in srgb, var(--color-alerta-vivo) 80%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
+      filter: brightness(1.25);
     }
   }
   /* Botão "Retornos de hoje" com retorno vencendo: pisca em âmbar (contraste com o topo azul) para chamar atenção (tarefa 22; mais rápido e forte a pedido do Mateus 04/11/2026). */

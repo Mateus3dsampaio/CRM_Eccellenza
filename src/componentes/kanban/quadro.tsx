@@ -27,6 +27,7 @@ import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "../ficha/agendar";
 import { NIVEIS_ZOOM, definirZoom, useZoomKanban } from "./zoom";
 import { Card, CardFlutuante, type AcoesCard } from "./card";
+import { JanelaDecisao, type EscolhaDecisao } from "./decisao";
 
 function contagem(n: number) {
   return `${n.toLocaleString("pt-BR")} ${n === 1 ? "conversa" : "conversas"}`;
@@ -62,6 +63,9 @@ export function Quadro() {
   const [pedido, setPedido] = useState<{ id: string; etapa: CodigoEtapa } | null>(null);
   // Medição/Apresentação agendada: o card só entra com o compromisso marcado; agendar já move o card.
   const [agendando, setAgendando] = useState<{ id: string; tipo: EtapaComAgenda } | null>(null);
+  const [decidindo, setDecidindo] = useState<string | null>(null);
+  // "Ainda negociando": a janela de Negociação pede a data nova (sem trazer a data vencida preenchida).
+  const [novoRetorno, setNovoRetorno] = useState(false);
 
   const sensores = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -120,9 +124,18 @@ export function Quadro() {
   }
 
   function moverAgora(id: string, etapa: string, venda?: VendaParaApi) {
+    const mesmaEtapa = cards.find((c) => c.id === id)?.etapa === etapa;
     // Atualiza na tela na hora; o servidor confirma em seguida.
     setDados((d) => (d ? { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
-    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, `Movido para "${nomesEtapas.nome(etapa)}".`);
+    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, mesmaEtapa ? "Próximo contato atualizado." : `Movido para "${nomesEtapas.nome(etapa)}".`);
+  }
+
+  function decidir(id: string, escolha: EscolhaDecisao) {
+    setDecidindo(null);
+    if ("agendar" in escolha) return setAgendando({ id, tipo: escolha.agendar });
+    if ("mover" in escolha) return mover(id, escolha.mover);
+    setNovoRetorno(true);
+    setPedido({ id, etapa: "negociacao" });
   }
 
   function confirmarExclusao(ids: string[], depois?: () => void) {
@@ -144,7 +157,9 @@ export function Quadro() {
     removerEtiqueta: (id, codigo) => void acao({ acao: "etiqueta", ids: [id], etiqueta: codigo, ativa: false }),
     arquivar: (id) => void acao({ acao: "arquivar", ids: [id] }, "Lead arquivado."),
     excluir: podeExcluir ? (id) => confirmarExclusao([id]) : undefined,
+    decidir: setDecidindo,
   };
+  const cardDecidindo = decidindo ? cards.find((c) => c.id === decidindo) : undefined;
 
   function limparColuna(etapa: string, modo: "arquivar" | "excluir") {
     // Conta a coluna inteira, não só o que está no filtro: a limpeza vale para todos.
@@ -403,14 +418,30 @@ export function Quadro() {
           }}
         />
       )}
+      {cardDecidindo?.decisao && (
+        <JanelaDecisao
+          nome={cardDecidindo.nome}
+          tipo={cardDecidindo.decisao.tipo}
+          venceuEm={cardDecidindo.decisao.venceuEm}
+          aoFechar={() => setDecidindo(null)}
+          aoEscolher={(escolha) => decidir(cardDecidindo.id, escolha)}
+        />
+      )}
       {pedido && (
         <JanelaMudanca
           etapa={pedido.etapa}
-          atuais={cards.find((c) => c.id === pedido.id)}
-          aoCancelar={() => setPedido(null)}
+          atuais={(() => {
+            const atual = cards.find((c) => c.id === pedido.id);
+            return atual && novoRetorno ? { ...atual, proximoContatoEm: null, lembreteNota: null } : atual;
+          })()}
+          aoCancelar={() => {
+            setPedido(null);
+            setNovoRetorno(false);
+          }}
           aoConfirmar={(venda) => {
             moverAgora(pedido.id, pedido.etapa, venda);
             setPedido(null);
+            setNovoRetorno(false);
           }}
         />
       )}
