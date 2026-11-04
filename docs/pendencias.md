@@ -14,7 +14,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Registrar o número com o PIN de 6 dígitos (`npx tsx scripts/registrar-numero.ts <PIN>`) e **guardar o PIN**.
 - [ ] Aprovar o nome de exibição (ex.: "Eccellenza Móveis Planejados").
 - [ ] Cadastrar a forma de pagamento no WhatsApp Manager e conferir a tabela de preços em reais.
-- [x] Gerar o token permanente (permissões `whatsapp_business_messaging` e `whatsapp_business_management`). Gerado e colado no Railway em 04/11/2026. **Conferir a validade escolhida** ("Nunca" ou 60 dias; se for 60 dias, anotar a data de renovação aqui).
+- [x] Gerar o token permanente (permissões `whatsapp_business_messaging` e `whatsapp_business_management`). Gerado e colado no Railway em 04/11/2026. Validade "Nunca expira" escolhida pelo Mateus (04/11/2026). Houve vários tokens gerados; se um dia o envio falhar com erro de token, conferir se o colado no Railway é o de "Nunca expira".
 - [ ] Criar e aprovar os modelos de mensagem na Meta, com o mesmo nome do código (`retomada`, `primeiro_contato`, `lembrete_visita`), pt_BR, sem variáveis.
 - [x] Cadastrar o webhook (`SEU-ENDEREÇO/api/whatsapp/webhook`) e assinar o campo `messages` (só depois do Railway no ar). Feito em 04/11/2026 (`https://crmeccellenza-production.up.railway.app/api/whatsapp/webhook`).
 - [ ] Conferir na página oficial da Meta: tipos aceitos no ENVIO (**DWG e ZIP são incertos**), limites de tamanho de vídeo e documento, versão atual da API (`WHATSAPP_API_VERSION`, padrão `v23.0`), se o app precisa estar em modo "Live".
@@ -26,7 +26,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Colar as variáveis (feito em 04/11/2026; `PRIVACIDADE_CONTATO`, `OPENAI_API_KEY` e `PRIVACIDADE_APROVADA` ficaram de fora por enquanto): `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_LOGIN`, `ADMIN_SENHA`, `ADMIN_NOME`, `MIDIAS_DIR=/data/midias`, `MIDIAS_LIMITE_MB`, `PRIVACIDADE_CONTATO`, as 4 do WhatsApp `CHAVE_MESTRA` (texto longo e secreto, para salvar chaves pela tela) e (opcional) `OPENAI_API_KEY`. As chaves de texto e áudio também podem ser coladas em Configurações > Chaves de API.
 - [x] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`). Feito em 04/11/2026.
 - [x] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway. Feito em 04/11/2026 (o login continuou funcionando).
-- [ ] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway.
+- [x] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway. Confirmado pelo Mateus em 04/11/2026.
 - [ ] Ligar e confirmar o backup do Postgres. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia.
 
 ### Decisões e textos para aprovar
