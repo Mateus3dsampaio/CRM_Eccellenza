@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { agruparAlertas, textoDoGrupo } from "../../src/regras/alertas";
 import { executarFerramenta } from "@/bot/executor";
 import { db } from "@/lib/db";
 import { avancarRelogio } from "@/lib/relogio";
@@ -184,5 +185,24 @@ describe("prazo vermelho avisa o admin (ESP-09)", () => {
     await avancarRelogio(6 * MIN);
     expect(await avisarPrazosVermelhos()).toBe(1);
     expect((await db.alerta.findFirstOrThrow({ where: { tipo: "prazo_vermelho" } })).leadId).toBe(esperando);
+  });
+});
+
+describe("avisos agrupados na tela (tarefa 25)", () => {
+  it("5 avisos de prazo que chegam juntos viram 1 grupo; aviso único fica solto; a ordem é a de chegada", () => {
+    const novos = [
+      { tipo: "prazo_vermelho" as const, id: 1 },
+      { tipo: "mensagem" as const, id: 2 },
+      { tipo: "prazo_vermelho" as const, id: 3 },
+      { tipo: "prazo_vermelho" as const, id: 4 },
+      { tipo: "prazo_vermelho" as const, id: 5 },
+      { tipo: "prazo_vermelho" as const, id: 6 },
+    ];
+    const saida = agruparAlertas(novos);
+    expect(saida).toEqual([
+      { grupo: true, tipo: "prazo_vermelho", total: 5 },
+      { grupo: false, alerta: novos[1] },
+    ]);
+    expect(textoDoGrupo("prazo_vermelho", 5)).toBe("5 clientes passaram do prazo sem resposta");
   });
 });

@@ -1,6 +1,6 @@
 # Tarefa 25 – Avisos (toasts) fora do caminho
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** Decisões na implementação: toast de aviso (prazo, retorno, mensagem) ganha botão "Abrir" que abre a gaveta do lead na tela atual; grupo ("5 clientes passaram do prazo") não tem botão, porque "Esperando" e "Retornos" na barra já listam. Lead com a gaveta aberta não gera toast dele.
 
 ## Problema
 Vários avisos "passou do prazo sem resposta" empilham no meio do kanban, em cima dos cards, e ficam lá. O sino já mostra a contagem; o toast só precisa chamar atenção uma vez.

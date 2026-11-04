@@ -202,7 +202,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
 | `src/regras/tempo-resposta.ts` | Tempo de resposta: por turno do cliente (bot ou consultor primeiro), do consultor em toda resposta (ignora o bot), 1ª resposta do consultor depois do repasse do bot; média/mediana e formatar duração. Usado pelo Painel e pela exportação |
 | `src/regras/painel.ts` | Período do Painel: atalhos (hoje, 7 dias, 30 dias, semana, mês), datas livres, período anterior do mesmo tamanho |
-| `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador |
+| `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador `agruparAlertas`/`textoDoGrupo`: avisos do mesmo tipo que chegam juntos viram um toast só (tarefa 25) |
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
 | `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
@@ -229,7 +229,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Faz |
 |---|---|
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
-| `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
+| `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) Toasts (tarefa 25): canto inferior direito, até 3 visíveis + "e mais N", somem sozinhos (ok/erro 6 s, alerta 15 s), pausa com o mouse, botão de ação opcional (`avisar(texto, tipo, { acao })`) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, trocar minha senha, sair). No celular tem que caber em 375px sem rolar para o lado |
 | `src/componentes/menu-lateral.tsx` | Menu lateral (computador): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
