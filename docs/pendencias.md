@@ -50,7 +50,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 ## C. Nunca foi testado de verdade (conferir no primeiro deploy)
 - [x] Railway: build, migração do Postgres, Volume, healthcheck (04/11/2026).
-- [ ] Meta: verificação do webhook (feita, 04/11/2026) e receber/enviar **texto** (feito: o cliente escreveu e o bot respondeu). Recebimento de foto, vídeo, ZIP e outros arquivos testado e funcionando (Mateus, 04/11/2026). Falta testar: documento (PDF/Word/Excel/DWG) recebido, enviar modelo/arquivo pela loja e status de entrega.
+- [ ] Meta: verificação do webhook (feita, 04/11/2026) e receber/enviar **texto** (feito: o cliente escreveu e o bot respondeu). Recebimento de foto, vídeo, ZIP e documentos testado e funcionando (Mateus, 04/11/2026). Falta testar: enviar modelo/arquivo pela loja e status de entrega.
 - [ ] OpenAI: transcrição de áudio real. Sem `OPENAI_API_KEY` o áudio chega e o bot avisa o cliente que ainda não atende áudio (comportamento confirmado em 04/11/2026); falta colocar a chave e testar a transcrição.
 - [ ] Navegador: vídeo avançando e voltando, abrir imagem e vídeo em outra aba (CSP), anexar arquivo. Galeria funcionando e vídeo recebido (04/11/2026).
 - [ ] Tela, ponta a ponta, com o celular do Mateus.
