@@ -7,6 +7,7 @@ import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
+import { AbasEntalhe } from "../entalhe/abas";
 import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
 import { ExportarDesempenho } from "./exportar-desempenho";
@@ -26,10 +27,20 @@ interface Dados {
   periodoExportacao: { de: string; ate: string };
 }
 
+type AbaConfig = "geral" | "vendas" | "instrucoes" | "api" | "exportar";
+
+const ABAS: { codigo: AbaConfig; rotulo: string }[] = [
+  { codigo: "geral", rotulo: "Geral" },
+  { codigo: "vendas", rotulo: "Vendas" },
+  { codigo: "instrucoes", rotulo: "Instruções de atendimento" },
+  { codigo: "api", rotulo: "Chave API" },
+  { codigo: "exportar", rotulo: "Exportar desempenho" },
+];
+
 export function Configuracoes() {
   const avisar = useAviso();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
-  const [aba, setAba] = useState<"geral" | "vendas" | "instrucoes" | "exportar">("geral");
+  const [aba, setAba] = useState<AbaConfig>("geral");
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
     try {
@@ -49,31 +60,18 @@ export function Configuracoes() {
         <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
       </div>
 
-      <div role="tablist" aria-label="Seções das configurações" className="rolagem-fina flex gap-1 overflow-x-auto border-b border-borda">
-        {(
-          [
-            ["geral", "Geral"],
-            ["vendas", "Vendas"],
-            ["instrucoes", "Instruções de atendimento"],
-            ["exportar", "Exportar desempenho"],
-          ] as const
-        ).map(([codigo, rotulo]) => (
-          <button
-            key={codigo}
-            role="tab"
-            aria-selected={aba === codigo}
-            onClick={() => setAba(codigo)}
-            className={juntar("-mb-px min-h-toque shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-medium transition", aba === codigo ? "border-marca text-marca-texto" : "border-transparent text-texto-suave hover:text-texto")}
-          >
-            {rotulo}
-          </button>
-        ))}
-      </div>
+      <AbasEntalhe itens={ABAS} valor={aba} aoMudar={setAba} rotuloAria="Seções das configurações" />
 
       {aba === "vendas" ? (
         <VendasConfig />
       ) : aba === "instrucoes" ? (
         <InstrucoesAtendimento />
+      ) : aba === "api" ? (
+        <div className="space-y-4">
+          <ChavesApi />
+          <UsoDoBot />
+          <WhatsappConfig />
+        </div>
       ) : aba === "exportar" ? (
         dados ? <ExportarDesempenho equipe={dados.equipe} periodoPadrao={dados.periodoExportacao} /> : <Carregando linhas={2} />
       ) : carregando && !dados ? (
@@ -118,13 +116,7 @@ export function Configuracoes() {
 
             <EquipeConfig equipe={dados.equipe} recarregar={recarregar} />
 
-            <WhatsappConfig />
-
             <Armazenamento />
-
-            <ChavesApi />
-
-            <UsoDoBot />
 
             <section className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
               <LayoutDashboard className="mb-2 size-5 text-texto-suave" aria-hidden />

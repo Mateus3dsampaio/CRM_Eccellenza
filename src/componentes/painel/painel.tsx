@@ -6,6 +6,7 @@ import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
 import { useDados } from "../dados";
+import { AbasEntalhe } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Carregando, EstadoErro, classeEntrada } from "../ui";
 import { useUsuario } from "../usuario";
@@ -73,13 +74,12 @@ export function Painel() {
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="sr-only">Painel</h1>
-        <div className="flex flex-wrap rounded-controle bg-superficie p-1 shadow-card" role="tablist" aria-label="Atalhos de período">
-          {ATALHOS_PAINEL.map((a) => (
-            <button key={a.codigo} role="tab" aria-selected={filtro.atalho === a.codigo} onClick={() => setFiltro({ ...filtro, atalho: a.codigo })} className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium", filtro.atalho === a.codigo ? "bg-marca-suave text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}>
-              {a.nome}
-            </button>
-          ))}
-        </div>
+        <AbasEntalhe
+          itens={ATALHOS_PAINEL.map((a) => ({ codigo: a.codigo, rotulo: a.nome }))}
+          valor={filtro.atalho}
+          aoMudar={(codigo) => setFiltro({ ...filtro, atalho: codigo })}
+          rotuloAria="Atalhos de período"
+        />
         <label className="space-y-1 text-xs text-texto-suave">
           De
           <input type="date" className={juntar(classeEntrada, "w-auto")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />

@@ -32,6 +32,9 @@ describe("regras dos avisos (Bloco 1, tarefa 3)", () => {
     expect(tituloDaAba("(3) CRM Eccellenza", 5)).toBe("(5) CRM Eccellenza");
     expect(tituloDaAba("(3) CRM Eccellenza", 0)).toBe("CRM Eccellenza");
     expect(tituloDaAba("CRM Eccellenza", 0)).toBe("CRM Eccellenza");
+    // Título vazio: o navegador devolve "(3)" sem espaço; o resultado tem de ser igual para não girar em laço.
+    expect(tituloDaAba("", 3)).toBe("(3)");
+    expect(tituloDaAba("(3)", 3)).toBe("(3)");
   });
 
   it("lê as preferências guardadas; lixo vira o padrão", () => {

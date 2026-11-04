@@ -53,7 +53,8 @@ const CONTADOR_NO_INICIO = /^\(\d+\)\s*/;
 /** "(3) CRM Eccellenza". Sem ninguém esperando, volta ao título normal. */
 export function tituloDaAba(titulo: string, esperando: number): string {
   const base = titulo.replace(CONTADOR_NO_INICIO, "");
-  return esperando > 0 ? `(${esperando}) ${base}` : base;
+  // trim: o navegador tira o espaço do fim do título; sem isso, título vazio dava "(3) " ≠ "(3)" e a aba travava num laço.
+  return (esperando > 0 ? `(${esperando}) ${base}` : base).trim();
 }
 
 /** Lê as preferências guardadas no navegador; qualquer coisa estranha vira o padrão. */

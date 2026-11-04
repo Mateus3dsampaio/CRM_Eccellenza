@@ -7,6 +7,7 @@ import { formatarTamanho, type FamiliaMidia } from "@/regras/midia";
 import { formatarDataHora } from "@/regras/tempo";
 import type { Galeria as DadosGaleria, ItemDaGaleria } from "@/servicos/midias";
 import { chamarApi, useAviso, useDados } from "../dados";
+import { AbasEntalhe } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
@@ -45,22 +46,15 @@ export function Galeria() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 rounded-controle bg-superficie-suave p-1" role="tablist" aria-label="Tipo de arquivo">
-          {FILTROS.map((f) => (
-            <button
-              key={f.codigo}
-              role="tab"
-              aria-selected={tipo === f.codigo}
-              onClick={() => {
-                setTipo(f.codigo);
-                setLimite(60);
-              }}
-              className={juntar("min-h-toque rounded-controle px-3 text-sm font-medium transition", tipo === f.codigo ? "bg-marca-suave text-marca-texto" : "text-texto-suave hover:text-texto")}
-            >
-              {f.nome}
-            </button>
-          ))}
-        </div>
+        <AbasEntalhe
+          itens={FILTROS.map((f) => ({ codigo: f.codigo || "tudo", rotulo: f.nome }))}
+          valor={tipo || "tudo"}
+          aoMudar={(c) => {
+            setTipo(c === "tudo" ? "" : (c as FamiliaMidia));
+            setLimite(60);
+          }}
+          rotuloAria="Tipo de arquivo"
+        />
         {dados && dados.vendedores.length > 0 && (
           <select className={juntar(classeEntrada, "w-auto")} value={vendedor} onChange={(e) => setVendedor(e.target.value)} aria-label="Vendedor">
             <option value="">Todos os vendedores</option>

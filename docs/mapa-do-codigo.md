@@ -32,6 +32,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
+| Abas, filtros de uma opção só, animação do menu | `src/componentes/entalhe/` (`AbasEntalhe` para abas; `Entalhe` para o menu lateral). Toda aba nova usa `AbasEntalhe` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
 | O que a exportação de desempenho leva | `src/servicos/vendas.ts` | Configurações de vendas: motivos de perda (carga inicial, criar, editar, reordenar, excluir só se sem uso) e o interruptor "Negociação exige próximo contato" (padrão ligado). `regrasDeVendas` entrega o que o `moverEtapa` confere |
 | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
@@ -216,7 +217,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, trocar minha senha, sair). No celular tem que caber em 375px sem rolar para o lado |
-| `src/componentes/menu-lateral.tsx` | Menu lateral (computador) com indicador que desliza e opção de encolher (guarda a escolha); no celular vira a barra de baixo |
+| `src/componentes/menu-lateral.tsx` | Menu lateral (computador) com o entalhe flutuante entre os itens (inclui Configurações) e opção de encolher (guarda a escolha); no celular vira a barra de baixo |
+| `src/componentes/entalhe/geometria.ts` | Contas puras do entalhe flutuante (modelo `docs/referencia/modelos_interacao.html`, barra 3): salto, abertura, forma do recorte e caminho SVG, nas duas orientações, e a mola |
+| `src/componentes/entalhe/entalhe.tsx` | `Entalhe`: desenha por cima da barra o recorte e a pílula que salta e pousa no item novo (anima direto no DOM; respeita "reduzir movimento") |
+| `src/componentes/entalhe/abas.tsx` | `AbasEntalhe`: PADRÃO de qualquer escolha de abas ou filtro de uma opção só (Configurações, Galeria, Painel, Agenda, ficha no celular). Use no lugar de botões `role="tab"` soltos |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
@@ -245,7 +249,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda e equipe (cadastro de usuários em `equipe.tsx`) |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções, Chave API e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
 | `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
@@ -304,6 +308,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
+| `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |

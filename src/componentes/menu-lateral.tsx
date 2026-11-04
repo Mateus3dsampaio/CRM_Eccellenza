@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Archive, BarChart3, CalendarDays, Images, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
 import { juntar } from "./estilos";
+import { Entalhe } from "./entalhe/entalhe";
 import { usePode } from "./usuario";
 
 export const LINKS = [
@@ -18,7 +19,7 @@ export const LINKS = [
 export const LINK_CONFIG = { href: "/configuracoes", rotulo: "Configurações", icone: Settings };
 
 const CHAVE_MINI = "menu-mini";
-const ALTURA_ITEM = 42; // px; o indicador desliza de 44 em 44 (item + espaço de 2)
+const ALTURA_ITEM = 42; // px
 
 /** Menu lateral (computador) com indicador que desliza e opção de encolher; no celular vira a barra de baixo. */
 export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
@@ -51,12 +52,17 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
 
   const ativo = (href: string) => (href === "/" ? caminho === "/" || caminho.startsWith("/lead") : caminho.startsWith(href));
   const todos = podeConfigurar ? [...links, LINK_CONFIG] : links;
-  const indice = links.findIndex((l) => ativo(l.href));
+  // Itens do computador na ordem em que aparecem (a engrenagem fica embaixo); o entalhe flutuante anda entre eles.
+  const itensDesktop = podeConfigurar ? [...links, LINK_CONFIG] : links;
+  const indice = itensDesktop.findIndex((l) => ativo(l.href));
+  const asideRef = useRef<HTMLElement>(null);
+  const itensRef = useRef<(HTMLElement | null)[]>([]);
   const rotuloClasse = juntar("whitespace-nowrap transition-opacity duration-150 ease-out", mini && "pointer-events-none opacity-0");
 
   return (
     <>
       <aside
+        ref={asideRef}
         aria-label="Módulos"
         className={juntar(
           "sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-300 ease-mola md:flex",
@@ -70,17 +76,13 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           <span className={juntar("font-semibold text-marca-texto", rotuloClasse)}>Eccellenza</span>
         </Link>
 
-        <nav className="relative grid gap-0.5" aria-label="Principal">
-          {indice >= 0 && (
-            <div
-              aria-hidden
-              className="afundado pointer-events-none absolute inset-x-0 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
-              style={{ height: ALTURA_ITEM, transform: `translateY(${indice * (ALTURA_ITEM + 2)}px)` }}
-            />
-          )}
-          {links.map(({ href, rotulo, icone: Icone }) => (
+        <nav className="relative grid grid-cols-[minmax(0,1fr)] gap-0.5" aria-label="Principal">
+          {links.map(({ href, rotulo, icone: Icone }, i) => (
             <Link
               key={href}
+              ref={(el) => {
+                itensRef.current[i] = el;
+              }}
               href={href}
               title={rotulo}
               aria-current={ativo(href) ? "page" : undefined}
@@ -96,7 +98,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           ))}
         </nav>
 
-        <div className="mt-auto grid gap-0.5">
+        <div className="mt-auto grid grid-cols-[minmax(0,1fr)] gap-0.5">
           <button
             type="button"
             onClick={alternar}
@@ -111,18 +113,38 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           {podeConfigurar && (
             <Link
               href={LINK_CONFIG.href}
+              ref={(el) => {
+                itensRef.current[links.length] = el;
+              }}
               title={LINK_CONFIG.rotulo}
               aria-current={ativo(LINK_CONFIG.href) ? "page" : undefined}
-              className={juntar(
-                "flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm transition",
-                ativo(LINK_CONFIG.href) ? "afundado" : "text-texto-suave hover:bg-superficie hover:text-texto",
-              )}
+              className={juntar("flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm transition", !ativo(LINK_CONFIG.href) && "text-texto-suave hover:bg-superficie hover:text-texto")}
             >
               <Settings className="size-5 shrink-0" aria-hidden />
               <span className={rotuloClasse}>{LINK_CONFIG.rotulo}</span>
             </Link>
           )}
         </div>
+
+        <Entalhe
+          raiz={asideRef}
+          itens={itensRef}
+          indice={indice}
+          orientacao="vertical"
+          fundo="var(--color-fundo)"
+          classePilula="flex items-center gap-3 px-[11px] text-sm font-medium"
+          conteudo={(i) => {
+            const item = itensDesktop[i];
+            if (!item) return null;
+            const Icone = item.icone;
+            return (
+              <>
+                <Icone className="size-5 shrink-0" aria-hidden />
+                <span className={rotuloClasse}>{item.rotulo}</span>
+              </>
+            );
+          }}
+        />
       </aside>
 
       {/* Navegação inferior no celular */}

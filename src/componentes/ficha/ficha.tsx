@@ -12,6 +12,7 @@ import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, N
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
+import { AbasEntalhe } from "../entalhe/abas";
 import { COR_ETAPA, juntar } from "../estilos";
 import { Avatar, Botao, Carregando, EstadoErro, Modal, Sino, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
@@ -235,19 +236,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       ) : (
         <>
           {/* Celular: abas */}
-          <div className="flex gap-1 rounded-controle bg-superficie p-1 shadow-card" role="tablist">
-            {abas.map((a) => (
-              <button
-                key={a.id}
-                role="tab"
-                aria-selected={aba === a.id}
-                onClick={() => setAba(a.id)}
-                className={juntar("min-h-toque flex-1 rounded-controle text-sm font-medium transition", aba === a.id ? "bg-marca-suave text-marca-texto" : "text-texto-suave")}
-              >
-                {a.rotulo}
-              </button>
-            ))}
-          </div>
+          <AbasEntalhe itens={abas.map((a) => ({ codigo: a.id, rotulo: a.rotulo }))} valor={aba} aoMudar={setAba} rotuloAria="Seções da ficha" />
           {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{blocos.conversa}</div>}
           {aba === "ficha" && (
             <div className="space-y-4">
