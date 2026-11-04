@@ -27,7 +27,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`). Feito em 04/11/2026.
 - [x] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway. Feito em 04/11/2026 (o login continuou funcionando).
 - [x] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway. Confirmado pelo Mateus em 04/11/2026.
-- [ ] Ligar e confirmar o backup do Postgres. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia.
+- [ ] Ligar e confirmar o backup do Postgres. **Confirmado em 04/11/2026: no plano Hobby o Railway só mostra backups existentes; criar backup, agendar e recuperação por ponto no tempo exigem o plano Pro.** Hoje não existe backup de nada: decidir entre plano Pro, ou rotina própria de `pg_dump` enviada para um armazenamento externo. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia.
 
 ### Decisões e textos para aprovar
 - [ ] Textos dos modelos da Meta (`src/regras/modelos.ts`); sugestão: incluir "Responda PARAR para não receber mais mensagens".
