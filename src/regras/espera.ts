@@ -63,6 +63,20 @@ export function textoDeEspera(minutos: number): string {
   return resto ? `${horas} h ${String(resto).padStart(2, "0")} min` : `${horas} h`;
 }
 
+/**
+ * Card "crítico" (tarefa 33, PROVISÓRIO): só ele fica com o fundo vermelho inteiro. É o que espera há mais tempo
+ * entre os vermelhos da coluna, ou qualquer um esperando há 24 h ou mais. Os outros vermelhos ficam só com borda e badge.
+ */
+export const MINUTOS_ESPERA_CRITICA = 24 * 60;
+
+export function idsCriticosDaColuna<T extends { id: string; esperandoDesde: Instante }>(cards: T[], agora: Date, prazos: PrazosEspera): Set<string> {
+  const vermelhos = cards.filter((c) => faixaDeEspera(c.esperandoDesde, agora, prazos) === "vermelho");
+  const criticos = new Set(vermelhos.filter((c) => minutosEsperando(c.esperandoDesde, agora) >= MINUTOS_ESPERA_CRITICA).map((c) => c.id));
+  const maisAntigo = vermelhos.reduce<T | null>((pior, c) => (pior === null || (emMs(c.esperandoDesde) ?? Infinity) < (emMs(pior.esperandoDesde) ?? Infinity) ? c : pior), null);
+  if (maisAntigo) criticos.add(maisAntigo.id);
+  return criticos;
+}
+
 interface ComEspera {
   id: string;
   esperandoDesde: Instante;

@@ -193,7 +193,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
-| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas |
+| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead (blocos: conversa, resumo, etapa, compromissos, dados, medidas). `ajustarLayoutSalvo` aproveita layout salvo com blocos antigos (tarefa 28). Padrão: conversa à esquerda e ficha à direita |

@@ -43,13 +43,23 @@ export function useSituacaoEspera(esperandoDesde: string | null): SituacaoEspera
   return { esperando: esperandoDesde !== null, minutos, faixa: faixaDeEspera(esperandoDesde, agora, prazos), texto: textoDeEspera(minutos) };
 }
 
-/** Classes do card e do texto por faixa. A cor nunca vai sozinha: o card também diz "esperando há X". */
+/**
+ * Classes do card por faixa (tarefa 33): borda esquerda grossa + badge, fundo normal. A cor nunca vai sozinha: o card
+ * também diz "esperando há X". Só o card crítico (`CLASSE_CARD_CRITICO`) fica com o fundo vermelho inteiro que pisca.
+ */
 export const CLASSE_CARD_ESPERA: Record<FaixaEspera, string> = {
   normal: "border-borda bg-superficie",
-  amarelo: "border-aviso bg-aviso-suave",
-  // Vermelho vivo que pisca (halo pulsando, mesmo ritmo do botão "Retornos de hoje") para chamar a atenção (pedido do Mateus
-  // 04/11/2026); com "reduzir movimento" ligado no aparelho, quase não anima.
-  vermelho: "border-alerta-vivo bg-alerta-card animate-respirar",
+  amarelo: "border-borda border-l-4 border-l-aviso bg-superficie",
+  vermelho: "border-borda border-l-4 border-l-alerta bg-superficie shadow-espera-vermelha",
+};
+// Vermelho vivo que pisca (halo pulsando, mesmo ritmo do botão "Retornos de hoje"), pedido do Mateus 04/11/2026;
+// com "reduzir movimento" ligado no aparelho, quase não anima.
+export const CLASSE_CARD_CRITICO = "border-alerta-vivo bg-alerta-card animate-respirar";
+/** Badge "esperando há X" por faixa. */
+export const CLASSE_BADGE_ESPERA: Record<FaixaEspera, string> = {
+  normal: "bg-superficie-suave text-texto-suave",
+  amarelo: "bg-aviso-suave text-aviso",
+  vermelho: "bg-alerta-suave text-alerta",
 };
 export const CLASSE_TEXTO_ESPERA: Record<FaixaEspera, string> = {
   normal: "text-texto-suave",

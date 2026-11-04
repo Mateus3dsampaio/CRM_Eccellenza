@@ -17,6 +17,8 @@ import { CheckSquare, ChevronsLeftRight, Clock, Filter, Minus, Pencil, Plus, Sca
 import { nomeEtiqueta } from "@/regras/etapas";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, etapaComAgenda, type CodigoEtapa, type EtapaComAgenda } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
+import { idsCriticosDaColuna } from "@/regras/espera";
+import { useAgoraDoServidor, useAguardando } from "../espera";
 import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -624,6 +626,9 @@ function Coluna(props: {
   aoRecolher: (recolher: boolean) => void;
 }) {
   const { codigo, nome, cards, recolhida, aoRecolher } = props;
+  const { prazos } = useAguardando();
+  const agora = useAgoraDoServidor();
+  const criticos = useMemo(() => idsCriticosDaColuna(cards, agora, prazos), [cards, agora, prazos]);
   const { setNodeRef, isOver } = useDroppable({ id: codigo });
   const limpavel = (ETAPAS_LIMPAVEIS as string[]).includes(codigo);
   const telaGrande = useTelaGrande();
@@ -707,7 +712,7 @@ function Coluna(props: {
           <EstadoVazio titulo="Nenhum lead nesta etapa" />
         ) : (
           cards.map((c) => (
-            <Card key={c.id} card={c} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
+            <Card key={c.id} card={c} critico={criticos.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
           ))
         )}
       </div>

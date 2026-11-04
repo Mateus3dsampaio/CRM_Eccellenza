@@ -1,6 +1,6 @@
 # Tarefa 33 – Cards do kanban: alerta de espera mais sóbrio
 
-Série de layout (23–33). Fazer por último. **Status: a fazer.** O Mateus aprovou em 04/11/2026, mas o visual final é dele: entregar prints "antes e depois" para ele bater o martelo antes de dar como pronta.
+Série de layout (23–33). Fazer por último. **Status: código feito em 04/11/2026, SEM print antes/depois e sem teste de tela** (o Mateus pediu para parar). Critério do crítico (`idsCriticosDaColuna` em `regras/espera.ts`, PROVISÓRIO): o vermelho que espera há mais tempo na coluna, ou qualquer um com 24 h+. Falta: conferir o visual no kanban e rodar `npm run test:tela`. O Mateus aprovou em 04/11/2026, mas o visual final é dele: entregar prints "antes e depois" para ele bater o martelo antes de dar como pronta.
 
 ## Problema
 Card inteiro vermelho quando o cliente espera além do prazo. Com três assim na mesma coluna, a coluna grita e os cards normais somem.
