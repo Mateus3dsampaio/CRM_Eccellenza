@@ -159,7 +159,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita, hora do retorno) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarRetornos`: avisa o dono do lead (e o admin) na hora do próximo contato, uma vez por data marcada. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
-| `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Sem resposta", limpeza de arquivados e de logs antigos, relógio (também confere os prazos vermelhos) |
+| `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Sem resposta", limpeza de arquivados (30 dias; quem está em Fechado espera 180 dias) e exclusão de clientes que fecharam 180 dias depois do fechamento (com registro LGPD), limpeza de logs antigos, relógio (também confere os prazos vermelhos) |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
@@ -185,7 +185,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead. Padrão: conversa à esquerda e ficha à direita (campo de resposta visível em 1280×720) |
 | `src/regras/limites.ts` | Limites usados na tela e no servidor (tamanho máximo de imagem) |
-| `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) |
+| `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) e quando um cliente que fechou é excluído (180 dias depois de fechar) |
 | `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
 | `src/regras/tempo-resposta.ts` | Tempo de resposta: por turno do cliente (bot ou consultor primeiro), do consultor em toda resposta (ignora o bot), 1ª resposta do consultor depois do repasse do bot; média/mediana e formatar duração. Usado pelo Painel e pela exportação |
 | `src/regras/painel.ts` | Período do Painel: atalhos (hoje, 7 dias, 30 dias, semana, mês), datas livres, período anterior do mesmo tamanho |

@@ -152,6 +152,44 @@ describe("arquivados excluídos em 30 dias (LIMP-04, LIMP-06)", () => {
   });
 });
 
+describe("clientes que fecharam: excluídos 180 dias depois do fechamento", () => {
+  async function fecharLead(tel: string) {
+    const lead = await obterOuCriarLead(tel);
+    await db.lead.update({ where: { id: lead.id }, data: { etapa: "fechado", valorFechado: 100000 } });
+    await db.mudancaEtapa.create({ data: { leadId: lead.id, de: "negociacao", para: "fechado", autor: "teste", criadoEm: await agora() } });
+    return lead.id;
+  }
+
+  it("aos 179 dias fica; aos 180 apaga, registra só os 4 últimos dígitos e preserva as métricas", async () => {
+    const id = await fecharLead("+5588900008888");
+    await avancarRelogio(179 * DIA);
+    expect((await rodarRotinas()).excluidos).toBe(0);
+    await avancarRelogio(1 * DIA + HORA);
+    const r = await rodarRotinas();
+    expect(r.excluidos).toBe(1);
+    expect(r.fechadosExcluidos).toBe(1);
+    expect(await db.lead.count({ where: { id } })).toBe(0);
+    const pedido = await db.pedidoLgpd.findFirstOrThrow();
+    expect(pedido).toMatchObject({ acao: "exclusao", telefoneFim: "8888" });
+    expect(pedido.quem).toMatch(/180/);
+  });
+
+  it("fechado e arquivado também espera 180 dias (não sai aos 30)", async () => {
+    const id = await fecharLead("+5588900009999");
+    await arquivarLeads([id], "teste");
+    await avancarRelogio(31 * DIA);
+    expect((await rodarRotinas()).excluidos).toBe(0);
+    expect(await db.lead.count({ where: { id } })).toBe(1);
+  });
+
+  it("quem não fechou não é afetado pela regra dos 180 dias", async () => {
+    const lead = await obterOuCriarLead("+5588900007000");
+    await avancarRelogio(200 * DIA);
+    expect((await rodarRotinas()).fechadosExcluidos).toBeUndefined();
+    expect(await db.lead.count({ where: { id: lead.id } })).toBe(1);
+  });
+});
+
 describe("bot sem chave da API (BOT-06)", () => {
   it("não derruba: marca aguardando humano com aviso", async () => {
     const chave = process.env.ANTHROPIC_API_KEY;

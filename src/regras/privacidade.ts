@@ -16,7 +16,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
   return [
     {
       titulo: "Quem somos",
-      paragrafos: ["A Eccellenza é uma loja de móveis planejados Italínea em Juazeiro do Norte, Ceará. A empresa responsável é a Amj Moveis Planejados LTDA, CNPJ 44.584.819/0001-19. Esta página explica como tratamos os dados de quem conversa conosco pelo WhatsApp."],
+      paragrafos: ["A Eccellenza é uma loja de móveis planejados Italínea em Juazeiro do Norte, Ceará. A empresa responsável é a AMJ MOVEIS PLANEJADOS LTDA - EPP (nome fantasia Eccellenza), CNPJ 44.584.819/0001-19. Esta página explica como tratamos os dados de quem conversa conosco pelo WhatsApp."],
     },
     {
       titulo: "Quais dados tratamos",
