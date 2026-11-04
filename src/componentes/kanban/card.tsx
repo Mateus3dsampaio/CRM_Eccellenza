@@ -246,6 +246,8 @@ export function Card({
       role="group"
       aria-label={card.nome}
       data-card={card.id}
+      data-espera={faixa}
+      data-critico={critico || undefined}
       aria-roledescription="card arrastável"
       className={juntar(
         "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
