@@ -105,7 +105,8 @@
 
   /* Espaçamentos nomeados */
   --spacing-toque: 44px;
-  --spacing-coluna: 300px;
+  --spacing-coluna: 264px;
+  --spacing-coluna-recolhida: 44px;
   --spacing-topo: 64px;
 
   /* Animações */

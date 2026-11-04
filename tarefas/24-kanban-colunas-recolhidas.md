@@ -1,6 +1,6 @@
 # Tarefa 24 – Kanban: todas as colunas úteis na tela
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** Decisões na implementação: em 1440 com o menu aberto, 5 colunas de 280px não cabem de jeito nenhum (sobram ~1190px úteis); a saída foi coluna de 264px + zoom **automático** ("Ajustar à tela", ícone ao lado do −/+, padrão para quem nunca mexeu no zoom), que encolhe até 75% para as colunas abertas caberem. Em 1440 fica em 79% com as 7 colunas visíveis; em 1280 fica em 75% e só Fechado/Perdido ficam na rolagem. Quem preferir texto maior aperta + (vira zoom fixo, como antes). Colunas recolhidas só no computador; a escolha fica salva por pessoa.
 
 ## Problema
 Em 1440×900 só 4 das 7 colunas aparecem. Negociação (onde está o dinheiro), Fechado e Perdido ficam escondidas na rolagem horizontal.
