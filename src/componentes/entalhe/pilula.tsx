@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type CSSProperties, type RefObject } from "react";
 import { clamp, molaPasso } from "./geometria";
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   itens: RefObject<(HTMLElement | null)[]>;
   /** Aba escolhida; -1 esconde a pílula. */
   indice: number;
+  /** `vidro` (abas): pílula de vidro escuro entre as abas. `anel` (temas): anel fino em volta do item, que estica ao andar. */
+  variante?: "vidro" | "anel";
 }
 
 /** Borda da frente chega rápido; a de trás sai um instante depois e passa um pouco do ponto antes de assentar (efeito de mola). */
@@ -22,7 +24,8 @@ const ATRASO_TRAS = 0.05; // s
  * separadas: ao ir para a direita a borda direita chega primeiro e a esquerda a alcança com um leve estalo.
  * Anima direto no DOM (sem re-renderizar a tela a cada quadro).
  */
-export function Pilula({ raiz, itens, indice }: Props) {
+export function Pilula({ raiz, itens, indice, variante = "vidro" }: Props) {
+  const margem = variante === "anel" ? 5 : 0;
   const pilulaRef = useRef<HTMLDivElement>(null);
   const irParaRef = useRef<(i: number) => void>(() => {});
   const medirRef = useRef<() => void>(() => {});
@@ -81,7 +84,7 @@ export function Pilula({ raiz, itens, indice }: Props) {
       est.medidas = itens.current.map((el) => {
         if (!el) return null;
         const b = el.getBoundingClientRect();
-        return { e: b.left - caixa.left, d: b.right - caixa.left };
+        return { e: b.left - caixa.left - margem, d: b.right - caixa.left + margem };
       });
       const alvo = est.medidas[est.ativo];
       if (alvo) {
@@ -153,19 +156,31 @@ export function Pilula({ raiz, itens, indice }: Props) {
     <div
       ref={pilulaRef}
       aria-hidden
-      className="pointer-events-none absolute left-0 rounded-controle"
-      style={{
-        top: 5,
-        bottom: 5,
-        opacity: 0,
-        willChange: "transform, width",
-        // Vidro líquido escuro: reflexo claro em cima, fundo ardósia translúcido, borda fina e sombra funda.
-        background: "linear-gradient(180deg, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0.06) 45%, rgb(255 255 255 / 0.1) 100%), rgb(52 66 86 / 0.7)",
-        backdropFilter: "blur(12px) saturate(1.6)",
-        WebkitBackdropFilter: "blur(12px) saturate(1.6)",
-        border: "1px solid rgb(255 255 255 / 0.16)",
-        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.38), inset 0 -1px 0 rgb(0 0 0 / 0.35), inset 0 0 14px rgb(255 255 255 / 0.05), 0 6px 16px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.5)",
-      }}
+      className={variante === "anel" ? "pointer-events-none absolute left-0" : "pointer-events-none absolute left-0 rounded-controle"}
+      style={variante === "anel" ? ESTILO_ANEL : ESTILO_VIDRO}
     />
   );
 }
+
+const ESTILO_VIDRO: CSSProperties = {
+  top: 5,
+  bottom: 5,
+  opacity: 0,
+  willChange: "transform, width",
+  // Vidro líquido escuro: reflexo claro em cima, fundo ardósia translúcido, borda fina e sombra funda.
+  background: "linear-gradient(180deg, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0.06) 45%, rgb(255 255 255 / 0.1) 100%), rgb(52 66 86 / 0.7)",
+  backdropFilter: "blur(12px) saturate(1.6)",
+  WebkitBackdropFilter: "blur(12px) saturate(1.6)",
+  border: "1px solid rgb(255 255 255 / 0.16)",
+  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.38), inset 0 -1px 0 rgb(0 0 0 / 0.35), inset 0 0 14px rgb(255 255 255 / 0.05), 0 3px 6px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.5)",
+};
+
+const ESTILO_ANEL: CSSProperties = {
+  top: 0,
+  bottom: 0,
+  opacity: 0,
+  willChange: "transform, width",
+  borderRadius: 9999,
+  border: "2px solid var(--color-marca-texto)",
+  boxShadow: "0 0 16px color-mix(in srgb, var(--color-marca) 60%, transparent)",
+};

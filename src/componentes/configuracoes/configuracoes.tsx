@@ -14,6 +14,7 @@ import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
 import { ChavesApi } from "./chaves-api";
+import { Temas } from "./temas";
 import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
@@ -27,13 +28,14 @@ interface Dados {
   periodoExportacao: { de: string; ate: string };
 }
 
-type AbaConfig = "geral" | "vendas" | "instrucoes" | "api" | "exportar";
+type AbaConfig = "geral" | "vendas" | "instrucoes" | "api" | "temas" | "exportar";
 
 const ABAS: { codigo: AbaConfig; rotulo: string }[] = [
   { codigo: "geral", rotulo: "Geral" },
   { codigo: "vendas", rotulo: "Vendas" },
   { codigo: "instrucoes", rotulo: "Instruções de atendimento" },
   { codigo: "api", rotulo: "Chave API" },
+  { codigo: "temas", rotulo: "Temas" },
   { codigo: "exportar", rotulo: "Exportar desempenho" },
 ];
 
@@ -72,6 +74,8 @@ export function Configuracoes() {
           <UsoDoBot />
           <WhatsappConfig />
         </div>
+      ) : aba === "temas" ? (
+        <Temas />
       ) : aba === "exportar" ? (
         dados ? <ExportarDesempenho equipe={dados.equipe} periodoPadrao={dados.periodoExportacao} /> : <Carregando linhas={2} />
       ) : carregando && !dados ? (

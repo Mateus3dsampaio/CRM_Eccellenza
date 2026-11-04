@@ -287,7 +287,7 @@ export function Entalhe({ raiz, itens, indice, orientacao, variante, soIcone, bo
           overflow: "hidden",
           borderRadius: variante === "bola" ? "50%" : "var(--radius-controle)",
           background: "linear-gradient(180deg, var(--color-marca-forte), var(--color-marca))",
-          boxShadow: "0 3px 0 var(--color-marca-lado), 0 8px 14px rgb(63 116 236 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.3)",
+          boxShadow: "0 3px 0 var(--color-marca-lado), 0 8px 14px color-mix(in srgb, var(--color-marca) 35%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3)",
           color: "var(--color-sobre-marca)",
           willChange: "transform",
         }}

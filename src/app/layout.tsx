@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
+// Aplica o tema guardado neste aparelho antes de pintar a tela (sem piscar o padrão). Só aceita letras minúsculas.
+const SCRIPT_TEMA = `try{var t=localStorage.getItem("tema");if(t&&/^[a-z]+$/.test(t)&&t!=="padrao"){document.documentElement.dataset.tema=t}}catch(e){}`;
+
 const inter = Inter({ subsets: ["latin"], variable: "--fonte-inter", display: "swap" });
 
 export const metadata: Metadata = {
@@ -17,7 +20,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

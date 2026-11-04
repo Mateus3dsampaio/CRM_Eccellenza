@@ -76,7 +76,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `src/app/layout.tsx` | Layout raiz (fonte). O sistema é só escuro |
 | `src/app/globals.css` | Estilos globais e as classes de "tecla" dos botões (`tecla`, `tecla-pri`, `tecla-perigo`) e `afundado` (selecionado) |
-| `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços. Paleta azul-ardósia do modelo do Mateus; sistema só escuro |
+| `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços. Paleta azul-ardósia do modelo do Mateus; sistema só escuro. No fim, os temas de cor (`:root[data-tema=...]`, seis paletas que só informam as cores-base; o resto sai por mistura) |
 | `src/app/login/page.tsx` | Login |
 | `src/app/manifest.ts` | App instalável (PWA): nome, cores e ícones (`public/icone-*.png`, `public/apple-touch-icon.png`, o "E" azul provisório). Sem service worker e sem avisos de propósito (decisão do Mateus). No iPhone: Safari > Compartilhar > Adicionar à Tela de Início |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
@@ -199,6 +199,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (PROVISÓRIO) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
 | `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
 
 ## Bot (`src/bot`)
@@ -221,7 +222,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/menu-lateral.tsx` | Menu lateral (computador): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
 | `src/componentes/entalhe/geometria.ts` | Contas puras do entalhe flutuante (modelo `docs/referencia/modelos_interacao.html`, barra 3: salto, abertura, recorte em caminho SVG, nas duas orientações) e a mola |
 | `src/componentes/entalhe/entalhe.tsx` | `Entalhe`: recorte + pílula que salta e pousa no item novo. Usado só no menu (encolhido no computador e barra de baixo do celular). Anima direto no DOM; respeita "reduzir movimento" |
-| `src/componentes/entalhe/pilula.tsx` | `Pilula`: pílula elástica de vidro escuro (barra 1 da referência). Duas bordas em molas diferentes: a da frente chega primeiro e a de trás alcança com um leve estalo |
+| `src/componentes/entalhe/pilula.tsx` | `Pilula`: pílula elástica (barra 1 da referência), em vidro escuro nas abas e como anel nos temas. Duas bordas em molas diferentes: a da frente chega primeiro e a de trás alcança com um leve estalo |
 | `src/componentes/entalhe/abas.tsx` | `Abas`: PADRÃO de qualquer escolha de abas ou filtro de uma opção só (Configurações, Galeria, Painel, Agenda, ficha no celular), com a pílula elástica. Use no lugar de botões `role="tab"` soltos |
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
@@ -251,12 +252,14 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções, Chave API e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções, Chave API, Temas e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
 | `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
 | `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": escolha Claude/GPT para o texto e modelo do GPT, dois campos em pontinhos (texto e áudio), "usar a mesma do texto" no áudio, mostra só o final, salvar/remover |
+| `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
+| `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
@@ -310,6 +313,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
+| `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |

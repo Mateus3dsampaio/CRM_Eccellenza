@@ -28,13 +28,13 @@ export function Abas<T extends string>({ itens, valor, aoMudar, rotuloAria, clas
   const indice = itens.findIndex((i) => i.codigo === valor);
 
   return (
-    // Fora da barra: rola de lado em tela estreita sem cortar a sombra.
-    <div className={juntar("rolagem-fina pointer-events-none max-w-full overflow-x-auto", className)} style={{ margin: "-8px -10px -14px", padding: "8px 10px 14px" }}>
+    // Fora da barra: rola de lado em tela estreita.
+    <div className={juntar("rolagem-fina max-w-full overflow-x-auto", className)}>
       <div
         ref={raiz}
         role="tablist"
         aria-label={rotuloAria}
-        className="pointer-events-auto relative flex w-max min-w-full rounded-controle px-1.5"
+        className="relative flex w-max min-w-full rounded-controle px-1.5"
         style={{
           background: "rgb(255 255 255 / 0.035)",
           backdropFilter: "blur(10px)",

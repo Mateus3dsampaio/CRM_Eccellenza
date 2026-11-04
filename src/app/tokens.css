@@ -95,7 +95,7 @@
   --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
   /* Tecla: lateral sólida + sombra ambiente + brilho no topo */
   --shadow-tecla: 0 4px 0 var(--color-tecla-lado), 0 7px 8px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.07);
-  --shadow-tecla-pri: 0 4px 0 var(--color-marca-lado), 0 7px 10px rgb(63 116 236 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.3);
+  --shadow-tecla-pri: 0 4px 0 var(--color-marca-lado), 0 7px 10px color-mix(in srgb, var(--color-marca) 35%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3);
   --shadow-tecla-perigo: 0 4px 0 var(--color-perigo-lado), 0 7px 10px rgb(204 59 55 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.25);
   --shadow-tecla-afundada: 0 1px 0 var(--color-tecla-lado), 0 2px 3px rgb(0 0 0 / 0.4);
   /* Indicador "afundado" (aba/menu selecionado) */
@@ -121,3 +121,35 @@
     50% { opacity: 0.55; }
   }
 }
+
+/*
+ * Temas (Configurações > Temas). O padrão é o azul-ardósia acima. Cada tema só informa as cores da paleta:
+ * --t0 (mais escura) a --t4 (mais clara) e a marca (--m botão, --mf passar o mouse, --mt texto, --ml lateral da tecla).
+ * O resto dos tokens sai por mistura destas cores. A escolha vale só neste aparelho (localStorage "tema").
+ */
+:root[data-tema] {
+  --color-fundo: var(--t0);
+  --color-lateral: color-mix(in srgb, var(--t0) 88%, var(--t1));
+  --color-coluna: color-mix(in srgb, var(--t0) 74%, var(--t1));
+  --color-superficie: color-mix(in srgb, var(--t0) 50%, var(--t1));
+  --color-superficie-suave: color-mix(in srgb, var(--t1) 72%, var(--t2));
+  --color-borda: color-mix(in srgb, var(--t1) 68%, var(--t2));
+  --color-borda-forte: color-mix(in srgb, var(--t1) 45%, var(--t2));
+  --color-texto: color-mix(in srgb, var(--t4) 55%, #fff);
+  --color-texto-suave: color-mix(in srgb, var(--t4) 88%, var(--t0));
+  --color-texto-fraco: color-mix(in srgb, var(--t4) 72%, var(--t0));
+  --color-marca: var(--m);
+  --color-marca-forte: var(--mf);
+  --color-marca-lado: var(--ml);
+  --color-marca-texto: var(--mt);
+  --color-marca-suave: color-mix(in srgb, var(--t0) 72%, var(--m));
+  --color-tecla-lado: color-mix(in srgb, var(--t0) 80%, #000);
+  --color-chat-fundo: color-mix(in srgb, var(--t0) 92%, var(--t1));
+  --color-chat-cliente: color-mix(in srgb, var(--t1) 70%, var(--t2));
+}
+:root[data-tema="ametista"] { --t0: #0e0b1d; --t1: #2a1e4d; --t2: #5a3b8c; --t3: #8b7cc7; --t4: #c9c2e3; --m: #6a47b8; --mf: #7f5fd0; --mt: #b2a5f0; --ml: #3f2a75; }
+:root[data-tema="cafe"] { --t0: #1a120e; --t1: #3a2418; --t2: #6b4a2e; --t3: #a88462; --t4: #d5c4ae; --m: #9a5a24; --mf: #b56e2e; --mt: #d9a56e; --ml: #6b3e16; }
+:root[data-tema="floresta"] { --t0: #0f1f17; --t1: #1e3a2e; --t2: #3e5a3f; --t3: #6b7f67; --t4: #c7cbb8; --m: #4a7a4f; --mf: #5c9062; --mt: #9cc79f; --ml: #2e5232; }
+:root[data-tema="marinho"] { --t0: #0b132b; --t1: #1c2541; --t2: #3a506b; --t3: #5bc0de; --t4: #f4d6b0; --m: #b85c08; --mf: #d97706; --mt: #f4b46a; --ml: #7a3c05; }
+:root[data-tema="petroleo"] { --t0: #0a0f14; --t1: #0f3d3e; --t2: #2e6f73; --t3: #7fb3b8; --t4: #eadcc8; --m: #b5541a; --mf: #c6601f; --mt: #f0a06a; --ml: #78360e; }
+:root[data-tema="rosa"] { --t0: #121212; --t1: #1f2937; --t2: #334155; --t3: #64748b; --t4: #f1f5f9; --m: #d6317f; --mf: #ec4899; --mt: #f58dbb; --ml: #8f1f52; }
