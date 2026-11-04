@@ -7,12 +7,12 @@
 - Conferido: testes de privacidade e do mapa passam; verificação de tipos (tsc) sem erro. Não rodei a suíte completa nem testei a página no navegador.
 
 ## Falta (depende da sua aprovação)
-- [ ] Você aprovar os textos (`02-textos-para-aprovar.md`).
+- [x] Você aprovar os textos (`02-textos-para-aprovar.md`). Aprovado em 05/11/2026; marcador PROVISÓRIO tirado do código.
 - [ ] Você autorizar o push (commit na branch de trabalho e subida para o Railway). Depois do deploy, abrir `https://crmeccellenza-production.up.railway.app/exclusao-de-dados` e `/privacidade` para conferir.
 - [ ] Trocar os textos de `src/regras/modelos.ts` pelos modelos aprovados (`03-modelos-de-mensagem.md`) e subir.
 - [ ] Testar o envio de um modelo com botões depois de aprovado na Meta.
 - [ ] Opcional: variáveis nos modelos (data e hora no lembrete da visita).
-- [ ] Opcional: aviso do Web Push, encarregado e data na política.
+- [x] Aviso do Web Push, encarregado e data na política: decidido que NÃO entram (05/11/2026).
 - [ ] Atualizar `docs/pendencias.md` e `docs/colocar-no-ar.md` ao concluir.
 
 ## Observação

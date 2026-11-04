@@ -43,7 +43,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
-| `src/regras/privacidade.ts` | Texto da política de privacidade e da página de exclusão de dados `secoesExclusao` (PROVISÓRIO, prazo de 15 dias a aprovar) (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
+| `src/regras/privacidade.ts` | Texto da política de privacidade e da página de exclusão de dados `secoesExclusao` (aprovada em 05/11/2026, prazo de 15 dias) (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
 | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
@@ -91,7 +91,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/(app)/simulador/page.tsx` | Simulador (chat do cliente fictício) |
 | `src/app/(app)/galeria/page.tsx` | Galeria de imagens, vídeos e PDFs |
 | `src/app/privacidade/page.tsx` | Política de privacidade PÚBLICA (sem login; a Meta e os clientes abrem). Rascunho até `PRIVACIDADE_APROVADA=1`; contato em `PRIVACIDADE_CONTATO` |
-| `src/app/exclusao-de-dados/page.tsx` | Instruções PÚBLICAS de exclusão de dados (sem login; endereço que a Meta pede nas configurações do app). Texto PROVISÓRIO em `regras/privacidade.ts` (`secoesExclusao`), aguardando aprovação do Mateus; mesmo aviso de rascunho da política |
+| `src/app/exclusao-de-dados/page.tsx` | Instruções PÚBLICAS de exclusão de dados (sem login; endereço que a Meta pede nas configurações do app). Texto em `regras/privacidade.ts` (`secoesExclusao`), aprovado pelo Mateus em 05/11/2026; mesmo aviso de rascunho da política |
 | `src/app/(app)/arquivados/page.tsx` | Arquivados |
 | `src/app/(app)/configuracoes/page.tsx` | Configurações (só admin) |
 

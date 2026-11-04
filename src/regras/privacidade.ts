@@ -14,8 +14,7 @@ export const CONTATO_PADRAO = "italinea.eccellenza@hotmail.com ou telefone/Whats
 // Página pública com o passo a passo para excluir os dados (a Meta pede este endereço nas configurações do app).
 export const CAMINHO_EXCLUSAO = "/exclusao-de-dados";
 
-// PROVISÓRIO: texto PROPOSTO, aguardando aprovação do Mateus (docs/publicacao-meta/02-textos-para-aprovar.md).
-// O prazo de resposta (15 dias) também é provisório.
+// Texto da página de exclusão e prazo de 15 dias APROVADOS pelo Mateus em 05/11/2026 (docs/publicacao-meta/02-textos-para-aprovar.md).
 export const PRAZO_EXCLUSAO_DIAS = 15;
 
 export function secoesExclusao(contato: string | undefined): SecaoPrivacidade[] {

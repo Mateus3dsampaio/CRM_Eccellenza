@@ -2,7 +2,9 @@
 
 Tudo aqui é PROPOSTA. O texto já está no código, no computador, com o aviso de "rascunho" (não foi enviado para o Git nem para o Railway). Ao aprovar, aviso o Claude para subir.
 
-Perguntas para decidir:
+**Decisões do Mateus (05/11/2026): texto da página `/exclusao-de-dados` e prazo de 15 dias APROVADOS. Web Push na política: não. Encarregado (DPO): não (rever com advogado). Data de atualização: não.** Nada mais pendente nesta etapa.
+
+Perguntas (já respondidas):
 1. O prazo de **15 dias** para responder pedidos de exclusão serve? [ ] sim [ ] outro: ____
 2. Quer citar na política os **avisos do navegador** (Web Push)? [ ] sim [ ] não
 3. Quer citar um **encarregado (DPO)**? Recomendo combinar com seu advogado. [ ] sim [ ] não [ ] depois
