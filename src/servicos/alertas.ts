@@ -8,6 +8,7 @@ import { nomeExibicao } from "@/regras/telefone";
 import { DIA } from "@/regras/tempo";
 import { prazosDeEspera } from "./configuracoes";
 import { marcarMudanca } from "@/lib/versao";
+import { enviarPushDoAlerta } from "./push";
 
 const LIMITE_POR_CONSULTA = 50;
 
@@ -19,7 +20,7 @@ export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string
   const lead = await db.lead.findUnique({ where: { id: params.leadId }, include: { consultor: { select: { id: true, nome: true } } } });
   if (!lead) return;
   const quando = await agora();
-  await db.alerta.create({
+  const criado = await db.alerta.create({
     data: {
       tipo: params.tipo,
       leadId: lead.id,
@@ -30,6 +31,8 @@ export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string
       criadoEm: quando,
     },
   });
+  // Avisos com o CRM fechado ou minimizado (quem ligou no sino). Não espera: o aviso do sistema não pode atrasar a resposta.
+  void enviarPushDoAlerta(criado);
   // Aviso velho não serve para nada: limpa junto.
   await db.alerta.deleteMany({ where: { criadoEm: { lt: new Date(quando.getTime() - DIAS_ALERTA_GUARDADO * DIA) } } });
 }

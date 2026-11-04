@@ -5,6 +5,8 @@ import { Bell, BellOff } from "lucide-react";
 import { juntar } from "../estilos";
 import { Botao } from "../ui";
 import { useUsuario } from "../usuario";
+import { chamarApi } from "../dados";
+import { ativarPush, desativarPush, pushLigadoNesteNavegador, pushSuportado, renovarPushSeLigado } from "./push";
 import { useAlertas } from "./provedor";
 
 function Chave({ ligada, aoMudar, rotulo, desabilitada }: { ligada: boolean; aoMudar: (v: boolean) => void; rotulo: string; desabilitada?: boolean }) {
@@ -26,7 +28,12 @@ function Chave({ ligada, aoMudar, rotulo, desabilitada }: { ligada: boolean; aoM
 export function BotaoAvisos() {
   const { preferencias, permissao, definirSom, definirNotificacoes, pedirPermissao, testar } = useAlertas();
   const ehAdmin = useUsuario().perfil === "admin";
+  const usuario = useUsuario();
   const [aberto, setAberto] = useState(false);
+  // Avisos com o CRM fechado ou minimizado (Web Push).
+  const [pushOn, setPushOn] = useState(false);
+  const [pushOcupado, setPushOcupado] = useState(false);
+  const [pushErro, setPushErro] = useState<string | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +47,29 @@ export function BotaoAvisos() {
       document.removeEventListener("keydown", tecla);
     };
   }, [aberto]);
+
+  useEffect(() => {
+    let vivo = true;
+    // Quem ligou antes volta a ser assinado (sair e entrar, ou o navegador trocou o endereço) e o botão mostra a verdade.
+    void renovarPushSeLigado(usuario.id).then(() => pushLigadoNesteNavegador(usuario.id)).then((ligado) => vivo && setPushOn(ligado));
+    return () => {
+      vivo = false;
+    };
+  }, [usuario.id]);
+
+  async function mudarPush(ligar: boolean) {
+    setPushOcupado(true);
+    setPushErro(null);
+    try {
+      if (ligar) await ativarPush(usuario.id);
+      else await desativarPush(usuario.id);
+      setPushOn(ligar);
+    } catch (e) {
+      setPushErro(e instanceof Error ? e.message : "Não foi possível mudar.");
+    } finally {
+      setPushOcupado(false);
+    }
+  }
 
   const notificacoesAtivas = preferencias.notificacoes && permissao === "granted";
   const silenciado = !preferencias.som && !notificacoesAtivas;
@@ -61,7 +91,7 @@ export function BotaoAvisos() {
           <div>
             <p className="font-semibold">Avisos neste navegador</p>
             <p className="mt-1 text-xs text-texto-suave">
-              {ehAdmin ? "Você recebe os avisos de todos os leads. Para silenciar, desligue as duas opções abaixo." : "Você recebe só os avisos dos seus leads."} Só funciona com o CRM aberto numa aba.
+              {ehAdmin ? "Você recebe os avisos de todos os leads. Para silenciar, desligue o som e as notificações." : "Você recebe só os avisos dos seus leads."} Com a última opção ligada, os avisos chegam também com o CRM fechado ou minimizado.
             </p>
           </div>
           <label className="flex items-center justify-between gap-3 text-sm">
@@ -81,6 +111,32 @@ export function BotaoAvisos() {
             {permissao === "denied" && <p className="rounded-controle bg-aviso-suave px-2 py-1.5 text-xs text-aviso">Bloqueadas neste navegador. Clique no cadeado ao lado do endereço do site e permita as notificações.</p>}
             {permissao === "indisponivel" && <p className="text-xs text-texto-suave">Este navegador não permite notificações.</p>}
           </div>
+          {pushSuportado() && (
+            <div className="space-y-1.5 text-sm">
+              <label className="flex items-center justify-between gap-3">
+                <span>Avisar com o CRM fechado ou minimizado</span>
+                <Chave ligada={pushOn} aoMudar={(v) => void mudarPush(v)} rotulo="Avisar com o CRM fechado ou minimizado" desabilitada={pushOcupado} />
+              </label>
+              <p className="text-xs text-texto-suave">
+                Aparece um cartão do Windows com o nome do cliente e um trecho da mensagem. Vale só neste navegador; ao sair do CRM, ele para de receber.
+              </p>
+              {pushOn && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-marca-texto hover:underline"
+                  onClick={() => {
+                    setPushErro(null);
+                    chamarApi("/api/push/teste", { method: "POST" })
+                      .then(() => setPushErro("Minimize o CRM agora: o aviso de teste chega em 5 segundos."))
+                      .catch((e) => setPushErro(e instanceof Error ? e.message : "Não foi possível testar."));
+                  }}
+                >
+                  Testar com o CRM minimizado
+                </button>
+              )}
+              {pushErro && <p className="rounded-controle bg-aviso-suave px-2 py-1.5 text-xs text-aviso">{pushErro}</p>}
+            </div>
+          )}
           <Botao variante="fantasma" onClick={testar}>
             Testar aviso
           </Botao>

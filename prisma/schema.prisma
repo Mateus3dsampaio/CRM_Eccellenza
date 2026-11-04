@@ -21,9 +21,10 @@ model Usuario {
   // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
   almocoSeq Int      @default(0)
 
-  leads     Lead[]     @relation("consultorLead")
-  visitas   Visita[]
-  bloqueios Bloqueio[]
+  leads           Lead[]           @relation("consultorLead")
+  visitas         Visita[]
+  bloqueios       Bloqueio[]
+  assinaturasPush AssinaturaPush[]
 }
 
 model Lead {
@@ -145,6 +146,20 @@ model Alerta {
   consultorNome String?
   texto         String? // prévia da mensagem ou horário da visita
   criadoEm      DateTime
+}
+
+// Aparelhos/navegadores que aceitaram receber avisos com o CRM fechado (Web Push). Uma linha por navegador; o endereço é único.
+// As chaves (p256dh, auth) só servem para criptografar o aviso para aquele navegador; não abrem nada no CRM.
+model AssinaturaPush {
+  id        Int      @id @default(autoincrement())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  criadoEm  DateTime
+
+  @@index([usuarioId])
 }
 
 // Histórico da conversa no formato da API do Claude. Só cresce (nunca editado).

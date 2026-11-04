@@ -62,6 +62,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `Visita`, `Bloqueio` | Agenda: visitas e bloqueios de horário |
 | `EventoWebhook` | Caixa de entrada do webhook da Meta: o corpo (traz texto e telefone do cliente) é gravado antes do 200, processado depois e ESVAZIADO ao terminar; a linha some em 2 dias. Excluir um cliente apaga também os eventos pendentes dele |
 | `EventoMetrica` | Contadores anônimos do painel |
+| `AssinaturaPush` | Navegadores que aceitaram avisos com o CRM fechado: pessoa, endereço do navegador (único) e as chaves que só servem para criptografar o aviso para ele |
 | `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
 | `Configuracao` | Pares chave/valor (chaves de API criptografadas, modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
@@ -133,6 +134,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
+| `src/app/api/push/route.ts` | Avisos com o CRM fechado (Web Push): GET devolve a chave pública do servidor e se este navegador já está ligado; POST liga este navegador; DELETE desliga. Qualquer usuário logado, cada um no seu navegador | `push` |
+| `src/app/api/push/teste/route.ts` | "Testar com o CRM minimizado" do sino: manda um aviso de teste em 5 s só para os navegadores de quem pediu | `push` |
 | `src/app/api/etapas/route.ts` | Nomes das colunas do Kanban: GET qualquer usuário logado; PUT só admin (`configurar`), nome vazio volta ao de fábrica, nomes repetidos recusados | `etapas` |
 | `src/app/api/vendas/regras/route.ts` | Regras de vendas e motivos para a janela de mover, a ficha e o card (qualquer usuário logado) | `vendas` |
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
@@ -154,6 +157,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/agenda.ts` | Horários livres, agendar, cancelar visita, bloqueios |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço (só muda por clique), `transferirLeads` (todos os leads em andamento de um consultor para outro) e `transferirLead` (um lead só), ambos com registro na ficha |
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
+| `src/servicos/push.ts` | Avisos com o CRM fechado (biblioteca `web-push`): chaves VAPID (variáveis `VAPID_*` ou criadas sozinhas e guardadas no banco, a privada criptografada com a `CHAVE_MESTRA`), guardar/cancelar o navegador de cada pessoa, enviar o aviso de cada alerta (`registrarAlerta` chama) a quem deve receber, remover navegador morto (404/410), aviso de teste. Nunca lança |
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
@@ -201,6 +205,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
 | `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/push.ts` | Web Push, só regra: quem recebe (admin tudo; consultor só os seus leads e nunca prazo vencido) e como o aviso é escrito (mensagem nova = nome do cliente no título + trecho de 110 letras; os outros usam `textoDoAlerta`) |
 | `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
 
@@ -229,6 +234,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/espera.tsx` | Espera do cliente na tela: provedor (uma consulta a `/api/aguardando` para a tela toda), hora do servidor, tempo e faixa de cor, classes de cor |
 | `src/componentes/alertas/provedor.tsx` | Busca os avisos novos a cada mudança de versão, toca o som, mostra a notificação do navegador (aba em segundo plano) ou o aviso na tela (aba na frente) e põe "(3)" no título da aba |
 | `src/componentes/alertas/botao-avisos.tsx` | Sino do topo: liga/desliga som e notificações, pede a permissão do navegador, testar aviso (só no computador) |
+| `src/componentes/alertas/push.ts` | Lado do navegador do Web Push: registrar `/sw.js`, pedir permissão, assinar, ligar/desligar, pausar ao sair do CRM e renovar ao abrir (quem já ligou neste navegador) |
 | `src/componentes/alertas/som.ts` | Som feito no navegador (sem arquivo de áudio) |
 | `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
@@ -316,6 +322,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
+| `testes/unit/push.test.ts` | Web Push (biblioteca trocada por uma falsa): quem recebe, texto do aviso, 410 remove o navegador, trocar de pessoa no mesmo navegador, chaves criptografadas, teste do sino |
+| `testes/unit/sw.test.ts` | O `public/sw.js` rodando numa casca falsa: mostra o cartão minimizado, não mostra com o CRM na frente, clique abre a conversa |
 | `testes/unit/etapas.test.ts` | Nome das colunas: validação, mesclar com o padrão, renomear/voltar ao padrão, nome repetido, histórico com o nome atual |
 | `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
@@ -325,6 +333,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/e2e/telas.spec.ts` | Telas no computador e no celular, com prints |
 
 ## Fora do código
+- `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.
 - `agente/instrucoes/` (01 a 15): só a carga inicial do banco; 14 = dados da loja, 15 = regras do CRM e ferramentas. O bot lê só do banco.
 - `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.

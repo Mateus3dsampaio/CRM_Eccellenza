@@ -9,6 +9,7 @@ import { chamarApi, useVersao } from "./dados";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
 import { BotaoAvisos } from "./alertas/botao-avisos";
+import { pausarPushAoSair } from "./alertas/push";
 import { BotaoAlmoco } from "./almoco";
 import { JanelaMinhaSenha } from "./configuracoes/equipe";
 import { NovaMensagem } from "./nova-mensagem";
@@ -35,6 +36,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
   const titulo = TITULOS.find(([prefixo]) => caminho.startsWith(prefixo))?.[1] ?? "Atendimentos";
 
   async function sair() {
+    await pausarPushAoSair().catch(() => undefined);
     await chamarApi("/api/login", { method: "DELETE" }).catch(() => undefined);
     router.push("/login");
   }

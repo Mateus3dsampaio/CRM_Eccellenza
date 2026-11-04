@@ -49,6 +49,8 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Dívida: a rota de arquivos lê o arquivo inteiro a cada pedido (usar `createReadStream` com Range).
 
 ## C. Nunca foi testado de verdade (conferir no primeiro deploy)
+- [ ] **Avisos com o CRM minimizado (Web Push, 05/11/2026).** Feito e testado só com simulação: o sistema de teste não tem como assinar de verdade no Google/Microsoft. Falta o Mateus, no Windows (Chrome ou Edge): abrir o sino, ligar "Avisar com o CRM fechado ou minimizado", clicar em "Testar com o CRM minimizado" e minimizar. Conferir também uma mensagem real de cliente e o clique no cartão levando à conversa.
+- [ ] **Privacidade dos avisos:** o cartão leva o nome do cliente e um trecho da mensagem. O conteúdo vai criptografado de ponta a ponta para o navegador (Google, Microsoft e Mozilla só repassam e não conseguem ler), mas o Mateus pode querer citar isso na política de privacidade.
 - [x] Railway: build, migração do Postgres, Volume, healthcheck (04/11/2026).
 - [ ] Meta: verificação do webhook (feita, 04/11/2026) e receber/enviar **texto** (feito: o cliente escreveu e o bot respondeu). Recebimento de foto, vídeo, ZIP e documentos testado e funcionando (Mateus, 04/11/2026). Falta testar: enviar modelo/arquivo pela loja e status de entrega.
 - [ ] OpenAI: transcrição de áudio real. Sem `OPENAI_API_KEY` o áudio chega e o bot avisa o cliente que ainda não atende áudio (comportamento confirmado em 04/11/2026); falta colocar a chave e testar a transcrição.

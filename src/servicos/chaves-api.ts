@@ -13,7 +13,7 @@ const CHAVE_SEGREDO_LOCAL = "segredo_sessao"; // só no computador, quando não 
 export class ErroChave extends Error {}
 
 /** Em produção a chave mestra (variável CHAVE_MESTRA) é obrigatória: sem ela o banco sozinho abriria as chaves. No computador, usa o segredo local. */
-async function segredoDeCifra(): Promise<string | null> {
+export async function segredoDeCifra(): Promise<string | null> {
   const mestra = process.env.CHAVE_MESTRA?.trim();
   if (mestra) {
     if (mestra.length < 16) throw new ErroChave("A variável CHAVE_MESTRA está curta demais (mínimo 16 caracteres).");
