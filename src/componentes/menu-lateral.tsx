@@ -178,7 +178,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
       {/* Navegação inferior no celular: a bolinha sai do entalhe e pousa no item ativo. O espaço de cima é transparente e não pega clique. */}
       <div ref={movelRef} className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pt-8 md:hidden">
         <nav
-          className="pointer-events-auto grid border-t border-borda bg-lateral"
+          className="pointer-events-auto grid border-t border-borda bg-lateral pb-[env(safe-area-inset-bottom)]"
           style={{
             gridTemplateColumns: `repeat(${todos.length}, minmax(0, 1fr))`,
           }}

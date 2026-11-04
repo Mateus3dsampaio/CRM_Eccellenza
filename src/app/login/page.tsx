@@ -54,6 +54,7 @@ export default function PaginaLogin() {
             Entrar
           </Botao>
         </form>
+        <p className="mt-4 text-center text-xs text-texto-fraco md:hidden">No iPhone: toque em Compartilhar e depois em &quot;Adicionar à Tela de Início&quot; para abrir como app.</p>
         <p className="mt-4 text-center text-xs text-texto-fraco">Ambiente de simulação com dados fictícios. Usuários de teste no README.</p>
       </div>
     </main>

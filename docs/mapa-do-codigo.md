@@ -78,6 +78,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/globals.css` | Estilos globais e as classes de "tecla" dos botões (`tecla`, `tecla-pri`, `tecla-perigo`) e `afundado` (selecionado) |
 | `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços. Paleta azul-ardósia do modelo do Mateus; sistema só escuro |
 | `src/app/login/page.tsx` | Login |
+| `src/app/manifest.ts` | App instalável (PWA): nome, cores e ícones (`public/icone-*.png`, `public/apple-touch-icon.png`, o "E" azul provisório). Sem service worker e sem avisos de propósito (decisão do Mateus). No iPhone: Safari > Compartilhar > Adicionar à Tela de Início |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
 | `src/app/(app)/page.tsx` | Kanban |
 | `src/app/(app)/lead/[id]/page.tsx` | Ficha do lead |

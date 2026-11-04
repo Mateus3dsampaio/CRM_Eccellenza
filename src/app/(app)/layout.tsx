@@ -28,7 +28,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                     <MenuLateral simulador={simulador} />
                     <div className="flex min-w-0 flex-1 flex-col">
                       <Cabecalho simulador={simulador} />
-                      <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</main>
+                      <main className="flex min-h-0 flex-1 flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
                     </div>
                   </div>
                 </ProvedorAlertas>
