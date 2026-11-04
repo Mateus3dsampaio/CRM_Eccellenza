@@ -9,7 +9,7 @@ import { variantesTelefone } from "@/regras/telefone";
 import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, MOTIVO_PAROU_DE_RESPONDER, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { motivosDePerda, regrasDeVendas } from "./vendas";
-import { ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
+import { ETAPAS_ANTIGAS, ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
 import { nomesDasEtapas } from "./etapas";
 import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
@@ -110,7 +110,8 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
     data: {
       etapa,
       ordem: -quando.getTime(),
-      etapaAnterior: opcoes.guardarAnterior ? lead.etapa : lead.etapaAnterior,
+      // Ir para Perdido (pelo consultor ou pela rotina) guarda de onde saiu: se o cliente voltar a falar, o card volta para lá.
+      etapaAnterior: opcoes.guardarAnterior || etapa === "perdido" ? lead.etapa : lead.etapaAnterior,
       semRespostaEm: parouDeResponder ? quando : lead.semRespostaEm,
       // O lembrete/retorno acompanha o lead nas etapas abertas; Fechado e Perdido apagam a data e a nota.
       proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : null,
@@ -326,6 +327,20 @@ export async function excluirLeads(ids: string[]): Promise<number> {
   }
   if (total) await marcarMudanca();
   return total;
+}
+
+/**
+ * Coluna em que o card estava antes de ir para Perdido. Vem do histórico de mudanças (vale também para cards que
+ * foram para Perdido antes desta regra); sem histórico, usa `etapaAnterior`; sem nada, Em qualificação (PROVISÓRIO).
+ */
+export async function etapaAntesDoPerdido(lead: { id: string; etapaAnterior: string | null }): Promise<CodigoEtapa> {
+  const ultima = await db.mudancaEtapa.findFirst({ where: { leadId: lead.id, para: "perdido" }, orderBy: { criadoEm: "desc" }, select: { de: true } });
+  for (const candidata of [ultima?.de, lead.etapaAnterior]) {
+    if (!candidata) continue;
+    const codigo = ETAPAS_ANTIGAS[candidata] ?? candidata;
+    if (etapaValida(codigo) && codigo !== "perdido") return codigo;
+  }
+  return "qualificacao";
 }
 
 export function etapaOuErro(codigo: string): CodigoEtapa {
