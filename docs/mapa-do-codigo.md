@@ -20,7 +20,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Onde mexer para…
 | Quero mudar… | Arquivos |
 |---|---|
-| O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): roteiro 01-13, dados da loja 14, regras do CRM e ferramentas 15. Montagem do prompt: `src/bot/prompt.ts` |
+| O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): as numeradas são coladas pelo Mateus do repositório de instruções dele (o projeto não tem cópia) e o Manual do CRM (fixo, fora da numeração) ensina as ferramentas. Sem instrução ativa o bot não atende e passa o cliente ao consultor (`src/bot/atendimento.ts`). Montagem do prompt: `src/bot/prompt.ts` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
@@ -67,7 +67,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `Configuracao` | Pares chave/valor (chaves de API criptografadas, modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
-| `Instrucao` | Instruções de atendimento do bot (título, texto, ordem, ativa, versão anterior) |
+| `Instrucao` | Instruções do bot (título, texto, ordem, ativa, versão anterior). `tipo`: `roteiro` (numeradas, coladas pelo admin) ou `manual` (o Manual do CRM: um só, ordem 0, sempre ativo, título fixo) |
 | `UsoApi` | Uma linha por chamada à API de texto (Claude ou GPT, sem distinguir): só contadores de tokens (sem texto de cliente). Alimenta "Uso do bot" em Configurações |
 | `LogWebhook` | Log do que a Meta mandou e dos envios (sem conteúdo das mensagens, só tipo e final do telefone). Apagado após 14 dias |
 | `PedidoLgpd` | Registro de exclusões e exportações de dados de cliente (só ação, quem fez e os 4 últimos dígitos do telefone) |
@@ -142,8 +142,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
 | `src/app/api/configuracoes/layout-ficha/route.ts` | Layout padrão da ficha (chave `layout_ficha` em `Configuracao`) | `regras/layout-ficha` |
 | `src/app/api/configuracoes/agenda/route.ts` | Gravar as regras da agenda (só admin) | `configuracoes` |
-| `src/app/api/configuracoes/instrucoes/route.ts` | Listar e criar instruções | `instrucoes` |
-| `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/route.ts` | Listar (numeradas + manual) e criar instruções | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir (o manual só edita o texto) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/reordenar/route.ts` | Reordenar | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/exportar/route.ts` | Exportar .txt ou .zip | `instrucoes`, `lib/zip` |
@@ -159,7 +159,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/push.ts` | Avisos com o CRM fechado (biblioteca `web-push`): chaves VAPID (variáveis `VAPID_*` ou criadas sozinhas e guardadas no banco, a privada criptografada com a `CHAVE_MESTRA`), guardar/cancelar o navegador de cada pessoa, enviar o aviso de cada alerta (`registrarAlerta` chama) a quem deve receber, remover navegador morto (404/410), aviso de teste. Nunca lança |
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
-| `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
+| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
 | `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor: contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) |
@@ -182,7 +182,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Regra |
 |---|---|
 | `src/regras/vendas.ts` | Acompanhamento de vendas: motivos de fábrica (carga inicial), dinheiro (centavos ↔ "R$ 1.621,00"), o que cada etapa exige para receber o card (próximo contato, valor fechado, motivo da perda; Negociação conforme o interruptor), data/hora de Fortaleza e situação do retorno (hoje, atrasado, sem data) |
-| `src/regras/etapas.ts` | Colunas do kanban, etiquetas, classificações, cidades atendidas |
+| `src/regras/etapas.ts` | Colunas do kanban, etiquetas, classificações (cidades atendidas e faixas ficam só nas instruções) |
 | `src/regras/agenda.ts` | Regras da agenda como parâmetro (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para "Sem resposta" |
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
@@ -214,8 +214,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
-| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções ativas do banco. Não lê mais nenhum arquivo |
-| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação |
+| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
+| `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
+| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação. O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
 | `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente |
 
@@ -271,7 +272,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
-| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista, edição, exportar, excluir |
+| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
 | Arquivo | Faz |
@@ -290,7 +291,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/instrumentation.ts` | Roda ao subir o servidor: cria o primeiro admin e liga o agendador |
 | `src/lib/cifra.ts` | Criptografia AES-256-GCM de segredos guardados no banco (chaves de API) |
 | `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
-| `prisma/seed.ts` | Dados fictícios (apaga tudo e recria) |
+| `prisma/seed.ts` | Dados fictícios (apaga tudo e recria, menos as instruções do bot) |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
 | `scripts/gerar-planta.ts` | Gera a planta fictícia de teste |
 | `scripts/criar-usuario.ts` | Cria usuário no banco configurado |
@@ -304,7 +305,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `testes/unit/regras.test.ts` | Regras puras (24h, retomada, agenda, permissões) |
 | `testes/unit/fluxos.test.ts` | Fluxos com banco: retomada, distribuição, agenda, mensagens |
-| `testes/unit/instrucoes.test.ts` | Instruções: carga, edição, versão anterior, exclusão, zip |
+| `testes/unit/instrucoes.test.ts` | Instruções: banco vazio, Manual do CRM (criação, conversão do banco antigo, proteções), edição, versão anterior, exclusão, zip, bot sem instruções |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
@@ -328,12 +329,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
-| `testes/unit/ajuda.ts` | Limpar banco e criar consultores de teste |
+| `testes/unit/ajuda.ts` | Limpar banco, criar consultores de teste e um roteiro de EXEMPLO para os testes do bot (não é o que o bot usa) |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
 | `testes/e2e/telas.spec.ts` | Telas no computador e no celular, com prints |
 
 ## Fora do código
 - `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.
-- `agente/instrucoes/` (01 a 15): só a carga inicial do banco; 14 = dados da loja, 15 = regras do CRM e ferramentas. O bot lê só do banco.
+- Instruções de atendimento: NÃO ficam no projeto. Vêm do repositório de instruções do Mateus e são coladas em Configurações > Instruções de atendimento.
 - `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.

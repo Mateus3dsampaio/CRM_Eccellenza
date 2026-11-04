@@ -37,5 +37,5 @@ Você é o **orquestrador** e o único que escreve código. Argumentos: $ARGUMEN
 ## Nunca
 - Enviar mensagem real de WhatsApp, publicar, fazer push ou instalar algo fora do projeto sem autorização do Mateus.
 - Ler, exibir ou alterar a chave da API.
-- Editar `agente/instrucoes/` para mudar o bot (é só a carga inicial do banco: o bot lê do banco, edite pela tela de Configurações).
+- Criar arquivo de instruções do bot no projeto ou pôr regra do bot no código. As instruções vivem só no banco (tela de Configurações); mudança no Manual do CRM é proposta ao Mateus.
 - Inventar política da loja ou texto para o cliente final sem marcar como PROVISÓRIO.

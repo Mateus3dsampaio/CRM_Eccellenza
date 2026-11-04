@@ -1,7 +1,7 @@
 import { dataLocal, partesLocais, somarDias } from "./tempo";
 
 // Regras da agenda: o admin edita em Configurações (chave `agenda`). Sem nada gravado vale o padrão abaixo (PROVISÓRIO).
-// O bot não conhece estes números: ele só oferece o que ver_horarios_livres devolver.
+// O bot não agenda (decisão do Mateus 04/11/2026): quem marca é o consultor, pela agenda.
 const MINUTO = 60 * 1000;
 
 export interface RegrasAgenda {

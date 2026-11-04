@@ -262,6 +262,8 @@ model MotivoPerda {
 
 model Instrucao {
   id             String    @id @default(cuid())
+  /// "roteiro" (as numeradas, coladas pelo admin) ou "manual" (o Manual do CRM: uma só, fixa, fora da numeração)
+  tipo           String    @default("roteiro")
   titulo         String
   texto          String
   ordem          Int

@@ -71,14 +71,12 @@ Mapa completo, arquivo por arquivo: [`docs/mapa-do-codigo.md`](docs/mapa-do-codi
 | `src/componentes` | Partes das telas (kanban, ficha, agenda, simulador, painel) |
 | `src/regras` | Regras do negócio puras (24h, retomada, agenda, permissões, etapas) |
 | `src/servicos` | Regras que gravam no banco (leads, mensagens, agenda, rotinas, métricas) |
-| `src/bot` | O bot: monta o prompt a partir de `agente/` e executa as ferramentas |
+| `src/bot` | O bot: monta o prompt a partir das instruções do banco (tela de Configurações) e executa as ferramentas |
 | `src/app/tokens.css` | Todas as cores, sombras, raios e espaçamentos |
 | `prisma/` | Banco (SQLite) e dados de exemplo |
 | `midias/` | Fotos e plantas enviadas (fora da pasta pública; só com login) |
-| `agente/` | a carga inicial das 15 instruções (roteiro, dados da loja e regras do CRM). Tudo o que o bot segue vive no banco e é editado em Configurações |
 | `docs/` | Briefing, requisitos, design e relatórios de cada rodada |
 
 ## Arquivos de trabalho
 - `/ciclo etapa 1` – constrói e revisa o sistema em rodadas (relatórios em `docs/rodadas/`).
 - `/ciclo etapa 2` – layout profissional com animações (só depois de aprovar a etapa 1).
-- `/sincronizar-instrucoes` – traz as instruções atualizadas do projeto do agente do WhatsApp.

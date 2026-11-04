@@ -1,5 +1,7 @@
 # Tarefa 20 – Instruções só na tela (sem cópia no projeto)
 
+**Status: feito em 04/11/2026** (falta o Mateus colar as instruções na tela e aprovar o Manual do CRM; ver `docs/pendencias.md`).
+
 ## Por quê
 O Mateus mantém as instruções de atendimento em outro repositório (com um agente próprio que analisa casos e atualiza o texto) e cola o resultado em Configurações > Instruções de atendimento. A cópia em `agente/instrucoes/` está desatualizada e confunde. Decisão do Mateus (04/11/2026): **toda regra do bot fica em instrução editável na tela; nada de regra do bot no código nem em arquivo do projeto.**
 

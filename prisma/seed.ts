@@ -24,7 +24,7 @@ async function main() {
   await db.usuario.deleteMany();
   await db.registroRotina.deleteMany();
   await db.configuracao.deleteMany();
-  await db.instrucao.deleteMany();
+  // As instruções do bot NÃO são apagadas: vêm do repositório de instruções do Mateus, coladas na tela (o projeto não tem cópia).
   await db.motivoPerda.deleteMany();
   await rm(path.join(process.cwd(), "midias"), { recursive: true, force: true });
 

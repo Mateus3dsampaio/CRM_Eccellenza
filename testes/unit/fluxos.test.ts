@@ -16,7 +16,7 @@ import { arquivarLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
 import { receberMensagemCliente } from "@/servicos/conversa";
-import { criarConsultores, limparBanco } from "./ajuda";
+import { criarConsultores, limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 // PNG mínimo válido (1x1).
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -192,6 +192,7 @@ describe("clientes que fecharam: excluídos 180 dias depois do fechamento", () =
 
 describe("bot sem chave da API (BOT-06)", () => {
   it("não derruba: marca aguardando humano com aviso", async () => {
+    await criarRoteiroDeTeste();
     const chave = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     try {

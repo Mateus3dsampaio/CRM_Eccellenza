@@ -4,11 +4,11 @@ Cada requisito tem um ID. Os revisores citam o ID ao apontar problemas. **E1** =
 Um requisito só está "atendido" se o critério de aceite puder ser demonstrado no sistema rodando.
 
 ## BOT – atendimento
-- **BOT-01 (E1)** O prompt do bot é montado a cada conversa somente das instruções de atendimento (banco do CRM, ver INST-01 a INST-06), que incluem os dados da loja (14) e as regras do CRM e ferramentas (15), lidas em tempo de execução. Não existe outra fonte: nenhum arquivo nem texto fixo no código altera o comportamento do bot (a abertura fixa só identifica o bot e as tags <cliente>/<sistema>).
-  - Aceite: alterar uma instrução no arquivo muda o comportamento do bot sem mexer no código.
+- **BOT-01 (E1)** O prompt do bot é montado a cada conversa somente das instruções do banco (ver INST-01 a INST-08): as numeradas, coladas pelo admin, e depois o Manual do CRM. Não existe outra fonte: nenhum arquivo nem texto fixo no código altera o comportamento do bot (a abertura fixa só identifica o bot e as tags <cliente>/<sistema>).
+  - Aceite: alterar uma instrução na tela muda o comportamento do bot na próxima mensagem, sem mexer no código.
 - **BOT-02 (E1)** O bot segue as instruções: uma pergunta por mensagem, roteiro da 02, faixa de valor só para cozinha (03), nunca preço fechado ou desconto, casos da 06 direto ao consultor.
   - Aceite: os cenários de `testes/cenarios.md` passam com o agente `cliente-simulado`.
-- **BOT-03 (E1)** O bot grava as informações por ferramentas (`registrar_lead`, `atualizar_lead`, `classificar_lead`, `registrar_medidas`, `ver_horarios_livres`, `agendar_visita`, `passar_para_consultor`).
+- **BOT-03 (E1)** O bot grava as informações por ferramentas (`registrar_lead`, `atualizar_lead`, `classificar_lead`, `registrar_medidas`, `passar_para_consultor`). O bot não agenda: quem marca é o consultor (decisão do Mateus 04/11/2026).
   - Aceite: ao fim de uma conversa simulada, a ficha do lead tem todos os dados ditos pelo cliente, sem dados inventados.
 - **BOT-04 (E1)** Leitura de medidas em foto/planta enviada no chat, com confirmação ao cliente e origem "informada pelo cliente".
 - **BOT-05 (E1)** Quando um consultor assume a conversa, o bot para de responder nela até o consultor devolver.
@@ -100,13 +100,14 @@ A etapa 1 termina quando:
 5. O relatório final em `docs/rodadas/` explica ao Mateus como rodar e testar, o que ficou pendente e o que foi marcado como PROVISÓRIO.
 
 ## Instruções de atendimento editáveis (pedido do Mateus, 31/10/2026)
-- **INST-01** O CRM é a fonte principal das instruções: as 15 (13 originais + dados da loja + regras do CRM) entram no banco na primeira vez (carga inicial de `agente/instrucoes/`) e o bot passa a ler do banco.
+- **INST-01** O banco é a única fonte das instruções. O projeto não traz roteiro: o admin cola as instruções numeradas do repositório de instruções dele (atualizado 04/11/2026). Sem instrução ativa, o bot não atende e o cliente vai direto ao consultor, com aviso na tela de Instruções e na conversa.
 - **INST-02** Só o admin vê e edita (tela e API conferem a permissão `configurar`).
 - **INST-03** Aba "Instruções de atendimento" em Configurações: criar, editar título e texto, reordenar e ativar/desativar.
 - **INST-04** Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior"; botão "Voltar para a anterior" troca as duas.
 - **INST-05** Exportar: janela com seleção por instrução e "selecionar todas"; saída em .txt único ou .zip com um .txt por instrução.
 - **INST-06** Aviso de confirmação ao salvar e atalho "Testar no simulador".
 - **INST-07** O admin pode excluir uma instrução de vez, com confirmação clara de que não dá para desfazer. Não pode excluir a última instrução ativa.
+- **INST-08** Manual do CRM (04/11/2026): instrução fixa, fora da numeração, que ensina as ferramentas. Editável (com versão anterior e exportação), não pode ser desativada nem excluída, vai no prompt depois das numeradas. Em banco antigo, a instrução "15. Regras do CRM" vira o manual e a "14. Dados da loja" sai, uma vez só.
 
 ## Bloco 1 – Avisos e leads esperando resposta (pedido do Mateus, 04/11/2026)
 Tarefas em `tarefas/`. Marcado ✅ o que já está pronto.

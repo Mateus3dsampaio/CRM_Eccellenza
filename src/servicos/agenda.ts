@@ -51,7 +51,7 @@ export async function horariosLivresParaLead(leadId: string, limite = 3, aPartir
  * Marca a visita. A checagem e a gravação acontecem juntas; a chave única da vaga
  * garante que dois agendamentos simultâneos no mesmo horário da loja não passem.
  */
-export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; validarJanelaDoBot?: boolean; tipo?: "visita" | "apresentacao" }) {
+export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; tipo?: "visita" | "apresentacao" }) {
   const quando = await agora();
   const tipo = params.tipo ?? "visita";
   const nomeTipo = tipo === "apresentacao" ? "apresentação" : "visita";
@@ -59,10 +59,6 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   const regras = await regrasDaAgenda();
   if (!horarioDentroDaRegra(inicio, regras)) throw new ErroAgenda("Horário fora do funcionamento da loja.");
   if (inicio.getTime() <= quando.getTime()) throw new ErroAgenda("Horário já passou.");
-  if (params.validarJanelaDoBot) {
-    const { de, ate } = janelaDeAgendamento(quando, regras);
-    if (inicio < de || inicio >= ate) throw new ErroAgenda(`Horário fora da janela de agendamento (próximo dia aberto até ${regras.diasAFrente} dias).`);
-  }
   const fim = new Date(inicio.getTime() + duracaoVisitaMs(regras));
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
 

@@ -20,7 +20,7 @@ Antes de tudo, leia `docs/formato-revisao.md` e siga o formato e os limites de l
 - Entradas validadas (telefone; upload de imagem com tipo e tamanho).
 
 ## Uso da API do Claude
-- Prompt montado a partir dos arquivos em `agente/` (BOT-01), não copiado para o código.
+- Prompt montado só a partir das instruções do banco (BOT-01): nenhuma regra do bot no código nem em arquivo do projeto.
 - Ferramentas com esquema claro; resultados validados antes de gravar no banco.
 - Tratamento de erro, tempo limite e nova tentativa; falha não derruba o sistema (BOT-06).
 - Custo: histórico da conversa sem crescer sem limite, cache de prompt aproveitado, modelo adequado a cada tarefa.

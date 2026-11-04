@@ -17,15 +17,16 @@ Leia antes de qualquer trabalho: `docs/briefing.md`, `docs/requisitos.md` e `doc
 - **Nunca envie mensagem real de WhatsApp** nesta fase. Toda integração com a Meta é simulada.
 - **A chave da API (`ANTHROPIC_API_KEY`) fica no `.env`, colocada pelo Mateus.** Nunca escreva, exiba ou registre a chave em log.
 - **Dados de clientes reais não entram no simulador.** Use só dados fictícios (seed).
-- **Nunca invente política da loja** (preço, prazo, garantia, pagamento, cidades atendidas, regras de agenda). A fonte é a instrução 14 (Dados da loja). Se faltar, pergunte ao Mateus ou marque como PROVISÓRIO no código e no briefing.
+- **Nunca invente política da loja** (preço, prazo, garantia, pagamento, cidades atendidas, regras de agenda). A fonte são as instruções de atendimento do Mateus (no banco, coladas por ele do repositório de instruções). Se faltar, pergunte ao Mateus ou marque como PROVISÓRIO no código e no briefing.
 - **Textos que o cliente final vai ler** (mensagem de retomada, modelos de mensagem, novas falas do bot) são propostos e o Mateus aprova antes de valerem.
 - Antes de escrever código que usa a API do Claude, consulte a skill `claude-api` (modelos, preços e uso de ferramentas atuais).
 
 ## Instruções do bot: de onde vêm
-- **A partir de 31/10/2026 o CRM é a fonte principal das instruções de atendimento.** Elas ficam no banco (tabela `Instrucao`) e o admin edita em Configurações > Instruções de atendimento (criar, editar, reordenar, desativar, exportar; guarda só a versão anterior). O bot lê do banco a cada conversa (`src/servicos/instrucoes.ts`, `src/bot/prompt.ts`).
-- **Única fonte do que o bot segue: o banco.** Roteiro (01-13), dados da loja (14) e regras do CRM e ferramentas (15) são instruções; não existe `loja.md` nem `complemento-crm.md`, e `src/bot/prompt.ts` só tem a abertura fixa (identidade e tags de segurança). Qualquer regra nova do bot entra como instrução, nunca como texto no código.
-- `agente/instrucoes/*.txt` (15 arquivos) agora são só a **carga inicial**: copiadas para o banco uma vez, quando a tabela está vazia (primeiro uso ou depois do `npm run seed`). Editar esses arquivos não muda o bot que já está rodando, e o `/sincronizar-instrucoes` não atualiza mais as instruções do banco. Não use os arquivos para mudar o comportamento do bot: use a tela.
-- Dados da loja = instrução 14. Regras do CRM (ferramentas, agenda, pausa, retomada) = instrução 15, PROVISÓRIA; mudanças nela precisam de aprovação do Mateus. Não há mais "prioridade" entre fontes: se duas instruções se contradisserem, corrija o texto delas.
+- **Toda regra do bot fica em instrução editável na tela** (Configurações > Instruções de atendimento, tabela `Instrucao`). Nada de regra do bot no código nem em arquivo do projeto (decisão do Mateus 04/11/2026). `src/bot/prompt.ts` só tem a abertura fixa (identidade e tags de segurança).
+- **Instruções numeradas (roteiro):** o Mateus mantém em outro repositório (com um agente que analisa casos e atualiza o texto) e cola na tela. **O CRM não guarda cópia delas** e não traz roteiro de fábrica. Dados da loja (preço, prazo, cidades, pagamento) estão nelas; não existe mais "instrução 14". Sem instrução ativa, o bot não atende e passa o cliente direto ao consultor.
+- **Manual do CRM:** instrução fixa, fora da numeração, que ensina o bot a usar as ferramentas (ficha, medidas, classificação, passar ao consultor). Editável na mesma tela; não pode ser desativado nem excluído. É o único texto que o CRM grava sozinho (`src/bot/manual-inicial.ts`, só quando o manual ainda não existe). Editar esse arquivo não muda o bot que já roda. **Quando uma ferramenta do bot mudar, proponha o texto novo do manual ao Mateus**; com a aprovação, aplique (pela tela ou por conversão única no banco). PROVISÓRIO.
+- O bot **não agenda** (decisão do Mateus 04/11/2026): convida para a loja e passa ao consultor, que marca na agenda.
+- `npm run seed` não apaga as instruções. Testes usam um roteiro de exemplo (`testes/unit/ajuda.ts`), nunca as instruções reais.
 
 ## Como o trabalho é feito
 - Trabalho em **rodadas** com o comando `/ciclo`: o orquestrador (a sessão principal) implementa, roda os testes, chama os revisores em paralelo, corrige o que for bloqueante e repete, até não restar bloqueante ou atingir o limite de rodadas.
