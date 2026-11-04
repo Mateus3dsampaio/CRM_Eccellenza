@@ -2,6 +2,8 @@
 
 Fazer **depois** da tarefa 20 (o bot já não agenda). Aprovado pelo Mateus em 04/11/2026.
 
+**Status: feito em 04/11/2026.** Decisões tomadas na implementação (conferir com o Mateus): "Em negociação" do painel soma Apresentação agendada + Negociação; o valor do orçamento só é pedido ao mover para Negociação; visita à loja também conta no limite de visitas ao mesmo tempo na loja; cancelar a apresentação com medição ainda marcada volta o card para Medição.
+
 ## Objetivo
 O kanban mostra onde cada lead está e para onde o vendedor precisa levá-lo. O alvo é **trazer o cliente à loja com o projeto pronto** (quase todo cliente que compra visita a loja).
 

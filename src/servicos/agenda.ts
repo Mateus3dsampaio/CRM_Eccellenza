@@ -8,9 +8,13 @@ import {
   horarioDentroDaRegra,
   horariosLivres,
   janelaDeAgendamento,
+  naLoja,
+  NOMES_COMPROMISSO,
   vagaLivre,
   type Intervalo,
+  type TipoCompromisso,
 } from "@/regras/agenda";
+import { ETAPAS, type CodigoEtapa } from "@/regras/etapas";
 import { formatarVisitaCurta } from "@/regras/tempo";
 import { regrasDaAgenda } from "./configuracoes";
 import { registrarAlerta } from "./alertas";
@@ -25,41 +29,63 @@ async function consultoresAtivos(): Promise<string[]> {
   return lista.map((c) => c.id);
 }
 
-/** Visitas ativas e bloqueios no período. As visitas do próprio lead não contam (remarcação). */
-async function ocupados(de: Date, ate: Date, ignorarLeadId?: string): Promise<Intervalo[]> {
+/**
+ * Compromissos ativos e bloqueios no período. O compromisso do mesmo tipo do próprio lead não conta (é a remarcação);
+ * os outros dele contam (a medição do lead não pode coincidir com a apresentação dele).
+ */
+async function ocupados(de: Date, ate: Date, remarcando?: { leadId: string; tipo: TipoCompromisso }): Promise<Intervalo[]> {
   const [visitas, bloqueios] = await Promise.all([
-    db.visita.findMany({ where: { status: "agendada", inicio: { lt: ate }, fim: { gt: de }, leadId: ignorarLeadId ? { not: ignorarLeadId } : undefined } }),
+    db.visita.findMany({ where: { status: "agendada", inicio: { lt: ate }, fim: { gt: de } } }),
     db.bloqueio.findMany({ where: { inicio: { lt: ate }, fim: { gt: de } } }),
   ]);
   return [
-    ...visitas.map((v) => ({ consultorId: v.consultorId, inicio: v.inicio, fim: v.fim, tipo: "visita" as const })),
+    ...visitas
+      .filter((v) => !(remarcando && v.leadId === remarcando.leadId && v.tipo === remarcando.tipo))
+      .map((v) => ({ consultorId: v.consultorId, inicio: v.inicio, fim: v.fim, tipo: naLoja(v.tipo) ? ("visita" as const) : ("medicao" as const) })),
     ...bloqueios.map((b) => ({ consultorId: b.consultorId, inicio: b.inicio, fim: b.fim, tipo: "bloqueio" as const })),
   ];
 }
 
-/** Horários livres que o bot pode oferecer (AGENDA-02). */
-export async function horariosLivresParaLead(leadId: string, limite = 3, aPartirDe?: Date) {
+/** Horários livres para o compromisso do lead (AGENDA-02), já com a duração e as regras do tipo. */
+export async function horariosLivresParaLead(leadId: string, limite = 3, aPartirDe?: Date, tipo: TipoCompromisso = "visita") {
   const quando = await agora();
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { consultorId: true } });
   const regras = await regrasDaAgenda();
   const { de, ate } = janelaDeAgendamento(quando, regras);
   const consultores = await consultoresAtivos();
-  return horariosLivres({ agora: quando, consultores, ocupados: await ocupados(de, ate, leadId), consultorPreferido: lead?.consultorId, limite, aPartirDe, regras });
+  return horariosLivres({ agora: quando, consultores, ocupados: await ocupados(de, ate, { leadId, tipo }), consultorPreferido: lead?.consultorId, limite, aPartirDe, regras, tipo });
 }
+
+const ORDEM_ETAPA = Object.fromEntries(ETAPAS.map((e, i) => [e.codigo, i])) as Record<CodigoEtapa, number>;
+
+/**
+ * Para onde o card vai quando o compromisso é marcado (tarefa 21): medição → "Medição agendada", apresentação →
+ * "Apresentação agendada". Nunca volta o card de etapa mais avançada (ex.: em Negociação continua em Negociação);
+ * Perdido volta para o funil (o cliente voltou). Visita à loja não move o card (ele continua em qualificação).
+ */
+export function etapaAoAgendar(etapaAtual: string, tipo: TipoCompromisso): CodigoEtapa | null {
+  if (tipo === "visita") return null;
+  if (etapaAtual === "perdido") return tipo;
+  const atual = ORDEM_ETAPA[etapaAtual as CodigoEtapa];
+  return atual === undefined || atual < ORDEM_ETAPA[tipo] ? tipo : null;
+}
+
+/** Eventos do painel: conta um por lead (remarcar não soma). */
+const EVENTO_DO_TIPO = { visita: "visita_agendada", medicao: "medicao_agendada", apresentacao: "apresentacao_agendada" } as const;
 
 /**
  * Marca a visita. A checagem e a gravação acontecem juntas; a chave única da vaga
  * garante que dois agendamentos simultâneos no mesmo horário da loja não passem.
  */
-export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; tipo?: "visita" | "apresentacao" }) {
+export async function agendarVisita(params: { leadId: string; inicio: Date; consultorId?: string | null; autor: string; tipo?: TipoCompromisso }) {
   const quando = await agora();
   const tipo = params.tipo ?? "visita";
-  const nomeTipo = tipo === "apresentacao" ? "apresentação" : "visita";
+  const nomeTipo = NOMES_COMPROMISSO[tipo].toLowerCase();
   const { inicio } = params;
   const regras = await regrasDaAgenda();
-  if (!horarioDentroDaRegra(inicio, regras)) throw new ErroAgenda("Horário fora do funcionamento da loja.");
+  if (!horarioDentroDaRegra(inicio, regras, tipo)) throw new ErroAgenda(tipo === "medicao" ? "Horário fora do funcionamento da loja (a medição inteira precisa caber no horário)." : "Horário fora do funcionamento da loja.");
   if (inicio.getTime() <= quando.getTime()) throw new ErroAgenda("Horário já passou.");
-  const fim = new Date(inicio.getTime() + duracaoVisitaMs(regras));
+  const fim = new Date(inicio.getTime() + duracaoVisitaMs(regras, tipo));
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
 
   // Consultor escolhido; senão o consultor do lead; senão o primeiro livre.
@@ -69,9 +95,9 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
     : lead.consultorId
       ? [lead.consultorId, ...ativos.filter((c) => c !== lead.consultorId)]
       : ativos;
-  const ocupado = await ocupados(inicio, fim, lead.id);
-  const consultorId = lista.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupado, regras));
-  if (!consultorId) throw new ErroAgenda("Esse horário não está mais livre.");
+  const ocupado = await ocupados(inicio, fim, { leadId: lead.id, tipo });
+  const consultorId = lista.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupado, regras, tipo));
+  if (!consultorId) throw new ErroAgenda(params.consultorId ? "O consultor já tem compromisso nesse horário." : "Esse horário não está mais livre.");
 
   // Um compromisso ativo de cada tipo por lead: o anterior do mesmo tipo é cancelado (remarcação).
   const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo } });
@@ -81,7 +107,7 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
     visita = await db.$transaction(async (tx) => {
       for (const v of anteriores) await tx.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
       return tx.visita.create({
-        data: { leadId: lead.id, consultorId, inicio, fim, tipo, vagaChave: chaveVaga(consultorId, inicio, regras), criadoPor: params.autor, criadoEm: quando },
+        data: { leadId: lead.id, consultorId, inicio, fim, tipo, vagaChave: chaveVaga(consultorId, inicio, regras, tipo), criadoPor: params.autor, criadoEm: quando },
         include: { consultor: { select: { nome: true } } },
       });
     });
@@ -91,11 +117,11 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   }
 
   await db.lead.update({ where: { id: lead.id }, data: { consultorId } });
-  // Conta uma visita por lead: remarcar não soma no painel. Apresentação na loja não entra nessa conta.
-  if (tipo === "visita") await registrarUmaVez(lead.id, "visita_agendada", consultorId);
+  await registrarUmaVez(lead.id, EVENTO_DO_TIPO[tipo], consultorId);
   await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} ${nomeTipo}: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
-  // AGENDA-04: visita agendada move o card (sem voltar etapas mais avançadas).
-  if (tipo === "visita" && ["novo", "pronto", "sem_resposta"].includes(lead.etapa)) await moverEtapa(lead.id, "visita", params.autor);
+  // AGENDA-04: medição e apresentação movem o card (sem voltar etapas mais avançadas).
+  const destino = etapaAoAgendar(lead.etapa, tipo);
+  if (destino) await moverEtapa(lead.id, destino, params.autor);
   await atualizarResumo(lead.id);
   // Aviso só quando o bot marca: quem marca pela tela já sabe que marcou.
   if (params.autor === "bot") await registrarAlerta({ tipo: "visita_marcada", leadId: lead.id, texto: formatarVisitaCurta(inicio) });
@@ -104,12 +130,18 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
 }
 
 export async function cancelarVisita(visitaId: string, autor: string) {
-  if (!(await db.visita.findUnique({ where: { id: visitaId }, select: { id: true } }))) throw new ErroAgenda("Visita não encontrada.");
+  if (!(await db.visita.findUnique({ where: { id: visitaId }, select: { id: true } }))) throw new ErroAgenda("Compromisso não encontrado.");
   const visita = await db.visita.update({ where: { id: visitaId }, data: { status: "cancelada", vagaChave: null } });
-  await registrarAlteracao(visita.leadId, autor, `Cancelou ${visita.tipo === "apresentacao" ? "a apresentação" : "a visita"} de ${formatarVisitaCurta(visita.inicio)}`);
+  await registrarAlteracao(visita.leadId, autor, `Cancelou ${NOMES_COMPROMISSO[visita.tipo as TipoCompromisso]?.toLowerCase() ?? "o compromisso"} de ${formatarVisitaCurta(visita.inicio)}`);
   const lead = await db.lead.findUniqueOrThrow({ where: { id: visita.leadId } });
-  const outra = await db.visita.count({ where: { leadId: lead.id, status: "agendada", tipo: "visita" } });
-  if (visita.tipo === "visita" && !outra && lead.etapa === "visita") await moverEtapa(lead.id, "pronto", autor);
+  // Card na coluna do compromisso cancelado, sem outro igual marcado: volta para a medição (se houver uma marcada) ou para Em qualificação.
+  if (lead.etapa === visita.tipo && (visita.tipo === "medicao" || visita.tipo === "apresentacao")) {
+    const ativos = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada" }, select: { tipo: true } });
+    if (!ativos.some((a) => a.tipo === visita.tipo)) {
+      const volta: CodigoEtapa = visita.tipo === "apresentacao" && ativos.some((a) => a.tipo === "medicao") ? "medicao" : "qualificacao";
+      await moverEtapa(lead.id, volta, autor, { semExigencias: true });
+    }
+  }
   await atualizarResumo(lead.id);
   await marcarMudanca();
 }
@@ -119,7 +151,7 @@ export async function criarBloqueio(params: { consultorId: string; inicio: Date;
   const conflito = await db.visita.findFirst({
     where: { consultorId: params.consultorId, status: "agendada", inicio: { lt: params.fim }, fim: { gt: params.inicio } },
   });
-  if (conflito) throw new ErroAgenda("Já existe visita nesse período. Remarque ou cancele a visita antes de bloquear.");
+  if (conflito) throw new ErroAgenda("Já existe compromisso nesse período. Remarque ou cancele antes de bloquear.");
   const bloqueio = await db.bloqueio.create({
     data: { consultorId: params.consultorId, inicio: params.inicio, fim: params.fim, motivo: params.motivo, criadoEm: await agora() },
   });

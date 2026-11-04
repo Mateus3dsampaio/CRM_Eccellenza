@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
-import { CLASSIFICACOES, ETIQUETAS, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
+import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
+import { CLASSIFICACOES, ETIQUETAS, etapaComAgenda, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
 import { formatarVisitaCurta } from "@/regras/tempo";
 import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
@@ -32,10 +33,10 @@ function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => v
   const { motivos } = useRegrasVendas();
   if (!(ETAPAS_QUE_PEDEM_DADOS as string[]).includes(ficha.etapa)) return null;
   const linhas: [string, string][] = [];
-  if (ficha.etapa === "orcamento" || ficha.etapa === "negociacao") {
+  if (ficha.etapa === "qualificacao" || ficha.etapa === "negociacao") {
     linhas.push(["Próximo contato", ficha.proximoContatoEm ? formatarVisitaCurta(new Date(ficha.proximoContatoEm)) : "não definido"]);
-    linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
   }
+  if (ficha.etapa === "negociacao") linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
   if (ficha.etapa === "fechado") linhas.push(["Valor fechado", formatarReais(ficha.valorFechado) || "não informado"]);
   if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda, motivos)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
   return (
@@ -73,7 +74,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const nomesEtapas = useNomesEtapas();
   const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
   const [editando, setEditando] = useState(false);
-  const [agendar, setAgendar] = useState<"visita" | "apresentacao" | null>(null);
+  const [agendar, setAgendar] = useState<TipoCompromisso | null>(null);
   // Etapa que pede dados (retorno, valor fechado, motivo da perda): abre a janela; trocar só vale ao confirmar.
   const [pedido, setPedido] = useState<CodigoEtapa | null>(null);
 
@@ -124,8 +125,36 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
     }
   }
 
-  const visitaAtiva = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === "visita");
   const apresentacaoAtiva = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === "apresentacao");
+
+  /** Uma linha de compromisso (medição ou visita à loja): marcado com Cancelar, ou "Nenhum(a)". */
+  const linhaCompromisso = (tipo: "medicao" | "visita") => {
+    const ativo = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === tipo);
+    const nome = NOMES_COMPROMISSO[tipo];
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium">{nome}</span>
+          <Botao variante="fantasma" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={() => setAgendar(tipo)} aria-label={`${ativo ? "Remarcar" : "Agendar"} ${nome.toLowerCase()}`}>
+            {ativo ? "Remarcar" : "Agendar"}
+          </Botao>
+        </div>
+        {ativo ? (
+          <div className={juntar("flex flex-wrap items-center justify-between gap-2 rounded-controle p-3", tipo === "medicao" ? "bg-marca-suave" : "bg-sucesso-suave")}>
+            <p className={juntar("text-sm font-medium", tipo === "medicao" ? "text-marca-texto" : "text-sucesso")}>
+              {ativo.rotulo} com {ativo.consultor}
+            </p>
+            <Botao variante="fantasma" onClick={() => cancelarVisita(ativo.id)}>
+              Cancelar
+            </Botao>
+          </div>
+        ) : (
+          <p className="text-sm text-texto-suave">{tipo === "medicao" ? "Nenhuma medição agendada." : "Nenhuma visita agendada (cliente vem conhecer a loja; não move o card)."}</p>
+        )}
+      </div>
+    );
+  };
+  const canceladas = ficha.visitas.filter((v) => v.status === "cancelada");
 
   const blocos = {
     resumo: (
@@ -155,7 +184,17 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
         <Painel titulo="Etapa e responsável">
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo rotulo="Etapa">
-              <select className={classeEntrada} value={ficha.etapa} onChange={(e) => ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(e.target.value) ? setPedido(e.target.value as CodigoEtapa) : void acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada."))}>
+              <select
+                className={classeEntrada}
+                value={ficha.etapa}
+                onChange={(e) => {
+                  const etapa = e.target.value;
+                  // Medição/Apresentação: o card só entra com o compromisso marcado (abre a agenda).
+                  if (etapaComAgenda(etapa)) return setAgendar(etapa);
+                  if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido(etapa as CodigoEtapa);
+                  void acaoLead({ acao: "mover", etapa }, "Etapa alterada.");
+                }}
+              >
                 {nomesEtapas.lista.map((e) => (
                   <option key={e.codigo} value={e.codigo}>
                     {e.nome}
@@ -209,30 +248,16 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
           </div>
         </Painel>
     ),
+    // O bloco "visita" da grade (nome mantido para não perder o layout salvo) reúne medição e visita à loja.
     visita: (
-        <Painel
-          titulo="Visita"
-          acao={
-            <Botao variante="fantasma" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={() => setAgendar("visita")}>
-              {visitaAtiva ? "Remarcar" : "Agendar"}
-            </Botao>
-          }
-        >
-          {visitaAtiva ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-controle bg-sucesso-suave p-3">
-              <p className="text-sm font-medium text-sucesso">
-                {visitaAtiva.rotulo} com {visitaAtiva.consultor}
-              </p>
-              <Botao variante="fantasma" onClick={() => cancelarVisita(visitaAtiva.id)}>
-                Cancelar visita
-              </Botao>
-            </div>
-          ) : (
-            <p className="text-sm text-texto-suave">Nenhuma visita agendada.</p>
-          )}
-          {ficha.visitas.some((v) => v.status === "cancelada") && (
-            <p className="mt-2 text-xs text-texto-fraco">
-              Canceladas: {ficha.visitas.filter((v) => v.status === "cancelada" && v.tipo === "visita").map((v) => v.rotulo).join(", ")}
+        <Painel titulo="Medição e visita à loja">
+          <div className="space-y-4">
+            {linhaCompromisso("medicao")}
+            {linhaCompromisso("visita")}
+          </div>
+          {canceladas.length > 0 && (
+            <p className="mt-3 text-xs text-texto-fraco">
+              Cancelados: {canceladas.map((v) => `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso] ?? "Visita"} ${v.rotulo}`).join(", ")}
             </p>
           )}
         </Painel>

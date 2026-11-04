@@ -6,9 +6,10 @@ import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
 import { variantesTelefone } from "@/regras/telefone";
-import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
+import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, MOTIVO_PAROU_DE_RESPONDER, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
+import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { motivosDePerda, regrasDeVendas } from "./vendas";
-import { ETAPAS_FUNIL, etapaValida, nomeEtiqueta, type CodigoEtapa } from "@/regras/etapas";
+import { ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
 import { nomesDasEtapas } from "./etapas";
 import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
@@ -70,6 +71,15 @@ export async function conferirMudanca(leadId: string, etapa: CodigoEtapa, dados:
     await regrasDeVendas(lead.motivoPerda),
   );
   if (falta) throw new ErroHttp(400, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${falta}`);
+  const semAgenda = await faltaCompromisso(leadId, etapa);
+  if (semAgenda) throw new ErroHttp(400, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${semAgenda}`);
+}
+
+/** Medição/Apresentação agendada só recebe o card com o compromisso marcado na agenda (tarefa 21). */
+async function faltaCompromisso(leadId: string, etapa: CodigoEtapa): Promise<string | null> {
+  if (!etapaComAgenda(etapa)) return null;
+  const marcado = await db.visita.count({ where: { leadId, status: "agendada", tipo: etapa } });
+  return marcado ? null : `Marque a ${NOMES_COMPROMISSO[etapa].toLowerCase()} na agenda para mover o card.`;
 }
 
 export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: string, opcoes: OpcoesMover = {}) {
@@ -88,32 +98,33 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
   };
   const regras = await regrasDeVendas(lead.motivoPerda);
   if (!opcoes.semExigencias) {
-    const falta = faltaParaMover(etapa, final, regras);
+    const falta = faltaParaMover(etapa, final, regras) ?? (await faltaCompromisso(leadId, etapa));
     if (falta) throw new ErroHttp(400, falta);
   }
   const pergunta = regras.motivos.find((m) => m.codigo === final.motivoPerda)?.pergunta ?? null;
   const quando = await agora();
   const vaiTerRetorno = ETAPAS_COM_RETORNO.includes(etapa);
+  const parouDeResponder = etapa === "perdido" && final.motivoPerda === MOTIVO_PAROU_DE_RESPONDER;
   const atualizado = await db.lead.update({
     where: { id: leadId },
     data: {
       etapa,
       ordem: -quando.getTime(),
       etapaAnterior: opcoes.guardarAnterior ? lead.etapa : lead.etapaAnterior,
-      semRespostaEm: etapa === "sem_resposta" ? quando : lead.semRespostaEm,
-      // O retorno marcado só vale em Orçamento/Negociação; em "Sem resposta" fica guardado para quando o lead voltar.
-      proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : etapa === "sem_resposta" ? lead.proximoContatoEm : null,
+      semRespostaEm: parouDeResponder ? quando : lead.semRespostaEm,
+      // O retorno marcado só vale em Em qualificação/Negociação (nas colunas com agenda, o compromisso é o próximo contato).
+      proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : null,
       valorOrcamento: dados.valorOrcamento === undefined ? lead.valorOrcamento : dados.valorOrcamento,
       valorFechado: etapa === "fechado" ? final.valorFechado : lead.etapa === "fechado" ? null : lead.valorFechado,
       motivoPerda: etapa === "perdido" ? final.motivoPerda : lead.etapa === "perdido" ? null : lead.motivoPerda,
       concorrente: etapa === "perdido" && pergunta ? final.concorrente?.trim() || null : lead.etapa === "perdido" || etapa === "perdido" ? null : lead.concorrente,
     },
   });
-  // Funil (MET-02): ao avançar, conta também as etapas do funil que o card pulou (ex.: Novo → Visita conta "Pronto").
-  // "Negociação" não é coluna do funil, mas vem depois de "Orçamento".
-  const posicao = etapa === "negociacao" ? ETAPAS_FUNIL.indexOf("orcamento") : (ETAPAS_FUNIL as string[]).indexOf(etapa);
+  // Funil (MET-02): ao avançar, conta também as etapas do funil que o card pulou (ex.: Novo → Apresentação conta "Aguardando" e "Em qualificação").
+  // Medição conta como Em qualificação e Negociação como Apresentação (regras/etapas.ts).
+  const posicao = POSICAO_NO_FUNIL[etapa] ?? -1;
   for (const passou of ETAPAS_FUNIL.slice(0, posicao + 1)) await registrarUmaVez(leadId, `etapa_${passou}`, lead.consultorId);
-  if (etapa === "sem_resposta") await registrarUmaVez(leadId, "sem_resposta");
+  if (parouDeResponder) await registrarUmaVez(leadId, "sem_resposta");
   const nomes = await nomesDasEtapas();
   await registrarAlteracao(leadId, autor, `Moveu de "${nomes[lead.etapa as CodigoEtapa] ?? lead.etapa}" para "${nomes[etapa]}"${detalheDaMudanca(etapa, atualizado, await motivosDePerda())}`);
   await db.mudancaEtapa.create({ data: { leadId, de: lead.etapa, para: etapa, autor, criadoEm: quando } });
@@ -170,10 +181,10 @@ export async function alterarEtiqueta(leadId: string, codigo: string, ativa: boo
   await marcarMudanca();
 }
 
-/** Visita ativa mais próxima do lead (a partir de agora). */
+/** Compromisso ativo mais próximo do lead (visita à loja, medição ou apresentação). */
 export async function proximaVisita(leadId: string) {
   return db.visita.findFirst({
-    where: { leadId, status: "agendada", tipo: "visita" },
+    where: { leadId, status: "agendada" },
     orderBy: { inicio: "asc" },
     include: { consultor: { select: { nome: true } } },
   });
@@ -196,7 +207,7 @@ export async function atualizarResumo(leadId: string): Promise<string> {
     classificacao: lead.classificacao,
     observacoes: lead.observacoes,
     medidas: lead.medidas,
-    visita: visita ? { inicio: visita.inicio, consultorNome: visita.consultor.nome } : null,
+    visita: visita ? { inicio: visita.inicio, consultorNome: visita.consultor.nome, tipo: NOMES_COMPROMISSO[visita.tipo as TipoCompromisso] ?? "Visita" } : null,
   });
   await db.lead.update({ where: { id: leadId }, data: { resumo } });
   return resumo;

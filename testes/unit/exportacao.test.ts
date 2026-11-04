@@ -106,7 +106,7 @@ describe("exportação do vendedor", () => {
     await registrarMensagemCliente(lead.id, "É a cozinha, 3 metros");
     await avancarRelogio(30 * MIN);
     await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", autorNome: a.nome, texto: "Vamos marcar uma visita?" });
-    await moverEtapa(lead.id, "visita", a.nome);
+    await moverEtapa(lead.id, "qualificacao", a.nome, { semExigencias: true });
 
     // Lead de outro vendedor não entra.
     const outro = await obterOuCriarLead("+5588900008888");
@@ -125,8 +125,8 @@ describe("exportação do vendedor", () => {
     expect(texto).toContain(`Consultor (${a.nome}): Vamos marcar uma visita?`);
     expect(texto).toContain("consultor_tempo_mediano_min,30.0");
     expect(texto).toContain("bot_tempo_mediano_min,2.0");
-    expect(texto).toContain("chegaram_em_visita,1");
-    expect(texto).toContain("Novo / bot atendendo > Pronto para o consultor > Visita agendada");
+    expect(texto).toContain("chegaram_em_qualificacao,1");
+    expect(texto).toContain("IA atendendo > Aguardando consultor > Em qualificação");
     expect(texto).not.toContain("+5588900007777");
     expect(texto).not.toContain("Fulano Secreto");
   });

@@ -1,3 +1,4 @@
+import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
@@ -80,7 +81,8 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
   if (lerLista(lead.etiquetas).includes("retomada")) {
     await alterarEtiqueta(leadId, "retomada", false, "sistema");
     await registrarUmaVez(leadId, "retomada_voltou");
-    if (lead.etapa === "sem_resposta" && lead.etapaAnterior) {
+    // Foi para Perdido por ter parado de responder (rotina): volta para onde estava.
+    if (lead.etapa === "perdido" && lead.motivoPerda === MOTIVO_PAROU_DE_RESPONDER && lead.etapaAnterior) {
       await moverEtapa(leadId, etapaOuErro(lead.etapaAnterior), "sistema", { semExigencias: true });
     }
   }

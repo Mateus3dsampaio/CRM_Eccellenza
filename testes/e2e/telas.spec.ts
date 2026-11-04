@@ -21,7 +21,7 @@ test("login e kanban com colunas e contadores", async ({ page }, info) => {
   await page.goto("/login");
   await page.screenshot({ path: `${PASTA}/${info.project.name}-login.png` });
   await entrar(page);
-  await expect(page.getByRole("heading", { name: "Novo / bot atendendo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "IA atendendo" })).toBeVisible();
   await expect(page.getByText(/\d+ conversas?/).first()).toBeVisible();
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
   await semRolagemLateral(page);
@@ -30,8 +30,8 @@ test("login e kanban com colunas e contadores", async ({ page }, info) => {
 
 test("menu Mover para... move o card", async ({ page }, info) => {
   await entrar(page);
-  if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
-  const coluna = page.getByRole("region", { name: "Novo / bot atendendo" });
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /IA atendendo/ }).click();
+  const coluna = page.getByRole("region", { name: "IA atendendo" });
   const nome = (await coluna.locator("[data-card] p.font-semibold").first().textContent())!;
   await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
   await page.screenshot({ path: `${PASTA}/${info.project.name}-mover-para.png` });
@@ -48,7 +48,7 @@ test("menu Mover para... move o card", async ({ page }, info) => {
   await expect(page.getByRole("region", { name: "Negociação" }).getByText(nome)).toBeVisible();
   // Devolve para não alterar os dados dos outros testes.
   await page.getByRole("region", { name: "Negociação" }).getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
-  await page.getByRole("menuitem", { name: "Novo / bot atendendo" }).click();
+  await page.getByRole("menuitem", { name: "IA atendendo" }).click();
 });
 
 test("Retornos de hoje: lista no topo e card atrasado destacado", async ({ page }, info) => {
@@ -77,8 +77,8 @@ test("Configurações > Vendas: cria motivo, aparece na janela de Perdido e o in
   await caixa.uncheck();
   await expect(page.getByText(/Desligado:/)).toBeVisible();
   await page.goto("/");
-  if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
-  const coluna = page.getByRole("region", { name: "Novo / bot atendendo" });
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /IA atendendo/ }).click();
+  const coluna = page.getByRole("region", { name: "IA atendendo" });
   const nome = (await coluna.locator("[data-card] p.font-semibold").first().textContent())!;
   await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
   await page.getByRole("menuitem", { name: "Negociação" }).click();
@@ -100,8 +100,8 @@ test("Configurações > Vendas: cria motivo, aparece na janela de Perdido e o in
 
 test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info) => {
   await entrar(page);
-  if (info.project.name === "celular") await page.getByRole("tab", { name: /Novo/ }).click();
-  const coluna = page.getByRole("region", { name: "Novo / bot atendendo" });
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /IA atendendo/ }).click();
+  const coluna = page.getByRole("region", { name: "IA atendendo" });
   const nome = (await coluna.locator("[data-card] p.font-semibold").first().textContent())!;
   await coluna.getByRole("button", { name: `Ações para ${nome}`, exact: true }).click();
   await page.getByRole("menuitem", { name: "Perdido" }).click();
@@ -116,7 +116,7 @@ test("Perdido pede o motivo e cancelar não move o card", async ({ page }, info)
 
 test("ficha do lead, agenda, painel, simulador e arquivados abrem sem quebrar", async ({ page }, info) => {
   await entrar(page);
-  if (info.project.name === "celular") await page.getByRole("tab", { name: /Visita agendada/ }).click();
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Apresentação agendada/ }).click();
   await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
   if (info.project.name === "celular") await page.getByRole("tab", { name: "Ficha" }).click();
   await expect(page.getByText("Resumo para o consultor")).toBeVisible();

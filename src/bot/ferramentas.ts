@@ -71,7 +71,7 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
   },
   {
     name: "passar_para_consultor",
-    description: "Encerra a parte do bot: gera o resumo, move o card para \"Pronto para o consultor\" e pausa o bot nesta conversa.",
+    description: "Encerra a parte do bot: gera o resumo, move o card para \"Aguardando consultor\" e pausa o bot nesta conversa.",
     input_schema: {
       type: "object",
       properties: { motivo: { type: "string", description: "Motivo curto (ex.: roteiro concluído, outra cidade, arquiteto)." } },

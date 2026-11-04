@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { ErroHttp } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
-import { MOTIVOS_PADRAO, type MotivoDePerda, type RegrasDeVendas } from "@/regras/vendas";
+import { MOTIVO_PAROU_DE_RESPONDER, MOTIVOS_PADRAO, type MotivoDePerda, type RegrasDeVendas } from "@/regras/vendas";
 import { gravarConfig, lerConfig } from "./configuracoes";
 
 // Configurações de vendas (Configurações > Vendas): motivos de perda editáveis e se Negociação exige próximo contato.
@@ -27,6 +27,18 @@ export async function motivosDePerda(): Promise<MotivoDePerda[]> {
   }
   const linhas = await db.motivoPerda.findMany({ orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
   return linhas.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta, ativo: m.ativo }));
+}
+
+/**
+ * O motivo "Parou de responder" é usado pela rotina (antiga coluna "Sem resposta"): bancos de antes da tarefa 21 não
+ * o têm e o admin pode tê-lo apagado enquanto não tinha uso. Cria no fim da lista se faltar.
+ */
+export async function garantirMotivoParouDeResponder(): Promise<void> {
+  await motivosDePerda();
+  if (await db.motivoPerda.findUnique({ where: { codigo: MOTIVO_PAROU_DE_RESPONDER } })) return;
+  const padrao = MOTIVOS_PADRAO.find((m) => m.codigo === MOTIVO_PAROU_DE_RESPONDER)!;
+  const ultimo = await db.motivoPerda.aggregate({ _max: { ordem: true } });
+  await db.motivoPerda.create({ data: { ...padrao, ordem: (ultimo._max.ordem ?? -1) + 1 } }).catch(() => undefined);
 }
 
 /**

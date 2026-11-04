@@ -9,5 +9,5 @@ export const dynamic = "force-dynamic";
 export const GET = rota(async () => {
   await exigirUsuario();
   const exigirNegociacao = await exigirContatoNegociacao();
-  return { exigirContatoNegociacao: exigirNegociacao, retornoObrigatorio: { orcamento: exigeRetorno("orcamento"), negociacao: exigirNegociacao }, motivos: await motivosDePerda() };
+  return { exigirContatoNegociacao: exigirNegociacao, retornoObrigatorio: { qualificacao: exigeRetorno("qualificacao"), negociacao: exigirNegociacao }, motivos: await motivosDePerda() };
 });

@@ -39,6 +39,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Revisão jurídica da LGPD, em especial o áudio enviado à OpenAI e o aviso de privacidade. Mateus: feito (05/11/2026).
 - [ ] (Opcional) Colar no bot a instrução sobre áudio transcrito (texto sugerido no `docs/colocar-no-ar.md`).
 - [ ] **Colar as instruções atualizadas** (tarefa 20, 04/11/2026): o projeto não guarda mais cópia das instruções. Quando a tarefa 20 estiver na `main`, colar as 01–13 do repositório de instruções em Configurações > Instruções de atendimento, **no Railway e no computador** (substituir as antigas). A antiga 15 vira o Manual do CRM e a 14 sai sozinhas na primeira abertura. A 05 nova (bot não agenda; "Anotado! O consultor confirma com você.") foi aprovada em 04/11/2026.
+- [ ] **Novo funil (tarefa 21)**: conferir no simulador as 8 colunas, a agenda com visita à loja / medição (2h) / apresentação e o painel. Confirmar as decisões anotadas no topo de `tarefas/21-novo-funil-kanban.md`. Quando for para a `main`, os cards de teste nas colunas antigas mudam sozinhos ao subir o servidor (Visita agendada → Apresentação, Orçamento → Negociação, Sem resposta → Perdido "Parou de responder").
 - [ ] Aprovar o texto do **Manual do CRM** (PROVISÓRIO; aparece em Configurações > Instruções, abaixo das numeradas).
 
 ## B. Do Claude (código)

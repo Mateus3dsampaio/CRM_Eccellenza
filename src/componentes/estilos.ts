@@ -2,12 +2,12 @@
 export const COR_ETAPA: Record<string, string> = {
   novo: "bg-etapa-novo",
   pronto: "bg-etapa-pronto",
-  visita: "bg-etapa-visita",
-  orcamento: "bg-etapa-orcamento",
+  qualificacao: "bg-etapa-qualificacao",
+  medicao: "bg-etapa-medicao",
+  apresentacao: "bg-etapa-apresentacao",
   negociacao: "bg-etapa-negociacao",
   fechado: "bg-etapa-fechado",
   perdido: "bg-etapa-perdido",
-  sem_resposta: "bg-etapa-sem-resposta",
 };
 
 export const COR_ETIQUETA: Record<string, string> = {

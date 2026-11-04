@@ -48,7 +48,7 @@ describe("nomes das colunas (serviço)", () => {
   it("recusa coluna desconhecida, nome inválido e nome repetido (sem diferenciar maiúscula)", async () => {
     await expect(definirNomeDaEtapa("nao_existe", "X")).rejects.toThrow(/desconhecida/);
     await expect(definirNomeDaEtapa("novo", "x".repeat(NOME_ETAPA_MAX + 1))).rejects.toThrow(/máximo/);
-    await expect(definirNomeDaEtapa("novo", "visita agendada")).rejects.toThrow(/Já existe/);
+    await expect(definirNomeDaEtapa("novo", "apresentação agendada")).rejects.toThrow(/Já existe/);
     expect((await nomesDasEtapas()).novo).toBe(ETAPAS[0].nome);
   });
 

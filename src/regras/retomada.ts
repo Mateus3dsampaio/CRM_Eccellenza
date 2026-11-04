@@ -19,7 +19,7 @@ export type AcaoRetomada = "enviar_retomada" | "mover_sem_resposta" | null;
 /**
  * Decide o que a rotina faz com um lead (RET-01 e RET-03).
  * Só vale para quem está com o bot, no "Novo", devendo resposta ao bot. Lead passado ao consultor, com visita marcada
- * ou esperando a loja nunca recebe retomada nem cai em "Sem resposta" sozinho.
+ * ou esperando a loja nunca recebe retomada nem vai sozinho para Perdido ("Parou de responder", antiga coluna "Sem resposta").
  */
 export function avaliarRetomada(lead: EstadoRetomada, agora: Date): AcaoRetomada {
   if (lead.arquivadoEm) return null;
@@ -31,7 +31,7 @@ export function avaliarRetomada(lead: EstadoRetomada, agora: Date): AcaoRetomada
     lead.ultimaMsgClienteEm !== null && lead.ultimaMsgClienteEm.getTime() > desde.getTime();
 
   if (lead.retomadaEnviadaEm) {
-    // Nunca mais de uma retomada por lead; depois dela, só o "Sem resposta".
+    // Nunca mais de uma retomada por lead; depois dela, só o "Parou de responder".
     if (clienteRespondeuDepois(lead.retomadaEnviadaEm)) return null;
     const passou = agora.getTime() - lead.retomadaEnviadaEm.getTime();
     return passou >= DIAS_PARA_SEM_RESPOSTA * DIA ? "mover_sem_resposta" : null;

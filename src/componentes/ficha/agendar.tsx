@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, type RegrasAgenda, type TipoCompromisso } from "@/regras/agenda";
 import { chaveDia, formatarDiaLongo, formatarHora, partesLocais } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { primeiraMaiuscula } from "../texto";
@@ -15,12 +15,19 @@ interface DadosLivres {
   livres: { inicio: string; consultorId: string }[];
 }
 
-// Agendar ou remarcar pela ficha (AGENDA-03). Só mostra horários livres.
-export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "visita" }: { leadId: string; aberto: boolean; aoFechar: () => void; aoAgendar: () => void; tipo?: "visita" | "apresentacao" }) {
-  const apresentacao = tipo === "apresentacao";
+// Textos de cada compromisso (tarefa 21).
+const TEXTOS: Record<TipoCompromisso, { titulo: string; ok: string; botao: string; dica?: string }> = {
+  visita: { titulo: "Agendar visita à loja", ok: "Visita agendada.", botao: "Confirmar visita", dica: "Cliente vem conhecer a loja ou passar o projeto: o card continua na coluna em que está." },
+  medicao: { titulo: "Agendar medição na casa do cliente", ok: "Medição agendada. O card foi para Medição agendada.", botao: "Confirmar medição", dica: "A medição ocupa a agenda do consultor e não ocupa a loja." },
+  apresentacao: { titulo: "Agendar apresentação na loja", ok: "Apresentação agendada. O card foi para Apresentação agendada.", botao: "Confirmar apresentação" },
+};
+
+// Agendar ou remarcar pela ficha ou ao arrastar o card (AGENDA-03). Só mostra horários livres do tipo escolhido.
+export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "visita" }: { leadId: string; aberto: boolean; aoFechar: () => void; aoAgendar: () => void; tipo?: TipoCompromisso }) {
+  const textos = TEXTOS[tipo];
   const avisar = useAviso();
   const usuario = useUsuario();
-  const { dados, carregando } = useDados<DadosLivres>(aberto ? `/api/agenda?visao=dia&livresPara=${leadId}` : null);
+  const { dados, carregando } = useDados<DadosLivres>(aberto ? `/api/agenda?visao=dia&livresPara=${leadId}&tipo=${tipo}` : null);
   const [escolhido, setEscolhido] = useState<{ inicio: string; consultorId: string } | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -46,7 +53,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
         method: "POST",
         json: { acao: "agendar", leadId, quando: { dia: chaveDia(d), hora: partesLocais(d).hora }, consultorId: escolhido.consultorId, tipo },
       });
-      avisar(apresentacao ? "Apresentação agendada." : "Visita agendada.");
+      avisar(textos.ok);
       aoAgendar();
       aoFechar();
       setEscolhido(null);
@@ -58,7 +65,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
   }
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo={apresentacao ? "Agendar apresentação na loja" : "Agendar visita"} largura="max-w-2xl">
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo={textos.titulo} largura="max-w-2xl">
       {carregando && !dados ? (
         <Carregando linhas={2} />
       ) : !porDia.length ? (
@@ -66,6 +73,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-texto-suave">Horários livres ({descreverRegrasAgenda(dados?.regras ?? REGRAS_AGENDA_PADRAO)}).</p>
+          {textos.dica && <p className="text-sm text-texto-suave">{textos.dica}</p>}
           <div className="max-h-[55dvh] space-y-3 overflow-y-auto pr-1">
             {porDia.map(([dia, vagas]) => (
               <div key={dia}>
@@ -96,7 +104,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
               Cancelar
             </Botao>
             <Botao variante="primario" disabled={!escolhido} carregando={salvando} onClick={confirmar}>
-              {apresentacao ? "Confirmar apresentação" : "Confirmar visita"}
+              {textos.botao}
             </Botao>
           </div>
         </div>

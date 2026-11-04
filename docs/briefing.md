@@ -20,8 +20,8 @@ Esta primeira fase é um **simulador**: prova o conceito sem tocar no WhatsApp r
 4. **Ficha do lead pronta para o consultor**: dados, medidas, exigências, investimento, histórico e resumo.
 5. **Agenda própria**: o bot marca visitas em horários livres, e o consultor bloqueia horários.
 6. **Nova mensagem para qualquer número**, sem contato salvo, respeitando as regras da Meta (janela de 24h e modelos aprovados).
-7. **Retomada e limpeza**: quem não responde recebe uma retomada; quem continua sem responder vai para "Sem resposta" e pode ser arquivado ou excluído fácil. Arquivados são excluídos de vez em 30 dias.
-8. **Painel de métricas**: leads por semana, qualificados, outras cidades, arquitetos, sem resposta, visitas agendadas.
+7. **Retomada e limpeza**: quem não responde recebe uma retomada; quem continua sem responder vai para "Perdido" com o motivo "Parou de responder" e pode ser arquivado ou excluído fácil. Arquivados são excluídos de vez em 30 dias.
+8. **Painel de métricas**: apresentações e medições agendadas, conversão da agenda, leads por semana, qualificados, outras cidades, arquitetos.
 9. **Usuários**: Mateus (administrador, único que exclui) e consultores.
 
 ## Decisões já tomadas (Mateus, 31/10/2026)
@@ -37,7 +37,7 @@ Esta primeira fase é um **simulador**: prova o conceito sem tocar no WhatsApp r
 ## Pendências (perguntar ao Mateus, não inventar)
 - Regras reais da agenda: dias, horários, duração da visita, quantos consultores ao mesmo tempo.
 - Texto da mensagem de retomada.
-- Prazo entre a retomada e "Sem resposta" (provisório: 4 dias).
+- Prazo entre a retomada e "Parou de responder" (provisório: 4 dias).
 - Nomes finais das colunas do kanban.
 - Critério para atender outras cidades (valor x distância).
 - Quantos consultores e seus nomes (no simulador: 2 fictícios).
@@ -54,7 +54,7 @@ Esta primeira fase é um **simulador**: prova o conceito sem tocar no WhatsApp r
 - **SDK oficial da Anthropic** com uso de ferramentas (tool use). Modelo do bot: o Sonnet mais recente; avaliar Haiku para tarefas simples (resumo, classificação). Conferir modelos e preços atuais na skill `claude-api` antes de codar.
 - **Playwright** para testes de tela e prints (computador e celular).
 - Chave em `.env` (`ANTHROPIC_API_KEY`), colocada pelo Mateus. `.env.example` sem valores.
-- **Relógio simulado**: o simulador precisa de um controle "avançar tempo" (horas/dias) para testar retomada, "Sem resposta" e exclusão de arquivados sem esperar dias reais.
+- **Relógio simulado**: o simulador precisa de um controle "avançar tempo" (horas/dias) para testar retomada, "Parou de responder" e exclusão de arquivados sem esperar dias reais.
 
 ## Fases
 - **Etapa 1 – funcionar** (agora): todos os requisitos de `docs/requisitos.md` marcados como etapa 1, visual limpo de `docs/design.md` (parte 1).

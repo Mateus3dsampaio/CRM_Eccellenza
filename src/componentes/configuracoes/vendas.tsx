@@ -69,7 +69,7 @@ export function VendasConfig() {
           <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Próximo contato ao mover o card
         </h2>
         <p className="mb-3 text-sm text-texto-suave">
-          Em <strong className="text-texto">Orçamento apresentado</strong> o próximo contato é sempre obrigatório. Aqui você escolhe se <strong className="text-texto">Negociação</strong> também exige.
+          Em <strong className="text-texto">Em qualificação</strong> o próximo contato é sempre obrigatório. Aqui você escolhe se <strong className="text-texto">Negociação</strong> também exige.
         </p>
         <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm">
           <input

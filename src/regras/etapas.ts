@@ -1,13 +1,14 @@
-// Colunas do kanban (KAN-01). Estes são os nomes de fábrica; o admin pode renomear cada coluna no Kanban (nomes guardados em Configuracao, ver servicos/etapas.ts).
+// Colunas do kanban (KAN-01, funil aprovado pelo Mateus em 04/11/2026, tarefa 21). O objetivo é trazer o cliente à loja
+// com o projeto pronto. Estes são os nomes de fábrica; o admin pode renomear cada coluna no Kanban (servicos/etapas.ts).
 export const ETAPAS = [
-  { codigo: "novo", nome: "Novo / bot atendendo" },
-  { codigo: "pronto", nome: "Pronto para o consultor" },
-  { codigo: "visita", nome: "Visita agendada" },
-  { codigo: "orcamento", nome: "Orçamento apresentado" },
+  { codigo: "novo", nome: "IA atendendo" },
+  { codigo: "pronto", nome: "Aguardando consultor" },
+  { codigo: "qualificacao", nome: "Em qualificação" },
+  { codigo: "medicao", nome: "Medição agendada" },
+  { codigo: "apresentacao", nome: "Apresentação agendada" },
   { codigo: "negociacao", nome: "Negociação" },
   { codigo: "fechado", nome: "Fechado" },
   { codigo: "perdido", nome: "Perdido" },
-  { codigo: "sem_resposta", nome: "Sem resposta" },
 ] as const;
 
 export type CodigoEtapa = (typeof ETAPAS)[number]["codigo"];
@@ -60,13 +61,27 @@ export function etapaValida(codigo: string): codigo is CodigoEtapa {
 }
 
 /** Colunas que têm o botão "Limpar coluna" (LIMP-02). */
-export const ETAPAS_LIMPAVEIS: CodigoEtapa[] = ["sem_resposta", "perdido"];
+export const ETAPAS_LIMPAVEIS: CodigoEtapa[] = ["perdido"];
 
-/** Etapas em que a retomada não se aplica. */
-export const ETAPAS_ENCERRADAS: CodigoEtapa[] = ["fechado", "perdido", "sem_resposta"];
+/**
+ * Etapas do funil (MET-02), na ordem. Medição fica fora (é opcional: quem tem planta vai direto à apresentação)
+ * e conta como "Em qualificação"; Negociação conta como "Apresentação" (vem depois dela, e quem fecha no dia pula).
+ */
+export const ETAPAS_FUNIL: CodigoEtapa[] = ["novo", "pronto", "qualificacao", "apresentacao", "fechado"];
 
-/** Etapas do funil (MET-02), na ordem. */
-export const ETAPAS_FUNIL: CodigoEtapa[] = ["novo", "pronto", "visita", "orcamento", "fechado"];
+/** Etapa do funil em que cada coluna conta. Fora do funil (Perdido): não tem. */
+export const POSICAO_NO_FUNIL: Partial<Record<CodigoEtapa, number>> = { novo: 0, pronto: 1, qualificacao: 2, medicao: 2, apresentacao: 3, negociacao: 3, fechado: 4 };
+
+/** Etapas que só recebem o card com o compromisso marcado na agenda (o tipo do compromisso tem o mesmo código). */
+export const ETAPAS_COM_AGENDA = ["medicao", "apresentacao"] as const;
+export type EtapaComAgenda = (typeof ETAPAS_COM_AGENDA)[number];
+
+export function etapaComAgenda(etapa: string): etapa is EtapaComAgenda {
+  return (ETAPAS_COM_AGENDA as readonly string[]).includes(etapa);
+}
+
+/** Códigos de antes da tarefa 21 → coluna nova (conversão única dos bancos que já existiam). */
+export const ETAPAS_ANTIGAS: Record<string, CodigoEtapa> = { visita: "apresentacao", orcamento: "negociacao", sem_resposta: "perdido" };
 
 // Etiquetas (KAN-04).
 export const ETIQUETAS = [

@@ -4,6 +4,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { temConsentimento } from "@/regras/consentimento";
 import { deveExcluirArquivado, deveExcluirFechado, DIAS_ARQUIVADO_ATE_EXCLUIR, DIAS_FECHADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
+import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { formatarDataHora } from "@/regras/tempo";
 import { avisarPrazosVermelhos, avisarRetornos } from "./alertas";
 import { registrarAlteracao } from "./historico";
@@ -11,6 +12,7 @@ import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
+import { garantirMotivoParouDeResponder } from "./vendas";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
 export interface ResultadoRotinas {
@@ -65,7 +67,10 @@ async function executar(): Promise<ResultadoRotinas> {
       await registrarUmaVez(lead.id, "retomada_enviada");
       resultado.retomadas++;
     } else if (acao === "mover_sem_resposta") {
-      await moverEtapa(lead.id, "sem_resposta", "sistema", { guardarAnterior: true });
+      // Tarefa 21: não existe mais a coluna "Sem resposta"; o lead vai para Perdido com o motivo "Parou de responder"
+      // e volta para onde estava se o cliente escrever de novo (servicos/mensagens.ts).
+      await garantirMotivoParouDeResponder();
+      await moverEtapa(lead.id, "perdido", "sistema", { guardarAnterior: true, semExigencias: true, dados: { motivoPerda: MOTIVO_PAROU_DE_RESPONDER } });
       resultado.semResposta++;
     }
   }
@@ -104,7 +109,7 @@ async function executar(): Promise<ResultadoRotinas> {
 
   const partes: string[] = [];
   if (resultado.retomadas) partes.push(`${resultado.retomadas} retomada(s) enviada(s) após ${DIAS_PARA_RETOMADA} dias sem resposta`);
-  if (resultado.semResposta) partes.push(`${resultado.semResposta} lead(s) movido(s) para "Sem resposta" (${DIAS_PARA_SEM_RESPOSTA} dias após a retomada)`);
+  if (resultado.semResposta) partes.push(`${resultado.semResposta} lead(s) movido(s) para "Perdido – Parou de responder" (${DIAS_PARA_SEM_RESPOSTA} dias após a retomada)`);
   if (resultado.excluidos) partes.push(`${resultado.excluidos} arquivado(s) excluído(s) de vez (${DIAS_ARQUIVADO_ATE_EXCLUIR} dias no arquivo)`);
   if (resultado.fechadosExcluidos) partes.push(`${resultado.fechadosExcluidos} cliente(s) que fecharam projeto excluído(s) de vez (${DIAS_FECHADO_ATE_EXCLUIR} dias após fechar)`);
   if (partes.length) {

@@ -49,12 +49,12 @@
   /* Barras das colunas do kanban (cores do modelo) */
   --color-etapa-novo: #8fb2ff;
   --color-etapa-pronto: #6fd6ff;
-  --color-etapa-visita: #f2b84b;
-  --color-etapa-orcamento: #c49bff;
+  --color-etapa-qualificacao: #f2b84b;
+  --color-etapa-medicao: #5fd3c4;
+  --color-etapa-apresentacao: #c49bff;
   --color-etapa-negociacao: #ff9f6e;
   --color-etapa-fechado: #3ccf8e;
   --color-etapa-perdido: #8a94a6;
-  --color-etapa-sem-resposta: #ff7a7a;
 
   /* Etiquetas (fundo + texto) */
   --color-etiqueta-cidade: #44211f;

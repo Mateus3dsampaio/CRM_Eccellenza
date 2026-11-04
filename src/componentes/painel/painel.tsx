@@ -21,7 +21,8 @@ interface DadosPainel {
   indicadores: { tipo: string; nome: string; atual: number; anterior: number }[];
   funil: { tipo: string; nome: string; total: number }[];
   tempos: { geral: EstatisticaTempo; consultor: EstatisticaTempo; primeiraResposta: EstatisticaTempo & { aguardando: number }; bot: EstatisticaTempo; semResposta: number };
-  visitasPorConsultor: { nome: string; total: number }[];
+  apresentacoesPorConsultor: { nome: string; total: number }[];
+  conversoes: { medicoes: number; medicoesComApresentacao: number; apresentacoes: number; apresentacoesFechadas: number };
   vendas: {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
@@ -37,9 +38,8 @@ interface Filtro {
 }
 
 // Quando o número SOBE, isso é bom, ruim ou não dá para julgar? PROVISÓRIO: confirmar com o Mateus.
-// Só "Sem resposta" é claramente pior ao subir; Curiosos e Outras cidades ficam neutros.
+// Curiosos e Outras cidades ficam neutros; o resto é melhor quando sobe.
 const SENTIDO_DO_INDICADOR: Record<string, "mais_e_melhor" | "menos_e_melhor" | "neutro"> = {
-  sem_resposta: "menos_e_melhor",
   curioso: "neutro",
   outra_cidade: "neutro",
 };
@@ -68,7 +68,7 @@ export function Painel() {
   const ate = filtro.atalho ? (dados?.ate ?? "") : filtro.ate;
   const mudarData = (campo: "de" | "ate", valor: string) => setFiltro({ ...filtro, atalho: null, de, ate, [campo]: valor });
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
-  const maiorConsultor = Math.max(1, ...(dados?.visitasPorConsultor.map((c) => c.total) ?? [1]));
+  const maiorConsultor = Math.max(1, ...(dados?.apresentacoesPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
     <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
@@ -122,7 +122,7 @@ export function Painel() {
               <p className="text-sm text-texto-suave">Total em negociação</p>
               <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
               <p className="mt-1 text-xs text-texto-fraco">
-                {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Orçamento ou Negociação, agora
+                {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Apresentação agendada ou Negociação, agora
                 {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
               </p>
             </div>
@@ -168,6 +168,27 @@ export function Painel() {
                 </div>
               );
             })}
+          </div>
+
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Conversão da agenda</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                ["Medições que viraram apresentação", dados.conversoes.medicoesComApresentacao, dados.conversoes.medicoes, "medição marcada no período"],
+                ["Apresentações que viraram venda", dados.conversoes.apresentacoesFechadas, dados.conversoes.apresentacoes, "apresentação marcada no período"],
+              ] as const
+            ).map(([titulo, parte, todo, base]) => (
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <p className="text-sm text-texto-suave">{titulo}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(parte, todo)}</p>
+                <p className="mt-1 text-xs text-texto-fraco">
+                  {todo ? `${parte.toLocaleString("pt-BR")} de ${todo.toLocaleString("pt-BR")} ${todo === 1 ? "lead" : "leads"} com ${base}` : `nenhum lead com ${base}`}
+                </p>
+                <div className="mt-2 h-2 rounded-pilula bg-superficie-suave">
+                  <div className="h-2 rounded-pilula bg-sucesso transition-[width] duration-300" style={{ width: `${todo ? (parte / todo) * 100 : 0}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
 
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>
@@ -219,16 +240,16 @@ export function Painel() {
               </ol>
             </section>
             <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
-              <h2 className="mb-4 font-semibold">Visitas agendadas por consultor</h2>
+              <h2 className="mb-4 font-semibold">Apresentações agendadas por consultor</h2>
               <ul className="space-y-3">
-                {dados.visitasPorConsultor.map((c) => (
+                {dados.apresentacoesPorConsultor.map((c) => (
                   <li key={c.nome}>
                     <div className="mb-1 flex justify-between text-sm">
                       <span>{c.nome}</span>
                       <span className="tabular-nums font-medium">{c.total}</span>
                     </div>
                     <div className="h-3 rounded-pilula bg-superficie-suave">
-                      <div className="h-3 rounded-pilula bg-etapa-visita transition-[width] duration-300" style={{ width: `${(c.total / maiorConsultor) * 100}%` }} />
+                      <div className="h-3 rounded-pilula bg-etapa-apresentacao transition-[width] duration-300" style={{ width: `${(c.total / maiorConsultor) * 100}%` }} />
                     </div>
                   </li>
                 ))}

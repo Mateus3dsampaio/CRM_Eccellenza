@@ -5,7 +5,7 @@ CRM com atendimento por IA (API do Claude) para a Eccellenza. Nesta fase roda s�
 ## Estado atual (31/10/2026)
 - **Etapa 1 (funcionar) construída.** Todos os requisitos E1 implementados, com testes automáticos de regras e de tela. Detalhes, pendências e itens PROVISÓRIOS em [`docs/rodadas/03-final-etapa-1.md`](docs/rodadas/03-final-etapa-1.md).
 - **Decidido:** depois de passar o lead ao consultor, o bot fica em pausa total naquela conversa (provisório; revisitar nas próximas etapas).
-- **Aguardando decisão do Mateus:** regras da agenda (visitas simultâneas, feriados, distribuição de leads), textos da retomada e dos modelos de mensagem, prazo até "Sem resposta", faixa para "só portas", nomes das colunas.
+- **Aguardando decisão do Mateus:** regras da agenda (visitas simultâneas, feriados, distribuição de leads), textos da retomada e dos modelos de mensagem, prazo até "Parou de responder", faixa para "só portas", nomes das colunas.
 - **Etapa 2 (layout profissional):** só começa quando o Mateus liberar.
 
 ## Pronto para produção (03/11/2026)
@@ -42,9 +42,9 @@ O código já está preparado para o Railway e para o WhatsApp oficial da Meta: 
 ## O que testar primeiro
 1. **Simulador** (menu Simulador): clique em **Novo**, invente um nome e converse como cliente ("Oi, quero fazer minha cozinha"). Em outra aba, deixe o **Kanban** aberto: o card aparece e muda de coluna sozinho.
 2. **Foto de planta**: no simulador, use o botão de imagem e envie `testes/imagens/planta-cozinha.png`. O bot confirma as medidas e grava na ficha.
-3. **Agenda**: aceite a visita no simulador. O bot oferece até 3 horários livres e agenda. Veja em **Agenda**.
+3. **Agenda**: o bot não agenda; ele convida para a loja e passa ao consultor. Na ficha (ou arrastando o card para Medição/Apresentação) o consultor marca visita à loja, medição ou apresentação. Veja em **Agenda**.
 4. **Ficha do lead**: clique num card. Tem o resumo pronto para copiar, os dados (dá para corrigir), medidas, visita, notas e o histórico de quem mudou o quê. Em **Assumir conversa** o bot para de responder; **Devolver ao bot** volta.
-5. **Relógio** (no Simulador, à direita): avance **+3 dias** para ver a retomada e mais **+4 dias** para o card ir a "Sem resposta".
+5. **Relógio** (no Simulador, à direita): avance **+3 dias** para ver a retomada e mais **+4 dias** para o card ir a "Perdido" (motivo "Parou de responder").
 6. **Nova mensagem** (botão no topo): digite um número qualquer. Para número novo só dá para mandar modelo aprovado (regra das 24h da Meta). Números terminados em `0000` simulam "sem WhatsApp" (status falhou).
 7. **Limpeza**: selecione cards (botão **Selecionar**) e arquive. Em **Arquivados** dá para restaurar. Entrando como consultor, o botão de excluir não aparece.
 

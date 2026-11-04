@@ -15,11 +15,11 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 - **BOT-06 (E1)** Erro ou falta de chave da API não derruba o sistema: aparece um aviso claro e a conversa fica marcada "aguardando humano".
 
 ## KAN – kanban
-- **KAN-01 (E1)** Colunas: Novo / bot atendendo · Pronto para o consultor · Visita agendada · Orçamento apresentado · Negociação · Fechado · Perdido · Sem resposta. Cada coluna mostra o contador.
+- **KAN-01 (E1)** Colunas (funil aprovado pelo Mateus em 04/11/2026, tarefa 21): IA atendendo · Aguardando consultor · Em qualificação · Medição agendada · Apresentação agendada · Negociação · Fechado · Perdido. Cada coluna mostra o contador. Exigências ao receber o card: Em qualificação pede o próximo contato; Medição e Apresentação só com o compromisso marcado na agenda (arrastar abre a janela de agendar); Negociação pede próximo contato (conforme Configurações > Vendas) e valor do orçamento opcional; Fechado pede o valor do contrato; Perdido pede o motivo. Sem setinha de avançar (decisão do Mateus).
 - **KAN-02 (E1)** Card mostra: foto/avatar, nome, horário da última mensagem, prévia da última mensagem, cidade, ambientes, investimento informado, etiquetas e um sino quando o cliente aguarda resposta humana.
 - **KAN-03 (E1)** Arrastar e soltar entre colunas no computador; no celular, toque longo para arrastar **e** alternativa por menu "Mover para...".
 - **KAN-04 (E1)** Etiquetas coloridas: Outra cidade, Arquiteto/parceiro, Pós-venda, Já atendido, Retomada enviada. Filtro por etiqueta, consultor e cidade. Busca por nome, telefone e texto da ficha.
-- **KAN-05 (E1)** O bot move os cards sozinho (novo → pronto para o consultor → visita agendada) e o movimento aparece na tela sem recarregar.
+- **KAN-05 (E1)** O bot move o card de IA atendendo para Aguardando consultor ao passar o lead (ele não agenda); o movimento aparece na tela sem recarregar.
 - **KAN-06 (E2)** Coreografia de arrastar descrita em `docs/design.md` (parte 2).
 
 ## FICHA – lead pronto para o consultor
@@ -43,25 +43,25 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 - **AGENDA-01 (E1)** Calendário com visão de dia e semana, visitas e bloqueios por consultor.
 - **AGENDA-02 (E1)** O bot oferece só horários livres, dentro das regras da agenda que o admin define em Configurações > Geral (horário por dia, duração, visitas por horário, dias à frente); o bot não conhece esses números, só oferece o que a ferramenta devolve, e nunca marca dois clientes no mesmo horário do mesmo consultor.
 - **AGENDA-03 (E1)** Consultor cria bloqueios, remarca e cancela visitas; o card e a ficha refletem a mudança.
-- **AGENDA-04 (E1)** Visita agendada aparece no card (data e hora) e move o card para "Visita agendada".
+- **AGENDA-04 (E1)** Três compromissos (tarefa 21): visita à loja (não move o card), medição na casa do cliente (2h por padrão, editável; move para "Medição agendada"; não ocupa vaga da loja) e apresentação na loja (move para "Apresentação agendada"). Nenhum pode coincidir com outro do mesmo consultor. Marcar nunca volta o card de etapa mais avançada (Negociação continua em Negociação; Perdido volta ao funil). Cancelar medição/apresentação sem outra marcada volta o card para Em qualificação. O próximo compromisso aparece no card com o tipo.
 
-## RET – retomada e "Sem resposta"
+## RET – retomada e "Parou de responder"
 - **RET-01 (E1)** 3 dias sem resposta depois da última mensagem do bot → envia **uma** retomada (modelo) e aplica a etiqueta "Retomada enviada". Nunca envia mais de uma retomada por lead.
 - **RET-02 (E1)** Se o cliente responder, o card volta à etapa em que estava e a etiqueta sai.
-- **RET-03 (E1)** Sem resposta 4 dias depois da retomada (provisório) → card vai para "Sem resposta".
+- **RET-03 (E1)** Sem resposta 4 dias depois da retomada (provisório) → card vai para "Perdido" com o motivo "Parou de responder" (a coluna "Sem resposta" saiu na tarefa 21). Se o cliente escrever de novo, o card volta para onde estava.
 - **RET-04 (E1)** Relógio simulado: controle visível no simulador para avançar horas e dias e disparar as rotinas, com registro do que aconteceu.
 
 ## LIMP – arquivar e excluir
 - **LIMP-01 (E1)** Seleção múltipla de cards; ações "Arquivar" e "Excluir".
-- **LIMP-02 (E1)** Botão "Limpar coluna" (pelo menos em "Sem resposta" e "Perdido"), com confirmação que mostra a quantidade. Ex.: "Excluir 23 leads? Não dá para desfazer."
+- **LIMP-02 (E1)** Botão "Limpar coluna" em "Perdido", com confirmação que mostra a quantidade. Ex.: "Excluir 23 leads? Não dá para desfazer."
 - **LIMP-03 (E1)** Arquivado sai do kanban, pode ser consultado numa lista de arquivados e restaurado.
 - **LIMP-04 (E1)** Arquivado há 30 dias é excluído de vez, com mensagens e mídias (fotos, plantas).
 - **LIMP-05 (E1)** Só o administrador (Mateus) exclui. Consultor arquiva, mas não exclui: o botão nem aparece para ele, e a API recusa.
 - **LIMP-06 (E1)** Excluir não altera as métricas: o painel usa contadores anônimos gravados no momento dos eventos.
 
 ## MET – painel
-- **MET-01 (E1)** Por semana e por mês: leads novos, qualificados, curiosos, outras cidades, arquitetos/parceiros, sem resposta, retomadas que voltaram, visitas agendadas, visitas por consultor.
-- **MET-02 (E1)** Funil: novo → pronto para o consultor → visita agendada → orçamento → fechado, com taxa de conversão entre etapas.
+- **MET-01 (E1)** Por semana e por mês: apresentações agendadas (métrica principal), medições agendadas, leads novos, qualificados, curiosos, outras cidades, arquitetos/parceiros, retomadas que voltaram, apresentações por consultor. Conversão da agenda: medições que viraram apresentação e apresentações que viraram venda. "Parou de responder" aparece nos motivos de perda.
+- **MET-02 (E1)** Funil: IA atendendo → Aguardando consultor → Em qualificação → Apresentação agendada → Fechado, com taxa de conversão entre etapas. Medição conta como Em qualificação (é opcional) e Negociação como Apresentação.
 - **MET-03 (E1)** Contadores anônimos (sem nome, telefone ou texto) preservados após exclusões.
 
 ## USR – usuários
@@ -87,7 +87,7 @@ Medidas: cozinha 3,20 × 2,10 (planta enviada, confirmada); quartos sem medida
 Exigências: cooktop na ilha, cores claras
 Pedido técnico: "quero aproveitar a bancada de granito"
 Investimento: informou R$ 40–60 mil
-Visita: sáb 08/11 10h com Consultor 1
+Agenda: Apresentação sáb 08/11 10h com Consultor 1
 Classificação: qualificado
 ```
 

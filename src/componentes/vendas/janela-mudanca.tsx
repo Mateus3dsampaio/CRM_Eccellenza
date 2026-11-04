@@ -4,7 +4,7 @@ import CurrencyInput from "react-currency-input-field";
 import { useState } from "react";
 import { type CodigoEtapa } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
-import { faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
+import { ETAPAS_COM_RETORNO, faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
 import { regrasParaConferir, retornoObrigatorio, useRegrasVendas } from "./regras";
 import { Botao, Campo, classeEntrada, Modal } from "../ui";
 
@@ -69,7 +69,9 @@ export function JanelaMudanca({
   const [erro, setErro] = useState("");
 
   const regras = useRegrasVendas();
-  const comRetorno = etapa === "orcamento" || etapa === "negociacao";
+  const comRetorno = ETAPAS_COM_RETORNO.includes(etapa);
+  // Valor do orçamento só faz sentido depois da apresentação (Negociação); em qualificação ainda não há orçamento.
+  const comValor = etapa === "negociacao";
   const retornoExigido = retornoObrigatorio(regras, etapa);
   // Motivos que dá para escolher agora (o que o lead já tem continua na lista, mesmo desativado).
   const motivosDisponiveis = regras.motivos.filter((m) => m.ativo || m.codigo === atuais.motivoPerda);
@@ -81,7 +83,7 @@ export function JanelaMudanca({
     if (comRetorno && !retornoExigido && (data || hora) && !quando) return setErro("Preencha a data e a hora do próximo contato, ou deixe os dois em branco.");
     const falta = faltaParaMover(etapa, { proximoContatoEm: quando, valorFechado, motivoPerda: motivo, concorrente }, regrasParaConferir(regras, atuais.motivoPerda));
     if (falta) return setErro(falta);
-    if (comRetorno) aoConfirmar({ ...(quando ? { proximoContatoEm: quando.toISOString() } : {}), ...(valorOrcamento ? { valorOrcamento } : {}) });
+    if (comRetorno) aoConfirmar({ ...(quando ? { proximoContatoEm: quando.toISOString() } : {}), ...(comValor && valorOrcamento ? { valorOrcamento } : {}) });
     else if (etapa === "fechado") aoConfirmar({ valorFechado: valorFechado as number });
     else aoConfirmar({ motivoPerda: motivo, ...(perguntaDoMotivo ? { concorrente: concorrente.trim() } : {}) });
   }
@@ -107,9 +109,11 @@ export function JanelaMudanca({
                 <input type="time" className={classeEntrada} value={hora} onChange={(e) => setHora(e.target.value)} required={retornoExigido} />
               </Campo>
             </div>
-            <Campo rotulo="Valor do orçamento (opcional)">
-              <CampoDinheiro valor={valorOrcamento} aoMudar={setValorOrcamento} />
-            </Campo>
+            {comValor && (
+              <Campo rotulo="Valor do orçamento (opcional)">
+                <CampoDinheiro valor={valorOrcamento} aoMudar={setValorOrcamento} />
+              </Campo>
+            )}
           </>
         )}
 

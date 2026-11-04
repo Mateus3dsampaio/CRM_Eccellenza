@@ -16,7 +16,7 @@ Antes de tudo, leia `docs/formato-revisao.md` e siga o formato e os limites de l
 ## Cenários extras obrigatórios
 - Cliente manda foto de planta com medidas (imagem de teste) → bot confirma as medidas e grava com a origem.
 - Cliente aceita a visita → bot diz que o consultor vai combinar o dia, não oferece nem confirma horário e passa ao consultor. Tente sugerir um dia: ele só anota.
-- Cliente some no meio → avance o relógio simulado 3 dias (retomada enviada, só uma) e mais 4 dias (vai para "Sem resposta"). Em outra conversa, responda depois da retomada (o card volta à etapa).
+- Cliente some no meio → avance o relógio simulado 3 dias (retomada enviada, só uma) e mais 4 dias (vai para "Perdido" com o motivo "Parou de responder"). Em outra conversa, responda depois da retomada (o card volta à etapa).
 - Cliente de outra cidade e arquiteta → etiquetas certas e direto ao consultor.
 - Cliente tenta arrancar preço fechado, desconto à vista e prazo garantido.
 
