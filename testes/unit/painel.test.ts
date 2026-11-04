@@ -63,7 +63,7 @@ describe("painel por vendedor e tempo de resposta", () => {
     await registrarMensagemCliente(leadA.id, "Quero uma visita");
     await avancarRelogio(30 * MIN);
     await enviarMensagemLoja({ leadId: leadA.id, autor: "consultor", autorNome: a.nome, texto: "Claro" });
-    await moverEtapa(leadA.id, "visita", a.nome);
+    await moverEtapa(leadA.id, "qualificacao", a.nome, { semExigencias: true });
 
     // Lead de B: consultor responde em 10 min.
     const leadB = await obterOuCriarLead("+5588900009002");
@@ -89,7 +89,7 @@ describe("painel por vendedor e tempo de resposta", () => {
     expect(deA.tempos.primeiraResposta.aguardando).toBe(0);
     expect(deA.indicadores.find((i) => i.tipo === "recebidos")?.atual).toBe(1);
     expect(deA.indicadores.find((i) => i.tipo === "atendidos")?.atual).toBe(1);
-    // Chegou até "Visita agendada": passou por Novo e Pronto também.
+    // Chegou até "Em qualificação": passou por IA atendendo e Aguardando consultor também.
     expect(deA.funil.map((f) => f.total)).toEqual([1, 1, 1, 0, 0]);
 
     const deB = await dadosDoPainel({ atalho: "hoje", vendedorId: b.id });

@@ -4,22 +4,22 @@ Cada requisito tem um ID. Os revisores citam o ID ao apontar problemas. **E1** =
 Um requisito só está "atendido" se o critério de aceite puder ser demonstrado no sistema rodando.
 
 ## BOT – atendimento
-- **BOT-01 (E1)** O prompt do bot é montado a cada conversa somente das instruções de atendimento (banco do CRM, ver INST-01 a INST-06), que incluem os dados da loja (14) e as regras do CRM e ferramentas (15), lidas em tempo de execução. Não existe outra fonte: nenhum arquivo nem texto fixo no código altera o comportamento do bot (a abertura fixa só identifica o bot e as tags <cliente>/<sistema>).
-  - Aceite: alterar uma instrução no arquivo muda o comportamento do bot sem mexer no código.
+- **BOT-01 (E1)** O prompt do bot é montado a cada conversa somente das instruções do banco (ver INST-01 a INST-08): as numeradas, coladas pelo admin, e depois o Manual do CRM. Não existe outra fonte: nenhum arquivo nem texto fixo no código altera o comportamento do bot (a abertura fixa só identifica o bot e as tags <cliente>/<sistema>).
+  - Aceite: alterar uma instrução na tela muda o comportamento do bot na próxima mensagem, sem mexer no código.
 - **BOT-02 (E1)** O bot segue as instruções: uma pergunta por mensagem, roteiro da 02, faixa de valor só para cozinha (03), nunca preço fechado ou desconto, casos da 06 direto ao consultor.
   - Aceite: os cenários de `testes/cenarios.md` passam com o agente `cliente-simulado`.
-- **BOT-03 (E1)** O bot grava as informações por ferramentas (`registrar_lead`, `atualizar_lead`, `classificar_lead`, `registrar_medidas`, `ver_horarios_livres`, `agendar_visita`, `passar_para_consultor`).
+- **BOT-03 (E1)** O bot grava as informações por ferramentas (`registrar_lead`, `atualizar_lead`, `classificar_lead`, `registrar_medidas`, `passar_para_consultor`). O bot não agenda: quem marca é o consultor (decisão do Mateus 04/11/2026).
   - Aceite: ao fim de uma conversa simulada, a ficha do lead tem todos os dados ditos pelo cliente, sem dados inventados.
 - **BOT-04 (E1)** Leitura de medidas em foto/planta enviada no chat, com confirmação ao cliente e origem "informada pelo cliente".
 - **BOT-05 (E1)** Quando um consultor assume a conversa, o bot para de responder nela até o consultor devolver.
 - **BOT-06 (E1)** Erro ou falta de chave da API não derruba o sistema: aparece um aviso claro e a conversa fica marcada "aguardando humano".
 
 ## KAN – kanban
-- **KAN-01 (E1)** Colunas: Novo / bot atendendo · Pronto para o consultor · Visita agendada · Orçamento apresentado · Negociação · Fechado · Perdido · Sem resposta. Cada coluna mostra o contador.
+- **KAN-01 (E1)** Colunas (funil aprovado pelo Mateus em 04/11/2026, tarefa 21): IA atendendo · Aguardando consultor · Em qualificação · Medição agendada · Apresentação agendada · Negociação · Fechado · Perdido. Cada coluna mostra o contador. Exigências ao receber o card: Em qualificação pede o próximo contato; Medição e Apresentação só com o compromisso marcado na agenda (arrastar abre a janela de agendar); Negociação pede próximo contato (conforme Configurações > Vendas) e valor do orçamento opcional; Fechado pede o valor do contrato; Perdido pede o motivo. Sem setinha de avançar (decisão do Mateus).
 - **KAN-02 (E1)** Card mostra: foto/avatar, nome, horário da última mensagem, prévia da última mensagem, cidade, ambientes, investimento informado, etiquetas e um sino quando o cliente aguarda resposta humana.
 - **KAN-03 (E1)** Arrastar e soltar entre colunas no computador; no celular, toque longo para arrastar **e** alternativa por menu "Mover para...".
 - **KAN-04 (E1)** Etiquetas coloridas: Outra cidade, Arquiteto/parceiro, Pós-venda, Já atendido, Retomada enviada. Filtro por etiqueta, consultor e cidade. Busca por nome, telefone e texto da ficha.
-- **KAN-05 (E1)** O bot move os cards sozinho (novo → pronto para o consultor → visita agendada) e o movimento aparece na tela sem recarregar.
+- **KAN-05 (E1)** O bot move o card de IA atendendo para Aguardando consultor ao passar o lead (ele não agenda); o movimento aparece na tela sem recarregar.
 - **KAN-06 (E2)** Coreografia de arrastar descrita em `docs/design.md` (parte 2).
 
 ## FICHA – lead pronto para o consultor
@@ -43,25 +43,25 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 - **AGENDA-01 (E1)** Calendário com visão de dia e semana, visitas e bloqueios por consultor.
 - **AGENDA-02 (E1)** O bot oferece só horários livres, dentro das regras da agenda que o admin define em Configurações > Geral (horário por dia, duração, visitas por horário, dias à frente); o bot não conhece esses números, só oferece o que a ferramenta devolve, e nunca marca dois clientes no mesmo horário do mesmo consultor.
 - **AGENDA-03 (E1)** Consultor cria bloqueios, remarca e cancela visitas; o card e a ficha refletem a mudança.
-- **AGENDA-04 (E1)** Visita agendada aparece no card (data e hora) e move o card para "Visita agendada".
+- **AGENDA-04 (E1)** Três compromissos (tarefa 21): visita à loja (não move o card), medição na casa do cliente (2h por padrão, editável; move para "Medição agendada"; não ocupa vaga da loja) e apresentação na loja (move para "Apresentação agendada"). Nenhum pode coincidir com outro do mesmo consultor. Marcar nunca volta o card de etapa mais avançada (Negociação continua em Negociação; Perdido volta ao funil). Cancelar medição/apresentação sem outra marcada volta o card para Em qualificação. O próximo compromisso aparece no card com o tipo.
 
-## RET – retomada e "Sem resposta"
+## RET – retomada e "Parou de responder"
 - **RET-01 (E1)** 3 dias sem resposta depois da última mensagem do bot → envia **uma** retomada (modelo) e aplica a etiqueta "Retomada enviada". Nunca envia mais de uma retomada por lead.
 - **RET-02 (E1)** Se o cliente responder, o card volta à etapa em que estava e a etiqueta sai.
-- **RET-03 (E1)** Sem resposta 4 dias depois da retomada (provisório) → card vai para "Sem resposta".
+- **RET-03 (E1)** Sem resposta 4 dias depois da retomada (provisório) → card vai para "Perdido" com o motivo "Parou de responder" (a coluna "Sem resposta" saiu na tarefa 21). Se o cliente escrever de novo, o card volta para onde estava.
 - **RET-04 (E1)** Relógio simulado: controle visível no simulador para avançar horas e dias e disparar as rotinas, com registro do que aconteceu.
 
 ## LIMP – arquivar e excluir
 - **LIMP-01 (E1)** Seleção múltipla de cards; ações "Arquivar" e "Excluir".
-- **LIMP-02 (E1)** Botão "Limpar coluna" (pelo menos em "Sem resposta" e "Perdido"), com confirmação que mostra a quantidade. Ex.: "Excluir 23 leads? Não dá para desfazer."
+- **LIMP-02 (E1)** Botão "Limpar coluna" em "Perdido", com confirmação que mostra a quantidade. Ex.: "Excluir 23 leads? Não dá para desfazer."
 - **LIMP-03 (E1)** Arquivado sai do kanban, pode ser consultado numa lista de arquivados e restaurado.
 - **LIMP-04 (E1)** Arquivado há 30 dias é excluído de vez, com mensagens e mídias (fotos, plantas).
 - **LIMP-05 (E1)** Só o administrador (Mateus) exclui. Consultor arquiva, mas não exclui: o botão nem aparece para ele, e a API recusa.
 - **LIMP-06 (E1)** Excluir não altera as métricas: o painel usa contadores anônimos gravados no momento dos eventos.
 
 ## MET – painel
-- **MET-01 (E1)** Por semana e por mês: leads novos, qualificados, curiosos, outras cidades, arquitetos/parceiros, sem resposta, retomadas que voltaram, visitas agendadas, visitas por consultor.
-- **MET-02 (E1)** Funil: novo → pronto para o consultor → visita agendada → orçamento → fechado, com taxa de conversão entre etapas.
+- **MET-01 (E1)** Por semana e por mês: apresentações agendadas (métrica principal), medições agendadas, leads novos, qualificados, curiosos, outras cidades, arquitetos/parceiros, retomadas que voltaram, apresentações por consultor. Conversão da agenda: medições que viraram apresentação e apresentações que viraram venda. "Parou de responder" aparece nos motivos de perda.
+- **MET-02 (E1)** Funil: IA atendendo → Aguardando consultor → Em qualificação → Apresentação agendada → Fechado, com taxa de conversão entre etapas. Medição conta como Em qualificação (é opcional) e Negociação como Apresentação.
 - **MET-03 (E1)** Contadores anônimos (sem nome, telefone ou texto) preservados após exclusões.
 
 ## USR – usuários
@@ -87,7 +87,7 @@ Medidas: cozinha 3,20 × 2,10 (planta enviada, confirmada); quartos sem medida
 Exigências: cooktop na ilha, cores claras
 Pedido técnico: "quero aproveitar a bancada de granito"
 Investimento: informou R$ 40–60 mil
-Visita: sáb 08/11 10h com Consultor 1
+Agenda: Apresentação sáb 08/11 10h com Consultor 1
 Classificação: qualificado
 ```
 
@@ -100,13 +100,14 @@ A etapa 1 termina quando:
 5. O relatório final em `docs/rodadas/` explica ao Mateus como rodar e testar, o que ficou pendente e o que foi marcado como PROVISÓRIO.
 
 ## Instruções de atendimento editáveis (pedido do Mateus, 31/10/2026)
-- **INST-01** O CRM é a fonte principal das instruções: as 15 (13 originais + dados da loja + regras do CRM) entram no banco na primeira vez (carga inicial de `agente/instrucoes/`) e o bot passa a ler do banco.
+- **INST-01** O banco é a única fonte das instruções. O projeto não traz roteiro: o admin cola as instruções numeradas do repositório de instruções dele (atualizado 04/11/2026). Sem instrução ativa, o bot não atende e o cliente vai direto ao consultor, com aviso na tela de Instruções e na conversa.
 - **INST-02** Só o admin vê e edita (tela e API conferem a permissão `configurar`).
 - **INST-03** Aba "Instruções de atendimento" em Configurações: criar, editar título e texto, reordenar e ativar/desativar.
 - **INST-04** Guarda só a versão anterior: cada edição de título/texto joga a atual para "anterior"; botão "Voltar para a anterior" troca as duas.
 - **INST-05** Exportar: janela com seleção por instrução e "selecionar todas"; saída em .txt único ou .zip com um .txt por instrução.
 - **INST-06** Aviso de confirmação ao salvar e atalho "Testar no simulador".
 - **INST-07** O admin pode excluir uma instrução de vez, com confirmação clara de que não dá para desfazer. Não pode excluir a última instrução ativa.
+- **INST-08** Manual do CRM (04/11/2026): instrução fixa, fora da numeração, que ensina as ferramentas. Editável (com versão anterior e exportação), não pode ser desativada nem excluída, vai no prompt depois das numeradas. Em banco antigo, a instrução "15. Regras do CRM" vira o manual e a "14. Dados da loja" sai, uma vez só.
 
 ## Bloco 1 – Avisos e leads esperando resposta (pedido do Mateus, 04/11/2026)
 Tarefas em `tarefas/`. Marcado ✅ o que já está pronto.

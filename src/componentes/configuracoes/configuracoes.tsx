@@ -185,7 +185,7 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
   function mudarDia(dia: number, faixa: { abre: number; fecha: number } | null) {
     setRascunho((r) => ({ ...r, horario: r.horario.map((h, i) => (i === dia ? faixa : h)) }));
   }
-  function mudarNumero(campo: "duracaoMin" | "visitasPorHorario" | "diasAFrente", valor: string) {
+  function mudarNumero(campo: "duracaoMin" | "duracaoMedicaoMin" | "visitasPorHorario" | "diasAFrente", valor: string) {
     setRascunho((r) => ({ ...r, [campo]: Number(valor) }));
   }
 
@@ -201,10 +201,10 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
   return (
     <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
-        <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Regras da agenda de visitas
+        <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Regras da agenda
       </h2>
       <p className="mb-3 text-sm text-texto-suave">
-        Valem para o bot e para a agenda. O bot não conhece estes números: ele só oferece os horários livres que o sistema devolve. O próximo horário é sempre o próximo dia aberto.{" "}
+        Valem para visitas à loja, medições e apresentações. Nenhum compromisso pode coincidir com outro do mesmo consultor; a medição não ocupa vaga na loja. O bot não agenda: quem marca é o consultor.{" "}
         <span className="rounded-pilula bg-aviso-suave px-2 py-0.5 text-xs font-medium text-aviso">Provisório</span>
       </p>
       <ul className="divide-y divide-borda">
@@ -231,9 +231,12 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
           );
         })}
       </ul>
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <Campo rotulo="Duração da visita (min)">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Campo rotulo="Visita e apresentação (min)">
           <input type="number" inputMode="numeric" min={30} max={240} step={15} value={rascunho.duracaoMin} onChange={(e) => mudarNumero("duracaoMin", e.target.value)} className={classeEntrada} />
+        </Campo>
+        <Campo rotulo="Medição (min)">
+          <input type="number" inputMode="numeric" min={30} max={480} step={15} value={rascunho.duracaoMedicaoMin} onChange={(e) => mudarNumero("duracaoMedicaoMin", e.target.value)} className={classeEntrada} />
         </Campo>
         <Campo rotulo="Visitas ao mesmo tempo na loja">
           <input type="number" inputMode="numeric" min={1} max={10} value={rascunho.visitasPorHorario} onChange={(e) => mudarNumero("visitasPorHorario", e.target.value)} className={classeEntrada} />

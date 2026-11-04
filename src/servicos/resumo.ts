@@ -15,7 +15,8 @@ export interface DadosResumo {
   classificacao: string | null;
   observacoes?: string | null;
   medidas: { ambiente: string; descricao: string; fonte: string; confirmada: boolean }[];
-  visita: { inicio: Date; consultorNome: string } | null;
+  /** Próximo compromisso marcado (tipo: "Visita à loja", "Medição" ou "Apresentação"). */
+  visita: { inicio: Date; consultorNome: string; tipo?: string } | null;
 }
 
 const FONTE: Record<string, string> = { texto: "por texto", foto: "foto enviada", planta: "planta enviada", audio: "áudio" };
@@ -41,7 +42,7 @@ export function gerarResumo(d: DadosResumo): string {
     `Exigências: ${d.exigencias.join(", ") || "nenhuma informada"}`,
     `Pedido técnico: ${d.pedidosTecnicos.length ? d.pedidosTecnicos.map((p) => `"${p}"`).join("; ") : "nenhum"}`,
     `Investimento: ${d.investimento ? `informou ${d.investimento}` : "não informado"}`,
-    `Visita: ${d.visita ? `${formatarVisitaCurta(d.visita.inicio)} com ${d.visita.consultorNome}` : "não agendada"}`,
+    `Agenda: ${d.visita ? `${d.visita.tipo ?? "Visita"} ${formatarVisitaCurta(d.visita.inicio)} com ${d.visita.consultorNome}` : "nada marcado"}`,
     `Classificação: ${classificacao}`,
     // Observações só quando houver (motivo do contato nos casos que vão direto ao consultor).
     ...(d.observacoes ? [`Observações: ${d.observacoes}`] : []),

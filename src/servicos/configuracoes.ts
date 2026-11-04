@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
-import { REGRAS_AGENDA_PADRAO, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
 const CHAVE_MODO = "distribuicao_modo";
@@ -40,7 +40,8 @@ export async function regrasDaAgenda(): Promise<RegrasAgenda> {
   const bruto = await lerConfig(CHAVE_AGENDA);
   if (!bruto) return REGRAS_AGENDA_PADRAO;
   try {
-    const r = JSON.parse(bruto) as RegrasAgenda;
+    // Regras gravadas antes de um campo novo (ex.: duração da medição) recebem o padrão nesse campo.
+    const r = completarRegrasAgenda(JSON.parse(bruto) as Partial<RegrasAgenda>);
     return validarRegrasAgenda(r) === null ? r : REGRAS_AGENDA_PADRAO;
   } catch {
     return REGRAS_AGENDA_PADRAO;

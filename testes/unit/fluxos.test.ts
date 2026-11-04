@@ -7,16 +7,19 @@ import { avancarRelogio, agora } from "@/lib/relogio";
 import { lerLista } from "@/lib/json";
 import { DIA, HORA } from "@/regras/tempo";
 import { janelaDeAgendamento } from "@/regras/agenda";
-import { agendarVisita, criarBloqueio, horariosLivresParaLead } from "@/servicos/agenda";
+import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresParaLead } from "@/servicos/agenda";
+import { converterFunilAntigo } from "@/servicos/conversao-funil";
+import { motivosDePerda } from "@/servicos/vendas";
+import { dadosDoPainel } from "@/servicos/painel";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
 import { definirModoDistribuicao, definirRegrasDaAgenda, regrasDaAgenda } from "@/servicos/configuracoes";
 import { definirStatusConsultor, distribuirFila, escolherProximoConsultor } from "@/servicos/distribuicao";
-import { arquivarLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
+import { arquivarLeads, conferirMudanca, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
 import { receberMensagemCliente } from "@/servicos/conversa";
-import { criarConsultores, limparBanco } from "./ajuda";
+import { criarConsultores, limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 // PNG mínimo válido (1x1).
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -26,7 +29,7 @@ beforeEach(async () => {
 });
 
 describe("retomada e Sem resposta com o relógio simulado (RET-01 a RET-03)", () => {
-  it("envia uma única retomada, move para Sem resposta e volta quando o cliente responde", async () => {
+  it("envia uma única retomada, move para Perdido (Parou de responder) e volta quando o cliente responde", async () => {
     const lead = await obterOuCriarLead("+5588900001111", "Cliente Teste");
     await registrarMensagemCliente(lead.id, "Oi, quero uma cozinha");
     await enviarMensagemLoja({ leadId: lead.id, autor: "bot", texto: "Oi! Qual ambiente?" });
@@ -41,7 +44,8 @@ describe("retomada e Sem resposta com o relógio simulado (RET-01 a RET-03)", ()
     await avancarRelogio(4 * DIA + HORA);
     expect((await rodarRotinas()).semResposta).toBe(1);
     atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(atual.etapa).toBe("sem_resposta");
+    expect(atual).toMatchObject({ etapa: "perdido", motivoPerda: "parou_de_responder", etapaAnterior: "novo" });
+    expect((await motivosDePerda()).some((m) => m.codigo === "parou_de_responder")).toBe(true);
 
     // Muito tempo depois: continua uma retomada só.
     await avancarRelogio(10 * DIA);
@@ -51,6 +55,7 @@ describe("retomada e Sem resposta com o relógio simulado (RET-01 a RET-03)", ()
     await registrarMensagemCliente(lead.id, "Oi, ainda quero sim");
     atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect(atual.etapa).toBe("novo");
+    expect(atual.motivoPerda).toBeNull();
     expect(lerLista(atual.etiquetas)).not.toContain("retomada");
     expect(await db.eventoMetrica.count({ where: { tipo: "retomada_voltou" } })).toBe(1);
   });
@@ -84,8 +89,8 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     const l2 = await obterOuCriarLead("+5588900003332");
     const [vaga] = await horariosLivresParaLead(l1.id, 1);
     const resultados = await Promise.allSettled([
-      agendarVisita({ leadId: l1.id, inicio: vaga.inicio, consultorId: a.id, autor: "teste" }),
-      agendarVisita({ leadId: l2.id, inicio: vaga.inicio, consultorId: b.id, autor: "teste" }),
+      agendarVisita({ leadId: l1.id, inicio: vaga.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" }),
+      agendarVisita({ leadId: l2.id, inicio: vaga.inicio, consultorId: b.id, autor: "teste", tipo: "apresentacao" }),
     ]);
     expect(resultados.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await db.visita.count({ where: { inicio: vaga.inicio, status: "agendada" } })).toBe(1);
@@ -93,8 +98,8 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     const ok = resultados.findIndex((r) => r.status === "fulfilled");
     const leadOk = ok === 0 ? l1 : l2;
     const [outra] = (await horariosLivresParaLead(leadOk.id, 2)).slice(1);
-    await agendarVisita({ leadId: leadOk.id, inicio: outra.inicio, autor: "teste" });
-    expect(await db.eventoMetrica.count({ where: { tipo: "visita_agendada" } })).toBe(1);
+    await agendarVisita({ leadId: leadOk.id, inicio: outra.inicio, autor: "teste", tipo: "apresentacao" });
+    expect(await db.eventoMetrica.count({ where: { tipo: "apresentacao_agendada" } })).toBe(1);
     expect(await db.eventoMetrica.count({ where: { tipo: "etapa_pronto" } })).toBe(1);
   });
   it("horário bloqueado nunca é oferecido e agendar move o card", async () => {
@@ -107,8 +112,92 @@ describe("agenda sem conflito (AGENDA-02)", () => {
     const livres = await horariosLivresParaLead(lead.id, 20);
     expect(livres.every((v) => v.inicio.getTime() >= inicio.getTime() + 10 * HORA || v.inicio < inicio)).toBe(true);
     await expect(agendarVisita({ leadId: lead.id, inicio, autor: "teste" })).rejects.toThrow(/livre/);
-    await agendarVisita({ leadId: lead.id, inicio: livres[0].inicio, autor: "bot" });
-    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("visita");
+    await agendarVisita({ leadId: lead.id, inicio: livres[0].inicio, autor: "teste", tipo: "apresentacao" });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("apresentacao");
+  });
+});
+
+describe("novo funil com a agenda (tarefa 21)", () => {
+  const etapa = async (id: string) => (await db.lead.findUniqueOrThrow({ where: { id } })).etapa;
+  const contar = (tipo: string) => db.eventoMetrica.count({ where: { tipo } });
+
+  it("visita à loja não move o card; medição move para Medição e apresentação para Apresentação", async () => {
+    const [a] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900005001");
+    await moverEtapa(lead.id, "qualificacao", "teste", { dados: { proximoContatoEm: new Date((await agora()).getTime() + DIA) } });
+    const [v1, v2] = await horariosLivresParaLead(lead.id, 2);
+    await agendarVisita({ leadId: lead.id, inicio: v1.inicio, consultorId: a.id, autor: "teste", tipo: "visita" });
+    expect(await etapa(lead.id)).toBe("qualificacao");
+    const [m] = await horariosLivresParaLead(lead.id, 1, new Date(v2.inicio.getTime() + DIA), "medicao");
+    const medicao = await agendarVisita({ leadId: lead.id, inicio: m.inicio, consultorId: a.id, autor: "teste", tipo: "medicao" });
+    expect(medicao.fim.getTime() - medicao.inicio.getTime()).toBe(2 * HORA);
+    expect(await etapa(lead.id)).toBe("medicao");
+    const [ap] = await horariosLivresParaLead(lead.id, 1, new Date(m.inicio.getTime() + DIA), "apresentacao");
+    await agendarVisita({ leadId: lead.id, inicio: ap.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" });
+    expect(await etapa(lead.id)).toBe("apresentacao");
+    expect(await db.visita.count({ where: { leadId: lead.id, status: "agendada" } })).toBe(3);
+    for (const tipo of ["visita_agendada", "medicao_agendada", "apresentacao_agendada"]) expect(await contar(tipo)).toBe(1);
+    // Painel: a medição virou apresentação; a apresentação ainda não virou venda.
+    let painel = await dadosDoPainel({ atalho: "hoje" });
+    expect(painel.conversoes).toEqual({ medicoes: 1, medicoesComApresentacao: 1, apresentacoes: 1, apresentacoesFechadas: 0 });
+    expect(painel.indicadores.slice(0, 2).map((i) => [i.tipo, i.atual])).toEqual([["apresentacao_agendada", 1], ["medicao_agendada", 1]]);
+    await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
+    painel = await dadosDoPainel({ atalho: "hoje", vendedorId: a.id });
+    expect(painel.conversoes.apresentacoesFechadas).toBe(1);
+    expect(painel.apresentacoesPorConsultor.find((c) => c.nome === a.nome)?.total).toBe(1);
+  });
+
+  it("o consultor mede ou apresenta, nunca os dois no mesmo horário (inclusive no meio da medição)", async () => {
+    const [a] = await criarConsultores();
+    const l1 = await obterOuCriarLead("+5588900005002");
+    const l2 = await obterOuCriarLead("+5588900005003");
+    const [m] = await horariosLivresParaLead(l1.id, 1, undefined, "medicao");
+    await agendarVisita({ leadId: l1.id, inicio: m.inicio, consultorId: a.id, autor: "teste", tipo: "medicao" });
+    // A medição vai das h às h+2: a apresentação de a às h+1 é recusada.
+    await expect(agendarVisita({ leadId: l2.id, inicio: new Date(m.inicio.getTime() + HORA), consultorId: a.id, autor: "teste", tipo: "apresentacao" })).rejects.toThrow(/compromisso/);
+    // O próprio lead também não marca a apresentação dele em cima da medição.
+    await expect(agendarVisita({ leadId: l1.id, inicio: m.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" })).rejects.toThrow(/compromisso/);
+    // Os horários oferecidos para o consultor já pulam a medição.
+    const livres = await horariosLivresParaLead(l2.id, 40, undefined, "apresentacao");
+    expect(livres.some((v) => v.consultorId === a.id && v.inicio >= m.inicio && v.inicio < new Date(m.inicio.getTime() + 2 * HORA))).toBe(false);
+  });
+
+  it("Medição/Apresentação só recebem o card com o compromisso marcado; cancelar volta para Em qualificação", async () => {
+    const [a] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900005004");
+    await expect(moverEtapa(lead.id, "apresentacao", "teste")).rejects.toThrow(/Marque a apresentação/);
+    await expect(conferirMudanca(lead.id, "medicao", {})).rejects.toThrow(/Marque a medição/);
+    const [ap] = await horariosLivresParaLead(lead.id, 1, undefined, "apresentacao");
+    const marcada = await agendarVisita({ leadId: lead.id, inicio: ap.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" });
+    expect(await etapa(lead.id)).toBe("apresentacao");
+    await cancelarVisita(marcada.id, "teste");
+    expect(await etapa(lead.id)).toBe("qualificacao");
+  });
+
+  it("marcar não volta o card de Negociação nem de Fechado; Perdido volta para o funil", async () => {
+    const [a] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900005005");
+    await moverEtapa(lead.id, "negociacao", "teste", { dados: { proximoContatoEm: new Date((await agora()).getTime() + DIA) } });
+    const [v1, v2] = await horariosLivresParaLead(lead.id, 2, undefined, "apresentacao");
+    await agendarVisita({ leadId: lead.id, inicio: v1.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" });
+    expect(await etapa(lead.id)).toBe("negociacao");
+    await moverEtapa(lead.id, "perdido", "teste", { dados: { motivoPerda: "preco" } });
+    await agendarVisita({ leadId: lead.id, inicio: v2.inicio, consultorId: a.id, autor: "teste", tipo: "apresentacao" });
+    expect(await etapa(lead.id)).toBe("apresentacao");
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).motivoPerda).toBeNull();
+  });
+
+  it("converte os cards das colunas antigas uma vez", async () => {
+    const l1 = await obterOuCriarLead("+5588900005006");
+    const l2 = await obterOuCriarLead("+5588900005007");
+    const l3 = await obterOuCriarLead("+5588900005008");
+    await db.lead.update({ where: { id: l1.id }, data: { etapa: "visita" } });
+    await db.lead.update({ where: { id: l2.id }, data: { etapa: "orcamento" } });
+    await db.lead.update({ where: { id: l3.id }, data: { etapa: "sem_resposta", etapaAnterior: "novo" } });
+    expect(await converterFunilAntigo()).toBe(3);
+    expect([await etapa(l1.id), await etapa(l2.id), await etapa(l3.id)]).toEqual(["apresentacao", "negociacao", "perdido"]);
+    expect((await db.lead.findUniqueOrThrow({ where: { id: l3.id } })).motivoPerda).toBe("parou_de_responder");
+    expect(await converterFunilAntigo()).toBe(0);
   });
 });
 
@@ -192,6 +281,7 @@ describe("clientes que fecharam: excluídos 180 dias depois do fechamento", () =
 
 describe("bot sem chave da API (BOT-06)", () => {
   it("não derruba: marca aguardando humano com aviso", async () => {
+    await criarRoteiroDeTeste();
     const chave = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     try {
@@ -216,16 +306,17 @@ async function receberMensagemSemBot() {
 describe("funil e arquivamento (MET-02, AGENDA-02)", () => {
   const contar = (tipo: string) => db.eventoMetrica.count({ where: { tipo } });
 
-  it("Novo → Visita → remarcar → Fechado conta cada etapa uma vez", async () => {
+  it("Novo → Apresentação → remarcar → Fechado conta cada etapa uma vez", async () => {
     await criarConsultores();
     const lead = await obterOuCriarLead("+5588900007777");
     const [v1, v2] = await horariosLivresParaLead(lead.id, 2);
-    await agendarVisita({ leadId: lead.id, inicio: v1.inicio, autor: "teste" });
-    await agendarVisita({ leadId: lead.id, inicio: v2.inicio, autor: "teste" });
+    await agendarVisita({ leadId: lead.id, inicio: v1.inicio, autor: "teste", tipo: "apresentacao" });
+    await agendarVisita({ leadId: lead.id, inicio: v2.inicio, autor: "teste", tipo: "apresentacao" });
     await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
     await moverEtapa(lead.id, "novo", "teste");
     await moverEtapa(lead.id, "fechado", "teste", { dados: { valorFechado: 100000 } });
-    for (const tipo of ["etapa_novo", "etapa_pronto", "etapa_visita", "etapa_orcamento", "etapa_fechado", "visita_agendada"]) expect(await contar(tipo)).toBe(1);
+    for (const tipo of ["etapa_novo", "etapa_pronto", "etapa_qualificacao", "etapa_apresentacao", "etapa_fechado", "apresentacao_agendada"]) expect(await contar(tipo)).toBe(1);
+    expect(await contar("etapa_medicao")).toBe(0);
   });
 
   it("arquivar cancela a visita e libera o horário da loja", async () => {

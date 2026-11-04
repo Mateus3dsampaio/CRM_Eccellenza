@@ -2,34 +2,25 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { resolverPeriodoPainel, datasDosAtalhos } from "@/regras/painel";
-import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
+import { ETAPAS_FUNIL, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
+import { nomesDasEtapas } from "./etapas";
 import { motivosDePerda } from "./vendas";
 import { estatisticaDeTempos, primeiraRespostaDoConsultor, temposDoConsultor, turnosDoCliente } from "@/regras/tempo-resposta";
 
 // Painel (MET-01/02). Sem vendedor escolhido: contadores anônimos (valem mesmo para leads excluídos).
 // Com vendedor escolhido: dados dos leads que são dele hoje, porque os contadores não guardam de quem é cada lead (MET-03).
 
+// Tarefa 21: a métrica principal é trazer o cliente à loja (apresentações agendadas). "Sem resposta" virou motivo de perda.
 const TIPOS_PAINEL = [
+  ["apresentacao_agendada", "Apresentações agendadas"],
+  ["medicao_agendada", "Medições agendadas"],
   ["lead_novo", "Leads novos"],
   ["qualificado", "Qualificados"],
   ["curioso", "Curiosos"],
   ["outra_cidade", "Outras cidades"],
   ["parceiro", "Arquitetos/parceiros"],
-  ["sem_resposta", "Sem resposta"],
   ["retomada_voltou", "Retomadas que voltaram"],
-  ["visita_agendada", "Visitas agendadas"],
 ] as const;
-
-const FUNIL = [
-  ["etapa_novo", "Novo"],
-  ["etapa_pronto", "Pronto para o consultor"],
-  ["etapa_visita", "Visita agendada"],
-  ["etapa_orcamento", "Orçamento apresentado"],
-  ["etapa_fechado", "Fechado"],
-] as const;
-
-/** Posição da etapa no funil; "Negociação" conta como Orçamento (vem depois dele). Fora do funil: -1. */
-const POSICAO_NO_FUNIL: Record<string, number> = { novo: 0, pronto: 1, visita: 2, orcamento: 3, negociacao: 3, fechado: 4 };
 
 export interface PedidoPainel {
   atalho?: string | null;
@@ -85,9 +76,12 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
 
   let indicadores: { tipo: string; nome: string; atual: number; anterior: number }[];
   let funil: { tipo: string; nome: string; total: number }[];
+  const nomes = await nomesDasEtapas();
+  const FUNIL = ETAPAS_FUNIL.map((e: CodigoEtapa) => [`etapa_${e}`, nomes[e]] as const);
+  const indicador = (tipo: string, nome: string) => ({ tipo, nome, atual: contar(tipo, inicio, fim), anterior: contar(tipo, anteriorInicio, inicio) });
 
   if (!vendedor) {
-    indicadores = TIPOS_PAINEL.map(([tipo, nome]) => ({ tipo, nome, atual: contar(tipo, inicio, fim), anterior: contar(tipo, anteriorInicio, inicio) }));
+    indicadores = TIPOS_PAINEL.map(([tipo, nome]) => indicador(tipo, nome));
     funil = FUNIL.map(([tipo, nome]) => ({ tipo, nome, total: contar(tipo, inicio, fim) }));
   } else {
     const leads = await db.lead.findMany({
@@ -98,22 +92,22 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     const nos = (de: Date, ate: Date) => ({
       recebidos: leads.filter((l) => dentro(l.criadoEm, de, ate)).length,
       atendidos: leads.filter((l) => l.mensagens.some((m) => dentro(m.enviadaEm, de, ate))).length,
-      semResposta: leads.filter((l) => l.mudancasEtapa.some((m) => m.para === "sem_resposta" && dentro(m.criadoEm, de, ate))).length,
     });
     const atual = nos(inicio, fim);
     const anterior = nos(anteriorInicio, inicio);
     indicadores = [
+      indicador("apresentacao_agendada", "Apresentações agendadas"),
+      indicador("medicao_agendada", "Medições agendadas"),
       { tipo: "recebidos", nome: "Leads recebidos", atual: atual.recebidos, anterior: anterior.recebidos },
       { tipo: "atendidos", nome: "Leads atendidos", atual: atual.atendidos, anterior: anterior.atendidos },
-      { tipo: "visita_agendada", nome: "Visitas agendadas", atual: contar("visita_agendada", inicio, fim), anterior: contar("visita_agendada", anteriorInicio, inicio) },
-      { tipo: "sem_resposta", nome: "Sem resposta", atual: atual.semResposta, anterior: anterior.semResposta },
     ];
     // Etapa mais avançada do funil que cada lead alcançou no período (quem chegou longe passou pelas anteriores).
-    const alcance = leads.map((l) => Math.max(-1, ...l.mudancasEtapa.filter((m) => dentro(m.criadoEm, inicio, fim)).map((m) => POSICAO_NO_FUNIL[m.para] ?? -1)));
+    const alcance = leads.map((l) => Math.max(-1, ...l.mudancasEtapa.filter((m) => dentro(m.criadoEm, inicio, fim)).map((m) => POSICAO_NO_FUNIL[m.para as CodigoEtapa] ?? -1)));
     funil = FUNIL.map(([tipo, nome], i) => ({ tipo, nome, total: alcance.filter((a) => a >= i).length }));
   }
 
   const vendas = await vendasDoPeriodo(inicio, fim, vendedor?.id);
+  const conversoes = await conversoesDoPeriodo(inicio, fim, vendedor?.id);
 
   return {
     de: periodo.de,
@@ -126,22 +120,50 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     indicadores,
     funil,
     vendas,
+    conversoes,
     tempos,
-    visitasPorConsultor: consultores.map((c) => ({
+    apresentacoesPorConsultor: consultores.map((c) => ({
       nome: c.nome,
-      total: eventos.filter((e) => e.tipo === "visita_agendada" && e.consultorId === c.id && e.ocorridoEm >= inicio && e.ocorridoEm < fim).length,
+      total: eventos.filter((e) => e.tipo === "apresentacao_agendada" && e.consultorId === c.id && e.ocorridoEm >= inicio && e.ocorridoEm < fim).length,
     })),
   };
 }
 
 /**
- * Vendas (Bloco 2). "Em negociação" é a situação de agora: valor do orçamento dos leads em Orçamento apresentado e Negociação.
+ * Conversões (tarefa 21), por lead, a partir da agenda: das medições marcadas no período, quantas viraram apresentação;
+ * das apresentações marcadas no período, quantas viraram venda. Compromisso cancelado sem remarcar não conta.
+ * Leads excluídos somem (a agenda some com eles).
+ */
+async function conversoesDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
+  const compromissos = await db.visita.findMany({
+    where: { status: "agendada", tipo: { in: ["medicao", "apresentacao"] }, ...(vendedorId ? { consultorId: vendedorId } : {}) },
+    select: { leadId: true, tipo: true, criadoEm: true, lead: { select: { etapa: true } } },
+  });
+  const noPeriodo = (c: (typeof compromissos)[number]) => c.criadoEm >= inicio && c.criadoEm < fim;
+  const medicoes = new Map<string, Date>();
+  for (const c of compromissos) if (c.tipo === "medicao" && noPeriodo(c)) medicoes.set(c.leadId, c.criadoEm);
+  const viraramApresentacao = [...medicoes].filter(([leadId, marcada]) => compromissos.some((c) => c.tipo === "apresentacao" && c.leadId === leadId && c.criadoEm >= marcada)).length;
+  const apresentacoes = new Map(compromissos.filter((c) => c.tipo === "apresentacao" && noPeriodo(c)).map((c) => [c.leadId, c.lead.etapa]));
+  const fechadas = [...apresentacoes.values()].filter((etapa) => etapa === "fechado").length;
+  return {
+    medicoes: medicoes.size,
+    medicoesComApresentacao: viraramApresentacao,
+    apresentacoes: apresentacoes.size,
+    apresentacoesFechadas: fechadas,
+  };
+}
+
+/** Colunas que entram em "Em negociação" (situação de agora). */
+const ETAPAS_EM_NEGOCIACAO: CodigoEtapa[] = ["apresentacao", "negociacao"];
+
+/**
+ * Vendas (Bloco 2). "Em negociação" é a situação de agora: valor do orçamento dos leads em Apresentação agendada e Negociação.
  * "Vendido" e "perdidos" são do período: leads cuja última entrada em Fechado/Perdido caiu dentro das datas.
  * Dinheiro em centavos. Leads excluídos somem (o valor vem do lead); arquivados continuam contando.
  */
 async function vendasDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
   const dono = vendedorId ? { consultorId: vendedorId } : {};
-  const abertos = await db.lead.findMany({ where: { ...dono, arquivadoEm: null, etapa: { in: ETAPAS_COM_RETORNO } }, select: { valorOrcamento: true } });
+  const abertos = await db.lead.findMany({ where: { ...dono, arquivadoEm: null, etapa: { in: ETAPAS_EM_NEGOCIACAO } }, select: { valorOrcamento: true } });
   const encerrados = await db.lead.findMany({
     where: { ...dono, etapa: { in: ["fechado", "perdido"] } },
     select: { etapa: true, valorFechado: true, motivoPerda: true, concorrente: true, mudancasEtapa: { where: { para: { in: ["fechado", "perdido"] } }, select: { para: true, criadoEm: true } } },

@@ -17,7 +17,7 @@ const PASSOS = [
   { horas: 24 * 30, rotulo: "+30 dias" },
 ];
 
-// Relógio simulado (RET-04): avança o tempo e roda as rotinas (retomada, "Sem resposta", exclusão de arquivados).
+// Relógio simulado (RET-04): avança o tempo e roda as rotinas (retomada, "Parou de responder", exclusão de arquivados).
 export function Relogio() {
   const avisar = useAviso();
   const { dados, recarregar } = useDados<{ agora: string; deslocamentoHoras: number; registros: { id: string; texto: string }[] }>("/api/relogio");
@@ -61,7 +61,7 @@ export function Relogio() {
         ))}
       </div>
       <p className="text-xs text-texto-fraco">O relógio só anda para a frente. Para recomeçar do zero, rode <code>npm run seed</code>.</p>
-      <p className="text-xs text-texto-fraco">Regras: retomada após 3 dias sem resposta (só cards no &quot;Novo&quot; com o bot atendendo); &quot;Sem resposta&quot; 4 dias depois (PROVISÓRIO); arquivados excluídos em 30 dias.</p>
+      <p className="text-xs text-texto-fraco">Regras: retomada após 3 dias sem resposta (só cards no &quot;Novo&quot; com o bot atendendo); 4 dias depois vai para &quot;Perdido&quot; com o motivo &quot;Parou de responder&quot; (PROVISÓRIO); arquivados excluídos em 30 dias.</p>
       <div>
         <h3 className="mb-2 text-sm font-semibold">O que aconteceu</h3>
         <ol className="rolagem-fina max-h-72 space-y-2 overflow-y-auto pr-1 text-xs text-texto-suave">
@@ -74,7 +74,7 @@ export function Relogio() {
         </ol>
       </div>
       <Modal aberto={!!confirmar} aoFechar={() => setConfirmar(null)} titulo={`Avançar o relógio ${confirmar?.rotulo ?? ""}?`} largura="max-w-md">
-        <p className="text-sm text-texto-suave">O relógio só anda para a frente. As rotinas rodam: retomadas, &quot;Sem resposta&quot; e exclusão de arquivados com mais de 30 dias. Para voltar, só recomeçando os dados de teste.</p>
+        <p className="text-sm text-texto-suave">O relógio só anda para a frente. As rotinas rodam: retomadas, &quot;Parou de responder&quot; e exclusão de arquivados com mais de 30 dias. Para voltar, só recomeçando os dados de teste.</p>
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setConfirmar(null)}>Cancelar</Botao>
           <Botao

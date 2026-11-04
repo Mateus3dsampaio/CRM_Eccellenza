@@ -12,7 +12,7 @@ import { acharLeadPorTelefone, excluirLeads, obterOuCriarLead } from "@/servicos
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { apagarMidiaDaMensagem, apagarMidiasAntigas, apagarMidiasSoltas, armazenamento, listarGaleria, resumoDeMidias } from "@/servicos/midias";
 import { processarWebhook } from "@/servicos/whatsapp";
-import { criarConsultores, limparBanco } from "./ajuda";
+import { criarConsultores, limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 const pdf = (extra = 20) => Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(extra, 65)]);
 const mp4 = (extra = 40) => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from("ftypmp42"), Buffer.alloc(extra, 1)]);
@@ -294,6 +294,7 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
     metaConfigurada();
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
     const corpos = fingirApi();
+    await criarRoteiroDeTeste();
     const lead = await obterOuCriarLead("+5588999993333", "Beto");
     const nome = await guardar(pdf(), "application/pdf");
     await registrarMensagemCliente(lead.id, null, { arquivo: nome, tipo: "application/pdf", nome: "projeto.pdf", bytes: 10 });

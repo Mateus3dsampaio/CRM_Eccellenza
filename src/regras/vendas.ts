@@ -9,8 +9,12 @@ export const MOTIVOS_PADRAO: { codigo: string; nome: string; pergunta: string | 
   { codigo: "prazo", nome: "Prazo", pergunta: null },
   { codigo: "concorrente", nome: "Concorrente", pergunta: "Qual concorrente?" },
   { codigo: "desistiu", nome: "Desistiu", pergunta: null },
+  { codigo: "parou_de_responder", nome: "Parou de responder", pergunta: null },
   { codigo: "outro", nome: "Outro", pergunta: null },
 ];
+
+/** Motivo que a rotina usa quando o cliente some no atendimento do bot (substitui a antiga coluna "Sem resposta"). */
+export const MOTIVO_PAROU_DE_RESPONDER = "parou_de_responder";
 
 export interface MotivoDePerda {
   codigo: string;
@@ -21,7 +25,7 @@ export interface MotivoDePerda {
 
 /** Regras que o admin configura e que o servidor confere ao mover o card. */
 export interface RegrasDeVendas {
-  /** Negociação exige "Próximo contato em". Orçamento apresentado sempre exige. */
+  /** Negociação exige "Próximo contato em". Em qualificação sempre exige. */
   exigirContatoNegociacao: boolean;
   /** Motivos que podem ser escolhidos agora. */
   motivos: { codigo: string; pergunta: string | null }[];
@@ -35,11 +39,11 @@ export function nomeMotivo(codigo: string | null | undefined, motivos: { codigo:
 
 /** Essa etapa exige o próximo contato (com as regras de agora)? */
 export function exigeRetorno(etapa: CodigoEtapa, regras: Pick<RegrasDeVendas, "exigirContatoNegociacao"> = REGRAS_PADRAO): boolean {
-  return etapa === "orcamento" || (etapa === "negociacao" && regras.exigirContatoNegociacao);
+  return etapa === "qualificacao" || (etapa === "negociacao" && regras.exigirContatoNegociacao);
 }
 
-/** Etapas em que o lead tem um retorno marcado ("Próximo contato em"). */
-export const ETAPAS_COM_RETORNO: CodigoEtapa[] = ["orcamento", "negociacao"];
+/** Etapas em que o lead tem um retorno marcado ("Próximo contato em"). Em Medição/Apresentação o compromisso na agenda é o próximo contato. */
+export const ETAPAS_COM_RETORNO: CodigoEtapa[] = ["qualificacao", "negociacao"];
 
 /** Valor máximo aceito: R$ 100 milhões (evita número absurdo por engano). */
 export const VALOR_MAXIMO_CENTAVOS = 100_000_000 * 100;
@@ -92,8 +96,8 @@ export function faltaParaMover(etapa: CodigoEtapa, final: DadosDeVenda, regras: 
   return null;
 }
 
-/** Etapas que pedem dados ao receber o card (a tela abre a janela). */
-export const ETAPAS_QUE_PEDEM_DADOS: CodigoEtapa[] = ["orcamento", "negociacao", "fechado", "perdido"];
+/** Etapas que pedem dados ao receber o card (a tela abre a janela). Medição e Apresentação abrem a janela de agendar. */
+export const ETAPAS_QUE_PEDEM_DADOS: CodigoEtapa[] = ["qualificacao", "negociacao", "fechado", "perdido"];
 
 /** "2026-11-10" + "14:30" (horário de Fortaleza) → instante. Inválido: null. */
 export function lerDataHoraLocal(data: string, hora: string): Date | null {

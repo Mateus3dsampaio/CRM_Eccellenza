@@ -4,6 +4,7 @@ import { agora } from "@/lib/relogio";
 import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
 import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
 import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
+import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { ETAPAS_COM_RETORNO, exigeRetorno, situacaoDoRetorno } from "@/regras/vendas";
 import { exigirContatoNegociacao } from "./vendas";
 import { formatarTelefone, nomeExibicao } from "@/regras/telefone";
@@ -75,7 +76,7 @@ export async function cardsDoKanban() {
     where: { arquivadoEm: null },
     include: {
       consultor: { select: { id: true, nome: true } },
-      visitas: { where: { status: "agendada", tipo: "visita" }, orderBy: { inicio: "asc" }, take: 1 },
+      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, take: 1 },
       notas: { select: { texto: true } },
     },
   });
@@ -109,7 +110,8 @@ export async function cardsDoKanban() {
       erroBot: l.erroBot,
       modo: l.modoAtendimento,
       consultor: l.consultor,
-      visita: visita ? formatarVisitaCurta(visita.inicio) : null,
+      // Próximo compromisso marcado, com o tipo (ex.: "Apresentação qua 05/11 10h").
+      visita: visita ? `${NOMES_COMPROMISSO[visita.tipo as TipoCompromisso] ?? "Visita"} ${formatarVisitaCurta(visita.inicio)}` : null,
       // Texto para a busca (nome, telefone e dados da ficha).
       busca: [nome, l.telefone, formatarTelefone(l.telefone), l.cidade, l.endereco, ambientes.join(" "), lerLista(l.exigencias).join(" "), l.situacaoImovel, l.prazo, l.investimento, lerLista(l.pedidosTecnicos).join(" "), l.observacoes, l.resumo, l.notas.map((n) => n.texto).join(" ")]
         .filter(Boolean)

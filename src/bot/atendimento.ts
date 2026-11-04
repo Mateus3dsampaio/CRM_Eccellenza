@@ -10,6 +10,7 @@ import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
+import { instrucoesAtivas } from "@/servicos/instrucoes";
 import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
@@ -205,6 +206,16 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       const mensagem = `${limite.motivo}; o bot pausou para não gastar a API à toa.`;
       await db.mensagem.updateMany({ where: { leadId, autor: { not: "bot" }, processadaPeloBot: false }, data: { processadaPeloBot: true } });
       await marcarErro(leadId, mensagem);
+      return { respostas: [], erro: mensagem };
+    }
+
+    // Sem instruções cadastradas o bot não atende sem roteiro: o cliente vai direto ao consultor (decisão do Mateus 04/11/2026).
+    if ((await instrucoesAtivas()).length === 0) {
+      const mensagem = "o bot está sem instruções cadastradas (Configurações > Instruções de atendimento).";
+      await db.mensagem.updateMany({ where: { leadId, autor: { not: "bot" }, processadaPeloBot: false }, data: { processadaPeloBot: true } });
+      await executarFerramenta(leadId, "passar_para_consultor", { motivo: "bot sem instruções cadastradas" });
+      await db.lead.update({ where: { id: leadId }, data: { erroBot: mensagem } });
+      await marcarMudanca();
       return { respostas: [], erro: mensagem };
     }
 

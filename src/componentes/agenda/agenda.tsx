@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Lock, Plus, Presentation } from "lucide-react";
-import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda } from "@/regras/agenda";
+import { ChevronLeft, ChevronRight, Lock, Plus, Presentation, Ruler } from "lucide-react";
+import { NOMES_COMPROMISSO, REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda, type TipoCompromisso } from "@/regras/agenda";
 import { DIA, chaveDia, formatarData, formatarDiaLongo, formatarDiaSemana, formatarHora, lerChaveDia, partesLocais, somarDias } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
@@ -13,7 +13,14 @@ import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada } from "../u
 import { AgendarVisita } from "../ficha/agendar";
 import { useUsuario } from "../usuario";
 
-interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: "visita" | "apresentacao" }
+interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: TipoCompromisso }
+
+// Cor de cada compromisso na grade: apresentação em destaque (é o que mais importa), medição na cor da coluna dela.
+const ESTILO_COMPROMISSO: Record<TipoCompromisso, string> = {
+  apresentacao: "border border-alerta bg-alerta font-semibold text-sobre-cor shadow-card",
+  medicao: "bg-etapa-medicao font-semibold text-sobre-cor shadow-card",
+  visita: "bg-sucesso-suave font-medium text-sucesso",
+};
 interface Bloqueio { id: string; consultorId: string; inicio: string; fim: string; motivo: string | null }
 interface DadosAgenda { visao: "dia" | "semana"; de: string; ate: string; agora: string; regras: RegrasAgenda; consultores: { id: string; nome: string }[]; visitas: Visita[]; bloqueios: Bloqueio[] }
 
@@ -34,7 +41,7 @@ export function Agenda() {
   const [data, setData] = useState<string | null>(null);
   const { dados, erro, carregando, recarregar } = useDados<DadosAgenda>(`/api/agenda?visao=${visao}${data ? `&data=${data}` : ""}`);
   const [visitaAberta, setVisitaAberta] = useState<Visita | null>(null);
-  const [remarcar, setRemarcar] = useState<{ leadId: string; tipo: "visita" | "apresentacao" } | null>(null);
+  const [remarcar, setRemarcar] = useState<{ leadId: string; tipo: TipoCompromisso } | null>(null);
   const [bloqueio, setBloqueio] = useState<{ dia: string; hora: number; consultorId: string; horas: number; motivo: string } | null>(null);
   const [bloqueioAberto, setBloqueioAberto] = useState<Bloqueio | null>(null);
   // Filtro por consultor (só o admin vê os botões); null = todos.
@@ -69,6 +76,13 @@ export function Agenda() {
     }
   }
 
+  /** O compromisso começa nesse dia e hora (nas horas seguintes ele aparece como continuação). */
+  function mesmoInicio(iso: string, dia: Date, hora: number) {
+    const p = partesLocais(dia);
+    const q = partesLocais(new Date(iso));
+    return q.ano === p.ano && q.mes === p.mes && q.dia === p.dia && q.hora === hora;
+  }
+
   function itensNoHorario(dia: Date, hora: number) {
     const p = partesLocais(dia);
     const mesmo = (iso: string) => {
@@ -79,7 +93,8 @@ export function Agenda() {
     const cobre = (b: Bloqueio) => new Date(b.inicio).getTime() <= slot && slot < new Date(b.fim).getTime();
     const doFiltro = (consultorId: string) => !filtro || consultorId === filtro;
     return {
-      visitas: dados?.visitas.filter((v) => mesmo(v.inicio) && doFiltro(v.consultorId)) ?? [],
+      // O compromisso aparece em todas as horas que ocupa (a medição de 2h aparece em duas linhas).
+      visitas: dados?.visitas.filter((v) => (mesmo(v.inicio) || (new Date(v.inicio).getTime() < slot && slot < new Date(v.fim).getTime())) && doFiltro(v.consultorId)) ?? [],
       bloqueios: dados?.bloqueios.filter((b) => cobre(b) && doFiltro(b.consultorId)) ?? [],
     };
   }
@@ -171,12 +186,20 @@ export function Agenda() {
                       <td key={d.toISOString()} className={juntar("group/celula h-9 overflow-hidden border-b border-l border-borda p-0.5 align-top", !aberto && "bg-superficie-suave", aberto && chaveDia(d) === hojeChave && "bg-marca-suave/40")}>
                         {aberto && (
                           <div className="flex h-full gap-0.5">
-                            {visitas.map((v) => (
-                              <button key={v.id} title={`${v.tipo === "apresentacao" ? "Apresentação na loja: " : ""}${v.leadNome} · ${nomeConsultor(v.consultorId)}`} onClick={() => setVisitaAberta(v)} className={v.tipo === "apresentacao" ? "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle border border-alerta bg-alerta px-2 text-left text-xs font-semibold text-sobre-cor shadow-card hover:brightness-95" : "flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-sucesso-suave px-2 text-left text-xs font-medium text-sucesso hover:brightness-95"}>
-                                {v.tipo === "apresentacao" ? <Presentation className="size-3.5 shrink-0" aria-hidden /> : <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />}
-                                <span className="truncate">{v.leadNome}</span>
-                              </button>
-                            ))}
+                            {visitas.map((v) => {
+                              const continua = !mesmoInicio(v.inicio, d, hora);
+                              return (
+                                <button
+                                  key={v.id}
+                                  title={`${NOMES_COMPROMISSO[v.tipo] ?? "Visita"} (${formatarHora(new Date(v.inicio))}–${formatarHora(new Date(v.fim))}): ${v.leadNome} · ${nomeConsultor(v.consultorId)}`}
+                                  onClick={() => setVisitaAberta(v)}
+                                  className={juntar("flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle px-2 text-left text-xs hover:brightness-95", ESTILO_COMPROMISSO[v.tipo] ?? ESTILO_COMPROMISSO.visita, continua && "opacity-60")}
+                                >
+                                  {v.tipo === "apresentacao" ? <Presentation className="size-3.5 shrink-0" aria-hidden /> : v.tipo === "medicao" ? <Ruler className="size-3.5 shrink-0" aria-hidden /> : <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />}
+                                  <span className="truncate">{continua ? `↳ ${v.leadNome}` : v.leadNome}</span>
+                                </button>
+                              );
+                            })}
                             {bloqueios.map((b) => (
                               <button key={b.id} title={`${nomeConsultor(b.consultorId)}: ${b.motivo ?? "bloqueado"}`} onClick={() => setBloqueioAberto(b)} className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle bg-superficie-suave px-2 text-left text-xs text-texto-suave hover:bg-borda">
                                 <Lock className="size-3 shrink-0" aria-hidden />
@@ -204,13 +227,13 @@ export function Agenda() {
         </div>
       )}
 
-      <Modal aberto={!!visitaAberta} aoFechar={() => setVisitaAberta(null)} titulo={visitaAberta?.tipo === "apresentacao" ? "Apresentação na loja" : "Visita agendada"} largura="max-w-md">
+      <Modal aberto={!!visitaAberta} aoFechar={() => setVisitaAberta(null)} titulo={visitaAberta ? (visitaAberta.tipo === "apresentacao" ? "Apresentação na loja" : visitaAberta.tipo === "medicao" ? "Medição na casa do cliente" : "Visita à loja") : ""} largura="max-w-md">
         {visitaAberta && (
           <div className="space-y-4">
             <div className="text-sm">
               <p className="font-semibold">{visitaAberta.leadNome}</p>
               <p className="text-texto-suave">
-                {primeiraMaiuscula(formatarDiaLongo(new Date(visitaAberta.inicio)))}, {formatarHora(new Date(visitaAberta.inicio))} · {nomeConsultor(visitaAberta.consultorId)}
+                {primeiraMaiuscula(formatarDiaLongo(new Date(visitaAberta.inicio)))}, {formatarHora(new Date(visitaAberta.inicio))} às {formatarHora(new Date(visitaAberta.fim))} · {nomeConsultor(visitaAberta.consultorId)}
                 {visitaAberta.cidade && ` · ${visitaAberta.cidade}`}
               </p>
             </div>
@@ -219,7 +242,7 @@ export function Agenda() {
               {minha(visitaAberta.consultorId) ? (
                 <>
                   <Botao onClick={() => { setRemarcar({ leadId: visitaAberta.leadId, tipo: visitaAberta.tipo }); setVisitaAberta(null); }}>Remarcar</Botao>
-                  <Botao variante="perigo" onClick={async () => (await post({ acao: "cancelar", visitaId: visitaAberta.id }, "Cancelado.")) && setVisitaAberta(null)}>{visitaAberta.tipo === "apresentacao" ? "Cancelar apresentação" : "Cancelar visita"}</Botao>
+                  <Botao variante="perigo" onClick={async () => (await post({ acao: "cancelar", visitaId: visitaAberta.id }, "Cancelado.")) && setVisitaAberta(null)}>{visitaAberta.tipo === "apresentacao" ? "Cancelar apresentação" : visitaAberta.tipo === "medicao" ? "Cancelar medição" : "Cancelar visita"}</Botao>
                 </>
               ) : (
                 <p className="self-center text-xs text-texto-fraco">Agenda de outro consultor: só visualização.</p>

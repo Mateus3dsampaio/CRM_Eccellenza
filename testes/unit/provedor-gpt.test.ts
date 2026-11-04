@@ -7,7 +7,7 @@ import { configDoBot, definirConfigDoBot, MODELO_OPENAI_PADRAO } from "@/servico
 import { salvarChave } from "@/servicos/chaves-api";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { registrarMensagemCliente } from "@/servicos/mensagens";
-import { limparBanco } from "./ajuda";
+import { limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 describe("conversão para a OpenAI", () => {
   it("histórico com ferramenta vira system, user, assistant com tool_calls e tool", () => {
@@ -42,6 +42,7 @@ describe("conversão para a OpenAI", () => {
 describe("bot com GPT", () => {
   beforeEach(async () => {
     await limparBanco();
+    await criarRoteiroDeTeste();
     vi.restoreAllMocks();
     vi.stubEnv("CHAVE_MESTRA", "mestra-de-teste-bem-longa");
     vi.stubEnv("ANTHROPIC_API_KEY", "");

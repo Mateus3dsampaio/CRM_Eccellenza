@@ -23,3 +23,12 @@ export async function criarConsultores() {
   const b = await db.usuario.create({ data: { nome: "Consultor B", login: "b", senhaHash: gerarHashSenha("x"), perfil: "consultor" } });
   return [a, b];
 }
+
+/**
+ * Roteiro de EXEMPLO só para os testes (não é o que o bot usa). As instruções reais ficam no repositório de instruções
+ * do Mateus e são coladas na tela; o projeto não guarda cópia delas.
+ */
+export async function criarRoteiroDeTeste() {
+  const { criarInstrucao } = await import("@/servicos/instrucoes");
+  await criarInstrucao({ titulo: "Exemplo de teste", texto: "01. EXEMPLO DE TESTE\nCumprimente o cliente e pergunte qual ambiente ele quer fazer." });
+}

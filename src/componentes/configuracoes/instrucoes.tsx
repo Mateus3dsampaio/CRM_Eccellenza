@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Download, FlaskConical, History, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Download, FlaskConical, History, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -23,11 +23,12 @@ function resumo(texto: string): string {
   return /^\s*\d+\s*[.)-]\s*\S/.test(primeira) && resto.length > 0 ? resto.join("\n").trim() : texto;
 }
 
-type Edicao = { id: string | null; titulo: string; texto: string };
+// `manual`: editando o Manual do CRM (título fixo).
+type Edicao = { id: string | null; titulo: string; texto: string; manual?: boolean };
 
 export function InstrucoesAtendimento() {
   const avisar = useAviso();
-  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[] }>("/api/configuracoes/instrucoes");
+  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[]; manual: Instrucao }>("/api/configuracoes/instrucoes");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -67,7 +68,7 @@ export function InstrucoesAtendimento() {
     const corpo = { titulo: edicao.titulo, texto: edicao.texto };
     const ok = await agir(
       () => (edicao.id ? chamarApi(`/api/configuracoes/instrucoes/${edicao.id}`, { method: "PATCH", json: corpo }) : chamarApi("/api/configuracoes/instrucoes", { method: "POST", json: corpo })),
-      "Instrução salva. O bot já usa o novo texto na próxima mensagem.",
+      edicao.manual ? "Manual do CRM salvo. O bot já usa o novo texto na próxima mensagem." : "Instrução salva. O bot já usa o novo texto na próxima mensagem.",
       true,
     );
     setSalvando(false);
@@ -85,6 +86,7 @@ export function InstrucoesAtendimento() {
   }
 
   const instrucoes = dados?.instrucoes ?? [];
+  const manual = dados?.manual ?? null;
   const ativas = instrucoes.filter((i) => i.ativa).length;
 
   return (
@@ -92,13 +94,13 @@ export function InstrucoesAtendimento() {
       <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
         <h2 className="font-semibold">Instruções de atendimento do bot</h2>
         <p className="mt-1 text-sm text-texto-suave">
-          O bot segue só estas instruções, na ordem da lista (os dados da loja e as regras do CRM também são instruções). Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.
+          O bot segue as instruções numeradas, na ordem da lista, e depois o Manual do CRM (como preencher a ficha e usar as ferramentas). Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => { setSalvouAgora(false); setEdicao({ id: null, titulo: "", texto: "" }); }}>
             Nova instrução
           </Botao>
-          <Botao icone={<Download className="size-4" aria-hidden />} onClick={() => setExportando(true)} disabled={instrucoes.length === 0}>
+          <Botao icone={<Download className="size-4" aria-hidden />} onClick={() => setExportando(true)} disabled={!manual}>
             Exportar
           </Botao>
           <Link
@@ -129,7 +131,15 @@ export function InstrucoesAtendimento() {
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : (
         <ul className="space-y-2">
-          {instrucoes.length === 0 && <li className="rounded-painel border border-dashed border-borda-forte p-6 text-center text-sm text-texto-suave">Nenhuma instrução ainda. Crie a primeira.</li>}
+          {ativas === 0 && (
+            <li role="alert" className="flex items-start gap-3 rounded-painel border border-aviso bg-aviso-suave p-4 text-sm text-aviso">
+              <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden />
+              <span>
+                <strong className="block font-semibold">{instrucoes.length === 0 ? "Cole as instruções de atendimento para o bot começar a atender." : "Nenhuma instrução ativa."}</strong>
+                Enquanto não houver instrução ativa, o bot não responde: todo cliente novo vai direto para o consultor. Use &quot;Nova instrução&quot; e cole cada uma do seu repositório de instruções.
+              </span>
+            </li>
+          )}
           {instrucoes.map((i, n) => (
             <li key={i.id} className={juntar("rounded-painel border bg-superficie p-4 shadow-card transition", i.ativa ? "border-borda" : "border-dashed border-borda-forte opacity-70")}>
               <div className="flex items-start gap-3">
@@ -193,12 +203,46 @@ export function InstrucoesAtendimento() {
         </ul>
       )}
 
-      <Modal aberto={!!edicao} aoFechar={fecharEdicao} titulo={edicao?.id ? "Editar instrução" : "Nova instrução"} largura="max-w-2xl">
+      {manual && (
+        <section aria-label="Manual do CRM" className="rounded-painel border border-marca/40 bg-superficie p-4 shadow-card">
+          <div className="flex items-start gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-pilula bg-marca text-sobre-marca">
+              <BookOpen className="size-4" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {manual.titulo}
+                <span className="rounded-pilula bg-marca-suave px-2 py-0.5 text-xs font-normal text-marca-texto">Fixo · fora da numeração</span>
+              </p>
+              <p className="mt-1 text-xs text-texto-fraco">Ensina o bot a preencher a ficha, classificar o lead e passar ao consultor. Vai para o bot depois das instruções numeradas. Não pode ser desativado nem excluído.</p>
+              <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm text-texto-suave">{manual.texto.split(/\r?\n/).slice(1).join("\n").trim()}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t border-borda pt-3 text-sm">
+            {manual.anteriorTexto !== null && (
+              <Botao
+                variante="fantasma"
+                icone={<History className="size-4" aria-hidden />}
+                onClick={() => void agir(() => chamarApi(`/api/configuracoes/instrucoes/${manual.id}/voltar`, { method: "POST" }), "Manual do CRM voltou para a versão anterior.", true)}
+              >
+                Voltar para a anterior
+              </Botao>
+            )}
+            <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={() => { setSalvouAgora(false); setEdicao({ id: manual.id, titulo: manual.titulo, texto: manual.texto, manual: true }); }}>
+              Editar
+            </Botao>
+          </div>
+        </section>
+      )}
+
+      <Modal aberto={!!edicao} aoFechar={fecharEdicao} titulo={edicao?.manual ? "Editar Manual do CRM" : edicao?.id ? "Editar instrução" : "Nova instrução"} largura="max-w-2xl">
         {edicao && (
           <div className="space-y-3">
-            <Campo rotulo="Título">
-              <input className={classeEntrada} value={edicao.titulo} maxLength={120} disabled={confirmando} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} placeholder="Ex.: Cliente pergunta sobre garantia" />
-            </Campo>
+            {!edicao.manual && (
+              <Campo rotulo="Título">
+                <input className={classeEntrada} value={edicao.titulo} maxLength={120} disabled={confirmando} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} placeholder="Ex.: Cliente pergunta sobre garantia" />
+              </Campo>
+            )}
             <Campo rotulo="Texto da instrução" dica="Escreva como se estivesse orientando uma pessoa nova na loja. Este texto vai inteiro para o bot.">
               <textarea disabled={confirmando} className={juntar(classeEntrada, "h-48 resize-y font-mono sm:h-72 leading-relaxed")} value={edicao.texto} onChange={(e) => setEdicao({ ...edicao, texto: e.target.value })} />
             </Campo>
@@ -268,7 +312,7 @@ export function InstrucoesAtendimento() {
         </div>
       </Modal>
 
-      <ExportarInstrucoes aberto={exportando} aoFechar={() => setExportando(false)} instrucoes={instrucoes} />
+      <ExportarInstrucoes aberto={exportando} aoFechar={() => setExportando(false)} instrucoes={manual ? [...instrucoes, manual] : instrucoes} />
     </section>
   );
 }
@@ -329,7 +373,7 @@ function ExportarInstrucoes({ aberto, aoFechar, instrucoes }: { aberto: boolean;
                       })
                     }
                   />
-                  <span className="text-texto-fraco">{n + 1}.</span> {i.titulo}
+                  {i.ordem > 0 && <span className="text-texto-fraco">{n + 1}.</span>} {i.titulo}
                   {!i.ativa && <span className="text-xs text-texto-fraco">(desativada)</span>}
                 </label>
               </li>

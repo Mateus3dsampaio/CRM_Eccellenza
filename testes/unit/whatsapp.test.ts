@@ -16,7 +16,7 @@ import { assinaturaValida, extrairEventos, responderVerificacao } from "@/regras
 import { enviarMensagemLoja, statusEfetivo } from "@/servicos/mensagens";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { guardarEvento, processarEventoGuardado, processarWebhook } from "@/servicos/whatsapp";
-import { limparBanco } from "./ajuda";
+import { limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 const SEGREDO = "segredo-do-app";
 const assinar = (corpo: string) => `sha256=${createHmac("sha256", SEGREDO).update(corpo).digest("hex")}`;
@@ -274,6 +274,7 @@ describe("proteções do WhatsApp real", () => {
   });
 
   it("se a Meta recusar a resposta do bot, o lead vai para um humano (não fica sem resposta em silêncio)", async () => {
+    await criarRoteiroDeTeste();
     configurar();
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
     vi.stubGlobal("fetch", async (url: string) => {

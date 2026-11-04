@@ -35,34 +35,34 @@ describe("dinheiro (Bloco 2)", () => {
     expect(partirDataHoraLocal("2026-11-10T17:30:00.000Z")).toEqual({ data: "2026-11-10", hora: "14:30" });
   });
   it("o que cada etapa exige", () => {
-    expect(faltaParaMover("orcamento", {})).toMatch(/próximo contato/);
+    expect(faltaParaMover("qualificacao", {})).toMatch(/próximo contato/);
     expect(faltaParaMover("negociacao", { proximoContatoEm: retorno })).toBeNull();
     expect(faltaParaMover("fechado", {})).toMatch(/valor fechado/);
     expect(faltaParaMover("perdido", {})).toMatch(/motivo/);
     expect(faltaParaMover("perdido", { motivoPerda: "concorrente" })).toMatch(/concorrente/);
     expect(faltaParaMover("perdido", { motivoPerda: "concorrente", concorrente: "Todeschini" })).toBeNull();
     expect(faltaParaMover("perdido", { motivoPerda: "preco" })).toBeNull();
-    expect(faltaParaMover("visita", {})).toBeNull();
+    expect(faltaParaMover("medicao", {})).toBeNull();
   });
 });
 
 describe("mover etapa com dados de venda (Bloco 2)", () => {
   beforeEach(limparBanco);
 
-  it("recusa Orçamento sem data e aceita com data", async () => {
+  it("recusa Em qualificação sem data e aceita com data", async () => {
     const lead = await obterOuCriarLead("+5588900000101");
-    await expect(moverEtapa(lead.id, "orcamento", "Ana")).rejects.toThrow(/próximo contato/);
+    await expect(moverEtapa(lead.id, "qualificacao", "Ana")).rejects.toThrow(/próximo contato/);
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("novo");
-    await moverEtapa(lead.id, "orcamento", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 162100 } });
+    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 162100 } });
     const a = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(a.etapa).toBe("orcamento");
+    expect(a.etapa).toBe("qualificacao");
     expect(a.proximoContatoEm?.toISOString()).toBe(retorno.toISOString());
     expect(a.valorOrcamento).toBe(162100);
   });
 
-  it("de Orçamento para Negociação mantém a data; para Fechado exige o valor e limpa a data", async () => {
+  it("de Em qualificação para Negociação mantém a data; para Fechado exige o valor e limpa a data", async () => {
     const lead = await obterOuCriarLead("+5588900000102");
-    await moverEtapa(lead.id, "orcamento", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 100000 } });
+    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: retorno, valorOrcamento: 100000 } });
     await moverEtapa(lead.id, "negociacao", "Ana");
     await expect(moverEtapa(lead.id, "fechado", "Ana")).rejects.toThrow(/valor fechado/);
     await moverEtapa(lead.id, "fechado", "Ana", { dados: { valorFechado: 95000 } });
@@ -89,16 +89,16 @@ describe("mover etapa com dados de venda (Bloco 2)", () => {
     const lead = await obterOuCriarLead("+5588900000104");
     await expect(conferirMudanca(lead.id, "perdido", {})).rejects.toThrow(/motivo/);
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("novo");
-    await db.lead.update({ where: { id: lead.id }, data: { etapa: "sem_resposta", etapaAnterior: "orcamento" } });
-    await moverEtapa(lead.id, "orcamento", "sistema", { semExigencias: true });
-    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("orcamento");
+    await db.lead.update({ where: { id: lead.id }, data: { etapa: "perdido", motivoPerda: "parou_de_responder", etapaAnterior: "qualificacao" } });
+    await moverEtapa(lead.id, "qualificacao", "sistema", { semExigencias: true });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("qualificacao");
   });
 
   it("troca a data e o valor sem mudar de etapa", async () => {
     const lead = await obterOuCriarLead("+5588900000105");
-    await moverEtapa(lead.id, "orcamento", "Ana", { dados: { proximoContatoEm: retorno } });
+    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: retorno } });
     const nova = new Date("2026-11-12T13:00:00Z");
-    await moverEtapa(lead.id, "orcamento", "Ana", { dados: { proximoContatoEm: nova, valorOrcamento: 250000 } });
+    await moverEtapa(lead.id, "qualificacao", "Ana", { dados: { proximoContatoEm: nova, valorOrcamento: 250000 } });
     const a = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect(a.proximoContatoEm?.toISOString()).toBe(nova.toISOString());
     expect(a.valorOrcamento).toBe(250000);
@@ -123,7 +123,7 @@ describe("retornos e avisos (Bloco 2, tarefa 7)", () => {
     const lead = await obterOuCriarLead(telefone, "Cliente " + telefone.slice(-2));
     await db.lead.update({ where: { id: lead.id }, data: { consultorId: dono } });
     const quando = new Date((await agora()).getTime() + emMin * MIN);
-    await moverEtapa(lead.id, "orcamento", "teste", { dados: { proximoContatoEm: quando } });
+    await moverEtapa(lead.id, "qualificacao", "teste", { dados: { proximoContatoEm: quando } });
     return lead.id;
   }
 
@@ -145,13 +145,13 @@ describe("retornos e avisos (Bloco 2, tarefa 7)", () => {
 
     // Marcou outra data: novo aviso quando chegar.
     const nova = new Date((await agora()).getTime() + 10 * MIN);
-    await moverEtapa(id, "orcamento", "teste", { dados: { proximoContatoEm: nova } });
+    await moverEtapa(id, "qualificacao", "teste", { dados: { proximoContatoEm: nova } });
     expect(await avisarRetornos()).toBe(0);
     await avancarRelogio(11 * MIN);
     expect(await avisarRetornos()).toBe(1);
   });
 
-  it("não avisa lead arquivado nem fora de Orçamento/Negociação", async () => {
+  it("não avisa lead arquivado nem fora de Em qualificação/Negociação", async () => {
     const [a] = await criarConsultores();
     const id = await leadComRetorno("+5588900000202", a.id, -5);
     await db.lead.update({ where: { id }, data: { arquivadoEm: await agora() } });
@@ -191,11 +191,11 @@ describe("painel de vendas (Bloco 2, tarefa 8)", () => {
       return l.id;
     };
     const o1 = await novo("+5588900000301", a.id);
-    await moverEtapa(o1, "orcamento", "t", { dados: { proximoContatoEm: amanha(), valorOrcamento: 162100 } });
+    await moverEtapa(o1, "negociacao", "t", { dados: { proximoContatoEm: amanha(), valorOrcamento: 162100 } });
     const o2 = await novo("+5588900000302", a.id);
     await moverEtapa(o2, "negociacao", "t", { dados: { proximoContatoEm: amanha(), valorOrcamento: 100000 } });
     const o3 = await novo("+5588900000303", b.id);
-    await moverEtapa(o3, "orcamento", "t", { dados: { proximoContatoEm: amanha() } }); // sem valor
+    await moverEtapa(o3, "negociacao", "t", { dados: { proximoContatoEm: amanha() } }); // sem valor
     const f1 = await novo("+5588900000304", a.id);
     await moverEtapa(f1, "fechado", "t", { dados: { valorFechado: 250000 } });
     const f2 = await novo("+5588900000305", b.id);
@@ -231,18 +231,18 @@ describe("painel de vendas (Bloco 2, tarefa 8)", () => {
 describe("configurar vendas (Bloco 2, tarefa 9)", () => {
   beforeEach(limparBanco);
 
-  it("começa com os 5 motivos de fábrica, na ordem", async () => {
-    expect((await motivosDePerda()).map((m) => m.nome)).toEqual(["Preço", "Prazo", "Concorrente", "Desistiu", "Outro"]);
+  it("começa com os 6 motivos de fábrica, na ordem (Parou de responder substitui a coluna Sem resposta)", async () => {
+    expect((await motivosDePerda()).map((m) => m.nome)).toEqual(["Preço", "Prazo", "Concorrente", "Desistiu", "Parou de responder", "Outro"]);
   });
 
-  it("Negociação deixa de exigir o próximo contato quando o admin desliga; Orçamento continua exigindo", async () => {
+  it("Negociação deixa de exigir o próximo contato quando o admin desliga; Em qualificação continua exigindo", async () => {
     const lead = await obterOuCriarLead("+5588900000401");
     await expect(moverEtapa(lead.id, "negociacao", "t")).rejects.toThrow(/próximo contato/);
     await definirExigirContatoNegociacao(false);
     await moverEtapa(lead.id, "negociacao", "t");
     expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("negociacao");
     const outro = await obterOuCriarLead("+5588900000402");
-    await expect(moverEtapa(outro.id, "orcamento", "t")).rejects.toThrow(/próximo contato/);
+    await expect(moverEtapa(outro.id, "qualificacao", "t")).rejects.toThrow(/próximo contato/);
     // Sem data e sem obrigação: não vira cobrança na lista de hoje.
     expect((await retornosDeHoje(admin)).map((l) => l.id)).not.toContain(lead.id);
     await definirExigirContatoNegociacao(true);
@@ -280,7 +280,7 @@ describe("configurar vendas (Bloco 2, tarefa 9)", () => {
     expect((await motivosDePerda()).map((m) => m.codigo).slice(0, 3)).toEqual(["outro", "desistiu", "preco"]);
     await expect(criarMotivo({ nome: " preço " })).rejects.toThrow(/Já existe/);
     await expect(criarMotivo({ nome: "  " })).rejects.toThrow(/nome/);
-    for (const c of ["preco", "prazo", "concorrente", "desistiu"]) await editarMotivo(c, { ativo: false });
+    for (const c of ["preco", "prazo", "concorrente", "desistiu", "parou_de_responder"]) await editarMotivo(c, { ativo: false });
     await expect(editarMotivo("outro", { ativo: false })).rejects.toThrow(/pelo menos um/);
   });
 });

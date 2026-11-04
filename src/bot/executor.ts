@@ -3,25 +3,16 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { ETIQUETA_DA_CLASSIFICACAO, type Classificacao } from "@/regras/etapas";
-import { formatarVisitaCurta, lerChaveDia, partesLocais } from "@/regras/tempo";
-import { agendarVisita, ErroAgenda, horariosLivresParaLead } from "@/servicos/agenda";
 import { registrarAlerta } from "@/servicos/alertas";
 import { registrarAlteracao } from "@/servicos/historico";
 import { escolherProximoConsultor } from "@/servicos/distribuicao";
 import { alterarEtiqueta, atualizarCampos, atualizarResumo, moverEtapa } from "@/servicos/leads";
 import { registrarUmaVez } from "@/servicos/metricas";
-import { esquemaAgendar, esquemaCampos, esquemaClassificar, esquemaHorarios, esquemaMedidas, esquemaPassar } from "./ferramentas";
+import { esquemaCampos, esquemaClassificar, esquemaMedidas, esquemaPassar } from "./ferramentas";
 
 export interface ResultadoFerramenta {
   conteudo: string;
   erro?: boolean;
-}
-
-/** ISO com o fuso de Fortaleza, para o bot devolver exatamente o mesmo valor. */
-function isoLocal(d: Date): string {
-  const p = partesLocais(d);
-  const dois = (n: number) => String(n).padStart(2, "0");
-  return `${p.ano}-${dois(p.mes)}-${dois(p.dia)}T${dois(p.hora)}:${dois(p.minuto)}:00-03:00`;
 }
 
 export async function executarFerramenta(leadId: string, nome: string, entrada: unknown): Promise<ResultadoFerramenta> {
@@ -74,26 +65,6 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         return { conteudo: "Medidas gravadas com origem \"informada pelo cliente\"." };
       }
 
-      case "ver_horarios_livres": {
-        const { a_partir_de } = esquemaHorarios.parse(entrada ?? {});
-        const aPartirDe = a_partir_de ? lerChaveDia(a_partir_de) ?? undefined : undefined;
-        // Com dia pedido pelo cliente, devolve mais opções a partir dele (para achar o horário que ele quer).
-        const vagas = await horariosLivresParaLead(leadId, aPartirDe ? 12 : 6, aPartirDe);
-        if (!vagas.length) return { conteudo: "Nenhum horário livre na janela de agendamento." };
-        return { conteudo: JSON.stringify(vagas.map((v) => ({ inicio: isoLocal(v.inicio), rotulo: formatarVisitaCurta(v.inicio) }))) };
-      }
-
-      case "agendar_visita": {
-        const { inicio } = esquemaAgendar.parse(entrada);
-        const data = new Date(inicio);
-        if (Number.isNaN(data.getTime())) return { conteudo: "Data inválida. Use o campo inicio de ver_horarios_livres.", erro: true };
-        // Quem recebe o lead segue a regra de distribuição (rodízio ou menos leads) e só entre os consultores online.
-        const dono = await db.lead.findUniqueOrThrow({ where: { id: leadId }, select: { consultorId: true } });
-        if (!dono.consultorId) await db.lead.update({ where: { id: leadId }, data: { consultorId: await escolherProximoConsultor() } });
-        const visita = await agendarVisita({ leadId, inicio: data, autor: "bot", validarJanelaDoBot: true });
-        return { conteudo: `Visita agendada: ${formatarVisitaCurta(visita.inicio)}, com o consultor ${visita.consultor.nome}.` };
-      }
-
       case "passar_para_consultor": {
         const { motivo } = esquemaPassar.parse(entrada ?? {});
         const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
@@ -125,7 +96,6 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
     }
   } catch (erro) {
     if (erro instanceof ZodError) return { conteudo: `Dados inválidos: ${erro.issues.map((i) => i.message).join("; ")}`, erro: true };
-    if (erro instanceof ErroAgenda) return { conteudo: erro.message, erro: true };
     console.error("[bot] erro na ferramenta", nome, erro instanceof Error ? erro.message : "");
     return { conteudo: "Erro ao gravar.", erro: true };
   }

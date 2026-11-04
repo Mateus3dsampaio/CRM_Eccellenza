@@ -25,7 +25,7 @@ export interface AcoesCard {
 /** Valor mostrado no card: orçamento em Orçamento/Negociação, valor fechado em Fechado. Vazio nas outras etapas. */
 function valorDoCard(card: CardKanban): string {
   if (card.etapa === "fechado") return card.valorFechado ? `Fechado ${formatarReais(card.valorFechado)}` : "";
-  if (card.etapa === "orcamento" || card.etapa === "negociacao") return card.valorOrcamento ? `Orçamento ${formatarReais(card.valorOrcamento)}` : "";
+  if (card.etapa === "apresentacao" || card.etapa === "negociacao") return card.valorOrcamento ? `Orçamento ${formatarReais(card.valorOrcamento)}` : "";
   return "";
 }
 
@@ -116,7 +116,7 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
       {card.visita && (
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-pilula bg-sucesso-suave px-2.5 py-0.5 text-xs font-medium text-sucesso">
           <CalendarCheck className="size-3.5" aria-hidden />
-          Visita {card.visita}
+          {card.visita}
         </p>
       )}
       {card.erroBot && (

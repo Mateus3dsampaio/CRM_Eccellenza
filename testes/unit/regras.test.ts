@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horariosLivres, horarioDentroDaRegra, horasDeInicio, janelaDeAgendamento, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horariosLivres, horarioDentroDaRegra, horasDeInicio, janelaDeAgendamento, validarRegrasAgenda, type RegrasAgenda, vagaLivre, chaveVaga } from "@/regras/agenda";
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
 import { escolherConsultor } from "@/regras/distribuicao";
@@ -91,7 +91,7 @@ describe("agenda (AGENDA-02)", () => {
     expect(ate.getTime() - dataLocal(2026, 11, 7).getTime()).toBe(15 * DIA);
   });
   it("segue as regras editadas: dia aberto, duração, janela e validação", () => {
-    const regras: RegrasAgenda = { horario: [{ abre: 9, fecha: 12 }, ...REGRAS_AGENDA_PADRAO.horario.slice(1)], duracaoMin: 90, visitasPorHorario: 2, diasAFrente: 3 };
+    const regras: RegrasAgenda = { horario: [{ abre: 9, fecha: 12 }, ...REGRAS_AGENDA_PADRAO.horario.slice(1)], duracaoMin: 90, duracaoMedicaoMin: 120, visitasPorHorario: 2, diasAFrente: 3 };
     expect(validarRegrasAgenda(regras)).toBeNull();
     expect(horasDeInicio(0, regras)).toEqual([9, 10]); // 10h + 1h30 = 11h30, cabe; 11h não
     expect(horarioDentroDaRegra(dataLocal(2026, 11, 8, 10), regras)).toBe(true); // domingo agora abre
@@ -102,6 +102,27 @@ describe("agenda (AGENDA-02)", () => {
     expect(validarRegrasAgenda({ ...regras, duracaoMin: 10 })).not.toBeNull();
     expect(validarRegrasAgenda({ ...regras, horario: regras.horario.map(() => null) })).not.toBeNull();
     expect(validarRegrasAgenda({ ...regras, horario: [{ abre: 9, fecha: 10 }, ...regras.horario.slice(1)] })).not.toBeNull(); // 1h não comporta 1h30
+    expect(validarRegrasAgenda({ ...regras, duracaoMedicaoMin: 600 })).not.toBeNull();
+  });
+  it("medição: 2h por padrão, precisa caber inteira no horário e não ocupa a loja, mas ocupa o consultor", () => {
+    expect(REGRAS_AGENDA_PADRAO.duracaoMedicaoMin).toBe(120);
+    // Sábado 8h–12h: medição começa até as 10h; visita até as 11h.
+    expect(horasDeInicio(6, REGRAS_AGENDA_PADRAO, "medicao")).toEqual([8, 9, 10]);
+    expect(horarioDentroDaRegra(dataLocal(2026, 11, 7, 11), REGRAS_AGENDA_PADRAO, "medicao")).toBe(false);
+    expect(horarioDentroDaRegra(dataLocal(2026, 11, 7, 11))).toBe(true);
+    const inicio = dataLocal(2026, 11, 4, 8);
+    const loja = [{ consultorId: "a", inicio, fim: new Date(inicio.getTime() + HORA), tipo: "visita" as const }];
+    // Loja cheia às 8h (1 visita por horário): b não pode apresentar, mas pode medir.
+    expect(vagaLivre({ consultorId: "b", inicio, fim: new Date(inicio.getTime() + HORA) }, loja)).toBe(false);
+    expect(vagaLivre({ consultorId: "b", inicio, fim: new Date(inicio.getTime() + 2 * HORA) }, loja, REGRAS_AGENDA_PADRAO, "medicao")).toBe(true);
+    // a está apresentando às 8h: não mede às 8h, nem numa medição das 7h às 9h que encosta na apresentação.
+    expect(vagaLivre({ consultorId: "a", inicio, fim: new Date(inicio.getTime() + 2 * HORA) }, loja, REGRAS_AGENDA_PADRAO, "medicao")).toBe(false);
+    // Medição das 8h às 10h de a: a não apresenta às 9h; a loja continua livre para b às 9h.
+    const medicao = [{ consultorId: "a", inicio, fim: new Date(inicio.getTime() + 2 * HORA), tipo: "medicao" as const }];
+    const nove = new Date(inicio.getTime() + HORA);
+    expect(vagaLivre({ consultorId: "a", inicio: nove, fim: new Date(nove.getTime() + HORA) }, medicao)).toBe(false);
+    expect(vagaLivre({ consultorId: "b", inicio: nove, fim: new Date(nove.getTime() + HORA) }, medicao)).toBe(true);
+    expect(chaveVaga("a", inicio, REGRAS_AGENDA_PADRAO, "medicao")).not.toBe(chaveVaga("b", inicio));
   });
   it("uma visita por horário na loja; bloqueio tira só o consultor bloqueado", () => {
     const inicio = dataLocal(2026, 11, 4, 8);
@@ -140,7 +161,7 @@ describe("resumo (FICHA-02)", () => {
       "Exigências: cores claras",
       'Pedido técnico: "quero aproveitar a bancada de granito"',
       "Investimento: informou R$ 40–60 mil",
-      "Visita: sáb 07/11 10h com Consultor 1",
+      "Agenda: Visita sáb 07/11 10h com Consultor 1",
       "Classificação: qualificado",
     ]);
   });

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { CodigoEtapa } from "@/regras/etapas";
-import { MOTIVOS_PADRAO, REGRAS_PADRAO, type MotivoDePerda, type RegrasDeVendas } from "@/regras/vendas";
+import { exigeRetorno, MOTIVOS_PADRAO, REGRAS_PADRAO, type MotivoDePerda, type RegrasDeVendas } from "@/regras/vendas";
 import { useDados } from "../dados";
 
 interface Resposta {
@@ -29,5 +29,5 @@ export function regrasParaConferir(r: Resposta, motivoAtual?: string | null): Re
 
 /** O retorno é obrigatório nessa etapa? (Negociação depende do interruptor em Configurações > Vendas.) */
 export function retornoObrigatorio(r: Resposta, etapa: CodigoEtapa | string): boolean {
-  return etapa === "orcamento" || (etapa === "negociacao" && r.exigirContatoNegociacao);
+  return exigeRetorno(etapa as CodigoEtapa, r);
 }

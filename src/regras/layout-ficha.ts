@@ -17,7 +17,7 @@ export const NOMES_BLOCOS: Record<BlocoFicha, string> = {
   conversa: "Conversa",
   resumo: "Resumo para o consultor",
   etapa: "Etapa e responsável",
-  visita: "Visita",
+  visita: "Medição e visita à loja",
   apresentacao: "Apresentação na loja",
   dados: "Dados do lead",
   medidas: "Medidas",
@@ -34,9 +34,9 @@ export const LAYOUT_PADRAO_FICHA: ItemLayout[] = [
   { i: "historico", x: 0, y: 31, w: 7, h: 6 },
   { i: "resumo", x: 7, y: 0, w: 5, h: 7 },
   { i: "etapa", x: 7, y: 7, w: 5, h: 6 },
-  { i: "visita", x: 7, y: 13, w: 5, h: 5 },
-  { i: "apresentacao", x: 7, y: 18, w: 5, h: 4 },
-  { i: "medidas", x: 7, y: 22, w: 5, h: 8 },
+  { i: "visita", x: 7, y: 13, w: 5, h: 7 }, // medição e visita à loja (tarefa 21)
+  { i: "apresentacao", x: 7, y: 20, w: 5, h: 4 },
+  { i: "medidas", x: 7, y: 24, w: 5, h: 8 },
 ];
 
 /** Aceita um layout salvo só se tiver todos os blocos, sem repetir, e dentro da grade. */

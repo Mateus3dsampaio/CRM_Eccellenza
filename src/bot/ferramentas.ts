@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { CODIGOS_CLASSIFICACAO } from "@/regras/etapas";
 
-// BOT-03: ferramentas do bot. Esquemas para a API + validação (zod) antes de gravar no banco.
+// BOT-03: ferramentas do bot. O bot não agenda (decisão do Mateus 04/11/2026): quem marca visita, medição e apresentação é o consultor. Esquemas para a API + validação (zod) antes de gravar no banco.
 const textoOpcional = { type: "string" } as const;
 const lista = { type: "array", items: { type: "string" } } as const;
 
@@ -70,29 +70,8 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
     },
   },
   {
-    name: "ver_horarios_livres",
-    description: "Lista os horários livres para a visita à loja, já respeitando as regras da agenda e os bloqueios.",
-    input_schema: {
-      type: "object",
-      properties: {
-        a_partir_de: { type: "string", description: "Opcional. Data AAAA-MM-DD a partir da qual buscar, se o cliente pediu outro dia." },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "agendar_visita",
-    description: "Agenda a visita do cliente na loja em um horário retornado por ver_horarios_livres.",
-    input_schema: {
-      type: "object",
-      properties: { inicio: { type: "string", description: "Início exato do horário, como veio em ver_horarios_livres (campo inicio)." } },
-      required: ["inicio"],
-      additionalProperties: false,
-    },
-  },
-  {
     name: "passar_para_consultor",
-    description: "Encerra a parte do bot: gera o resumo, move o card para \"Pronto para o consultor\" e pausa o bot nesta conversa.",
+    description: "Encerra a parte do bot: gera o resumo, move o card para \"Aguardando consultor\" e pausa o bot nesta conversa.",
     input_schema: {
       type: "object",
       properties: { motivo: { type: "string", description: "Motivo curto (ex.: roteiro concluído, outra cidade, arquiteto)." } },
@@ -137,6 +116,4 @@ export const esquemaMedidas = z
   })
   .strict();
 
-export const esquemaHorarios = z.object({ a_partir_de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).strict();
-export const esquemaAgendar = z.object({ inicio: z.string().min(10).max(40) }).strict();
 export const esquemaPassar = z.object({ motivo: z.string().max(300).optional() }).strict();

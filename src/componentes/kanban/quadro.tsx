@@ -14,7 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CheckSquare, Clock, Filter, Minus, Pencil, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
-import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, type CodigoEtapa } from "@/regras/etapas";
+import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, etapaComAgenda, type CodigoEtapa, type EtapaComAgenda } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
 import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
@@ -24,6 +24,7 @@ import { AvisoMidias } from "../midias/aviso-midias";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
 import { usePode, useUsuario } from "../usuario";
 import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
+import { AgendarVisita } from "../ficha/agendar";
 import { NIVEIS_ZOOM, definirZoom, useZoomKanban } from "./zoom";
 import { Card, CardFlutuante, type AcoesCard } from "./card";
 
@@ -59,6 +60,8 @@ export function Quadro() {
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
   const [executando, setExecutando] = useState(false);
   const [pedido, setPedido] = useState<{ id: string; etapa: CodigoEtapa } | null>(null);
+  // Medição/Apresentação agendada: o card só entra com o compromisso marcado; agendar já move o card.
+  const [agendando, setAgendando] = useState<{ id: string; tipo: EtapaComAgenda } | null>(null);
 
   const sensores = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -110,6 +113,7 @@ export function Quadro() {
   }
 
   function mover(id: string, etapa: string) {
+    if (etapaComAgenda(etapa)) return setAgendando({ id, tipo: etapa });
     // Etapas que exigem dados (retorno, valor fechado, motivo da perda): abre a janela e só move ao confirmar.
     if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido({ id, etapa: etapa as CodigoEtapa });
     moverAgora(id, etapa);
@@ -387,6 +391,18 @@ export function Quadro() {
         </DndContext>
       )}
 
+      {agendando && (
+        <AgendarVisita
+          leadId={agendando.id}
+          tipo={agendando.tipo}
+          aberto
+          aoFechar={() => setAgendando(null)}
+          aoAgendar={() => {
+            setAgendando(null);
+            void recarregar();
+          }}
+        />
+      )}
       {pedido && (
         <JanelaMudanca
           etapa={pedido.etapa}
