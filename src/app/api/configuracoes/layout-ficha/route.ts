@@ -2,7 +2,7 @@ import { rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
-import { LAYOUT_PADRAO_FICHA, layoutValido, limparLayout } from "@/regras/layout-ficha";
+import { LAYOUT_PADRAO_FICHA, ajustarLayoutSalvo, layoutValido, limparLayout } from "@/regras/layout-ficha";
 
 export const dynamic = "force-dynamic";
 const CHAVE = "layout_ficha";
@@ -14,12 +14,15 @@ export const GET = rota(async () => {
   if (salvo) {
     try {
       const layout: unknown = JSON.parse(salvo.valor);
-      if (layoutValido(layout)) return { layout, personalizado: true };
+      if (layoutValido(layout)) return { layout, personalizado: true, ajustado: false };
+      // Layout salvo com blocos antigos (tarefa 28): aproveita o que dá e completa com o padrão.
+      const ajuste = ajustarLayoutSalvo(layout);
+      if (ajuste) return { layout: ajuste.layout, personalizado: true, ajustado: ajuste.ajustado };
     } catch {
       // Valor estragado: cai no padrão.
     }
   }
-  return { layout: LAYOUT_PADRAO_FICHA, personalizado: false };
+  return { layout: LAYOUT_PADRAO_FICHA, personalizado: false, ajustado: false };
 });
 
 export const PUT = rota(async (req: Request) => {

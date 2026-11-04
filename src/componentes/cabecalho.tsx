@@ -13,6 +13,7 @@ import { BotaoAlmoco } from "./almoco";
 import { MenuUsuario } from "./menu-usuario";
 import { NovaMensagem } from "./nova-mensagem";
 import { useUsuario } from "./usuario";
+import { useTituloTela } from "./titulo-tela";
 
 const TITULOS: [string, string][] = [
   ["/agenda", "Agenda"],
@@ -31,6 +32,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
   const { agora } = useVersao();
   const [novaAberta, setNovaAberta] = useState(false);
   const titulo = TITULOS.find(([prefixo]) => caminho.startsWith(prefixo))?.[1] ?? "Atendimentos";
+  const tituloDaTela = useTituloTela();
 
   return (
     <>
@@ -40,9 +42,15 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
           <Link href="/" className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca md:hidden" aria-label="Eccellenza – início">
             E
           </Link>
-          <p className="truncate text-lg font-semibold tracking-tight" data-titulo-tela>
-            {titulo}
-          </p>
+          {tituloDaTela ? (
+            <div className="flex min-w-0 items-center gap-3" data-titulo-tela>
+              {tituloDaTela.conteudo}
+            </div>
+          ) : (
+            <p className="truncate text-lg font-semibold tracking-tight" data-titulo-tela>
+              {titulo}
+            </p>
+          )}
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             {simulador && agora && (
               <Link href="/simulador" title="Relógio do simulador" className="hidden items-center gap-1.5 whitespace-nowrap rounded-pilula bg-superficie-suave px-3 py-1.5 text-xs font-medium text-texto-suave 2xl:inline-flex">

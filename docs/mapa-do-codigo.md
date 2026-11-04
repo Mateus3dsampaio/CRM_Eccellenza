@@ -196,7 +196,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
-| `src/regras/layout-ficha.ts` | Grade da ficha do lead. Padrão: conversa à esquerda e ficha à direita (campo de resposta visível em 1280×720) |
+| `src/regras/layout-ficha.ts` | Grade da ficha do lead (blocos: conversa, resumo, etapa, compromissos, dados, medidas). `ajustarLayoutSalvo` aproveita layout salvo com blocos antigos (tarefa 28). Padrão: conversa à esquerda e ficha à direita |
 | `src/regras/limites.ts` | Limites usados na tela e no servidor (tamanho máximo de imagem) |
 | `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) e quando um cliente que fechou é excluído (180 dias depois de fechar) |
 | `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
@@ -231,6 +231,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro `Popover` (tarefa 27): conteúdo ancorado num botão, fecha com Esc/clique fora, folha de baixo no celular. `Dica` (tarefa 29): ícone ⓘ com tooltip ao passar o mouse/focar |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) Toasts (tarefa 25): canto inferior direito, até 3 visíveis + "e mais N", somem sozinhos (ok/erro 6 s, alerta 15 s), pausa com o mouse, botão de ação opcional (`avisar(texto, tipo, { acao })`) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
+| `src/componentes/titulo-tela.tsx` | Título da barra de cima definido pela tela (`useDefinirTituloTela`): a ficha mostra avatar, nome, telefone e etapa do cliente no lugar de "Ficha do lead" (tarefa 28) |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações ("Retornos N", "Esperando N" com texto a partir de 1280px, Nova mensagem, avisos, menu do avatar). No celular tem que caber em 375px sem rolar para o lado |
 | `src/componentes/menu-usuario.tsx` | Menu do avatar (tarefa 26): nome e perfil, trocar minha senha, tema de cores (atalho do Configurações > Temas) e sair |
 | `src/componentes/menu-lateral.tsx` | Menu lateral (computador), em grupos separados por traço (trabalho do dia · Arquivados · Simulador, tarefa 32): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
@@ -260,8 +261,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro: níveis fixos ou "auto" (padrão, tarefa 24), que `zoomParaCaber` calcula para as colunas abertas caberem na tela (mínimo 75%) |
 | `src/componentes/ficha/gaveta.tsx` | Gaveta do lead (tarefa 23): `ProvedorGaveta` (no layout) lê `?lead=ID` da URL e abre um painel à direita com resumo, conversa e etapa, por cima de qualquer tela; `useGaveta().hrefDe(id)` é o link que todo card/lista usa para abrir (kanban, agenda, arquivados, retornos, esperando, galeria). "Abrir ficha completa" leva a `/lead/[id]`. Fechar usa `replace` para "voltar" não reabrir |
-| `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
-| `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar) Bloco "Medição e visita à loja" (chave `visita` na grade) e bloco de apresentação; escolher Medição/Apresentação na etapa abre a agenda. |
+| `src/componentes/ficha/ficha.tsx` | Ficha completa: grade arrastável (PC) e abas Conversa/Ficha (celular). Painel da conversa com abas Conversa | Notas | Histórico; ações raras (layout, exportar LGPD, excluir) no menu "⋯"; cliente na barra de cima (tarefa 28). Com a aba visível, marca a conversa como vista (zera as não lidas) |
+| `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar). "Dados do lead" esconde campos vazios atrás de "Mostrar campos vazios"; quadro "Compromissos" (visita à loja, medição, apresentação numa linha cada, tarefa 28); escolher Medição/Apresentação na etapa abre a agenda. |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/lembrete.tsx` | Bloco Lembrete da ficha (tarefa 22): data, hora e nota opcional em qualquer etapa aberta; concluir apaga. Em Negociação é o próximo contato (obrigatório conforme o interruptor) |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo . Calendário para escolher qualquer data futura (até 12 meses) e, ao lado, os horários livres da véspera, do dia escolhido e do dia seguinte |

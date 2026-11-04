@@ -12,6 +12,7 @@ import { ProvedorEtapas } from "@/componentes/etapas";
 import { ProvedorVendas } from "@/componentes/vendas/regras";
 import { ProvedorUsuario } from "@/componentes/usuario";
 import { ProvedorGaveta } from "@/componentes/ficha/gaveta";
+import { ProvedorTituloTela } from "@/componentes/titulo-tela";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                 <ProvedorAlertas>
                   {/* Gaveta do lead (?lead=ID) por cima de qualquer tela. Suspense: lê a URL no cliente. */}
                   <Suspense>
+                  <ProvedorTituloTela>
                   <ProvedorGaveta>
                   <div className="flex min-h-dvh">
                     <MenuLateral simulador={simulador} />
@@ -39,6 +41,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                     </div>
                   </div>
                   </ProvedorGaveta>
+                  </ProvedorTituloTela>
                   </Suspense>
                 </ProvedorAlertas>
               </ProvedorRetornos>

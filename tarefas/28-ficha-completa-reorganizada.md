@@ -1,6 +1,6 @@
 # Tarefa 28 – Ficha completa reorganizada
 
-Série de layout (23–33). Fazer **depois** da tarefa 23 (gaveta), porque a ficha completa passa a ser a tela de edição pesada. **Status: a fazer.**
+Série de layout (23–33). Fazer **depois** da tarefa 23 (gaveta), porque a ficha completa passa a ser a tela de edição pesada. **Status: feito em 04/11/2026.** Decisões: a linha de ações ficou dentro da ficha (Arquivar + "⋯"), já que a barra de cima recebeu o cliente; no celular as abas são Conversa/Ficha (notas e histórico ficam nas abas do painel da conversa). Layout salvo antigo é ajustado pela API (`ajustado: true`) e a tela avisa uma vez.
 
 ## Problemas
 - Dois cabeçalhos empilhados ("Ficha do lead" na barra + nome/avatar/ações logo abaixo).

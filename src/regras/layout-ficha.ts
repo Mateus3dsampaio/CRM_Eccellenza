@@ -1,5 +1,6 @@
 // Layout da ficha do lead (grade de 12 colunas). O admin personaliza e salva como padrão de todos.
-export const BLOCOS_FICHA = ["conversa", "resumo", "etapa", "visita", "apresentacao", "dados", "medidas", "notas", "historico"] as const;
+// Tarefa 28: "compromissos" reúne visita à loja, medição e apresentação; notas e histórico viraram abas do painel da conversa.
+export const BLOCOS_FICHA = ["conversa", "resumo", "etapa", "compromissos", "dados", "medidas"] as const;
 export type BlocoFicha = (typeof BLOCOS_FICHA)[number];
 
 export interface ItemLayout {
@@ -14,30 +15,39 @@ export const COLUNAS_FICHA = 12;
 export const ALTURA_LINHA_FICHA = 30;
 
 export const NOMES_BLOCOS: Record<BlocoFicha, string> = {
-  conversa: "Conversa",
+  conversa: "Conversa, notas e histórico",
   resumo: "Resumo para o consultor",
   etapa: "Etapa e responsável",
-  visita: "Medição e visita à loja",
-  apresentacao: "Apresentação na loja",
+  compromissos: "Compromissos",
   dados: "Dados do lead",
   medidas: "Medidas",
-  notas: "Notas internas",
-  historico: "Histórico de alterações",
 };
 
 // Conversa à esquerda e ficha à direita, lado a lado: o campo de resposta fica à vista sem rolar a página
 // (13 linhas de 30 px + espaços = ~534 px, cabem em uma tela de 1280x720). Abaixo da conversa vêm dados, notas e histórico.
 export const LAYOUT_PADRAO_FICHA: ItemLayout[] = [
-  { i: "conversa", x: 0, y: 0, w: 7, h: 13 },
-  { i: "dados", x: 0, y: 13, w: 7, h: 12 },
-  { i: "notas", x: 0, y: 25, w: 7, h: 6 },
-  { i: "historico", x: 0, y: 31, w: 7, h: 6 },
+  { i: "conversa", x: 0, y: 0, w: 7, h: 16 },
+  { i: "dados", x: 0, y: 16, w: 7, h: 10 },
   { i: "resumo", x: 7, y: 0, w: 5, h: 7 },
   { i: "etapa", x: 7, y: 7, w: 5, h: 9 }, // com o lembrete (tarefa 22)
-  { i: "visita", x: 7, y: 16, w: 5, h: 7 }, // medição e visita à loja (tarefa 21)
-  { i: "apresentacao", x: 7, y: 23, w: 5, h: 4 },
-  { i: "medidas", x: 7, y: 27, w: 5, h: 8 },
+  { i: "compromissos", x: 7, y: 16, w: 5, h: 7 }, // visita à loja, medição e apresentação (tarefa 28)
+  { i: "medidas", x: 7, y: 23, w: 5, h: 3 },
 ];
+
+/**
+ * Layout salvo antes de os blocos mudarem (tarefa 28): tira os blocos que não existem mais e acrescenta os novos
+ * (no lugar do padrão). Devolve `ajustado: true` quando mexeu em algo, para a tela avisar uma vez.
+ */
+export function ajustarLayoutSalvo(entrada: unknown): { layout: ItemLayout[]; ajustado: boolean } | null {
+  if (!Array.isArray(entrada)) return null;
+  const conhecidos = entrada.filter((item): item is ItemLayout => !!item && typeof item === "object" && (BLOCOS_FICHA as readonly string[]).includes((item as ItemLayout).i));
+  const vistos = new Set<string>();
+  const semRepetir = conhecidos.filter((item) => (vistos.has(item.i) ? false : (vistos.add(item.i), true)));
+  const faltando = LAYOUT_PADRAO_FICHA.filter((padrao) => !vistos.has(padrao.i));
+  const layout = [...semRepetir, ...faltando];
+  if (!layoutValido(layout)) return null;
+  return { layout, ajustado: layout.length !== entrada.length || faltando.length > 0 };
+}
 
 /** Aceita um layout salvo só se tiver todos os blocos, sem repetir, e dentro da grade. */
 export function layoutValido(entrada: unknown): entrada is ItemLayout[] {
