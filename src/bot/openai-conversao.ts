@@ -44,9 +44,6 @@ export function paraMensagensOpenAI(sistema: string, historico: MensagemHistoric
         saida.push({ role: "tool", tool_call_id: String(b.tool_use_id), content: erro + textoDoResultado(b.content) });
       } else if (b.type === "text") {
         partes.push({ type: "text", text: String(b.text ?? "") });
-      } else if (b.type === "document") {
-        // O GPT não recebe o PDF (só o Claude lê); o histórico continua o mesmo ao trocar de IA.
-        partes.push({ type: "text", text: "[PDF enviado pelo cliente: esta IA não consegue ler o conteúdo; o arquivo ficou guardado para o consultor]" });
       } else if (b.type === "image") {
         const fonte = b.source as { media_type?: string; data?: string } | undefined;
         if (fonte?.data) partes.push({ type: "image_url", image_url: { url: `data:${fonte.media_type ?? "image/jpeg"};base64,${fonte.data}` } });

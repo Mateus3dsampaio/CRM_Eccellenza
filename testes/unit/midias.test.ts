@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { apagarMidia, lerMidia, PASTA_MIDIAS, salvarMidia, tamanhoDaMidia } from "@/lib/midias";
 import { agora } from "@/lib/relogio";
-import { PDF_MAX_BYTES_PARA_BOT } from "@/regras/limite-bot";
 import { pode } from "@/regras/permissoes";
 import { DIAS_MIDIA_ATE_APAGAR, extensaoBloqueada, formatarTamanho, rotuloDoArquivo, TIPO_GENERICO, intervaloDeBytes, LIMITES_BYTES, nomeSeguroDeArquivo, previaDaMidia, rotuloDoTipo, tipoDoArquivo, tipoMidiaAceito, tipoPodeEnviar } from "@/regras/midia";
 import { DIA } from "@/regras/tempo";
@@ -291,40 +290,21 @@ describe("receber PDF e vídeo do cliente (WhatsApp)", () => {
     expect(docs.itens.map((i) => i.rotulo).sort()).toEqual(["RAR", "TXT", "PPTX", "Word"].sort());
   });
 
-  it("o bot lê PDF pequeno (bloco document); PDF grande demais vira só aviso", async () => {
-    metaConfigurada();
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
-    const corpos = fingirApi();
-    const { responderCliente } = await import("@/bot/atendimento");
-    const pequeno = await obterOuCriarLead("+5588999993344", "Dani");
-    await registrarMensagemCliente(pequeno.id, null, { arquivo: await guardar(pdf(), "application/pdf"), tipo: "application/pdf", nome: "planta.pdf", bytes: 10 });
-    expect((await responderCliente(pequeno.id)).erro).toBeUndefined();
-    expect(corpos[0]).toContain('"type":"document"');
-    expect(corpos[0]).toContain('"media_type":"application/pdf"');
-    expect(corpos[0]).toContain("planta.pdf");
-
-    const grande = await obterOuCriarLead("+5588999993355", "Edu");
-    await registrarMensagemCliente(grande.id, null, { arquivo: await guardar(pdf(PDF_MAX_BYTES_PARA_BOT), "application/pdf"), tipo: "application/pdf", nome: "enorme.pdf", bytes: 10 });
-    corpos.length = 0;
-    expect((await responderCliente(grande.id)).erro).toBeUndefined();
-    expect(corpos[0]).not.toContain('"type":"document"');
-    expect(corpos[0]).toContain("você não consegue ver o conteúdo");
-  });
-
-  it("o bot não recebe vídeo nem Word como imagem (só um aviso de que chegou)", async () => {
+  it("o bot não lê PDF nem Word: só recebe um aviso de que o arquivo chegou", async () => {
     metaConfigurada();
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-falsa");
     const corpos = fingirApi();
     const lead = await obterOuCriarLead("+5588999993333", "Beto");
-    const nome = await guardar(zip(), DOCX);
-    await registrarMensagemCliente(lead.id, null, { arquivo: nome, tipo: DOCX, nome: "projeto.docx", bytes: 10 });
+    const nome = await guardar(pdf(), "application/pdf");
+    await registrarMensagemCliente(lead.id, null, { arquivo: nome, tipo: "application/pdf", nome: "projeto.pdf", bytes: 10 });
     const { responderCliente } = await import("@/bot/atendimento");
     const r = await responderCliente(lead.id);
     expect(r.erro).toBeUndefined();
     expect(corpos.length).toBeGreaterThan(0);
     expect(corpos[0]).not.toContain('"type":"image"');
-    expect(corpos[0]).toContain("um documento Word");
-    expect(corpos[0]).toContain("projeto.docx");
+    expect(corpos[0]).not.toContain('"type":"document"');
+    expect(corpos[0]).toContain("um PDF");
+    expect(corpos[0]).toContain("projeto.pdf");
   });
 });
 

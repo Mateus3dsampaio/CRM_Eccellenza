@@ -45,7 +45,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Lead duplicado se uma mensagem com o 9 (digitada na loja) e outra sem (vinda do webhook) chegarem exatamente juntas (`obterOuCriarLead`).
 - [x] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual). Corrigido em 05/11/2026: o evento fica pendente e é reaplicado em 2 s, 10 s e 1 min.
 - [ ] Status "falhou" vindo da Meta não desfaz `ultimaMsgLojaEm`.
-- [x] Opcional: mandar PDF ao Claude para o bot ler (hoje o bot só vê imagem). Feito em 05/11/2026: PDF de até 5 MB entra como documento (só no Claude; o GPT recebe aviso). Limite de 5 MB PROVISÓRIO.
+- [x] ~~Opcional: mandar PDF ao Claude para o bot ler~~ Decisão do Mateus (05/11/2026): o bot NÃO lê PDF nem outros arquivos; só texto, áudio transcrito e imagem. Feito e depois desfeito no mesmo dia.
 - [ ] Dívida: a rota de arquivos lê o arquivo inteiro a cada pedido (usar `createReadStream` com Range).
 
 ## C. Nunca foi testado de verdade (conferir no primeiro deploy)

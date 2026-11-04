@@ -37,7 +37,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | O que a exportação de desempenho leva | `src/servicos/vendas.ts` | Configurações de vendas: motivos de perda (carga inicial, criar, editar, reordenar, excluir só se sem uso) e o interruptor "Negociação exige próximo contato" (padrão ligado). `regrasDeVendas` entrega o que o `moverEtapa` confere |
 | `src/servicos/exportacao.ts` (arquivos) + `src/regras/exportacao.ts` (período e cálculos) |
 | WhatsApp real (receber, enviar, status, mídia) | Regras puras: `src/regras/whatsapp.ts`. Chamadas à Meta e processamento: `src/servicos/whatsapp.ts`. Rota: `src/app/api/whatsapp/webhook/route.ts`. Chaves: `src/lib/whatsapp-config.ts` (variáveis de ambiente). O envio pelo bot/consultor passa por `enviarMensagemLoja` em `src/servicos/mensagens.ts` |
-| Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados; PDF que o bot lê até 5 MB, PROVISÓRIO) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
+| Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
 | `src/regras/privacidade.ts` | Texto da política de privacidade (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
@@ -201,7 +201,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
 | `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
-| `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) e tamanho máximo do PDF que o bot lê (5 MB, PROVISÓRIO) |
+| `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
 | `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
@@ -212,7 +212,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Bot (`src/bot`)
 | Arquivo | Faz |
 |---|---|
-| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O PDF do cliente de até 5 MB entra como bloco `document` (só o Claude lê; o GPT recebe um aviso); imagem entra como bloco `image` |
+| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções ativas do banco. Não lê mais nenhum arquivo |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação |
