@@ -1,4 +1,4 @@
-// Colunas do kanban (KAN-01). Nomes finais ainda PENDENTES de confirmação do Mateus.
+// Colunas do kanban (KAN-01). Estes são os nomes de fábrica; o admin pode renomear cada coluna no Kanban (nomes guardados em Configuracao, ver servicos/etapas.ts).
 export const ETAPAS = [
   { codigo: "novo", nome: "Novo / bot atendendo" },
   { codigo: "pronto", nome: "Pronto para o consultor" },
@@ -16,6 +16,43 @@ export const CODIGOS_ETAPA = ETAPAS.map((e) => e.codigo) as CodigoEtapa[];
 
 export function nomeEtapa(codigo: string): string {
   return ETAPAS.find((e) => e.codigo === codigo)?.nome ?? codigo;
+}
+
+export const NOME_ETAPA_MAX = 40;
+export type NomesEtapas = Record<CodigoEtapa, string>;
+
+/** Nomes de fábrica de todas as colunas. */
+export function nomesPadraoDasEtapas(): NomesEtapas {
+  return Object.fromEntries(ETAPAS.map((e) => [e.codigo, e.nome])) as NomesEtapas;
+}
+
+/** Texto guardado (JSON `{codigo: nome}`) + nomes de fábrica. Qualquer coisa estranha no guardado é ignorada. */
+export function mesclarNomesDasEtapas(bruto: string | null): NomesEtapas {
+  const nomes = nomesPadraoDasEtapas();
+  try {
+    const guardado = bruto ? JSON.parse(bruto) : null;
+    if (guardado && typeof guardado === "object") {
+      for (const codigo of CODIGOS_ETAPA) {
+        const v = validarNomeDaEtapa((guardado as Record<string, unknown>)[codigo]);
+        if (v.ok) nomes[codigo] = v.nome;
+      }
+    }
+  } catch {
+    // JSON quebrado: valem os nomes de fábrica.
+  }
+  return nomes;
+}
+
+export type NomeDeEtapaValido = { ok: true; nome: string } | { ok: false; erro: string };
+
+/** Nome de coluna: 1 a 40 letras, sem quebra de linha, espaços repetidos viram um. */
+export function validarNomeDaEtapa(texto: unknown): NomeDeEtapaValido {
+  if (typeof texto !== "string") return { ok: false, erro: "Escreva um nome para a coluna." };
+  const nome = texto.replace(/\s+/g, " ").trim();
+  if (!nome) return { ok: false, erro: "Escreva um nome para a coluna." };
+  if (nome.length > NOME_ETAPA_MAX) return { ok: false, erro: `O nome pode ter no máximo ${NOME_ETAPA_MAX} letras.` };
+  if (/[\u0000-\u001f\u007f<>]/.test(nome)) return { ok: false, erro: "O nome tem caracteres que não podem ser usados." };
+  return { ok: true, nome };
 }
 
 export function etapaValida(codigo: string): codigo is CodigoEtapa {

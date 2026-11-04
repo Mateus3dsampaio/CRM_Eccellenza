@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
-import { CLASSIFICACOES, ETAPAS, ETIQUETAS, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
+import { useNomesEtapas } from "../etapas";
+import { CLASSIFICACOES, ETIQUETAS, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
 import { formatarVisitaCurta } from "@/regras/tempo";
 import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
@@ -69,6 +70,7 @@ export function Painel({ titulo, acao, children }: { titulo: string; acao?: Reac
 // Blocos da ficha (FICHA-01/02/04). Cada bloco é um quadro da grade; o estado compartilhado fica neste hook.
 export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const avisar = useAviso();
+  const nomesEtapas = useNomesEtapas();
   const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
   const [editando, setEditando] = useState(false);
   const [agendar, setAgendar] = useState<"visita" | "apresentacao" | null>(null);
@@ -154,7 +156,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo rotulo="Etapa">
               <select className={classeEntrada} value={ficha.etapa} onChange={(e) => ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(e.target.value) ? setPedido(e.target.value as CodigoEtapa) : void acaoLead({ acao: "mover", etapa: e.target.value }, "Etapa alterada."))}>
-                {ETAPAS.map((e) => (
+                {nomesEtapas.lista.map((e) => (
                   <option key={e.codigo} value={e.codigo}>
                     {e.nome}
                   </option>

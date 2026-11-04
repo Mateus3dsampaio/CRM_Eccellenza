@@ -47,7 +47,8 @@ export function useSituacaoEspera(esperandoDesde: string | null): SituacaoEspera
 export const CLASSE_CARD_ESPERA: Record<FaixaEspera, string> = {
   normal: "border-borda bg-superficie",
   amarelo: "border-aviso bg-aviso-suave",
-  vermelho: "border-alerta bg-alerta-suave",
+  // Vermelho "respira" (halo pulsando) para chamar a atenção; com "reduzir movimento" ligado no aparelho, quase não anima.
+  vermelho: "border-alerta bg-alerta-suave animate-respirar",
 };
 export const CLASSE_TEXTO_ESPERA: Record<FaixaEspera, string> = {
   normal: "text-texto-suave",

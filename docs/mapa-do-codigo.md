@@ -22,7 +22,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): roteiro 01-13, dados da loja 14, regras do CRM e ferramentas 15. Montagem do prompt: `src/bot/prompt.ts` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
-| Colunas, etiquetas, classificações | `src/regras/etapas.ts` |
+| Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Sem resposta" | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
 | Modelos de mensagem / janela de 24h | `src/regras/modelos.ts`, `src/regras/janela24h.ts` |
@@ -133,6 +133,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
+| `src/app/api/etapas/route.ts` | Nomes das colunas do Kanban: GET qualquer usuário logado; PUT só admin (`configurar`), nome vazio volta ao de fábrica, nomes repetidos recusados | `etapas` |
 | `src/app/api/vendas/regras/route.ts` | Regras de vendas e motivos para a janela de mover, a ficha e o card (qualquer usuário logado) | `vendas` |
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
 | `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
@@ -153,6 +154,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/agenda.ts` | Horários livres, agendar, cancelar visita, bloqueios |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço (só muda por clique), `transferirLeads` (todos os leads em andamento de um consultor para outro) e `transferirLead` (um lead só), ambos com registro na ficha |
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
+| `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
 | `src/servicos/instrucoes.ts` | Instruções do bot: carga inicial, CRUD, versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
 | `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
@@ -232,14 +234,15 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
 | `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (próximo contato + valor do orçamento, valor fechado, motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
+| `src/componentes/etapas.tsx` | Provedor dos nomes das colunas (uma consulta a `/api/etapas` para a tela toda): `useNomesEtapas` entrega `nome(codigo)`, `lista` e `renomear`. Usado no Kanban, menu de mover, ficha, janela de mover e retornos |
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
 | `src/componentes/texto.ts` | Formatação de texto |
 | `src/componentes/chat.tsx` | Bolhas de conversa |
 | `src/componentes/almoco.tsx` | Botão de almoço do consultor |
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
-| `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") |
-| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera, "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado) |
+| `src/componentes/kanban/quadro.tsx` | Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") |
+| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado) |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro |
 | `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
@@ -313,6 +316,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
+| `testes/unit/etapas.test.ts` | Nome das colunas: validação, mesclar com o padrão, renomear/voltar ao padrão, nome repetido, histórico com o nome atual |
 | `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |

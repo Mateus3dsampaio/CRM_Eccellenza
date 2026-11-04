@@ -7,6 +7,7 @@ import { ProvedorAvisos, ProvedorVersao } from "@/componentes/dados";
 import { ProvedorAlertas } from "@/componentes/alertas/provedor";
 import { ProvedorEspera } from "@/componentes/espera";
 import { ProvedorRetornos } from "@/componentes/retornos";
+import { ProvedorEtapas } from "@/componentes/etapas";
 import { ProvedorVendas } from "@/componentes/vendas/regras";
 import { ProvedorUsuario } from "@/componentes/usuario";
 
@@ -22,6 +23,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
         <ProvedorAvisos>
           <ProvedorEspera>
             <ProvedorVendas>
+              <ProvedorEtapas>
               <ProvedorRetornos>
                 <ProvedorAlertas>
                   <div className="flex min-h-dvh">
@@ -33,6 +35,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                   </div>
                 </ProvedorAlertas>
               </ProvedorRetornos>
+              </ProvedorEtapas>
             </ProvedorVendas>
           </ProvedorEspera>
         </ProvedorAvisos>

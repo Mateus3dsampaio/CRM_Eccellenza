@@ -41,7 +41,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 ## B. Do Claude (código)
 - [x] **Tela de usuários** (Configurações > Geral > Equipe: criar, editar, nova senha, desativar, transferir leads) e **"trocar minha senha"** no cabeçalho (04/11/2026). Senha: 6+ caracteres com letra, número e maiúscula. Limitação conhecida: trocar a senha não derruba a sessão aberta (12 h); desativar derruba na hora (decisão do Mateus: não precisa agora).
-- [ ] Isolamento de arquivos entre vendedores (a galeria é só um filtro; hoje qualquer logado abre qualquer arquivo se souber o nome). Decidir primeiro se os vendedores devem ver conversas uns dos outros, porque a ficha hoje mostra.
+- [x] Isolamento de arquivos entre vendedores (a galeria é só um filtro; hoje qualquer logado abre qualquer arquivo se souber o nome). Decidir primeiro se os vendedores devem ver conversas uns dos outros, porque a ficha hoje mostra. **Decisão do Mateus (05/11/2026): todos os vendedores veem as conversas de todos e nunca houve problema; fica assim. Cada um filtra só as suas ("Meus leads").**
 - [ ] Lead duplicado se uma mensagem com o 9 (digitada na loja) e outra sem (vinda do webhook) chegarem exatamente juntas (`obterOuCriarLead`).
 - [x] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual). Corrigido em 05/11/2026: o evento fica pendente e é reaplicado em 2 s, 10 s e 1 min.
 - [ ] Status "falhou" vindo da Meta não desfaz `ultimaMsgLojaEm`.

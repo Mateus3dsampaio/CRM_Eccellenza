@@ -7,7 +7,7 @@ import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-gri
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Archive, ArchiveRestore, ArrowLeft, Download, GripHorizontal, LayoutDashboard, RotateCcw, Save, Trash2, X } from "lucide-react";
-import { nomeEtapa } from "@/regras/etapas";
+import { useNomesEtapas } from "../etapas";
 import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, NOMES_BLOCOS, limparLayout, type BlocoFicha, type ItemLayout } from "@/regras/layout-ficha";
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
@@ -57,6 +57,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
   const podeConfigurar = usePode("configurar");
+  const nomesEtapas = useNomesEtapas();
   const [aba, setAba] = useState<Aba>("conversa");
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const { dados: layoutSalvo, recarregar: recarregarLayout } = useDados<{ layout: ItemLayout[]; personalizado: boolean }>("/api/configuracoes/layout-ficha");
@@ -153,7 +154,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
             <span>{ficha.telefone}</span>
             <span className="inline-flex items-center gap-1.5">
               <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
-              {nomeEtapa(ficha.etapa)}
+              {nomesEtapas.nome(ficha.etapa)}
             </span>
             {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
           </p>

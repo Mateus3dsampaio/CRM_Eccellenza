@@ -2,7 +2,8 @@
 
 import CurrencyInput from "react-currency-input-field";
 import { useState } from "react";
-import { nomeEtapa, type CodigoEtapa } from "@/regras/etapas";
+import { type CodigoEtapa } from "@/regras/etapas";
+import { useNomesEtapas } from "../etapas";
 import { faltaParaMover, lerDataHoraLocal, partirDataHoraLocal } from "@/regras/vendas";
 import { regrasParaConferir, retornoObrigatorio, useRegrasVendas } from "./regras";
 import { Botao, Campo, classeEntrada, Modal } from "../ui";
@@ -57,6 +58,7 @@ export function JanelaMudanca({
   aoConfirmar: (venda: VendaParaApi) => void;
   aoCancelar: () => void;
 }) {
+  const nomesEtapas = useNomesEtapas();
   const inicio = partirDataHoraLocal(atuais.proximoContatoEm);
   const [data, setData] = useState(inicio.data);
   const [hora, setHora] = useState(inicio.hora);
@@ -85,7 +87,7 @@ export function JanelaMudanca({
   }
 
   return (
-    <Modal aberto aoFechar={aoCancelar} titulo={`Mover para "${nomeEtapa(etapa)}"`} largura="max-w-md">
+    <Modal aberto aoFechar={aoCancelar} titulo={`Mover para "${nomesEtapas.nome(etapa)}"`} largura="max-w-md">
       <form
         className="space-y-4"
         onSubmit={(e) => {

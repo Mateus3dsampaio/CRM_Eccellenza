@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
 import { AlertTriangle, CalendarCheck, CalendarClock, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
-import { ETAPAS } from "@/regras/etapas";
+import { useNomesEtapas } from "../etapas";
 import { formatarReais } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
@@ -159,6 +159,7 @@ export function Card({
   aoSelecionar: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
+  const nomesEtapas = useNomesEtapas();
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
   const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
@@ -287,7 +288,7 @@ export function Card({
                 className="fixed z-50 w-60 animate-surgir rounded-controle border border-borda bg-superficie p-1 shadow-flutuante"
               >
                 <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Mover para...</p>
-                {ETAPAS.filter((e) => e.codigo !== card.etapa).map((e) => (
+                {nomesEtapas.lista.filter((e) => e.codigo !== card.etapa).map((e) => (
                   <button
                     key={e.codigo}
                     role="menuitem"

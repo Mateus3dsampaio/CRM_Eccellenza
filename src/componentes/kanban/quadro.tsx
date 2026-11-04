@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,8 +13,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CheckSquare, Clock, Filter, Minus, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
-import { CODIGOS_ETAPA, ETAPAS, ETAPAS_LIMPAVEIS, ETIQUETAS, nomeEtapa, type CodigoEtapa } from "@/regras/etapas";
+import { CheckSquare, Clock, Filter, Minus, Pencil, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
+import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, type CodigoEtapa } from "@/regras/etapas";
+import { useNomesEtapas } from "../etapas";
 import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -36,6 +37,8 @@ export function Quadro() {
   const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
+  const podeRenomear = usePode("configurar");
+  const nomesEtapas = useNomesEtapas();
   const usuario = useUsuario();
   const ehAdmin = usuario.perfil === "admin";
   const zoom = useZoomKanban();
@@ -115,7 +118,7 @@ export function Quadro() {
   function moverAgora(id: string, etapa: string, venda?: VendaParaApi) {
     // Atualiza na tela na hora; o servidor confirma em seguida.
     setDados((d) => (d ? { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
-    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, `Movido para "${nomeEtapa(etapa)}".`);
+    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, `Movido para "${nomesEtapas.nome(etapa)}".`);
   }
 
   function confirmarExclusao(ids: string[], depois?: () => void) {
@@ -144,7 +147,7 @@ export function Quadro() {
     const totalReal = cards.filter((c) => c.etapa === etapa).length;
     if (!totalReal) return avisar("A coluna já está vazia.");
     setConfirmacao({
-      titulo: `Limpar "${nomeEtapa(etapa)}"`,
+      titulo: `Limpar "${nomesEtapas.nome(etapa)}"`,
       texto:
         modo === "excluir"
           ? `Excluir ${totalReal} ${totalReal === 1 ? "lead" : "leads"}? Não dá para desfazer.`
@@ -347,14 +350,14 @@ export function Quadro() {
         <DndContext sensors={sensores} onDragStart={aoComecar} onDragEnd={aoSoltar} onDragCancel={() => setArrastado(null)}>
           {/* Celular: abas por etapa (também recebem cards arrastados) */}
           <div className="sticky top-topo z-20 mt-3 flex gap-1 overflow-x-auto border-b border-borda bg-fundo px-4 pb-2 md:hidden" role="tablist" aria-label="Etapas">
-            {ETAPAS.map((e) => (
+            {nomesEtapas.lista.map((e) => (
               <AbaEtapa key={e.codigo} codigo={e.codigo} nome={e.nome} total={porEtapa[e.codigo].length} ativa={abaCelular === e.codigo} aoEscolher={() => setAbaCelular(e.codigo)} />
             ))}
           </div>
 
           <div className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
             <div className="flex gap-4 p-4 md:h-full md:items-stretch md:[zoom:var(--zoom-kanban)]" style={{ "--zoom-kanban": zoom } as React.CSSProperties}>
-            {ETAPAS.map((e) => (
+            {nomesEtapas.lista.map((e) => (
               <Coluna
                 key={e.codigo}
                 codigo={e.codigo}
@@ -367,6 +370,8 @@ export function Quadro() {
                 selecionados={selecionados}
                 aoSelecionar={alternarSelecao}
                 podeExcluir={podeExcluir}
+                podeRenomear={podeRenomear}
+                aoRenomear={nomesEtapas.renomear}
                 aoLimpar={limparColuna}
               />
             ))}
@@ -452,6 +457,8 @@ function Coluna(props: {
   selecionados: Set<string>;
   aoSelecionar: (id: string) => void;
   podeExcluir: boolean;
+  podeRenomear: boolean;
+  aoRenomear: (codigo: CodigoEtapa, nome: string) => Promise<void>;
   aoLimpar: (etapa: string, modo: "arquivar" | "excluir") => void;
 }) {
   const { codigo, nome, cards } = props;
@@ -470,7 +477,7 @@ function Coluna(props: {
       <header className="px-1 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="font-semibold text-texto">{nome}</h2>
+            <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} />
             <p className="text-xs text-texto-fraco">
               {contagem(props.totalSemFiltro)}
               {cards.length !== props.totalSemFiltro && ` · ${cards.length} no filtro`}
@@ -501,5 +508,74 @@ function Coluna(props: {
         )}
       </div>
     </section>
+  );
+}
+
+/** Título da coluna. Para o admin, o lápis ao lado troca o nome ali mesmo (Enter salva, Esc cancela; vazio volta ao nome de fábrica). */
+function NomeDaColuna({ codigo, nome, podeRenomear, aoRenomear }: { codigo: CodigoEtapa; nome: string; podeRenomear: boolean; aoRenomear: (codigo: CodigoEtapa, nome: string) => Promise<void> }) {
+  const avisar = useAviso();
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(nome);
+  const [salvando, setSalvando] = useState(false);
+  // O Enter já salvou: o desfoque que vem depois não pode salvar de novo.
+  const encerrado = useRef(false);
+
+  function comecar() {
+    encerrado.current = false;
+    setTexto(nome);
+    setEditando(true);
+  }
+
+  async function salvar() {
+    if (encerrado.current) return;
+    encerrado.current = true;
+    if (texto.trim() === nome) {
+      setEditando(false);
+      return;
+    }
+    setSalvando(true);
+    try {
+      await aoRenomear(codigo, texto);
+      avisar("Nome da coluna salvo.");
+      setEditando(false);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível salvar o nome.", "erro");
+      encerrado.current = false;
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (!editando) {
+    return (
+      <div className="flex items-center gap-1">
+        <h2 className="font-semibold text-texto">{nome}</h2>
+        {podeRenomear && (
+          <button type="button" onClick={comecar} title="Editar o nome da coluna" aria-label={`Editar o nome da coluna ${nome}`} className="inline-flex size-6 shrink-0 items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie hover:text-texto">
+            <Pencil className="size-3.5" aria-hidden />
+          </button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      value={texto}
+      maxLength={NOME_ETAPA_MAX}
+      disabled={salvando}
+      aria-label={`Novo nome da coluna ${nome}`}
+      onChange={(e) => setTexto(e.target.value)}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={() => void salvar()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") void salvar();
+        if (e.key === "Escape") {
+          encerrado.current = true;
+          setEditando(false);
+        }
+      }}
+      className="w-full rounded-controle border border-marca bg-superficie px-2 py-0.5 text-base font-semibold text-texto focus:outline-none focus:ring-2 focus:ring-marca/30"
+    />
   );
 }

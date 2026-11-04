@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CalendarClock } from "lucide-react";
-import { nomeEtapa } from "@/regras/etapas";
+import { useNomesEtapas } from "./etapas";
 import { formatarHora, formatarVisitaCurta, partesLocais } from "@/regras/tempo";
 import { ETAPAS_COM_RETORNO, formatarReais, situacaoDoRetorno, type SituacaoRetorno } from "@/regras/vendas";
 import type { retornosDeHoje } from "@/servicos/consultas";
@@ -71,6 +71,7 @@ export const CLASSE_TEXTO_RETORNO: Record<SituacaoRetorno, string> = {
 /** Botão "Retornos de hoje" no topo; ao clicar, abre a lista (RET-02). */
 export function BotaoRetornos() {
   const leads = useRetornos();
+  const nomesEtapas = useNomesEtapas();
   const ehAdmin = useUsuario().perfil === "admin";
   const [aberto, setAberto] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
@@ -135,7 +136,7 @@ export function BotaoRetornos() {
                       <CalendarClock className="size-3.5" aria-hidden />
                       {textoDoRetorno(l.situacao, l.proximoContatoEm)}
                       <span className="font-normal text-texto-fraco">
-                        · {nomeEtapa(l.etapa)}
+                        · {nomesEtapas.nome(l.etapa)}
                         {ehAdmin && ` · ${l.consultor ? l.consultor.nome : "sem consultor"}`}
                       </span>
                     </p>
