@@ -272,7 +272,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções, Chave API, Temas e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
+| `src/componentes/configuracoes/barra-salvar.tsx` | Barra "Alterações não salvas · Descartar · Salvar" fixa no rodapé das Configurações (tarefa 31): `useBlocoSalvavel` registra cada bloco com rascunho; `pedirSaida` pergunta antes de trocar de seção |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
 | `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |

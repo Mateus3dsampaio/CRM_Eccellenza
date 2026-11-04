@@ -1,6 +1,6 @@
 # Tarefa 31 – Configurações: submenu vertical e barra de salvar
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** Seções: Geral (distribuição, prazos, regras da agenda), Equipe, Vendas, Instruções, Chaves de API (com uso do bot e WhatsApp), Armazenamento, Temas. A barra de salvar cobre Prazos e Regras da agenda (os blocos com rascunho); distribuição grava no clique como antes; chaves de API e instruções mantêm o salvar próprio. Fechar a aba do navegador com mudança pendente também avisa.
 
 ## Problema
 Seis abas horizontais com páginas longas e vários botões "Salvar" espalhados (Salvar prazos, depois Salvar agenda…). Fácil editar e sair sem salvar. "Exportar desempenho" é uma ação, não configuração.

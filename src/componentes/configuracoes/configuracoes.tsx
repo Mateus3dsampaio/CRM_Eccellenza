@@ -1,20 +1,20 @@
 "use client";
 
-import { CalendarClock, LayoutDashboard, Shuffle, Timer } from "lucide-react";
+import { CalendarClock, HardDrive, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
-import { Abas } from "../entalhe/abas";
-import { Botao, Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
+import { Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
-import { ExportarDesempenho } from "./exportar-desempenho";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
 import { ChavesApi } from "./chaves-api";
 import { Temas } from "./temas";
+import { ProvedorBarraSalvar, useBarraSalvar, useBlocoSalvavel } from "./barra-salvar";
 import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
@@ -28,21 +28,37 @@ interface Dados {
   periodoExportacao: { de: string; ate: string };
 }
 
-type AbaConfig = "geral" | "vendas" | "instrucoes" | "api" | "temas" | "exportar";
+type Secao = "geral" | "equipe" | "vendas" | "instrucoes" | "api" | "armazenamento" | "temas";
 
-const ABAS: { codigo: AbaConfig; rotulo: string }[] = [
-  { codigo: "geral", rotulo: "Geral" },
-  { codigo: "vendas", rotulo: "Vendas" },
-  { codigo: "instrucoes", rotulo: "Instruções de atendimento" },
-  { codigo: "api", rotulo: "Chave API" },
-  { codigo: "temas", rotulo: "Temas" },
-  { codigo: "exportar", rotulo: "Exportar desempenho" },
+// Seções (tarefa 31): submenu vertical à esquerda; a URL guarda a seção (?secao=) para F5 voltar no lugar.
+const SECOES: { codigo: Secao; rotulo: string; icone: typeof Shuffle }[] = [
+  { codigo: "geral", rotulo: "Geral", icone: SlidersHorizontal },
+  { codigo: "equipe", rotulo: "Equipe", icone: Users },
+  { codigo: "vendas", rotulo: "Vendas", icone: Tag },
+  { codigo: "instrucoes", rotulo: "Instruções de atendimento", icone: MessageSquareText },
+  { codigo: "api", rotulo: "Chaves de API", icone: KeyRound },
+  { codigo: "armazenamento", rotulo: "Armazenamento", icone: HardDrive },
+  { codigo: "temas", rotulo: "Temas", icone: Palette },
 ];
 
 export function Configuracoes() {
+  return (
+    <ProvedorBarraSalvar>
+      <ConfiguracoesComBarra />
+    </ProvedorBarraSalvar>
+  );
+}
+
+function ConfiguracoesComBarra() {
   const avisar = useAviso();
+  const router = useRouter();
+  const caminho = usePathname();
+  const params = useSearchParams();
+  const { pedirSaida } = useBarraSalvar();
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
-  const [aba, setAba] = useState<AbaConfig>("geral");
+  const secaoDaUrl = params.get("secao");
+  const aba: Secao = SECOES.some((s) => s.codigo === secaoDaUrl) ? (secaoDaUrl as Secao) : "geral";
+  const irPara = (codigo: Secao) => pedirSaida(() => router.replace(`${caminho}?secao=${codigo}`, { scroll: false }));
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
     try {
@@ -56,14 +72,34 @@ export function Configuracoes() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-4">
-      <div>
-        <h1 className="sr-only">Configurações</h1>
-        <p className="text-sm text-texto-suave">Só o administrador vê esta tela.</p>
-      </div>
+    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:flex-row md:items-start">
+      <h1 className="sr-only">Configurações</h1>
+      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+1rem)] md:w-56 md:shrink-0">
+        <div role="tablist" aria-orientation="vertical" className="rolagem-fina flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+          {SECOES.map((s) => {
+            const Icone = s.icone;
+            const ativo = s.codigo === aba;
+            return (
+              <button
+                key={s.codigo}
+                role="tab"
+                aria-selected={ativo}
+                onClick={() => irPara(s.codigo)}
+                className={juntar(
+                  "flex min-h-toque shrink-0 items-center gap-3 rounded-controle px-3 text-left text-sm font-medium transition-colors",
+                  ativo ? "afundado text-sobre-marca" : "text-texto-suave hover:bg-superficie hover:text-texto",
+                )}
+              >
+                <Icone className="size-4 shrink-0" aria-hidden />
+                <span className="whitespace-nowrap">{s.rotulo}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 hidden px-3 text-xs text-texto-fraco md:block">Só o administrador vê esta tela.</p>
+      </nav>
 
-      <Abas itens={ABAS} valor={aba} aoMudar={setAba} rotuloAria="Seções das configurações" />
-
+      <div className="min-w-0 flex-1 space-y-4" role="tabpanel">
       {aba === "vendas" ? (
         <VendasConfig />
       ) : aba === "instrucoes" ? (
@@ -76,8 +112,10 @@ export function Configuracoes() {
         </div>
       ) : aba === "temas" ? (
         <Temas />
-      ) : aba === "exportar" ? (
-        dados ? <ExportarDesempenho equipe={dados.equipe} periodoPadrao={dados.periodoExportacao} /> : <Carregando linhas={2} />
+      ) : aba === "armazenamento" ? (
+        <Armazenamento />
+      ) : aba === "equipe" ? (
+        dados ? <EquipeConfig equipe={dados.equipe} recarregar={recarregar} /> : <Carregando linhas={3} />
       ) : carregando && !dados ? (
         <Carregando linhas={4} />
       ) : erro && !dados ? (
@@ -118,10 +156,6 @@ export function Configuracoes() {
 
             <RegrasDaAgenda regras={dados.regrasAgenda} aoSalvar={(r) => chamar("/api/configuracoes/agenda", "PUT", r, "Regras da agenda salvas.")} />
 
-            <EquipeConfig equipe={dados.equipe} recarregar={recarregar} />
-
-            <Armazenamento />
-
             <section className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
               <LayoutDashboard className="mb-2 size-5 text-texto-suave" aria-hidden />
               <h2 className="text-sm font-semibold">Layout da ficha do lead</h2>
@@ -130,6 +164,7 @@ export function Configuracoes() {
           </>
         )
       )}
+      </div>
     </div>
   );
 }
@@ -148,6 +183,15 @@ function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: 
       setSalvando(false);
     }
   }
+  // Salvar fica na barra do rodapé (tarefa 31).
+  useBlocoSalvavel("prazos", {
+    mudou,
+    salvar,
+    descartar: () => {
+      setAmarelo(String(prazos.amarelo));
+      setVermelho(String(prazos.vermelho));
+    },
+  });
 
   return (
     <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
@@ -166,11 +210,7 @@ function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: 
           <input type="number" inputMode="numeric" min={1} max={1440} value={vermelho} onChange={(e) => setVermelho(e.target.value)} className={classeEntrada} />
         </Campo>
       </div>
-      <div className="mt-3">
-        <Botao onClick={salvar} disabled={!mudou || salvando}>
-          {salvando ? "Salvando..." : "Salvar prazos"}
-        </Botao>
-      </div>
+      {salvando && <p className="mt-3 text-xs text-texto-fraco">Salvando...</p>}
     </section>
   );
 }
@@ -197,6 +237,7 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
       setSalvando(false);
     }
   }
+  useBlocoSalvavel("agenda", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   return (
     <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
@@ -245,11 +286,7 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
           <input type="number" inputMode="numeric" min={1} max={90} value={rascunho.diasAFrente} onChange={(e) => mudarNumero("diasAFrente", e.target.value)} className={classeEntrada} />
         </Campo>
       </div>
-      <div className="mt-3">
-        <Botao onClick={salvar} disabled={!mudou || salvando}>
-          {salvando ? "Salvando..." : "Salvar regras da agenda"}
-        </Botao>
-      </div>
+      {salvando && <p className="mt-3 text-xs text-texto-fraco">Salvando...</p>}
     </section>
   );
 }
