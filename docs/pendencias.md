@@ -1,7 +1,7 @@
 # Pendências (para a próxima sessão)
 
 Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e anote a data. Guia de como fazer cada passo: `docs/colocar-no-ar.md`.
-Última atualização: 04/11/2026 (versão 0.8.0).
+Última atualização: 04/11/2026 (versão 0.9.0).
 
 ## A. Do Mateus (conta, chave, decisão)
 
