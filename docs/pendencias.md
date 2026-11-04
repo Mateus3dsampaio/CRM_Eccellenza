@@ -1,7 +1,7 @@
 # Pendências (para a próxima sessão)
 
 Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e anote a data. Guia de como fazer cada passo: `docs/colocar-no-ar.md`.
-Última atualização: 04/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais).
+Última atualização: 05/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais; avisos com o CRM minimizado funcionando no Windows).
 
 ## A. Do Mateus (conta, chave, decisão)
 
@@ -27,16 +27,17 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`). Feito em 04/11/2026.
 - [x] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway. Feito em 04/11/2026 (o login continuou funcionando).
 - [x] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway. Confirmado pelo Mateus em 04/11/2026.
-- [ ] Ligar e confirmar o backup do Postgres. **Confirmado em 04/11/2026: no plano Hobby o Railway só mostra backups existentes; criar backup, agendar e recuperação por ponto no tempo exigem o plano Pro.** Hoje não existe backup de nada: decidir entre plano Pro, ou rotina própria de `pg_dump` enviada para um armazenamento externo. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia. **Decisão (Mateus, 05/11/2026): começa no plano Hobby e migra para o Pro depois; quando migrar, ligar o backup e decidir sobre o Volume.** (Item fica aberto até a migração.)
+- [ ] Ligar e confirmar o backup do Postgres. **Decisão do Mateus (05/11/2026): começa no plano Hobby e migra para o Pro depois; ao migrar, ligar o backup e decidir sobre o Volume. Até lá não existe backup.** **Confirmado em 04/11/2026: no plano Hobby o Railway só mostra backups existentes; criar backup, agendar e recuperação por ponto no tempo exigem o plano Pro.** Hoje não existe backup de nada: decidir entre plano Pro, ou rotina própria de `pg_dump` enviada para um armazenamento externo. **O backup não cobre o Volume** (fotos, vídeos e documentos): decidir se vale ter cópia. **Decisão (Mateus, 05/11/2026): começa no plano Hobby e migra para o Pro depois; quando migrar, ligar o backup e decidir sobre o Volume.** (Item fica aberto até a migração.)
 
 ### Decisões e textos para aprovar
 - [x] Textos dos modelos da Meta (`src/regras/modelos.ts`); sugestão: incluir "Responda PARAR para não receber mais mensagens". Aprovado em 05/11/2026, com "Responda PARAR" nos três textos. Falta criar os modelos na Meta com o texto de `src/regras/modelos.ts`.
 - [x] Texto de confirmação do "parar" (`src/regras/optout.ts`). Aprovado em 05/11/2026.
-- [x] Política de privacidade (`src/regras/privacidade.ts`): o Mateus aprovou o texto em 04/11/2026 (inclui "Anthropic ou OpenAI" no atendimento), e os dados (razão social, CNPJ, e-mail, prazos) já estão no texto; base legal ficou de fora por decisão dele. Mateus: "está feito" (05/11/2026). Falta só (1) conferir o texto final em `/privacidade`, se ainda não conferiu; (2) `PRIVACIDADE_APROVADA=1` definido no Railway (Mateus, 04/11/2026); (3) conferir se o telefone (88) 98213-5125 é o mesmo número cadastrado na Meta; (4) rotina dos 180 dias feita (04/11/2026, `servicos/rotinas.ts`); o Mateus sabe que o painel de vendas perde o histórico de quem foi excluído. Mateus informou em 05/11/2026 que a conferência do texto, do telefone e do `PRIVACIDADE_APROVADA=1` está feita.
+- [x] Política de privacidade (`src/regras/privacidade.ts`): texto aprovado pelo Mateus (04/11/2026; inclui "Anthropic ou OpenAI" no atendimento; razão social, CNPJ, e-mail e prazos já no texto; base legal ficou de fora por decisão dele). Conferência do texto final, do telefone (88) 98213-5125 e do `PRIVACIDADE_APROVADA=1` no Railway: feitos (Mateus, 05/11/2026). A rotina dos 180 dias está feita (`servicos/rotinas.ts`); o Mateus sabe que o painel de vendas perde o histórico de quem foi excluído.
 - [x] Decidir se "cliente que escreveu primeiro" vale como consentimento (`src/regras/consentimento.ts`). Decidido em 05/11/2026: vale.
 - [x] Limites do bot por cliente: 8 por minuto e 150 por dia (`src/regras/limite-bot.ts`). Aprovado em 05/11/2026.
 - [x] Limites de tamanho de arquivo: imagem 5 MB, vídeo 16 MB, documento 25 MB (`src/regras/midia.ts`); DWG e ZIP grandes podem passar disso. Aprovado em 05/11/2026.
 - [x] Revisão jurídica da LGPD, em especial o áudio enviado à OpenAI e o aviso de privacidade. Mateus: feito (05/11/2026).
+- [ ] **Áudio (decisão do Mateus 05/11/2026: o bot atende só texto, áudio transcrito e imagem; PDF e outros arquivos não).** Sem `OPENAI_API_KEY` o cliente que manda áudio recebe um aviso de que o bot ainda não atende áudio. Colar a chave (variável no Railway ou Configurações > Chaves de API) e testar uma transcrição real.
 - [ ] (Opcional) Colar no bot a instrução sobre áudio transcrito (texto sugerido no `docs/colocar-no-ar.md`).
 - [ ] **Colar as instruções atualizadas** (tarefa 20, 04/11/2026): o projeto não guarda mais cópia das instruções. Quando a tarefa 20 estiver na `main`, colar as 01–13 do repositório de instruções em Configurações > Instruções de atendimento, **no Railway e no computador** (substituir as antigas). A antiga 15 vira o Manual do CRM e a 14 sai sozinhas na primeira abertura. A 05 nova (bot não agenda; "Anotado! O consultor confirma com você.") foi aprovada em 04/11/2026.
 - [ ] **Novo funil (tarefa 21)**: conferir no simulador as 8 colunas, a agenda com visita à loja / medição (2h) / apresentação e o painel. Confirmar as decisões anotadas no topo de `tarefas/21-novo-funil-kanban.md`. Quando for para a `main`, os cards de teste nas colunas antigas mudam sozinhos ao subir o servidor (Visita agendada → Apresentação, Orçamento → Negociação, Sem resposta → Perdido "Parou de responder").
@@ -62,13 +63,23 @@ Achados na revisão de 04/11/2026. A correção chegou a ser feita e foi desfeit
 - [ ] Menores (sugestões dos revisores): o foco do teclado não entra na gaveta, no Popover e no menu do avatar, e não volta ao botão ao fechar (a gaveta poderia ser `role="dialog"`); com o menu do avatar aberto sobre a gaveta, um Esc fecha os dois; a sombra vermelha do card some com o mouse em cima; trocar de tela pelo menu lateral não avisa de alteração não salva nas Configurações; o texto cinza sobre o card vermelho crítico tem pouco contraste; "Retorno vencido – fechou?" quebra em 2 linhas no card; a dica da busca do kanban e o título "Atendim..." no celular aparecem cortados.
 
 ## C. Nunca foi testado de verdade (conferir no primeiro deploy)
-- [x] **Avisos com o CRM minimizado (Web Push, 05/11/2026).** Feito e testado só com simulação: o sistema de teste não tem como assinar de verdade no Google/Microsoft. Falta o Mateus, no Windows (Chrome ou Edge): abrir o sino, ligar "Avisar com o CRM fechado ou minimizado", clicar em "Testar com o CRM minimizado" e minimizar. Conferir também uma mensagem real de cliente e o clique no cartão levando à conversa. **Mateus confirmou que deu certo no Windows (05/11/2026); o deploy com a migração 0004 também subiu.**
+- [x] **Avisos com o CRM minimizado (Web Push).** Mateus confirmou que funciona no Windows (05/11/2026), e o deploy com a migração `0004_assinatura_push` subiu. Falta só conferir com mensagem real de cliente e o clique no cartão, no uso do dia a dia. iPhone: não testado (só vale com o CRM instalado na tela inicial, iOS 16.4+).
 - [ ] **Privacidade dos avisos:** o cartão leva o nome do cliente e um trecho da mensagem. O conteúdo vai criptografado de ponta a ponta para o navegador (Google, Microsoft e Mozilla só repassam e não conseguem ler), mas o Mateus pode querer citar isso na política de privacidade.
 - [x] Railway: build, migração do Postgres, Volume, healthcheck (04/11/2026).
 - [ ] Meta: verificação do webhook (feita, 04/11/2026) e receber/enviar **texto** (feito: o cliente escreveu e o bot respondeu). Recebimento de foto, vídeo, ZIP e documentos testado e funcionando (Mateus, 04/11/2026). Falta testar: enviar modelo/arquivo pela loja e status de entrega.
 - [ ] OpenAI: transcrição de áudio real. Sem `OPENAI_API_KEY` o áudio chega e o bot avisa o cliente que ainda não atende áudio (comportamento confirmado em 04/11/2026); falta colocar a chave e testar a transcrição.
 - [ ] Navegador: vídeo avançando e voltando, abrir imagem e vídeo em outra aba (CSP), anexar arquivo. Galeria funcionando e vídeo recebido (04/11/2026).
 - [ ] Tela, ponta a ponta, com o celular do Mateus.
+- [ ] **Celular (abas de Configurações):** a barra rola de lado e mostra um degradê nas pontas, mas o arrastar com o dedo nunca foi testado (o simulador de teste não faz toque). Se não rolar, trocar por abas em duas linhas. Pedir ao Mateus o modelo do celular e o navegador.
+- [ ] **iPhone (PWA):** ícone na tela inicial e tela cheia estão prontos, mas não foram testados num iPhone de verdade (barra de baixo na faixa de gestos, zoom nos campos).
+- [ ] **Temas de cor:** conferir o contraste do texto branco nos botões de cada tema e se algum tema fica ruim em alguma tela. A escolha vale só por aparelho (localStorage); se o Mateus quiser um tema único da loja, é uma mudança maior.
 
-## D. Ideias para depois (anotadas pelo Mateus)
+## D. Feito em 05/11/2026 (registro)
+Para não se perder: abas com pílula elástica de vidro escuro (Configurações, Galeria, Painel, Agenda, ficha); menu com entalhe flutuante (encolhido no PC e barra de baixo do celular); aba **Chave API** em Configurações (chaves, uso do bot, WhatsApp); **Temas** em Configurações (7 paletas); PWA para iPhone (sem avisos); Painel só para o administrador; admin renomeia as colunas do Kanban (lápis); card vermelho "respira"; status "entregue/lido" que chega antes da mensagem não se perde; textos dos modelos da Meta com "Responda PARAR"; avisos com o CRM minimizado (Web Push). Decisões: todos os vendedores veem todas as conversas; o bot não lê PDF.
+
+## E. Ideias abertas (sem prazo)
+- "Sem resposta" hoje não tem prazo para arquivar ou apagar sozinho (só arquivado vence em 30 dias e cliente fechado em 180). Se o Mateus quiser, definir em quantos dias vai para o arquivo.
+- Painel e exportação de desempenho usam os nomes de fábrica das colunas, não os renomeados pelo admin; as instruções do bot também citam nomes de fábrica.
+
+## F. Ideias para depois (anotadas pelo Mateus)
 - [ ] **Bloquear o vendedor com decisão vencida** (04/11/2026): enquanto ele tiver data vencida sem decisão (medição ou apresentação que passou, retorno da Negociação vencido), não recebe lead novo na distribuição. Mateus gostou, mas não quer agora: começar só com a cobrança (etiqueta, janela de decisão e aviso ao admin) e endurecer se não funcionar. Cuidado: não travar quem está de folga.
