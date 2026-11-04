@@ -1,6 +1,6 @@
 # Tarefa 29 – Ajustes de layout: Agenda e Galeria
 
-Série de layout (23–33). **Status: a fazer.**
+Série de layout (23–33). **Status: feito em 04/11/2026.** `Dica` (ⓘ com tooltip) nova em `ui.tsx`; na Galeria o aviso dos 180 dias também virou ⓘ ao lado da contagem.
 
 ## Agenda
 - A linha "Regras da agenda (o administrador muda em Configurações): seg, ter… Clique no + …" é cortada com reticências. Trocar por um **ícone ⓘ** ao lado do título do período, com tooltip com o texto completo; para o admin, o tooltip tem o link "Alterar em Configurações".

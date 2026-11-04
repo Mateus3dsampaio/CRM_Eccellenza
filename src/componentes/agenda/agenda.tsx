@@ -9,7 +9,7 @@ import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { primeiraMaiuscula } from "../texto";
 import { COR_AVATAR, juntar } from "../estilos";
-import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
+import { Botao, Campo, Carregando, EstadoErro, Modal, classeEntrada, Dica } from "../ui";
 import { AgendarVisita } from "../ficha/agendar";
 import { useUsuario } from "../usuario";
 import { useGaveta } from "../ficha/gaveta";
@@ -130,6 +130,13 @@ export function Agenda() {
           </button>
         </div>
         <p className="font-medium text-texto-suave">{primeiraMaiuscula(titulo)}</p>
+        <Dica rotulo="Regras da agenda" texto={`${descricaoRegras}. Clique no + de um horário para bloquear a agenda de um consultor.`}>
+          {usuario.perfil === "admin" && (
+            <Link href="/configuracoes" className="mt-2 block font-medium text-marca-texto hover:underline">
+              Alterar em Configurações
+            </Link>
+          )}
+        </Dica>
         {usuario.perfil === "admin" ? (
           <div className="ml-auto flex flex-wrap items-center gap-1 rounded-controle bg-superficie p-1 shadow-card" role="group" aria-label="Filtrar por consultor">
             {[{ id: null, nome: "Todos" }, ...(dados?.consultores ?? [])].map((c) => (
@@ -154,7 +161,6 @@ export function Agenda() {
           </div>
         )}
       </div>
-      <p className="truncate text-xs text-texto-fraco" title={descricaoRegras}>Regras da agenda (o administrador muda em Configurações): {descricaoRegras}. Clique no + de um horário para bloquear a agenda de um consultor.</p>
 
       {carregando && !dados ? (
         <Carregando linhas={4} />

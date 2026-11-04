@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Check, CheckCheck, Inbox, Loader2, X, AlertTriangle } from "lucide-react";
+import { Bell, Check, CheckCheck, Inbox, Info, Loader2, X, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { nomeEtiqueta } from "@/regras/etapas";
@@ -256,5 +256,23 @@ export function Popover({
         </>
       )}
     </div>
+  );
+}
+
+/** Ícone ⓘ com explicação (tarefa 29): aparece ao passar o mouse, ao focar com o teclado ou ao tocar. */
+export function Dica({ texto, children, rotulo = "Mais informações" }: { texto: string; children?: ReactNode; rotulo?: string }) {
+  return (
+    <span className="group/dica relative inline-flex">
+      <button type="button" aria-label={rotulo} title={children ? undefined : texto} className="inline-flex size-7 items-center justify-center rounded-full text-texto-fraco hover:bg-superficie-suave hover:text-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-marca/40">
+        <Info className="size-4" aria-hidden />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none invisible absolute left-1/2 top-full z-50 mt-1 w-72 -translate-x-1/2 rounded-controle border border-borda bg-superficie p-3 text-left text-xs leading-relaxed text-texto opacity-0 shadow-flutuante transition group-focus-within/dica:pointer-events-auto group-focus-within/dica:visible group-focus-within/dica:opacity-100 group-hover/dica:pointer-events-auto group-hover/dica:visible group-hover/dica:opacity-100"
+      >
+        {texto}
+        {children}
+      </span>
+    </span>
   );
 }

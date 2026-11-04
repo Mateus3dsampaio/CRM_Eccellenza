@@ -228,7 +228,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Componentes (`src/componentes`)
 | Arquivo | Faz |
 |---|---|
-| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro `Popover` (tarefa 27): conteúdo ancorado num botão, fecha com Esc/clique fora, folha de baixo no celular |
+| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro `Popover` (tarefa 27): conteúdo ancorado num botão, fecha com Esc/clique fora, folha de baixo no celular. `Dica` (tarefa 29): ícone ⓘ com tooltip ao passar o mouse/focar |
 | `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) Toasts (tarefa 25): canto inferior direito, até 3 visíveis + "e mais N", somem sozinhos (ok/erro 6 s, alerta 15 s), pausa com o mouse, botão de ação opcional (`avisar(texto, tipo, { acao })`) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
 | `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações ("Retornos N", "Esperando N" com texto a partir de 1280px, Nova mensagem, avisos, menu do avatar). No celular tem que caber em 375px sem rolar para o lado |
