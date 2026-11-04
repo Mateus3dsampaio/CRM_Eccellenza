@@ -11,6 +11,52 @@ export interface SecaoPrivacidade {
 // E-mail e telefone da loja informados pelo Mateus (04/11/2026). A variável PRIVACIDADE_CONTATO, se existir, vale mais (ex.: para incluir o telefone da loja).
 export const CONTATO_PADRAO = "italinea.eccellenza@hotmail.com ou telefone/WhatsApp (88) 98213-5125";
 
+// Página pública com o passo a passo para excluir os dados (a Meta pede este endereço nas configurações do app).
+export const CAMINHO_EXCLUSAO = "/exclusao-de-dados";
+
+// PROVISÓRIO: texto PROPOSTO, aguardando aprovação do Mateus (docs/publicacao-meta/02-textos-para-aprovar.md).
+// O prazo de resposta (15 dias) também é provisório.
+export const PRAZO_EXCLUSAO_DIAS = 15;
+
+export function secoesExclusao(contato: string | undefined): SecaoPrivacidade[] {
+  const canal = contato?.trim() || CONTATO_PADRAO;
+  return [
+    {
+      titulo: "Quem pode pedir",
+      paragrafos: ["Qualquer pessoa que conversou com a Eccellenza pelo WhatsApp."],
+    },
+    {
+      titulo: "Como pedir",
+      paragrafos: [
+        "Pelo WhatsApp: mande a mensagem \"Quero excluir meus dados\" para o mesmo número em que você conversou com a gente.",
+        "Por e-mail ou telefone: " + canal + ". Informe o número de telefone que você usa no WhatsApp.",
+      ],
+    },
+    {
+      titulo: "Como confirmamos que é você",
+      paragrafos: ["Respondemos pelo mesmo número do WhatsApp usado na conversa. Não pedimos senha nem documento."],
+    },
+    {
+      titulo: "O que apagamos",
+      paragrafos: ["O seu número, o nome do seu perfil, as mensagens, as fotos, os vídeos e os documentos que você enviou e as informações do seu projeto, do nosso sistema de atendimento."],
+    },
+    {
+      titulo: "Prazo",
+      paragrafos: [
+        `Respondemos em até ${PRAZO_EXCLUSAO_DIAS} dias. Guardamos apenas o registro de que a exclusão foi feita (data e os 4 últimos dígitos do telefone), sem o conteúdo da conversa.`,
+      ],
+    },
+    {
+      titulo: "O que não conseguimos apagar sozinhos",
+      paragrafos: ["Cópias que ficam com a Meta (WhatsApp), com as empresas de inteligência artificial e com a hospedagem seguem as regras próprias dessas empresas. Nós cuidamos do que está no nosso sistema."],
+    },
+    {
+      titulo: "Parar de receber mensagens sem excluir",
+      paragrafos: ["Responda PARAR em qualquer conversa."],
+    },
+  ];
+}
+
 export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade[] {
   const canal = contato?.trim() || CONTATO_PADRAO;
   return [
@@ -50,7 +96,7 @@ export function secoesPrivacidade(contato: string | undefined): SecaoPrivacidade
     {
       titulo: "Seus direitos",
       paragrafos: [
-        "Você pode pedir para saber quais dados temos sobre você, corrigi-los ou apagá-los. Para parar de receber mensagens automáticas, responda PARAR em qualquer conversa. Para os demais pedidos, fale com a gente: " + canal + ".",
+        "Você pode pedir para saber quais dados temos sobre você, corrigi-los ou apagá-los. Para parar de receber mensagens automáticas, responda PARAR em qualquer conversa. Para apagar seus dados, veja como em " + CAMINHO_EXCLUSAO + ". Para os demais pedidos, fale com a gente: " + canal + ".",
       ],
     },
   ];
