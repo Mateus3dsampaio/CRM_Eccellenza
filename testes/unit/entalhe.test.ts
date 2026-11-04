@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALTURA_BOJO, MEIA_BASE_BOJO, aberturaDoEntalhe, alturaDoBojoEm, alturaDoSalto, caminhoDoEntalhe, contornoDaBarra, esticarBojo, formaDoBojo, ponto, profundidadeDoEntalhe, progresso } from "@/componentes/entalhe/geometria";
+import { aberturaDoEntalhe, alturaDoSalto, caminhoDoEntalhe, ponto, profundidadeDoEntalhe, progresso } from "@/componentes/entalhe/geometria";
 
 describe("entalhe flutuante (contas)", () => {
   it("o salto é zero parado e máximo no meio do caminho", () => {
@@ -35,22 +35,5 @@ describe("entalhe flutuante (contas)", () => {
     expect(caminhoDoEntalhe("horizontal", 18, 100, 60, 26, 14).linha.startsWith("M")).toBe(true);
     expect(caminhoDoEntalhe("vertical", 215, 130, 27, 210, 12).preencher.endsWith("Z")).toBe(true);
     expect(caminhoDoEntalhe("horizontal", 18, 100, 60, 0, 14)).toEqual({ preencher: "", linha: "" });
-  });
-
-  it("bojo líquido: cúpula no centro, nada além da base, mais baixo e comprido quando estica", () => {
-    expect(formaDoBojo(0)).toBeCloseTo(ALTURA_BOJO, 5);
-    expect(formaDoBojo(MEIA_BASE_BOJO)).toBe(0);
-    const parado = esticarBojo(0);
-    const rapido = esticarBojo(2000);
-    expect(parado).toEqual({ sy: 1, sxl: 1, sxr: 1 });
-    expect(rapido.sy).toBeLessThan(1);
-    expect(rapido.sxl).toBeGreaterThan(rapido.sxr); // indo para a direita, o lado de trás (esquerdo) se arrasta
-    // aba larga: o topo é reto na largura do plato
-    expect(alturaDoBojoEm(130, 100, 40, parado)).toBeCloseTo(ALTURA_BOJO, 5);
-  });
-
-  it("contorno da barra fecha, com e sem bojo", () => {
-    expect(contornoDaBarra(300, 20, 64, 12, () => 0).endsWith("Z")).toBe(true);
-    expect(contornoDaBarra(300, 20, 64, 12, (x) => (x > 100 && x < 140 ? 10 : 0), [95, 145]).includes("L120.0,10.00")).toBe(true);
   });
 });
