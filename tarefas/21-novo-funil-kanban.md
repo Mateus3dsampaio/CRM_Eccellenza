@@ -33,9 +33,9 @@ O kanban mostra onde cada lead está e para onde o vendedor precisa levá-lo. O 
 
 - Nenhum compromisso pode coincidir com outro do mesmo consultor (ele mede ou apresenta, nunca os dois).
 - Um compromisso ativo de cada tipo por lead (marcar de novo = remarcar).
-- Marcar nunca volta o card de etapa mais avançada (ex.: lead em Negociação que marca nova apresentação continua em Negociação; PERGUNTAR ao Mateus se deve voltar para Apresentação agendada).
+- Marcar nunca volta o card de etapa mais avançada: lead em Negociação que marca nova apresentação continua em Negociação (decisão do Mateus 04/11/2026).
 - Cancelar medição ou apresentação sem outra marcada: o card volta para Em qualificação.
-- Medição: duração e endereço do cliente no compromisso. Duração PROVISÓRIA (perguntar ao Mateus).
+- Medição ocupa 2h na agenda por padrão (média informada pelo Mateus 04/11/2026), editável em Configurações como a duração dos outros compromissos. Sem regra extra de folga: o consultor olha a agenda e se organiza (decisão do Mateus).
 
 ## "Sem resposta" vira motivo de perda
 - Motivo de perda novo de fábrica: "Parou de responder".
