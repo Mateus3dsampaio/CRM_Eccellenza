@@ -21,6 +21,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Quero mudar… | Arquivos |
 |---|---|
 | O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): as numeradas são coladas pelo Mateus do repositório de instruções dele (o projeto não tem cópia) e o Manual do CRM (fixo, fora da numeração) ensina as ferramentas. Sem instrução ativa o bot não atende e passa o cliente ao consultor (`src/bot/atendimento.ts`). Montagem do prompt: `src/bot/prompt.ts` |
+| Abrir a ficha de um lead a partir de uma tela (card, lista, agenda) | Use `useGaveta().hrefDe(id)` (`src/componentes/ficha/gaveta.tsx`), nunca `/lead/ID` direto: abre a gaveta na tela atual. Só "Abrir ficha completa" vai para `/lead/[id]` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração da visita e da medição, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
@@ -42,7 +43,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
-| `src/regras/privacidade.ts` | Texto da política de privacidade (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
+| `src/regras/privacidade.ts` | Texto da política de privacidade e da página de exclusão de dados `secoesExclusao` (aprovada em 05/11/2026, prazo de 15 dias) (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
 | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
@@ -84,12 +85,13 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/manifest.ts` | App instalável (PWA): nome, cores e ícones (`public/icone-*.png`, `public/apple-touch-icon.png`, o "E" azul provisório). Sem service worker e sem avisos de propósito (decisão do Mateus). No iPhone: Safari > Compartilhar > Adicionar à Tela de Início |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
 | `src/app/(app)/page.tsx` | Kanban |
-| `src/app/(app)/lead/[id]/page.tsx` | Ficha do lead |
+| `src/app/(app)/lead/[id]/page.tsx` | Ficha completa do lead (dados, medidas, notas, histórico). O dia a dia usa a gaveta (`componentes/ficha/gaveta.tsx`) |
 | `src/app/(app)/agenda/page.tsx` | Agenda |
 | `src/app/(app)/painel/page.tsx` | Painel de métricas. Só admin (consultor volta ao Kanban; o menu também esconde o link) |
 | `src/app/(app)/simulador/page.tsx` | Simulador (chat do cliente fictício) |
 | `src/app/(app)/galeria/page.tsx` | Galeria de imagens, vídeos e PDFs |
 | `src/app/privacidade/page.tsx` | Política de privacidade PÚBLICA (sem login; a Meta e os clientes abrem). Rascunho até `PRIVACIDADE_APROVADA=1`; contato em `PRIVACIDADE_CONTATO` |
+| `src/app/exclusao-de-dados/page.tsx` | Instruções PÚBLICAS de exclusão de dados (sem login; endereço que a Meta pede nas configurações do app). Texto em `regras/privacidade.ts` (`secoesExclusao`), aprovado pelo Mateus em 05/11/2026; mesmo aviso de rascunho da política |
 | `src/app/(app)/arquivados/page.tsx` | Arquivados |
 | `src/app/(app)/configuracoes/page.tsx` | Configurações (só admin) |
 
@@ -192,16 +194,16 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
-| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas |
+| `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
-| `src/regras/layout-ficha.ts` | Grade da ficha do lead. Padrão: conversa à esquerda e ficha à direita (campo de resposta visível em 1280×720) |
+| `src/regras/layout-ficha.ts` | Grade da ficha do lead (blocos: conversa, resumo, etapa, compromissos, dados, medidas). `ajustarLayoutSalvo` aproveita layout salvo com blocos antigos (tarefa 28). Padrão: conversa à esquerda e ficha à direita |
 | `src/regras/limites.ts` | Limites usados na tela e no servidor (tamanho máximo de imagem) |
 | `src/regras/limpeza.ts` | Quando um arquivado é excluído (30 dias) e quando um cliente que fechou é excluído (180 dias depois de fechar) |
 | `src/regras/exportacao.ts` | Exportação de desempenho: período (máx. 30 dias), CSV |
 | `src/regras/tempo-resposta.ts` | Tempo de resposta: por turno do cliente (bot ou consultor primeiro), do consultor em toda resposta (ignora o bot), 1ª resposta do consultor depois do repasse do bot; média/mediana e formatar duração. Usado pelo Painel e pela exportação |
 | `src/regras/painel.ts` | Período do Painel: atalhos (hoje, 7 dias, 30 dias, semana, mês), datas livres, período anterior do mesmo tamanho |
-| `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador |
+| `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador `agruparAlertas`/`textoDoGrupo`: avisos do mesmo tipo que chegam juntos viram um toast só (tarefa 25) |
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
 | `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
@@ -227,11 +229,13 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Componentes (`src/componentes`)
 | Arquivo | Faz |
 |---|---|
-| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro |
-| `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) |
+| `src/componentes/ui.tsx` | Peças comuns: Botao, Modal, Campo, Avatar, Etiqueta, estados vazio/erro `Popover` (tarefa 27): conteúdo ancorado num botão, fecha com Esc/clique fora, folha de baixo no celular. `Dica` (tarefa 29): ícone ⓘ com tooltip ao passar o mouse/focar |
+| `src/componentes/dados.tsx` | `chamarApi`, `useDados` (recarrega com a versão), avisos (toasts) Toasts (tarefa 25): canto inferior direito, até 3 visíveis + "e mais N", somem sozinhos (ok/erro 6 s, alerta 15 s), pausa com o mouse, botão de ação opcional (`avisar(texto, tipo, { acao })`) |
 | `src/componentes/estilos.ts` | Cores por código e `juntar` |
-| `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações (retornos de hoje, "X aguardando você", Nova mensagem, avisos, usuário, trocar minha senha, sair). No celular tem que caber em 375px sem rolar para o lado |
-| `src/componentes/menu-lateral.tsx` | Menu lateral (computador): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
+| `src/componentes/titulo-tela.tsx` | Título da barra de cima definido pela tela (`useDefinirTituloTela`): a ficha mostra avatar, nome, telefone e etapa do cliente no lugar de "Ficha do lead" (tarefa 28) |
+| `src/componentes/cabecalho.tsx` | Barra de cima: título da tela e ações ("Retornos N", "Esperando N" com texto a partir de 1280px, Nova mensagem, avisos, menu do avatar). No celular tem que caber em 375px sem rolar para o lado |
+| `src/componentes/menu-usuario.tsx` | Menu do avatar (tarefa 26): nome e perfil, trocar minha senha, tema de cores (atalho do Configurações > Temas) e sair |
+| `src/componentes/menu-lateral.tsx` | Menu lateral (computador), em grupos separados por traço (trabalho do dia · Arquivados · Simulador, tarefa 32): aberto usa o indicador afundado que desliza; encolhido usa o entalhe flutuante (inclui Configurações). Guarda a escolha de encolher. No celular vira a barra de baixo, com a bolinha do entalhe |
 | `src/componentes/entalhe/geometria.ts` | Contas puras do entalhe flutuante (modelo `docs/referencia/modelos_interacao.html`, barra 3: salto, abertura, recorte em caminho SVG, nas duas orientações) e a mola |
 | `src/componentes/entalhe/entalhe.tsx` | `Entalhe`: recorte + pílula que salta e pousa no item novo. Usado só no menu (encolhido no computador e barra de baixo do celular). Anima direto no DOM; respeita "reduzir movimento" |
 | `src/componentes/entalhe/pilula.tsx` | `Pilula`: pílula elástica (barra 1 da referência), em vidro escuro nas abas e como anel nos temas. Duas bordas em molas diferentes: a da frente chega primeiro e a de trás alcança com um leve estalo |
@@ -253,23 +257,25 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/decisao.tsx` | Janela de decisão da data vencida (medição feita/remarcar/desistiu; fechou/negociando/não veio/desistiu; fechou/ainda negociando/não fechou). Cada botão abre a janela que já existe (agenda ou dados da etapa) |
-| `src/componentes/kanban/quadro.tsx` | Abre a janela de decisão pela etiqueta do card. Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads") Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). |
+| `src/componentes/kanban/quadro.tsx` | Abre a janela de decisão pela etiqueta do card. Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads"; etiqueta/cidade/zoom num popover, filtros ligados viram chips com "x", tarefa 27; Fechado/Perdido recolhidas e zoom automático, tarefa 24) Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). |
 | `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante de decisão pendente (abre a janela de decisão; card com borda vermelha), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
-| `src/componentes/kanban/zoom.ts` | Zoom do quadro |
-| `src/componentes/ficha/ficha.tsx` | Ficha: grade arrastável (PC) e abas (celular). Com a aba visível, marca a conversa como vista (zera as não lidas) |
-| `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar) Bloco "Medição e visita à loja" (chave `visita` na grade) e bloco de apresentação; escolher Medição/Apresentação na etapa abre a agenda. |
+| `src/componentes/kanban/zoom.ts` | Zoom do quadro: níveis fixos ou "auto" (padrão, tarefa 24), que `zoomParaCaber` calcula para as colunas abertas caberem na tela (mínimo 75%) |
+| `src/componentes/ficha/gaveta.tsx` | Gaveta do lead (tarefa 23): `ProvedorGaveta` (no layout) lê `?lead=ID` da URL e abre um painel à direita com resumo, conversa e etapa, por cima de qualquer tela; `useGaveta().hrefDe(id)` é o link que todo card/lista usa para abrir (kanban, agenda, arquivados, retornos, esperando, galeria). "Abrir ficha completa" leva a `/lead/[id]`. Fechar usa `replace` para "voltar" não reabrir |
+| `src/componentes/ficha/ficha.tsx` | Ficha completa: grade arrastável (PC) e abas Conversa/Ficha (celular). Painel da conversa com abas Conversa | Notas | Histórico; ações raras (layout, exportar LGPD, excluir) no menu "⋯"; cliente na barra de cima (tarefa 28). Com a aba visível, marca a conversa como vista (zera as não lidas) |
+| `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar). "Dados do lead" esconde campos vazios atrás de "Mostrar campos vazios"; quadro "Compromissos" (visita à loja, medição, apresentação numa linha cada, tarefa 28); escolher Medição/Apresentação na etapa abre a agenda. |
 | `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
 | `src/componentes/ficha/lembrete.tsx` | Bloco Lembrete da ficha (tarefa 22): data, hora e nota opcional em qualquer etapa aberta; concluir apaga. Em Negociação é o próximo contato (obrigatório conforme o interruptor) |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo . Calendário para escolher qualquer data futura (até 12 meses) e, ao lado, os horários livres da véspera, do dia escolhido e do dia seguinte |
 | `src/componentes/ficha/calendario.tsx` | `Calendario`: calendário de um mês para escolher o dia (bloqueia dias passados e dias em que a loja fecha) e utilitários de data "AAAA-MM-DD" |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) Cor e ícone por tipo; compromisso longo (medição) aparece em todas as horas que ocupa. |
-| `src/componentes/painel/painel.tsx` | Painel de métricas: atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
+| `src/componentes/painel/painel.tsx` | Painel de métricas (grade 3×3 de leads + conversão da agenda com "Clientes que faltaram", botão "Exportar" do admin abre `exportar-desempenho` numa janela, tarefa 30): atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
 | `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações (abas Geral, Vendas, Instruções, Chave API, Temas e Exportar desempenho). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
+| `src/componentes/configuracoes/barra-salvar.tsx` | Barra "Alterações não salvas · Descartar · Salvar" fixa no rodapé das Configurações (tarefa 31): `useBlocoSalvavel` registra cada bloco com rascunho; `pedirSaida` pergunta antes de trocar de seção |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
 | `src/componentes/galeria/galeria.tsx` | Galeria: filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
@@ -278,7 +284,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
-| `src/componentes/configuracoes/exportar-desempenho.tsx` | Aba de exportação: vendedor, período, incluir mídia, baixar .zip |
+| `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
 | `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
@@ -336,6 +342,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/etapas.test.ts` | Nome das colunas: validação, mesclar com o padrão, renomear/voltar ao padrão, nome repetido, histórico com o nome atual |
 | `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
+| `testes/unit/privacidade.test.ts` | Política aponta para a página de exclusão; página de exclusão tem as seções e o contato |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco, criar consultores de teste e um roteiro de EXEMPLO para os testes do bot (não é o que o bot usa) |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
@@ -344,5 +351,5 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Fora do código
 - `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.
 - Instruções de atendimento: NÃO ficam no projeto. Vêm do repositório de instruções do Mateus e são coladas em Configurações > Instruções de atendimento.
-- `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
+- `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas). `tarefas/futuras/`: caderno de melhorias futuras do Mateus, um arquivo por tópico e um índice no `README.md` (sem urgência; fora da numeração).
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.

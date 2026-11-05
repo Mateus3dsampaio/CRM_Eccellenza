@@ -9,11 +9,13 @@ import { chamarApi, useAviso, useDados, useVersao } from "./dados";
 import { AvisoMidias } from "./midias/aviso-midias";
 import { Avatar, Botao, Carregando, EstadoErro, EstadoVazio, Modal } from "./ui";
 import { usePode } from "./usuario";
+import { useGaveta } from "./ficha/gaveta";
 
 interface Arquivado { id: string; nome: string; telefone: string; cidade: string | null; avatarCor: number; arquivadoEm: string; previa: string | null }
 
 // Lista de arquivados: consultar, restaurar e (só o admin) excluir (LIMP-03, LIMP-05).
 export function Arquivados() {
+  const gaveta = useGaveta();
   const { dados, erro, carregando, recarregar } = useDados<{ leads: Arquivado[] }>("/api/arquivados");
   const { agora } = useVersao();
   const avisar = useAviso();
@@ -53,7 +55,7 @@ export function Arquivados() {
           {dados.leads.map((l) => (
             <li key={l.id} className="flex flex-wrap items-center gap-3 rounded-card border border-borda bg-superficie p-3 shadow-card">
               <Avatar nome={l.nome} cor={l.avatarCor} />
-              <Link href={`/lead/${l.id}`} className="min-w-0 flex-1">
+              <Link href={gaveta.hrefDe(l.id)} scroll={false} className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{l.nome}</p>
                 <p className="truncate text-xs text-texto-suave">
                   {l.telefone}

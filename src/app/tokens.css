@@ -94,6 +94,8 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
   --shadow-card-hover: 0 4px 14px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-flutuante: 0 18px 40px rgb(0 0 0 / 0.55), 0 4px 10px rgb(0 0 0 / 0.35);
+  /* Card vermelho não crítico (tarefa 33): sombra levemente avermelhada */
+  --shadow-espera-vermelha: 0 4px 14px color-mix(in srgb, var(--color-alerta) 28%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
   /* Tecla: lateral sólida + sombra ambiente + brilho no topo */
   --shadow-tecla: 0 4px 0 var(--color-tecla-lado), 0 7px 8px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.07);
@@ -105,7 +107,8 @@
 
   /* Espaçamentos nomeados */
   --spacing-toque: 44px;
-  --spacing-coluna: 300px;
+  --spacing-coluna: 264px;
+  --spacing-coluna-recolhida: 44px;
   --spacing-topo: 64px;
 
   /* Animações */

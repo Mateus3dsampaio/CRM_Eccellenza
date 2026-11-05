@@ -118,6 +118,21 @@ test("ficha do lead, agenda, painel, simulador e arquivados abrem sem quebrar", 
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Apresentação agendada/ }).click();
   await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
+  // Tarefa 23: o card abre a gaveta por cima do kanban, com ?lead= na URL (F5 reabre).
+  const gaveta = page.getByRole("complementary", { name: "Gaveta do lead" });
+  await expect(gaveta.getByText("Resumo para o consultor")).toBeVisible();
+  await expect(page).toHaveURL(/\?lead=/);
+  await page.reload();
+  await expect(page.getByRole("complementary", { name: "Gaveta do lead" }).getByText("Resumo para o consultor")).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/${info.project.name}-gaveta.png` });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("complementary", { name: "Gaveta do lead" })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/\?lead=/);
+  // No celular o reload volta o kanban para a primeira aba: escolhe a etapa de novo.
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Apresentação agendada/ }).click();
+  await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
+  await page.getByRole("complementary", { name: "Gaveta do lead" }).getByRole("link", { name: "Abrir ficha completa" }).click();
+  await page.waitForURL(/\/lead\//);
   if (info.project.name === "celular") await page.getByRole("tab", { name: "Ficha" }).click();
   await expect(page.getByText("Resumo para o consultor")).toBeVisible();
   await semRolagemLateral(page);
@@ -157,4 +172,19 @@ test("consultor não vê nem consegue excluir (LIMP-05)", async ({ page }) => {
 test("sem login a API recusa (USR-02)", async ({ request }) => {
   expect((await request.get("/api/kanban")).status()).toBe(401);
   expect((await request.get("/api/midias/x.png")).status()).toBe(401);
+});
+
+test("tarefa 33: coluna com vários atrasos só pinta de vermelho o card crítico", async ({ page }, info) => {
+  // Seed: em "Em qualificação", Fernanda espera ~23 h, Roberto ~46 h e Juliana ~48 h (todos no vermelho).
+  // Regra PROVISÓRIA (regras/espera.ts): crítico = o mais antigo da coluna ou 24 h+. Fernanda fica só com borda e badge.
+  await entrar(page);
+  if (info.project.name === "celular") await page.getByRole("tab", { name: /Em qualificação/ }).click();
+  const coluna = page.getByRole("region", { name: "Em qualificação" });
+  await expect(coluna.locator("[data-card]").first()).toBeVisible();
+  await expect(coluna.locator('[data-espera="vermelho"]')).not.toHaveCount(0);
+  await expect(coluna.getByRole("group", { name: "Fernanda Lima" })).toHaveAttribute("data-espera", "vermelho");
+  await expect(coluna.getByRole("group", { name: "Fernanda Lima" })).not.toHaveAttribute("data-critico", /.*/);
+  await expect(coluna.getByRole("group", { name: "Arq. Juliana Moreira" })).toHaveAttribute("data-critico", "true");
+  await page.waitForTimeout(400);
+  await coluna.screenshot({ path: `${PASTA}/${info.project.name}-cards-espera.png` });
 });

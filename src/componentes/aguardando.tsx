@@ -7,6 +7,7 @@ import { juntar } from "./estilos";
 import { CLASSE_TEXTO_ESPERA, useAguardando, useSituacaoEspera, type LeadAguardando } from "./espera";
 import { BolinhaNaoLidas } from "./kanban/bolinha";
 import { useUsuario } from "./usuario";
+import { useGaveta } from "./ficha/gaveta";
 
 /** Contador "X aguardando você" no topo; ao clicar, abre a lista desses leads (ESP-05). */
 export function BotaoAguardando() {
@@ -48,8 +49,8 @@ export function BotaoAguardando() {
         )}
       >
         <BellRing className="size-4" aria-hidden />
+        <span className="hidden whitespace-nowrap xl:inline">Esperando</span>
         <span className="tabular-nums">{total}</span>
-        <span className="hidden whitespace-nowrap 2xl:inline">aguardando {ehAdmin ? "resposta" : "você"}</span>
       </button>
 
       {aberto && (
@@ -77,10 +78,11 @@ export function BotaoAguardando() {
 }
 
 function ItemAguardando({ lead, mostrarConsultor, aoEscolher }: { lead: LeadAguardando; mostrarConsultor: boolean; aoEscolher: () => void }) {
+  const gaveta = useGaveta();
   const espera = useSituacaoEspera(lead.esperandoDesde);
   return (
     <li>
-      <Link href={`/lead/${lead.id}`} onClick={aoEscolher} className="flex items-start gap-3 px-4 py-3 hover:bg-superficie-suave">
+      <Link href={gaveta.hrefDe(lead.id)} scroll={false} onClick={aoEscolher} className="flex items-start gap-3 px-4 py-3 hover:bg-superficie-suave">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{lead.nome}</p>
           {lead.previa && <p className="truncate text-xs text-texto-suave">{lead.previa}</p>}

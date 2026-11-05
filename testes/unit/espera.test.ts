@@ -9,8 +9,7 @@ import {
   ordenarParaColuna,
   PRAZOS_ESPERA_PADRAO,
   textoDeEspera,
-  validarPrazos,
-} from "@/regras/espera";
+  validarPrazos, idsCriticosDaColuna } from "@/regras/espera";
 import { definirPrazosDeEspera, prazosDeEspera } from "@/servicos/configuracoes";
 import { cardsDoKanban, fichaDoLead, leadsAguardando } from "@/servicos/consultas";
 import { devolverAoBot, marcarConversaVista } from "@/servicos/conversa";
@@ -65,6 +64,24 @@ describe("regras de espera (Bloco 1)", () => {
     ];
     expect(ordenarParaColuna(cards).map((c) => c.id)).toEqual(["espera-antiga", "espera-recente", "resto-novo", "resto-velho", "sem-mensagem"]);
     expect(compararParaColuna(cards[0], cards[0])).toBe(0);
+  });
+});
+
+describe("card crítico da coluna (tarefa 33)", () => {
+  it("só o vermelho mais antigo é crítico; 24 h+ também; amarelo nunca", () => {
+    const agora = new Date("2026-11-04T12:00:00Z");
+    const ha = (min: number) => new Date(agora.getTime() - min * 60_000).toISOString();
+    const prazos = { amarelo: 10, vermelho: 30 };
+    const cards = [
+      { id: "amarelo", esperandoDesde: ha(15) },
+      { id: "vermelho-novo", esperandoDesde: ha(40) },
+      { id: "vermelho-antigo", esperandoDesde: ha(90) },
+      { id: "um-dia", esperandoDesde: ha(25 * 60) },
+      { id: "sem-espera", esperandoDesde: null },
+    ];
+    expect([...idsCriticosDaColuna(cards, agora, prazos)].sort()).toEqual(["um-dia"]);
+    expect([...idsCriticosDaColuna(cards.slice(0, 3), agora, prazos)]).toEqual(["vermelho-antigo"]);
+    expect(idsCriticosDaColuna(cards.slice(0, 1), agora, prazos).size).toBe(0);
   });
 });
 

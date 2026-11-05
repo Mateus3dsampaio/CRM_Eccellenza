@@ -14,8 +14,9 @@ import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
 import { Avatar, Etiqueta, Sino } from "../ui";
 import { CLASSE_CARD_RETORNO, CLASSE_TEXTO_RETORNO, useSituacaoRetorno } from "../retornos";
-import { CLASSE_CARD_ESPERA, CLASSE_TEXTO_ESPERA, useSituacaoEspera } from "../espera";
+import { CLASSE_BADGE_ESPERA, CLASSE_CARD_CRITICO, CLASSE_CARD_ESPERA, useSituacaoEspera } from "../espera";
 import { BolinhaNaoLidas } from "./bolinha";
+import { useGaveta } from "../ficha/gaveta";
 
 export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
@@ -34,7 +35,7 @@ function valorDoCard(card: CardKanban): string {
 }
 
 /** Informações do card (KAN-02). */
-export function ConteudoCard({ card }: { card: CardKanban }) {
+export function ConteudoCard({ card, critico = false }: { card: CardKanban; critico?: boolean }) {
   const espera = useSituacaoEspera(card.esperandoDesde);
   const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   return (
@@ -68,8 +69,8 @@ export function ConteudoCard({ card }: { card: CardKanban }) {
         </div>
       </div>
       {espera.esperando && (
-        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", espera.faixa === "vermelho" ? "font-bold text-texto" : CLASSE_TEXTO_ESPERA[espera.faixa])}>
-          {/* No card vermelho vivo, o texto vermelho sumiria: vai em branco e negrito. */}
+        // Badge por faixa (tarefa 33). No card crítico (fundo vermelho vivo) o badge vai em branco e negrito.
+        <p className={juntar("mt-2 inline-flex items-center gap-1 rounded-pilula px-2 py-0.5 text-xs font-semibold", critico ? "bg-sobre-cor/15 font-bold text-texto" : CLASSE_BADGE_ESPERA[espera.faixa])}>
           <Clock className="size-3.5 shrink-0" aria-hidden />
           esperando há {espera.texto}
         </p>
@@ -171,17 +172,22 @@ export function Card({
   selecionando,
   selecionado,
   aoSelecionar,
+  critico = false,
 }: {
   card: CardKanban;
   acoes: AcoesCard;
   selecionando: boolean;
   selecionado: boolean;
   aoSelecionar: (id: string) => void;
+  /** Pior espera da coluna (ou 24 h+): único com fundo vermelho inteiro (tarefa 33). */
+  critico?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
   const nomesEtapas = useNomesEtapas();
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
   const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
+  const gaveta = useGaveta();
+  const abertoNaGaveta = gaveta.aberto === card.id;
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
   const refBotao = useRef<HTMLButtonElement>(null);
@@ -240,23 +246,27 @@ export function Card({
       role="group"
       aria-label={card.nome}
       data-card={card.id}
+      data-espera={faixa}
+      data-critico={critico || undefined}
       aria-roledescription="card arrastável"
       className={juntar(
         "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
-        CLASSE_CARD_ESPERA[faixa],
+        critico ? CLASSE_CARD_CRITICO : CLASSE_CARD_ESPERA[faixa],
         card.decisao ? "ring-2 ring-alerta" : retorno && CLASSE_CARD_RETORNO[retorno.situacao],
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
+        // Card aberto na gaveta: nível "selecionado" (docs/design.md).
+        abertoNaGaveta && "ring-2 ring-marca shadow-card-hover",
       )}
     >
       {selecionando ? (
         <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="block w-full text-left">
           <span className="sr-only">{selecionado ? "Desmarcar" : "Selecionar"} </span>
-          <ConteudoCard card={card} />
+          <ConteudoCard card={card} critico={critico} />
         </button>
       ) : (
-        <Link href={`/lead/${card.id}`} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
-          <ConteudoCard card={card} />
+        <Link href={gaveta.hrefDe(card.id)} replace={gaveta.aberto !== null} scroll={false} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
+          <ConteudoCard card={card} critico={critico} />
         </Link>
       )}
 

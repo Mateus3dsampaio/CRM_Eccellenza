@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,21 +13,43 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CheckSquare, Clock, Filter, Minus, Pencil, Plus, Search, Trash2, Archive, UserRound, X } from "lucide-react";
+import { CheckSquare, ChevronsLeftRight, Clock, Filter, Minus, Pencil, Plus, Scan, Search, Trash2, Archive, UserRound, X } from "lucide-react";
+import { nomeEtiqueta } from "@/regras/etapas";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, etapaComAgenda, type CodigoEtapa, type EtapaComAgenda } from "@/regras/etapas";
 import { useNomesEtapas } from "../etapas";
+import { idsCriticosDaColuna } from "@/regras/espera";
+import { useAgoraDoServidor, useAguardando } from "../espera";
 import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
 import { AvisoMidias } from "../midias/aviso-midias";
-import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, Popover, classeEntrada } from "../ui";
 import { usePode, useUsuario } from "../usuario";
 import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "../ficha/agendar";
-import { NIVEIS_ZOOM, definirZoom, useZoomKanban } from "./zoom";
+import { NIVEIS_ZOOM, definirZoom, useZoomKanban, zoomParaCaber } from "./zoom";
 import { Card, CardFlutuante, type AcoesCard } from "./card";
 import { JanelaDecisao, type EscolhaDecisao } from "./decisao";
+
+// Colunas recolhidas (tarefa 24): faixa fina com nome na vertical e contador. Fechado e Perdido começam assim.
+const CHAVE_RECOLHIDAS = "colunas-recolhidas";
+const RECOLHIDAS_PADRAO: readonly string[] = ["fechado", "perdido"];
+// Medidas sem zoom para o ajuste automático (tokens --spacing-coluna e --spacing-coluna-recolhida, gap-4 e p-4).
+const LARGURA_COLUNA = 264;
+const LARGURA_RECOLHIDA = 44;
+const ESPACO_ENTRE = 16;
+const MARGEM_QUADRO = 32;
+
+function assinarTela(aviso: () => void) {
+  const mq = window.matchMedia("(min-width: 768px)");
+  mq.addEventListener("change", aviso);
+  return () => mq.removeEventListener("change", aviso);
+}
+/** Colunas recolhidas só existem no computador; no celular as abas já resolvem. */
+function useTelaGrande() {
+  return useSyncExternalStore(assinarTela, () => window.matchMedia("(min-width: 768px)").matches, () => true);
+}
 
 function contagem(n: number) {
   return `${n.toLocaleString("pt-BR")} ${n === 1 ? "conversa" : "conversas"}`;
@@ -43,8 +65,54 @@ export function Quadro() {
   const nomesEtapas = useNomesEtapas();
   const usuario = useUsuario();
   const ehAdmin = usuario.perfil === "admin";
-  const zoom = useZoomKanban();
-  const indiceZoom = (NIVEIS_ZOOM as readonly number[]).indexOf(zoom);
+  const zoomEscolhido = useZoomKanban();
+  const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set(RECOLHIDAS_PADRAO));
+  const [zoomAuto, setZoomAuto] = useState(1);
+  const refRolagem = useRef<HTMLDivElement>(null);
+  const zoom = zoomEscolhido === "auto" ? zoomAuto : zoomEscolhido;
+  // No modo automático, −/+ partem do nível fixo mais próximo do zoom atual.
+  const indiceZoom = (NIVEIS_ZOOM as readonly number[]).indexOf(zoomEscolhido === "auto" ? NIVEIS_ZOOM.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a)) : zoomEscolhido);
+
+  // Quais colunas ficam recolhidas é escolha de cada pessoa neste navegador.
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem(CHAVE_RECOLHIDAS);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- só existe no navegador
+      if (salvo !== null) setRecolhidas(new Set(JSON.parse(salvo) as string[]));
+    } catch {
+      // Sem armazenamento: vale o padrão.
+    }
+  }, []);
+  function alternarRecolhida(codigo: string, recolher?: boolean) {
+    setRecolhidas((atual) => {
+      const novo = new Set(atual);
+      const vai = recolher ?? !novo.has(codigo);
+      if (vai) novo.add(codigo);
+      else novo.delete(codigo);
+      try {
+        localStorage.setItem(CHAVE_RECOLHIDAS, JSON.stringify([...novo]));
+      } catch {
+        // Vale só nesta visita.
+      }
+      return novo;
+    });
+  }
+
+  // Zoom automático: as colunas abertas cabem na largura do quadro (até o mínimo; abaixo disso rola).
+  const totalColunas = nomesEtapas.lista.length;
+  const totalRecolhidas = [...recolhidas].filter((c) => nomesEtapas.lista.some((e) => e.codigo === c)).length;
+  useLayoutEffect(() => {
+    const el = refRolagem.current;
+    if (!el || zoomEscolhido !== "auto") return;
+    const medir = () => {
+      const necessario = (totalColunas - totalRecolhidas) * LARGURA_COLUNA + totalRecolhidas * LARGURA_RECOLHIDA + (totalColunas - 1) * ESPACO_ENTRE + MARGEM_QUADRO;
+      setZoomAuto(zoomParaCaber(el.clientWidth, necessario));
+    };
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [zoomEscolhido, totalColunas, totalRecolhidas, dados]);
 
   const [busca, setBusca] = useState("");
   const [etiqueta, setEtiqueta] = useState("");
@@ -210,7 +278,7 @@ export function Quadro() {
       <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="sr-only">Atendimentos</h1>
-          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-xs sm:flex-1 sm:basis-auto">
+          <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-[15rem] sm:flex-1 sm:basis-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-texto-fraco" aria-hidden />
             <input
               type="search"
@@ -255,7 +323,59 @@ export function Quadro() {
               ))}
             </div>
           )}
-          <div className="hidden items-center rounded-controle bg-superficie shadow-card md:ml-auto md:flex" role="group" aria-label="Zoom do quadro">
+          {/* Filtros ligados viram chips com "x" (tarefa 27): dá para ver o que está filtrando sem abrir nada. */}
+          {etiqueta && <ChipFiltro rotulo={`Etiqueta: ${nomeEtiqueta(etiqueta)}`} aoRemover={() => setEtiqueta("")} />}
+          {cidade && <ChipFiltro rotulo={`Cidade: ${cidade}`} aoRemover={() => setCidade("")} />}
+          {!ehAdmin && consultor && <ChipFiltro rotulo={`Consultor: ${consultores.find(([id]) => id === consultor)?.[1] ?? ""}`} aoRemover={() => setConsultor("")} />}
+          <div className="md:ml-auto" />
+          <Popover
+            aberto={filtrosAbertos}
+            aoFechar={() => setFiltrosAbertos(false)}
+            titulo="Filtros do quadro"
+            largura="sm:w-96"
+            gatilho={
+              <Botao onClick={() => setFiltrosAbertos((f) => !f)} aria-expanded={filtrosAbertos} icone={<Filter className="size-4" aria-hidden />}>
+                Filtros{filtrosAtivos ? ` · ${filtrosAtivos}` : ""}
+              </Botao>
+            }
+          >
+            <div className="grid gap-3">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-texto-suave">Etiqueta</span>
+                <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">
+                  <option value="">Todas as etiquetas</option>
+                  {ETIQUETAS.map((e) => (
+                    <option key={e.codigo} value={e.codigo}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!ehAdmin && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-texto-suave">Consultor</span>
+                  <select className={classeEntrada} value={consultor} onChange={(e) => setConsultor(e.target.value)} aria-label="Filtrar por consultor">
+                    <option value="">Todos os consultores</option>
+                    {consultores.map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-texto-suave">Cidade</span>
+                <select className={classeEntrada} value={cidade} onChange={(e) => setCidade(e.target.value)} aria-label="Filtrar por cidade">
+                  <option value="">Todas as cidades</option>
+                  {cidades.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="hidden items-center justify-between gap-2 border-t border-borda pt-3 md:flex">
+                <span className="text-xs font-medium text-texto-suave">Tamanho dos cards</span>
+          <div className="flex items-center rounded-controle bg-superficie-suave" role="group" aria-label="Zoom do quadro">
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
               disabled={indiceZoom <= 0}
@@ -265,7 +385,7 @@ export function Quadro() {
             >
               <Minus className="size-4" aria-hidden />
             </button>
-            <button onClick={() => definirZoom(1)} className="min-w-12 px-1 text-center text-sm font-medium tabular-nums" aria-label="Voltar o zoom para 100%" title="Voltar para 100%">
+            <button onClick={() => definirZoom(1)} className="min-w-12 px-1 text-center text-sm font-medium tabular-nums" aria-label="Voltar o zoom para 100%" title={zoomEscolhido === "auto" ? "Ajustado à tela. Clique para voltar a 100%" : "Voltar para 100%"}>
               {Math.round(zoom * 100)}%
             </button>
             <button
@@ -277,10 +397,30 @@ export function Quadro() {
             >
               <Plus className="size-4" aria-hidden />
             </button>
+            <button
+              onClick={() => definirZoom("auto")}
+              aria-pressed={zoomEscolhido === "auto"}
+              className={juntar("inline-flex size-toque items-center justify-center rounded-controle transition", zoomEscolhido === "auto" ? "text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}
+              aria-label="Ajustar o zoom para as colunas caberem na tela"
+              title="Ajustar à tela"
+            >
+              <Scan className="size-4" aria-hidden />
+            </button>
           </div>
-          <Botao onClick={() => setFiltrosAbertos((f) => !f)} aria-expanded={filtrosAbertos} icone={<Filter className="size-4" aria-hidden />}>
-            Filtros{filtrosAtivos ? ` (${filtrosAtivos})` : ""}
-          </Botao>
+              </div>
+              <Botao
+                variante="fantasma"
+                onClick={() => {
+                  setEtiqueta("");
+                  setConsultor("");
+                  setCidade("");
+                }}
+                disabled={!filtrosAtivos}
+              >
+                Limpar filtros
+              </Botao>
+            </div>
+          </Popover>
           {selecionando ? (
             <Botao variante="fantasma" onClick={sairSelecao} icone={<X className="size-4" aria-hidden />}>
               Cancelar seleção
@@ -291,45 +431,6 @@ export function Quadro() {
             </Botao>
           )}
         </div>
-        {filtrosAbertos && (
-          <div className="grid animate-surgir gap-2 rounded-card border border-borda bg-superficie p-3 shadow-painel sm:grid-cols-4">
-            <select className={classeEntrada} value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} aria-label="Filtrar por etiqueta">
-              <option value="">Todas as etiquetas</option>
-              {ETIQUETAS.map((e) => (
-                <option key={e.codigo} value={e.codigo}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-            {!ehAdmin && (
-            <select className={classeEntrada} value={consultor} onChange={(e) => setConsultor(e.target.value)} aria-label="Filtrar por consultor">
-              <option value="">Todos os consultores</option>
-              {consultores.map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-            )}
-            <select className={classeEntrada} value={cidade} onChange={(e) => setCidade(e.target.value)} aria-label="Filtrar por cidade">
-              <option value="">Todas as cidades</option>
-              {cidades.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <Botao
-              variante="fantasma"
-              onClick={() => {
-                setEtiqueta("");
-                setConsultor("");
-                setCidade("");
-              }}
-              disabled={!filtrosAtivos}
-            >
-              Limpar filtros
-            </Botao>
-          </div>
-        )}
         {selecionando && (
           <div className="flex flex-wrap items-center gap-2 rounded-card bg-marca-suave p-2 pl-4 text-sm">
             <span className="font-medium text-marca-texto">{selecionados.size} selecionado(s)</span>
@@ -374,7 +475,7 @@ export function Quadro() {
             ))}
           </div>
 
-          <div className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
+          <div ref={refRolagem} className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
             <div className="flex gap-4 p-4 md:h-full md:items-stretch md:[zoom:var(--zoom-kanban)]" style={{ "--zoom-kanban": zoom } as React.CSSProperties}>
             {nomesEtapas.lista.map((e) => (
               <Coluna
@@ -392,6 +493,8 @@ export function Quadro() {
                 podeRenomear={podeRenomear}
                 aoRenomear={nomesEtapas.renomear}
                 aoLimpar={limparColuna}
+                recolhida={recolhidas.has(e.codigo)}
+                aoRecolher={(recolher) => alternarRecolhida(e.codigo, recolher)}
               />
             ))}
             </div>
@@ -472,6 +575,18 @@ export function Quadro() {
   );
 }
 
+/** Chip de filtro ligado, com "x" para tirar (tarefa 27). */
+function ChipFiltro({ rotulo, aoRemover }: { rotulo: string; aoRemover: () => void }) {
+  return (
+    <span className="inline-flex min-h-toque items-center gap-1 rounded-pilula bg-marca-suave pl-3 pr-1.5 text-sm font-medium text-marca-texto">
+      {rotulo}
+      <button type="button" onClick={aoRemover} className="inline-flex size-7 items-center justify-center rounded-full hover:bg-marca/20" aria-label={`Tirar o filtro ${rotulo}`}>
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </span>
+  );
+}
+
 function AbaEtapa({ codigo, nome, total, ativa, aoEscolher }: { codigo: string; nome: string; total: number; ativa: boolean; aoEscolher: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: `aba:${codigo}` });
   return (
@@ -507,10 +622,47 @@ function Coluna(props: {
   podeRenomear: boolean;
   aoRenomear: (codigo: CodigoEtapa, nome: string) => Promise<void>;
   aoLimpar: (etapa: string, modo: "arquivar" | "excluir") => void;
+  recolhida: boolean;
+  aoRecolher: (recolher: boolean) => void;
 }) {
-  const { codigo, nome, cards } = props;
+  const { codigo, nome, cards, recolhida, aoRecolher } = props;
+  const { prazos } = useAguardando();
+  const agora = useAgoraDoServidor();
+  const criticos = useMemo(() => idsCriticosDaColuna(cards, agora, prazos), [cards, agora, prazos]);
   const { setNodeRef, isOver } = useDroppable({ id: codigo });
   const limpavel = (ETAPAS_LIMPAVEIS as string[]).includes(codigo);
+  const telaGrande = useTelaGrande();
+  // Card arrastado por cima da coluna recolhida: ela abre sozinha para receber (e fica aberta).
+  useEffect(() => {
+    if (isOver && recolhida) aoRecolher(false);
+  }, [isOver, recolhida, aoRecolher]);
+
+  if (recolhida && telaGrande) {
+    return (
+      <section
+        ref={setNodeRef}
+        aria-label={nome}
+        data-recolhida
+        className={juntar(
+          "flex w-coluna-recolhida shrink-0 flex-col items-center rounded-painel bg-coluna py-3 shadow-painel transition md:max-h-full",
+          isOver && "bg-marca-suave ring-2 ring-marca/40",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => aoRecolher(false)}
+          title={`Abrir a coluna ${nome}`}
+          aria-label={`Abrir a coluna ${nome} (${contagem(props.totalSemFiltro)})`}
+          aria-expanded={false}
+          className="flex min-h-0 flex-1 flex-col items-center gap-3 rounded-controle px-1 py-1 text-texto-suave transition hover:bg-superficie hover:text-texto"
+        >
+          <span className={juntar("inline-flex min-w-6 items-center justify-center rounded-pilula px-1.5 py-0.5 text-xs font-semibold tabular-nums text-sobre-cor", COR_ETAPA[codigo])}>{props.totalSemFiltro}</span>
+          <h2 className="truncate text-sm font-semibold [writing-mode:vertical-rl] [text-orientation:mixed]">{nome}</h2>
+          <ChevronsLeftRight className="mt-auto size-4 shrink-0" aria-hidden />
+        </button>
+      </section>
+    );
+  }
   return (
     <section
       ref={setNodeRef}
@@ -523,13 +675,23 @@ function Coluna(props: {
     >
       <header className="px-1 pb-3">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} />
             <p className="text-xs text-texto-fraco">
               {contagem(props.totalSemFiltro)}
               {cards.length !== props.totalSemFiltro && ` · ${cards.length} no filtro`}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => aoRecolher(true)}
+            title={`Recolher a coluna ${nome}`}
+            aria-label={`Recolher a coluna ${nome}`}
+            aria-expanded
+            className="hidden size-7 shrink-0 items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie hover:text-texto md:inline-flex"
+          >
+            <ChevronsLeftRight className="size-3.5" aria-hidden />
+          </button>
         </div>
         <div className={juntar("mt-3 h-1 rounded-pilula", COR_ETAPA[codigo])} aria-hidden />
         {limpavel && props.totalSemFiltro > 0 && (
@@ -550,7 +712,7 @@ function Coluna(props: {
           <EstadoVazio titulo="Nenhum lead nesta etapa" />
         ) : (
           cards.map((c) => (
-            <Card key={c.id} card={c} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
+            <Card key={c.id} card={c} critico={criticos.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
           ))
         )}
       </div>

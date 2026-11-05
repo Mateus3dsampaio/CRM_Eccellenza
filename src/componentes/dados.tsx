@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, X } from "lucide-react";
 import { juntar } from "./estilos";
 
 /** Chamada à API com mensagem de erro em português. */
@@ -78,34 +78,87 @@ export function useDados<T>(url: string | null) {
   return { dados, erro, carregando, recarregar: carregar, setDados };
 }
 
-// Avisos rápidos (toasts).
-type Aviso = { id: number; texto: string; tipo: "ok" | "erro" };
-const ContextoAviso = createContext<(texto: string, tipo?: "ok" | "erro") => void>(() => {});
+// Avisos rápidos (toasts), tarefa 25: canto inferior direito, no máximo 3 visíveis (o resto vira "e mais N"),
+// somem sozinhos (ok/erro em 6 s, alerta em 15 s), o mouse em cima pausa e clicar no X fecha.
+export type TipoAviso = "ok" | "erro" | "alerta";
+export interface OpcoesAviso {
+  /** Botão dentro do toast (ex.: "Abrir" a gaveta do lead). */
+  acao?: { rotulo: string; aoClicar: () => void };
+}
+type Aviso = { id: number; texto: string; tipo: TipoAviso; acao?: OpcoesAviso["acao"]; venceEm: number };
+export type Avisar = (texto: string, tipo?: TipoAviso, opcoes?: OpcoesAviso) => void;
+const ContextoAviso = createContext<Avisar>(() => {});
+const MAXIMO_VISIVEIS = 3;
+const DURACAO: Record<TipoAviso, number> = { ok: 6000, erro: 6000, alerta: 15000 };
 
 export function ProvedorAvisos({ children }: { children: ReactNode }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const avisar = useCallback((texto: string, tipo: "ok" | "erro" = "ok") => {
+  const pausado = useRef(false);
+  const avisar = useCallback<Avisar>((texto, tipo = "ok", opcoes) => {
     const id = Date.now() + Math.random();
-    setAvisos((a) => [...a, { id, texto, tipo }]);
-    setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 4000);
+    setAvisos((a) => [...a, { id, texto, tipo, acao: opcoes?.acao, venceEm: Date.now() + DURACAO[tipo] }]);
   }, []);
+  const fechar = useCallback((id: number) => setAvisos((a) => a.filter((x) => x.id !== id)), []);
+
+  // Um relógio só para todos: a cada meio segundo tira os vencidos (se o mouse não estiver em cima).
+  useEffect(() => {
+    if (!avisos.length) return;
+    const t = setInterval(() => {
+      if (pausado.current) {
+        // Pausado: empurra o vencimento para a frente, para o aviso não sumir logo ao tirar o mouse.
+        setAvisos((a) => a.map((x) => ({ ...x, venceEm: x.venceEm + 500 })));
+        return;
+      }
+      const agora = Date.now();
+      setAvisos((a) => (a.some((x) => x.venceEm <= agora) ? a.filter((x) => x.venceEm > agora) : a));
+    }, 500);
+    return () => clearInterval(t);
+  }, [avisos.length]);
+
+  const visiveis = avisos.slice(0, MAXIMO_VISIVEIS);
+  const sobra = avisos.length - visiveis.length;
   return (
     <ContextoAviso.Provider value={avisar}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
-        {avisos.map((a) => (
+      <div
+        className="pointer-events-none fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-end gap-2 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[380px] md:bottom-4"
+        aria-live="polite"
+        onMouseEnter={() => (pausado.current = true)}
+        onMouseLeave={() => (pausado.current = false)}
+      >
+        {visiveis.map((a) => (
           <div
             key={a.id}
             role={a.tipo === "erro" ? "alert" : "status"}
             className={juntar(
-              "pointer-events-auto flex max-w-md animate-surgir items-center gap-2 rounded-controle px-4 py-3 text-sm font-medium shadow-flutuante",
-              a.tipo === "erro" ? "bg-alerta text-sobre-cor" : "bg-texto text-sobre-cor",
+              "pointer-events-auto flex w-full animate-surgir items-start gap-2 rounded-controle px-3 py-2.5 text-sm font-medium shadow-flutuante",
+              a.tipo === "erro" ? "bg-alerta text-sobre-cor" : a.tipo === "alerta" ? "bg-superficie text-texto ring-1 ring-alerta/40" : "bg-texto text-sobre-cor",
             )}
           >
-            {a.tipo === "erro" ? <AlertTriangle className="size-4 shrink-0" aria-hidden /> : <CheckCircle2 className="size-4 shrink-0" aria-hidden />}
-            {a.texto}
+            {a.tipo === "erro" ? <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> : a.tipo === "alerta" ? <Bell className="mt-0.5 size-4 shrink-0 text-alerta" aria-hidden /> : <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />}
+            <span className="min-w-0 flex-1">{a.texto}</span>
+            {a.acao && (
+              <button
+                type="button"
+                onClick={() => {
+                  a.acao?.aoClicar();
+                  fechar(a.id);
+                }}
+                className={juntar("shrink-0 rounded-controle px-2 py-0.5 text-xs font-semibold", a.tipo === "alerta" ? "bg-marca text-sobre-marca" : "bg-sobre-cor/15 hover:bg-sobre-cor/25")}
+              >
+                {a.acao.rotulo}
+              </button>
+            )}
+            <button type="button" onClick={() => fechar(a.id)} className="-mr-1 -mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-controle opacity-70 hover:opacity-100" aria-label="Fechar aviso">
+              <X className="size-4" aria-hidden />
+            </button>
           </div>
         ))}
+        {sobra > 0 && (
+          <button type="button" onClick={() => setAvisos((a) => a.slice(1))} className="pointer-events-auto rounded-pilula bg-superficie px-3 py-1 text-xs font-medium text-texto-suave shadow-card hover:text-texto">
+            e mais {sobra} {sobra === 1 ? "aviso" : "avisos"}
+          </button>
+        )}
       </div>
     </ContextoAviso.Provider>
   );

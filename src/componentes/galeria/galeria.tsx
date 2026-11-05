@@ -9,8 +9,9 @@ import type { Galeria as DadosGaleria, ItemDaGaleria } from "@/servicos/midias";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
-import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada, Dica } from "../ui";
 import { usePode } from "../usuario";
+import { useGaveta } from "../ficha/gaveta";
 
 const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
   { codigo: "", nome: "Tudo" },
@@ -21,6 +22,7 @@ const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
 
 /** Galeria do vendedor: imagens, vídeos e documentos (PDF, Word, Excel, DWG, ZIP) dos leads dele (o admin vê todos). Fica no sistema; dá para baixar cada arquivo. */
 export function Galeria() {
+  const gaveta = useGaveta();
   const avisar = useAviso();
   const podeApagar = usePode("apagar_midia");
   const [tipo, setTipo] = useState<"" | FamiliaMidia>("");
@@ -56,7 +58,7 @@ export function Galeria() {
           rotuloAria="Tipo de arquivo"
         />
         {dados && dados.vendedores.length > 0 && (
-          <select className={juntar(classeEntrada, "w-auto")} value={vendedor} onChange={(e) => setVendedor(e.target.value)} aria-label="Vendedor">
+          <select className={juntar(classeEntrada, "w-auto! max-w-56")} value={vendedor} onChange={(e) => setVendedor(e.target.value)} aria-label="Vendedor">
             <option value="">Todos os vendedores</option>
             <option value="sem">Leads sem vendedor</option>
             {dados.vendedores.map((v) => (
@@ -67,13 +69,13 @@ export function Galeria() {
           </select>
         )}
         {dados && (
-          <p className="ml-auto text-sm text-texto-suave">
+          <p className="ml-auto inline-flex items-center gap-1 text-sm text-texto-suave">
             {dados.total} {dados.total === 1 ? "arquivo" : "arquivos"}
             {dados.bytes > 0 ? ` · ${formatarTamanho(dados.bytes)}` : ""}
+            <Dica rotulo="Prazo dos arquivos" texto="Arquivos com mais de 180 dias são apagados automaticamente. Para guardar um, baixe antes." />
           </p>
         )}
       </div>
-      <p className="text-xs text-texto-fraco">Arquivos com mais de 180 dias são apagados automaticamente. Para guardar um, baixe antes.</p>
 
       {carregando && !dados ? (
         <Carregando linhas={4} />
@@ -117,7 +119,7 @@ export function Galeria() {
                           <ExternalLink className="size-3.5" aria-hidden /> Abrir
                         </a>
                       )}
-                      <Link href={`/lead/${i.leadId}`} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Ver a conversa">
+                      <Link href={gaveta.hrefDe(i.leadId)} scroll={false} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Ver a conversa">
                         <MessageSquare className="size-3.5" aria-hidden /> Conversa
                       </Link>
                       {podeApagar && (

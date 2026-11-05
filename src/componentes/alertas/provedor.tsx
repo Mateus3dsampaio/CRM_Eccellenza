@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { lerPreferencias, textoDoAlerta, tituloDaAba, type AlertaTela, type PreferenciasAlertas } from "@/regras/alertas";
+import { agruparAlertas, lerPreferencias, textoDoAlerta, textoDoGrupo, tituloDaAba, type AlertaTela, type PreferenciasAlertas } from "@/regras/alertas";
 import { chamarApi, useAviso, useVersao } from "../dados";
 import { useAguardando } from "../espera";
 import { useUsuario } from "../usuario";
@@ -91,8 +91,10 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
   const mostrar = useCallback(
     (a: AlertaTela, naTela: boolean) => {
       const { titulo, corpo } = textoDoAlerta(a, usuario.id);
+      // Abre a gaveta do lead na tela em que a pessoa está (tarefa 23).
+      const abrir = () => router.push(`${vivo.current.caminho}?lead=${a.leadId}`);
       if (naTela) {
-        avisarNaTela(corpo ? `${titulo}: ${corpo}` : titulo);
+        avisarNaTela(corpo ? `${titulo}: ${corpo}` : titulo, "alerta", { acao: { rotulo: "Abrir", aoClicar: abrir } });
         return;
       }
       const atual = vivo.current;
@@ -101,7 +103,7 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
         const n = new Notification(titulo, { body: corpo, tag: `alerta-${a.id}`, silent: true });
         n.onclick = () => {
           window.focus();
-          router.push(`/lead/${a.leadId}`);
+          abrir();
           n.close();
         };
       } catch {
@@ -117,12 +119,16 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
       // Olhando a tela agora? Então o aviso aparece dentro do CRM; senão vai para o sistema (Windows).
       const olhando = document.visibilityState === "visible" && document.hasFocus();
       // Quem já está com a conversa daquele lead aberta não precisa de aviso dele.
-      const relevantes = novos.filter((a) => !(olhando && atual.caminho === `/lead/${a.leadId}`));
+      const leadNaTela = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lead") : null;
+      const relevantes = novos.filter((a) => !(olhando && (atual.caminho === `/lead/${a.leadId}` || leadNaTela === a.leadId)));
       if (!relevantes.length) return;
       if (atual.preferencias.som && relevantes.some((a) => a.tipo === "mensagem" || a.tipo === "retorno")) tocarSom();
-      relevantes.slice(0, MAXIMO_NOTIFICACOES).forEach((a) => mostrar(a, olhando));
-      const sobra = relevantes.length - MAXIMO_NOTIFICACOES;
-      if (sobra > 0 && olhando) avisarNaTela(`E mais ${sobra} ${sobra === 1 ? "aviso" : "avisos"}.`);
+      if (olhando) {
+        // Na tela, avisos do mesmo tipo que chegaram juntos viram um toast só (tarefa 25). O detalhe fica em "Esperando" e "Retornos".
+        agruparAlertas(relevantes).forEach((item) => (item.grupo ? avisarNaTela(textoDoGrupo(item.tipo, item.total), "alerta") : mostrar(item.alerta, true)));
+        return;
+      }
+      relevantes.slice(0, MAXIMO_NOTIFICACOES).forEach((a) => mostrar(a, false));
     },
     [mostrar, avisarNaTela],
   );

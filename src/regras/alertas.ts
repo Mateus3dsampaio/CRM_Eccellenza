@@ -51,6 +51,45 @@ export function textoDoAlerta(a: Pick<AlertaTela, "tipo" | "leadNome" | "consult
   }
 }
 
+/** Texto de um grupo de avisos do mesmo tipo que chegaram juntos (tarefa 25): um toast em vez de N. */
+export function textoDoGrupo(tipo: TipoAlerta, total: number): string {
+  const clientes = `${total} clientes`;
+  switch (tipo) {
+    case "mensagem":
+      return `${total} mensagens novas de ${clientes}`;
+    case "lead_passado":
+      return `${clientes} passados pelo bot aguardam resposta`;
+    case "prazo_vermelho":
+      return `${clientes} passaram do prazo sem resposta`;
+    case "retorno":
+      return `${total} retornos para fazer agora`;
+    case "decisao_vencida":
+      return `${total} decisões pendentes (data vencida)`;
+    case "visita_marcada":
+      return `${total} visitas marcadas`;
+  }
+}
+
+/**
+ * Agrupa avisos que chegaram juntos: tipo com 2 ou mais vira um grupo (um toast só); os demais ficam soltos.
+ * Devolve na ordem em que apareceram.
+ */
+export function agruparAlertas<T extends { tipo: TipoAlerta }>(novos: T[]): ({ grupo: false; alerta: T } | { grupo: true; tipo: TipoAlerta; total: number })[] {
+  const porTipo = new Map<TipoAlerta, number>();
+  novos.forEach((a) => porTipo.set(a.tipo, (porTipo.get(a.tipo) ?? 0) + 1));
+  const jaEmitido = new Set<TipoAlerta>();
+  const saida: ({ grupo: false; alerta: T } | { grupo: true; tipo: TipoAlerta; total: number })[] = [];
+  for (const a of novos) {
+    const total = porTipo.get(a.tipo) ?? 1;
+    if (total < 2) saida.push({ grupo: false, alerta: a });
+    else if (!jaEmitido.has(a.tipo)) {
+      jaEmitido.add(a.tipo);
+      saida.push({ grupo: true, tipo: a.tipo, total });
+    }
+  }
+  return saida;
+}
+
 const CONTADOR_NO_INICIO = /^\(\d+\)\s*/;
 
 /** "(3) CRM Eccellenza". Sem ninguém esperando, volta ao título normal. */

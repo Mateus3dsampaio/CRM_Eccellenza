@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
@@ -18,12 +19,52 @@ import { Lembrete } from "./lembrete";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
 
-function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
+function Linha({ rotulo, valor, esmaecida }: { rotulo: string; valor: React.ReactNode; esmaecida?: boolean }) {
   return (
-    <div className="grid grid-cols-[8.5rem_1fr] gap-2 py-1.5 text-sm">
+    <div className={juntar("grid grid-cols-[8.5rem_1fr] gap-2 py-1.5 text-sm", esmaecida && "opacity-60")}>
       <dt className="text-texto-suave">{rotulo}</dt>
       <dd className="min-w-0 break-words text-texto">{valor || <span className="text-texto-fraco">não informado</span>}</dd>
     </div>
+  );
+}
+
+/** "Dados do lead" (tarefa 28): os preenchidos sempre à vista; os vazios ficam recolhidos atrás de um botão. */
+function DadosDoLead({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => void }) {
+  const [mostrarVazios, setMostrarVazios] = useState(false);
+  const linhas: [string, React.ReactNode][] = [
+    ["Nome", ficha.nome ?? ficha.nomePerfil],
+    ["Telefone", ficha.telefone],
+    ["Cidade", ficha.cidade],
+    ["Endereço", ficha.endereco],
+    ["Ambientes", ficha.ambientes.join(", ")],
+    ["Situação do imóvel", ficha.situacaoImovel],
+    ["Prazo", ficha.prazo],
+    ["Investimento", ficha.investimento],
+    ["Exigências", ficha.exigencias.join("; ")],
+    ["Pedidos técnicos", ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null],
+    ["Observações", ficha.observacoes],
+  ];
+  const vazias = linhas.filter(([, v]) => !v).length;
+  return (
+    <Painel
+      titulo="Dados do lead"
+      acao={
+        <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={aoEditar}>
+          Editar
+        </Botao>
+      }
+    >
+      <dl className="divide-y divide-borda">
+        {linhas.map(([rotulo, valor]) => (!valor && !mostrarVazios ? null : <Linha key={rotulo} rotulo={rotulo} valor={valor} esmaecida={!valor} />))}
+      </dl>
+      {vazias > 0 && (
+        <button type="button" onClick={() => setMostrarVazios((v) => !v)} aria-expanded={mostrarVazios} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-controle px-2 text-xs font-medium text-texto-suave hover:bg-superficie-suave hover:text-texto">
+          {mostrarVazios ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
+          {mostrarVazios ? "Esconder campos vazios" : `Mostrar campos vazios (${vazias})`}
+        </button>
+      )}
+      {vazias === linhas.length && !mostrarVazios && <p className="text-sm text-texto-suave">Nada preenchido ainda.</p>}
+    </Painel>
   );
 }
 
@@ -123,32 +164,28 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
     }
   }
 
-  const apresentacaoAtiva = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === "apresentacao");
-
-  /** Uma linha de compromisso (medição ou visita à loja): marcado com Cancelar, ou "Nenhum(a)". */
-  const linhaCompromisso = (tipo: "medicao" | "visita") => {
+  /** Uma linha de compromisso (visita à loja, medição ou apresentação): data e consultor com Remarcar/Cancelar, ou "não marcada" com Agendar. */
+  const linhaCompromisso = (tipo: TipoCompromisso) => {
     const ativo = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === tipo);
     const nome = NOMES_COMPROMISSO[tipo];
+    const Icone = tipo === "apresentacao" ? Presentation : CalendarPlus;
+    const corAtivo = tipo === "medicao" ? "text-marca-texto" : tipo === "apresentacao" ? "text-alerta" : "text-sucesso";
     return (
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium">{nome}</span>
-          <Botao variante="fantasma" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={() => setAgendar(tipo)} aria-label={`${ativo ? "Remarcar" : "Agendar"} ${nome.toLowerCase()}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+        <span className="w-28 shrink-0 font-medium">{nome}</span>
+        <span className={juntar("min-w-0 flex-1 break-words", ativo ? juntar("font-medium", corAtivo) : "text-texto-suave")} title={tipo === "visita" ? "Cliente vem conhecer a loja; não move o card." : undefined}>
+          {ativo ? `${ativo.rotulo} com ${ativo.consultor}` : "não marcada"}
+        </span>
+        <span className="ml-auto flex shrink-0 gap-1">
+          <Botao variante="fantasma" icone={<Icone className="size-4" aria-hidden />} onClick={() => setAgendar(tipo)} aria-label={`${ativo ? "Remarcar" : "Agendar"} ${nome.toLowerCase()}`}>
             {ativo ? "Remarcar" : "Agendar"}
           </Botao>
-        </div>
-        {ativo ? (
-          <div className={juntar("flex flex-wrap items-center justify-between gap-2 rounded-controle p-3", tipo === "medicao" ? "bg-marca-suave" : "bg-sucesso-suave")}>
-            <p className={juntar("text-sm font-medium", tipo === "medicao" ? "text-marca-texto" : "text-sucesso")}>
-              {ativo.rotulo} com {ativo.consultor}
-            </p>
-            <Botao variante="fantasma" onClick={() => cancelarVisita(ativo.id)}>
+          {ativo && (
+            <Botao variante="fantasma" onClick={() => cancelarVisita(ativo.id)} aria-label={`Cancelar ${nome.toLowerCase()}`}>
               Cancelar
             </Botao>
-          </div>
-        ) : (
-          <p className="text-sm text-texto-suave">{tipo === "medicao" ? "Nenhuma medição agendada." : "Nenhuma visita agendada (cliente vem conhecer a loja; não move o card)."}</p>
-        )}
+          )}
+        </span>
       </div>
     );
   };
@@ -247,12 +284,13 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
           </div>
         </Painel>
     ),
-    // O bloco "visita" da grade (nome mantido para não perder o layout salvo) reúne medição e visita à loja.
-    visita: (
-        <Painel titulo="Medição e visita à loja">
-          <div className="space-y-4">
-            {linhaCompromisso("medicao")}
+    // Quadro único "Compromissos" (tarefa 28): visita à loja, medição e apresentação, uma linha cada.
+    compromissos: (
+        <Painel titulo="Compromissos">
+          <div className="divide-y divide-borda">
             {linhaCompromisso("visita")}
+            {linhaCompromisso("medicao")}
+            {linhaCompromisso("apresentacao")}
           </div>
           {canceladas.length > 0 && (
             <p className="mt-3 text-xs text-texto-fraco">
@@ -261,55 +299,11 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
           )}
         </Painel>
     ),
-    apresentacao: (
-        <Painel
-          titulo="Apresentação na loja"
-          acao={
-            <Botao variante="fantasma" icone={<Presentation className="size-4" aria-hidden />} onClick={() => setAgendar("apresentacao")}>
-              {apresentacaoAtiva ? "Remarcar" : "Agendar"}
-            </Botao>
-          }
-        >
-          {apresentacaoAtiva ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-controle bg-alerta-suave p-3">
-              <p className="text-sm font-medium text-alerta">
-                {apresentacaoAtiva.rotulo} com {apresentacaoAtiva.consultor}
-              </p>
-              <Botao variante="fantasma" onClick={() => cancelarVisita(apresentacaoAtiva.id)}>
-                Cancelar apresentação
-              </Botao>
-            </div>
-          ) : (
-            <p className="text-sm text-texto-suave">Nenhuma apresentação agendada.</p>
-          )}
-        </Painel>
-    ),
     dados: editando ? (
-          <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await salvar(corpo)) && setEditando(false)} />
-        ) : (
-          <Painel
-            titulo="Dados do lead"
-            acao={
-              <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={() => setEditando(true)}>
-                Editar
-              </Botao>
-            }
-          >
-            <dl className="divide-y divide-borda">
-              <Linha rotulo="Nome" valor={ficha.nome ?? ficha.nomePerfil} />
-              <Linha rotulo="Telefone" valor={ficha.telefone} />
-              <Linha rotulo="Cidade" valor={ficha.cidade} />
-              <Linha rotulo="Endereço" valor={ficha.endereco} />
-              <Linha rotulo="Ambientes" valor={ficha.ambientes.join(", ")} />
-              <Linha rotulo="Situação do imóvel" valor={ficha.situacaoImovel} />
-              <Linha rotulo="Prazo" valor={ficha.prazo} />
-              <Linha rotulo="Investimento" valor={ficha.investimento} />
-              <Linha rotulo="Exigências" valor={ficha.exigencias.join("; ")} />
-              <Linha rotulo="Pedidos técnicos" valor={ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null} />
-              <Linha rotulo="Observações" valor={ficha.observacoes} />
-            </dl>
-          </Painel>
-        ),
+      <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await salvar(corpo)) && setEditando(false)} />
+    ) : (
+      <DadosDoLead ficha={ficha} aoEditar={() => setEditando(true)} />
+    ),
     medidas: <Medidas ficha={ficha} aoMudar={aoMudar} />,
   };
   // Janela de agendar visita/apresentação: fica fora da grade.

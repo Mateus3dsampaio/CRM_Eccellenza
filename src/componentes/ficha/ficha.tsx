@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { Archive, ArchiveRestore, ArrowLeft, Download, GripHorizontal, LayoutDashboard, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Download, GripHorizontal, LayoutDashboard, MoreHorizontal, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { ALTURA_LINHA_FICHA, BLOCOS_FICHA, COLUNAS_FICHA, LAYOUT_PADRAO_FICHA, NOMES_BLOCOS, limparLayout, type BlocoFicha, type ItemLayout } from "@/regras/layout-ficha";
 import { formatarDataHora } from "@/regras/tempo";
@@ -14,13 +14,15 @@ import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { COR_ETAPA, juntar } from "../estilos";
-import { Avatar, Botao, Carregando, EstadoErro, Modal, Sino, classeEntrada } from "../ui";
+import { Avatar, Botao, Carregando, EstadoErro, Modal, Popover, Sino, classeEntrada } from "../ui";
+import { useDefinirTituloTela } from "../titulo-tela";
 import { usePode } from "../usuario";
 import { AvisoMidias } from "../midias/aviso-midias";
 import { ConversaConsultor } from "./conversa";
 import { Painel, useBlocosDadosLead } from "./dados-lead";
 
-type Aba = "conversa" | "ficha" | "notas";
+type Aba = "conversa" | "ficha";
+type AbaConversa = "conversa" | "notas" | "historico";
 
 function assinarTela(aviso: () => void) {
   const mq = window.matchMedia("(min-width: 1024px)");
@@ -59,8 +61,43 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   const podeConfigurar = usePode("configurar");
   const nomesEtapas = useNomesEtapas();
   const [aba, setAba] = useState<Aba>("conversa");
+  const [abaConversa, setAbaConversa] = useState<AbaConversa>("conversa");
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
-  const { dados: layoutSalvo, recarregar: recarregarLayout } = useDados<{ layout: ItemLayout[]; personalizado: boolean }>("/api/configuracoes/layout-ficha");
+  const [menuAberto, setMenuAberto] = useState(false);
+  const { dados: layoutSalvo, recarregar: recarregarLayout } = useDados<{ layout: ItemLayout[]; personalizado: boolean; ajustado: boolean }>("/api/configuracoes/layout-ficha");
+  // Layout salvo antes de os blocos mudarem (tarefa 28): avisa uma vez.
+  const avisouAjuste = useRef(false);
+  useEffect(() => {
+    if (layoutSalvo?.ajustado && !avisouAjuste.current) {
+      avisouAjuste.current = true;
+      avisar("O layout salvo da ficha foi ajustado aos blocos novos. Se quiser, personalize e salve de novo.");
+    }
+  }, [layoutSalvo, avisar]);
+
+  // A barra de cima mostra o cliente (tarefa 28): o cabeçalho interno da ficha saiu.
+  useDefinirTituloTela(
+    <>
+      <Link href="/" className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle text-texto-suave hover:bg-superficie" aria-label="Voltar ao kanban">
+        <ArrowLeft className="size-5" aria-hidden />
+      </Link>
+      <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} tamanho="sm" />
+      <div className="min-w-0">
+        <h1 className="flex items-center gap-2 text-base font-semibold leading-tight tracking-tight">
+          <span className="truncate">{ficha.nomeExibicao}</span>
+          {ficha.aguardandoHumano && <Sino />}
+        </h1>
+        <p className="flex flex-wrap items-center gap-x-3 text-xs text-texto-suave">
+          <span>{ficha.telefone}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
+            {nomesEtapas.nome(ficha.etapa)}
+          </span>
+          {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
+        </p>
+      </div>
+    </>,
+    `${ficha.nomeExibicao}|${ficha.telefone}|${ficha.etapa}|${ficha.aguardandoHumano}|${ficha.arquivado}|${nomesEtapas.nome(ficha.etapa)}`,
+  );
   // Rascunho do admin enquanto personaliza (null = não está personalizando).
   const [rascunho, setRascunho] = useState<ItemLayout[] | null>(null);
   const [salvandoLayout, setSalvandoLayout] = useState(false);
@@ -121,18 +158,22 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "conversa", rotulo: "Conversa" },
     { id: "ficha", rotulo: "Ficha" },
-    { id: "notas", rotulo: "Notas" },
   ];
 
+  // Painel da conversa com abas Conversa | Notas | Histórico (tarefa 28): é tudo linha do tempo do mesmo cliente.
+  const abasConversa: { codigo: AbaConversa; rotulo: string }[] = [
+    { codigo: "conversa", rotulo: "Conversa" },
+    { codigo: "notas", rotulo: ficha.notas.length ? `Notas (${ficha.notas.length})` : "Notas" },
+    { codigo: "historico", rotulo: "Histórico" },
+  ];
   const blocos: Record<BlocoFicha, React.ReactNode> = {
     conversa: (
-      <div className="flex h-full min-h-0 flex-col">
-        <ConversaConsultor ficha={ficha} aoMudar={recarregar} />
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        <Abas itens={abasConversa} valor={abaConversa} aoMudar={setAbaConversa} rotuloAria="Conversa, notas e histórico" />
+        {abaConversa === "conversa" ? <ConversaConsultor ficha={ficha} aoMudar={recarregar} /> : abaConversa === "notas" ? <Notas ficha={ficha} aoMudar={recarregar} /> : <Historico ficha={ficha} />}
       </div>
     ),
     ...blocosDados,
-    notas: <Notas ficha={ficha} aoMudar={recarregar} />,
-    historico: <Historico ficha={ficha} />,
   };
 
   const editando = rascunho !== null;
@@ -140,53 +181,69 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link href="/" className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie" aria-label="Voltar ao kanban">
-          <ArrowLeft className="size-5" aria-hidden />
-        </Link>
-        <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} tamanho="lg" />
-        <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            <span className="truncate">{ficha.nomeExibicao}</span>
-            {ficha.aguardandoHumano && <Sino />}
-          </h1>
-          <p className="flex flex-wrap items-center gap-x-3 text-sm text-texto-suave">
-            <span>{ficha.telefone}</span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
-              {nomesEtapas.nome(ficha.etapa)}
-            </span>
-            {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
-          {podeConfigurar && telaGrande && !editando && (
-            <Botao onClick={() => setRascunho(layoutAtual.map((l) => ({ ...l })))} icone={<LayoutDashboard className="size-4" aria-hidden />}>
-              Personalizar layout
-            </Botao>
-          )}
-          {ficha.arquivado ? (
-            <Botao onClick={restaurar} icone={<ArchiveRestore className="size-4" aria-hidden />}>Restaurar</Botao>
-          ) : (
-            <Botao onClick={() => acao({ acao: "arquivar" }, "Lead arquivado.", () => router.push("/"))} icone={<Archive className="size-4" aria-hidden />}>
-              Arquivar
-            </Botao>
-          )}
-          {podeExcluir && (
-            // LGPD: baixa tudo o que o CRM guarda deste cliente. É um link normal; o servidor confere se é admin.
-            <a href={`/api/leads/${ficha.id}/exportar`} download className="tecla inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium" title="Baixar todos os dados deste cliente (LGPD)">
-              <Download className="size-4" aria-hidden />
-              <span className="hidden sm:inline">Exportar dados</span>
-              <span className="sr-only sm:hidden">Exportar dados</span>
-            </a>
-          )}
-          {podeExcluir && (
-            <Botao variante="fantasma" className="text-alerta hover:bg-alerta-suave hover:text-alerta sm:ml-4" onClick={() => setConfirmarExclusao(true)} icone={<Trash2 className="size-4" aria-hidden />}>
-              <span className="hidden sm:inline">Excluir</span>
-              <span className="sr-only sm:hidden">Excluir</span>
-            </Botao>
-          )}
-        </div>
+      {/* Ações: Arquivar à vista; o raro (layout, exportar, excluir) no menu "⋯" (tarefa 28). */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {ficha.arquivado ? (
+          <Botao onClick={restaurar} icone={<ArchiveRestore className="size-4" aria-hidden />}>Restaurar</Botao>
+        ) : (
+          <Botao onClick={() => acao({ acao: "arquivar" }, "Lead arquivado.", () => router.push("/"))} icone={<Archive className="size-4" aria-hidden />}>
+            Arquivar
+          </Botao>
+        )}
+        {(podeConfigurar || podeExcluir) && !editando && (
+          <Popover
+            aberto={menuAberto}
+            aoFechar={() => setMenuAberto(false)}
+            titulo="Mais ações"
+            largura="sm:w-64"
+            gatilho={
+              <button
+                type="button"
+                onClick={() => setMenuAberto((m) => !m)}
+                aria-expanded={menuAberto}
+                aria-haspopup="dialog"
+                aria-label="Mais ações"
+                title="Mais ações"
+                className="tecla inline-flex size-toque items-center justify-center rounded-controle"
+              >
+                <MoreHorizontal className="size-5" aria-hidden />
+              </button>
+            }
+          >
+            <div className="-mt-2 grid gap-0.5">
+              {podeConfigurar && telaGrande && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setRascunho(layoutAtual.map((l) => ({ ...l })));
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+                >
+                  <LayoutDashboard className="size-4 text-texto-suave" aria-hidden /> Personalizar layout
+                </button>
+              )}
+              {podeExcluir && (
+                // LGPD: baixa tudo o que o CRM guarda deste cliente. É um link normal; o servidor confere se é admin.
+                <a href={`/api/leads/${ficha.id}/exportar`} download onClick={() => setMenuAberto(false)} className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-sm hover:bg-superficie-suave" title="Baixar todos os dados deste cliente (LGPD)">
+                  <Download className="size-4 text-texto-suave" aria-hidden /> Exportar dados (LGPD)
+                </a>
+              )}
+              {podeExcluir && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setConfirmarExclusao(true);
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
+                >
+                  <Trash2 className="size-4" aria-hidden /> Excluir de vez
+                </button>
+              )}
+            </div>
+          </Popover>
+        )}
       </div>
 
       {editando && (
@@ -241,15 +298,9 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
           {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{blocos.conversa}</div>}
           {aba === "ficha" && (
             <div className="space-y-4">
-              {(["resumo", "etapa", "visita", "apresentacao", "dados", "medidas"] as const).map((b) => (
+              {(["resumo", "etapa", "compromissos", "dados", "medidas"] as const).map((b) => (
                 <div key={b}>{blocos[b]}</div>
               ))}
-            </div>
-          )}
-          {aba === "notas" && (
-            <div className="space-y-4">
-              {blocos.notas}
-              {blocos.historico}
             </div>
           )}
         </>
