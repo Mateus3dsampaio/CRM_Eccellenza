@@ -351,5 +351,5 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Fora do código
 - `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.
 - Instruções de atendimento: NÃO ficam no projeto. Vêm do repositório de instruções do Mateus e são coladas em Configurações > Instruções de atendimento.
-- `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas).
+- `tarefas/`: tarefas numeradas, uma por vez. 1–4: Bloco 1 (avisos e leads esperando resposta). 5–8: Bloco 2 (acompanhamento de vendas). `tarefas/futuras/`: caderno de melhorias futuras do Mateus, um arquivo por tópico e um índice no `README.md` (sem urgência; fora da numeração).
 - `docs/`: `briefing.md`, `requisitos.md`, `design.md`, `rodadas/` (relatórios), `referencia/` (modelos HTML de layout e interação, só para consulta). `.claude/agents` e `.claude/skills`: revisores e comandos.

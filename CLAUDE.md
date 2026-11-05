@@ -34,6 +34,10 @@ Leia antes de qualquer trabalho: `docs/briefing.md`, `docs/requisitos.md` e `doc
 - Cada rodada gera um relatório em `docs/rodadas/NN-descricao.md`.
 - Revisores ativos na etapa 1: `revisor-requisitos`, `revisor-codigo`, `revisor-design`, `cliente-simulado`. O `diretor-de-arte` entra só na etapa 2 (layout), quando o Mateus liberar.
 
+## Melhorias futuras
+- Ideias sem urgência ficam em `tarefas/futuras/`, **um tópico por arquivo**, com índice em `tarefas/futuras/README.md`. Não misturar com as tarefas numeradas.
+- Quando o Mateus pedir para ver as melhorias futuras: leia o `README.md`, **mostre só a lista de tópicos** para ele escolher e, depois da escolha, abra o tópico inteiro e trabalhe uma etapa por vez, marcando `[x]` no arquivo. Ideia nova: pergunte se é tópico novo ou entra num existente, e registre lá.
+
 ## Produção (Railway + WhatsApp Meta)
 - **Pendências abertas: `docs/pendencias.md`** (o que falta do Mateus, do Claude e o que nunca foi testado). Leia no começo de cada sessão e atualize ao concluir algo.
 - Código pronto; falta só o Mateus criar as contas e colar as variáveis. Guia: `docs/colocar-no-ar.md`. **Chaves da Meta, `DATABASE_URL`, `CHAVE_MESTRA` e senhas só existem como variáveis de ambiente**; nunca em arquivo versionado nem em log. As chaves de API do Claude e da OpenAI podem também ser coladas em Configurações > Chaves de API (decisão do Mateus 03/11/2026): ficam no banco criptografadas com a `CHAVE_MESTRA`, a da tela vale mais que a variável, e nunca voltam inteiras para a tela nem vão para log.
