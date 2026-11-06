@@ -1,12 +1,14 @@
 "use client";
 
-import { CalendarClock, HardDrive, UserCheck, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
+import { CalendarClock, HardDrive, MessageSquareReply, UserCheck, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { Pilula } from "../entalhe/pilula";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
+import { MODELOS } from "@/regras/modelos";
 import type { RegrasPresenca } from "@/regras/presenca";
+import type { RegrasRetorno } from "@/regras/retorno-fechada";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
@@ -28,6 +30,7 @@ interface Dados {
   prazosEspera: PrazosEspera;
   regrasAgenda: RegrasAgenda;
   regrasPresenca: RegrasPresenca;
+  regrasRetorno: RegrasRetorno;
   periodoExportacao: { de: string; ate: string };
 }
 
@@ -169,6 +172,8 @@ function ConfiguracoesComBarra() {
             <RegrasDaAgenda regras={dados.regrasAgenda} aoSalvar={(r) => chamar("/api/configuracoes/agenda", "PUT", r, "Regras da agenda salvas.")} />
 
             <PresencaEFila regras={dados.regrasPresenca} aoSalvar={(r) => chamar("/api/configuracoes/presenca", "PUT", r, "Presença e fila salvos.")} />
+
+            <RetornoComLojaFechada regras={dados.regrasRetorno} aoSalvar={(r) => chamar("/api/configuracoes/retorno-fechada", "PUT", r, "Retorno com a loja fechada salvo.")} />
 
             <section className="rounded-painel border border-dashed border-borda-forte bg-superficie p-4 opacity-80">
               <LayoutDashboard className="mb-2 size-5 text-texto-suave" aria-hidden />
@@ -362,6 +367,59 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
               </select>
             </label>
           </div>
+        </div>
+      </div>
+      {salvando && <p className="mt-3 text-xs text-texto-fraco">Salvando...</p>}
+    </section>
+  );
+}
+
+/** Cartão "Retorno com a loja fechada" (tarefa 36). O horário da loja, o texto do modelo e "só envia com dono online" são fixos. */
+function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; aoSalvar: (r: RegrasRetorno) => Promise<void> }) {
+  const [rascunho, setRascunho] = useState<RegrasRetorno>(regras);
+  const [salvando, setSalvando] = useState(false);
+  const mudou = JSON.stringify(rascunho) !== JSON.stringify(regras);
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await aoSalvar(rascunho);
+    } finally {
+      setSalvando(false);
+    }
+  }
+  useBlocoSalvavel("retorno-fechada", { mudou, salvar, descartar: () => setRascunho(regras) });
+
+  return (
+    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <MessageSquareReply className="size-4 text-texto-suave" aria-hidden /> Retorno com a loja fechada
+      </h2>
+      <p className="mb-3 text-sm text-texto-suave">
+        Cliente que chega com a loja fechada tem a janela de 24h da Meta fechada antes de a loja abrir. No horário do retorno marcado pelo bot, sai um modelo aprovado, só se o lead tiver dono online (senão passa para quem está online; se ninguém estiver, o modelo espera e todos recebem aviso).
+      </p>
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={rascunho.automatico} onChange={(e) => setRascunho((r) => ({ ...r, automatico: e.target.checked }))} />
+          Enviar o modelo de retorno automaticamente
+        </label>
+        {!rascunho.automatico && <p className="pl-6 text-xs text-texto-suave">Desligado: o vendedor recebe o aviso do retorno e envia o modelo pela conversa.</p>}
+        <div className={juntar("space-y-2 pl-6", !rascunho.automatico && "opacity-50")}>
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="w-56">Qual modelo usar</span>
+            <select disabled={!rascunho.automatico} aria-label="Qual modelo usar" value={rascunho.modelo} onChange={(e) => setRascunho((r) => ({ ...r, modelo: e.target.value }))} className={juntar(classeEntrada, "w-72")}>
+              {MODELOS.map((m) => (
+                <option key={m.codigo} value={m.codigo}>
+                  {m.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="w-56">Sem horário escolhido pelo cliente, enviar</span>
+            <input type="number" inputMode="numeric" min={0} max={240} disabled={!rascunho.automatico} aria-label="Minutos depois da abertura" value={rascunho.semHorarioMin} onChange={(e) => setRascunho((r) => ({ ...r, semHorarioMin: Number(e.target.value) }))} className={juntar(classeEntrada, "w-24")} />
+            min depois da abertura
+          </label>
         </div>
       </div>
       {salvando && <p className="mt-3 text-xs text-texto-fraco">Salvando...</p>}

@@ -8,7 +8,11 @@ import { registrarAlteracao } from "@/servicos/historico";
 import { escolherProximoConsultor } from "@/servicos/distribuicao";
 import { alterarEtiqueta, atualizarCampos, atualizarResumo, moverEtapa } from "@/servicos/leads";
 import { registrarUmaVez } from "@/servicos/metricas";
-import { esquemaCampos, esquemaClassificar, esquemaMedidas, esquemaPassar } from "./ferramentas";
+import { horarioDoRetorno } from "@/regras/retorno-fechada";
+import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
+import { dataLocal, formatarDataHora } from "@/regras/tempo";
+import { regrasDaAgenda, regrasDeRetorno } from "@/servicos/configuracoes";
+import { esquemaCampos, esquemaClassificar, esquemaMedidas, esquemaPassar, esquemaRetorno } from "./ferramentas";
 
 export interface ResultadoFerramenta {
   conteudo: string;
@@ -63,6 +67,28 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         await atualizarResumo(leadId);
         await marcarMudanca();
         return { conteudo: "Medidas gravadas com origem \"informada pelo cliente\"." };
+      }
+
+      case "registrar_retorno": {
+        const { quando: pedidoTexto, nota } = esquemaRetorno.parse(entrada);
+        const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
+        if (lead.arquivadoEm || !ETAPAS_COM_RETORNO.includes(lead.etapa as (typeof ETAPAS_COM_RETORNO)[number])) return { conteudo: "Este lead não aceita retorno agora.", erro: true };
+        const agoraData = await agora();
+        // Retorno já marcado (por uma pessoa ou antes): não sobrescreve. Só guarda a nota se ainda não havia nenhuma.
+        if (lead.proximoContatoEm && lead.proximoContatoEm.getTime() > agoraData.getTime()) {
+          if (!lead.lembreteNota) await db.lead.update({ where: { id: leadId }, data: { lembreteNota: nota } });
+          await registrarAlteracao(leadId, "bot", `Anotou para o retorno: ${nota} (o retorno já marcado foi mantido)`);
+          await marcarMudanca();
+          return { conteudo: `Já existe um retorno marcado para ${formatarDataHora(lead.proximoContatoEm)}. Mantive esse horário e guardei sua nota.` };
+        }
+        const m = pedidoTexto?.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
+        const pedido = m ? dataLocal(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5])) : null;
+        const { quando, usouPadrao } = horarioDoRetorno(pedido, agoraData, await regrasDeRetorno(), await regrasDaAgenda());
+        // retornoModeloEm: o envio automático do modelo só vale para este horário (se uma pessoa mudar a data, deixa de valer).
+        await db.lead.update({ where: { id: leadId }, data: { proximoContatoEm: quando, lembreteNota: nota, retornoModeloEm: quando } });
+        await registrarAlteracao(leadId, "bot", `Marcou retorno para ${formatarDataHora(quando)}${usouPadrao ? " (horário da reabertura da loja)" : ""}: ${nota}`);
+        await marcarMudanca();
+        return { conteudo: `Retorno marcado para ${formatarDataHora(quando)}${usouPadrao ? " (horário pedido indisponível: usei a reabertura da loja)" : ""}. Confirme esse horário ao cliente.` };
       }
 
       case "passar_para_consultor": {

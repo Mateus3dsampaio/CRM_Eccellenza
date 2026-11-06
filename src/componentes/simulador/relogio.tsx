@@ -57,7 +57,7 @@ export function Relogio() {
       </div>
       <div className="grid grid-cols-3 gap-2">
         {PASSOS.map((p) => (
-          <Botao key={p.horas} onClick={() => (p.horas >= LIMITE_SALTO_GRANDE_HORAS ? setConfirmar(p) : mudar(p.minutos ? { minutos: p.minutos } : { horas: p.horas }))} disabled={ocupado} className="whitespace-nowrap px-2">
+          <Botao key={p.rotulo} onClick={() => (p.horas >= LIMITE_SALTO_GRANDE_HORAS ? setConfirmar(p) : mudar(p.minutos ? { minutos: p.minutos } : { horas: p.horas }))} disabled={ocupado} className="whitespace-nowrap px-2">
             {p.rotulo}
           </Botao>
         ))}

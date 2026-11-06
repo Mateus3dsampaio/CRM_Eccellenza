@@ -26,6 +26,11 @@ function normalizar(texto: string): string {
     .trim();
 }
 
+/** Toque no botão "Não tenho interesse" do modelo de retorno: vale como PARAR. Só para mensagem que veio de botão (texto digitado não conta). */
+export function recusouPeloBotao(texto: string | null | undefined): boolean {
+  return !!texto && normalizar(texto) === "nao tenho interesse";
+}
+
 export function pediuParaParar(texto: string | null | undefined): boolean {
   if (!texto) return false;
   return PEDIDOS.includes(normalizar(texto));

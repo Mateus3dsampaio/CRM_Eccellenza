@@ -188,7 +188,7 @@ async function aplicarMensagem(m: MensagemRecebida) {
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
     try {
-      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, midia, idExterno: m.idExterno, waId: m.telefone });
+      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, midia, idExterno: m.idExterno, waId: m.telefone, botao: m.tipo === "button" || m.tipo === "interactive" });
       await registrarLogWebhook("mensagem", `Mensagem (${m.tipo}) de …${fim(m.telefone)} recebida`);
       return;
     } catch (erro) {

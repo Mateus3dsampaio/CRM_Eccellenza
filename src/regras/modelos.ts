@@ -1,6 +1,18 @@
 // Modelos de mensagem (MSG-02). Textos aprovados pelo Mateus em 05/11/2026 (com o aviso "Responda PARAR").
 // Na Meta o modelo precisa ter o MESMO nome (código) e o MESMO texto, sem variáveis, em pt_BR.
-export const MODELOS = [
+export interface Modelo {
+  codigo: string;
+  nome: string;
+  texto: string;
+  /** Botões de resposta rápida (cadastrados na Meta junto com o modelo; o envio não leva nada a mais). */
+  botoes?: readonly string[];
+}
+
+export const BOTAO_CONTINUAR = "Quero continuar";
+/** Tocar neste botão vale como PARAR (regras/optout.ts). */
+export const BOTAO_SEM_INTERESSE = "Não tenho interesse";
+
+export const MODELOS: readonly Modelo[] = [
   {
     codigo: "retomada",
     nome: "Retomada de atendimento",
@@ -17,9 +29,17 @@ export const MODELOS = [
     nome: "Lembrete de visita",
     texto: "Olá! Passando para lembrar da sua visita à Eccellenza. Se precisar remarcar, é só responder por aqui. Responda PARAR para não receber mais mensagens.",
   },
-] as const;
+  {
+    // Aprovado pelo Mateus em 06/11/2026. Cadastrar na Meta com os dois botões de resposta rápida, mesmo código e mesmo texto.
+    codigo: "retorno_atendimento",
+    nome: "Retorno de atendimento (loja estava fechada)",
+    texto:
+      "Olá! Aqui é da Eccellenza Móveis Planejados. Recebemos seu contato fora do nosso horário e agora já podemos continuar o atendimento do seu projeto. Podemos seguir? Responda PARAR para não receber mais mensagens.",
+    botoes: [BOTAO_CONTINUAR, BOTAO_SEM_INTERESSE],
+  },
+];
 
-export type CodigoModelo = (typeof MODELOS)[number]["codigo"];
+export type CodigoModelo = string;
 
 export function buscarModelo(codigo: string) {
   return MODELOS.find((m) => m.codigo === codigo) ?? null;

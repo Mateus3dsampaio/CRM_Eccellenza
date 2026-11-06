@@ -13,6 +13,7 @@ import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
 import { rodarPresenca } from "./presenca";
+import { enviarRetornosAutomaticos } from "./retorno-fechada";
 import { garantirMotivoParouDeResponder } from "./vendas";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
@@ -109,6 +110,13 @@ async function executar(): Promise<ResultadoRotinas> {
     await rodarPresenca();
   } catch (erro) {
     console.error("[rotinas] presença falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
+
+  // Retorno do lead que chegou com a loja fechada (tarefa 36): o modelo sai no horário, só com dono online.
+  try {
+    await enviarRetornosAutomaticos();
+  } catch (erro) {
+    console.error("[rotinas] retorno automático falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
   // O relógio simulado pode ter andado: confere os prazos de espera.

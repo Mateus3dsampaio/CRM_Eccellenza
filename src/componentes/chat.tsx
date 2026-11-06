@@ -19,13 +19,15 @@ export interface MensagemChat {
   enviadaEm: string;
   status: string | null;
   modelo?: string | null;
+  /** Botões de resposta rápida do modelo (só na conversa do simulador, onde o cliente pode tocar). */
+  botoes?: readonly string[] | null;
 }
 
 /**
  * Lista de mensagens estilo WhatsApp.
  * lado "loja": cliente à esquerda, loja à direita (ficha). lado "cliente": o contrário (simulador).
  */
-export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean; aoApagarMidia?: (mensagemId: string) => void }) {
+export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTocarBotao }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean; aoApagarMidia?: (mensagemId: string) => void; aoTocarBotao?: (texto: string) => void }) {
   const fim = useRef<HTMLDivElement>(null);
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "end" });
@@ -62,6 +64,16 @@ export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia }: { 
                 )}
                 {m.midia && <MidiaDaMensagem m={m} aoApagar={aoApagarMidia} />}
                 {m.texto && <p className="whitespace-pre-wrap break-words">{m.texto}</p>}
+                {/* Botões de resposta rápida: só o do último movimento da conversa (depois que o cliente responde, somem). */}
+                {aoTocarBotao && m.botoes && i === mensagens.length - 1 && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    {m.botoes.map((b) => (
+                      <button key={b} type="button" onClick={() => aoTocarBotao(b)} className="min-h-toque rounded-controle border border-borda bg-superficie px-3 text-sm font-medium text-marca-texto hover:bg-superficie-suave">
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-texto-fraco">
                   {formatarHora(data)}
                   {daLoja && <StatusMensagem status={m.status} />}

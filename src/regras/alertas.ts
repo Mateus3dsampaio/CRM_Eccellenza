@@ -1,6 +1,6 @@
 // Avisos para quem atende (Bloco 1, tarefa 3): textos, título da aba e preferências. Só regra, sem banco.
 
-export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada" | "prazo_vermelho" | "retorno" | "decisao_vencida" | "ausencia" | "compromisso_cedo";
+export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada" | "prazo_vermelho" | "retorno" | "decisao_vencida" | "ausencia" | "compromisso_cedo" | "retorno_sem_online";
 
 export interface AlertaTela {
   id: number;
@@ -51,6 +51,8 @@ export function textoDoAlerta(a: Pick<AlertaTela, "tipo" | "leadNome" | "consult
     case "ausencia":
       // Para `ausencia`, `leadId` guarda o id do vendedor ausente e `leadNome` o nome dele.
       return { titulo: `${a.leadNome} não ficou online`, corpo: `Tem hoje: ${a.texto ?? "compromissos"}.` };
+    case "retorno_sem_online":
+      return { titulo: `${a.leadNome} aguarda o modelo de retorno`, corpo: "Ninguém está online para assumir o lead. O modelo sai assim que alguém ficar online." };
     case "compromisso_cedo":
       return { titulo: `${a.consultorNome ?? "O vendedor"} não está online`, corpo: `${a.texto ?? "Compromisso cedo"} com ${a.leadNome}.` };
     case "visita_marcada":
@@ -78,6 +80,8 @@ export function textoDoGrupo(tipo: TipoAlerta, total: number): string {
       return `${total} vendedores não ficaram online e têm compromissos hoje`;
     case "compromisso_cedo":
       return `${total} compromissos cedo sem vendedor online`;
+    case "retorno_sem_online":
+      return `${total} retornos esperando alguém ficar online`;
   }
 }
 

@@ -1,6 +1,6 @@
 # Tarefa 36 – Retorno do lead que chega com a loja fechada (janela de 24h)
 
-Decidida com o Mateus em 06/11/2026. **Status: a fazer.** Depende da **tarefa 35** (presença e fila).
+Decidida com o Mateus em 06/11/2026. **Status: feita (06/11/2026); falta o Mateus aprovar o texto do Manual do CRM e cadastrar o modelo na Meta.** Depende da **tarefa 35** (presença e fila).
 
 ## Problema
 Lead que chega com a loja fechada (ex.: sábado 15h) tem a janela de 24h da Meta fechada antes de a loja abrir (segunda 8h). Depois disso só sai modelo aprovado. Vale para fim de semana e para noites de dia de semana (18h às 8h).
@@ -35,15 +35,15 @@ Lead que chega com a loja fechada (ex.: sábado 15h) tem a janela de 24h da Meta
 **Fixo, sem opção na tela** (decisão 06/11/2026): horário da loja (vem da agenda), texto do modelo (a Meta exige o texto aprovado), "só envia com dono online" (proteção).
 
 ## Etapas
-1. [ ] Data/hora e situação da loja no prompt do bot (reaproveitar a regra de loja aberta/fechada da tarefa 35).
-2. [ ] Ferramenta `registrar_retorno` em `src/bot/ferramentas.ts` + executor + validação. Testes.
-3. [ ] **Propor ao Mateus** o parágrafo do Manual do CRM sobre `registrar_retorno` e aplicar só depois da aprovação.
-4. [ ] Modelo com botões: `regras/modelos.ts`, envio em `servicos/whatsapp.ts`, recebimento do toque no webhook, "Não tenho interesse" como opt-out.
-5. [ ] Rotina do retorno automático (janela fechada + dono online + consentimento + sem opt-out), com as regras do item 3.
-6. [ ] Cartão "Retorno com a loja fechada" nas Configurações.
-7. [ ] Simulador: botões do modelo clicáveis na tela do cliente simulado; testar sábado 15h → segunda.
-8. [ ] Atualizar `docs/mapa-do-codigo.md`, `docs/pendencias.md` (incluir "cadastrar o modelo na Meta" como pendência do Mateus).
-9. [ ] Testes (`npm run tipos`, `npm run lint`, `npm test`) e conversa de teste com o `cliente-simulado`.
+1. [x] Data/hora e situação da loja no prompt do bot (vai no aviso `<sistema>` de cada turno, e não no prompt fixo, para não perder o cache do prompt) (reaproveitar a regra de loja aberta/fechada da tarefa 35).
+2. [x] Ferramenta `registrar_retorno` em `src/bot/ferramentas.ts` + executor + validação. Testes.
+3. [ ] **Propor ao Mateus** (proposta feita no chat em 06/11/2026; falta a aprovação e aplicar na tela) o parágrafo do Manual do CRM sobre `registrar_retorno` e aplicar só depois da aprovação.
+4. [x] Modelo com botões: `regras/modelos.ts`, envio em `servicos/whatsapp.ts`, recebimento do toque no webhook, "Não tenho interesse" como opt-out.
+5. [x] Rotina do retorno automático (janela fechada + dono online + consentimento + sem opt-out), com as regras do item 3.
+6. [x] Cartão "Retorno com a loja fechada" nas Configurações.
+7. [x] Simulador: botões do modelo clicáveis na tela do cliente simulado; testar sábado 15h → segunda.
+8. [x] Atualizar `docs/mapa-do-codigo.md`, `docs/pendencias.md` (incluir "cadastrar o modelo na Meta" como pendência do Mateus).
+9. [x] Testes (`npm run tipos`, `npm run lint`, `npm test`) e conversa de teste com o `cliente-simulado` (esta não foi feita: precisa da chave da API).
 
 ## O que fica com o Mateus
 - Incluir nas **instruções numeradas** (repositório dele): "com a loja fechada, avise quando reabre e pergunte o melhor horário para o consultor chamar".

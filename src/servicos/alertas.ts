@@ -17,7 +17,7 @@ const LIMITE_POR_CONSULTA = 50;
  * Guarda um aviso para quem atende. O dono é o consultor do lead nesta hora; sem dono, só o admin recebe.
  * Quem chama já vai marcar a mudança (as telas então buscam os avisos novos).
  */
-export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string; texto?: string | null }): Promise<void> {
+export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string; texto?: string | null; paraTodos?: boolean }): Promise<void> {
   const lead = await db.lead.findUnique({ where: { id: params.leadId }, include: { consultor: { select: { id: true, nome: true } } } });
   if (!lead) return;
   const quando = await agora();
@@ -29,6 +29,7 @@ export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string
       consultorId: lead.consultor?.id ?? null,
       consultorNome: lead.consultor?.nome ?? null,
       texto: params.texto ?? null,
+      paraTodos: params.paraTodos ?? false,
       criadoEm: quando,
     },
   });

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
 import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
+import { REGRAS_RETORNO_PADRAO, completarRegrasRetorno, validarRegrasRetorno, type RegrasRetorno } from "@/regras/retorno-fechada";
 import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
@@ -84,5 +85,26 @@ export async function definirRegrasDePresenca(regras: RegrasPresenca): Promise<v
   const erro = validarRegrasPresenca(regras);
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_PRESENCA, JSON.stringify(regras));
+  await marcarMudanca();
+}
+
+const CHAVE_RETORNO = "retorno_fechada";
+
+/** Regras do retorno com a loja fechada (tarefa 36). Sem valor (ou inválido) vale o padrão decidido com o Mateus. */
+export async function regrasDeRetorno(): Promise<RegrasRetorno> {
+  const bruto = await lerConfig(CHAVE_RETORNO);
+  if (!bruto) return REGRAS_RETORNO_PADRAO;
+  try {
+    const r = completarRegrasRetorno(JSON.parse(bruto) as Partial<RegrasRetorno>);
+    return validarRegrasRetorno(r) === null ? r : REGRAS_RETORNO_PADRAO;
+  } catch {
+    return REGRAS_RETORNO_PADRAO;
+  }
+}
+
+export async function definirRegrasDeRetorno(regras: RegrasRetorno): Promise<void> {
+  const erro = validarRegrasRetorno(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_RETORNO, JSON.stringify(regras));
   await marcarMudanca();
 }

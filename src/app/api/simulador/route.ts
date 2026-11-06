@@ -8,6 +8,7 @@ import { tipoDoArquivo } from "@/regras/midia";
 import { normalizarTelefone } from "@/regras/telefone";
 import { nomeExibicao } from "@/servicos/consultas";
 import { ErroConversa, receberMensagemCliente } from "@/servicos/conversa";
+import { buscarModelo } from "@/regras/modelos";
 import { marcarLidas, statusEfetivo } from "@/servicos/mensagens";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export const GET = rota(async (req: Request) => {
       mensagens: mensagens
         // Mensagens que falharam nunca chegam ao cliente.
         .filter((m) => m.status !== "falhou")
-        .map((m) => ({ id: m.id, autor: m.autor, texto: m.texto, midia: m.midiaArquivo, midiaTipo: m.midiaTipo, midiaNome: m.midiaNome, midiaBytes: m.midiaBytes, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando) })),
+        .map((m) => ({ id: m.id, autor: m.autor, texto: m.texto, midia: m.midiaArquivo, midiaTipo: m.midiaTipo, midiaNome: m.midiaNome, midiaBytes: m.midiaBytes, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando), botoes: m.modelo ? (buscarModelo(m.modelo)?.botoes ?? null) : null })),
     },
   };
 });
@@ -56,6 +57,7 @@ export const POST = rota(async (req: Request) => {
       telefone: String(form.get("telefone") ?? ""),
       nomePerfil: String(form.get("nome") ?? "") || null,
       texto: String(form.get("texto") ?? ""),
+      botao: form.get("botao") === "1",
       midia,
     });
   } catch (erro) {

@@ -6,7 +6,9 @@ import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { avaliarLimiteDoBot } from "@/regras/limite-bot";
 import { descricaoDoTipo } from "@/regras/midia";
+import { situacaoDaLoja } from "@/regras/presenca";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
+import { regrasDaAgenda } from "@/servicos/configuracoes";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
@@ -103,7 +105,7 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
   });
   const quando = await agora();
   const blocos: BlocoEntrada[] = [];
-  const contexto = [`Agora: ${formatarDiaSemana(quando)} ${formatarDataHora(quando)} (horário de Fortaleza).`];
+  const contexto = [`Agora: ${formatarDiaSemana(quando)} ${formatarDataHora(quando)} (horário de Fortaleza).`, `Situação da loja (${situacaoDaLoja(quando, await regrasDaAgenda())}).`];
   if (primeiraVez) contexto.push(`Nome do perfil do cliente no WhatsApp: ${lead.nomePerfil ? escapar(lead.nomePerfil) : "(sem nome)"}.`);
   blocos.push({ type: "text", text: `<sistema>${contexto.join(" ")}</sistema>` });
 

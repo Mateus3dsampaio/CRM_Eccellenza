@@ -59,6 +59,7 @@ model Lead {
   valorFechado      Int?
   motivoPerda       String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
   concorrente       String? // nome, quando o motivo é "concorrente"
+  retornoModeloEm   DateTime? // retorno marcado pelo bot com a loja fechada (tarefa 36): vale para o envio automático do modelo só enquanto for igual a proximoContatoEm
   alertaContatoPara DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
   alertaDecisaoEm   DateTime? // último aviso de decisão vencida (data vencida sem decisão do vendedor): um aviso por dia enquanto não decidir
 

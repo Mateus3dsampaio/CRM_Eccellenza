@@ -114,3 +114,32 @@ export function resumirItensDoDia(itens: ItemDoDia[]): string {
   if (retornos) partes.push(`${retornos} ${retornos === 1 ? "retorno" : "retornos"}`);
   return partes.join(", ");
 }
+
+/** Próxima abertura da loja depois de `instante` (hoje, se ainda não abriu; senão o próximo dia aberto). */
+export function proximaAbertura(instante: Date, agenda: RegrasAgenda = REGRAS_AGENDA_PADRAO): Date {
+  let dia = inicioDoDiaLocal(instante);
+  for (let i = 0; i < 9; i++, dia = new Date(dia.getTime() + DIA)) {
+    const e = expedienteDoDia(new Date(dia.getTime() + 12 * 60 * MINUTO), agenda);
+    if (e && e.abre.getTime() > instante.getTime()) return e.abre;
+  }
+  return instante;
+}
+
+const DIAS_SEMANA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/** Data e hora de Fortaleza no formato do prompt do bot: "sábado 07/11 15:20". */
+function dataHoraCurta(d: Date): string {
+  const p = partesLocais(d);
+  const dois = (n: number) => String(n).padStart(2, "0");
+  return `${DIAS_SEMANA[p.diaSemana]} ${dois(p.dia)}/${dois(p.mes)} ${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
+/** Frase que o bot lê (tarefa 36): "agora: sábado 07/11 15:20; loja fechada; reabre segunda 09/11 08:00". */
+export function situacaoDaLoja(instante: Date, agenda: RegrasAgenda = REGRAS_AGENDA_PADRAO): string {
+  const agora = `agora: ${dataHoraCurta(instante)}`;
+  if (lojaAberta(instante, agenda)) {
+    const e = expedienteDoDia(instante, agenda) as { fecha: Date };
+    return `${agora}; loja aberta; fecha hoje às ${dataHoraCurta(e.fecha).slice(-5)}`;
+  }
+  return `${agora}; loja fechada; reabre ${dataHoraCurta(proximaAbertura(instante, agenda))}`;
+}

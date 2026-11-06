@@ -34,6 +34,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Avisos (som, notificação do navegador, número na aba) | Quando nasce o aviso: `src/servicos/alertas.ts` (chamado por `mensagens`, `agenda` e `bot/executor`). Texto: `src/regras/alertas.ts`. Tela: `src/componentes/alertas/` |
 | Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
+| Retorno do lead que chegou com a loja fechada (tarefa 36: bot grava o retorno com `registrar_retorno`, modelo `retorno_atendimento` com botões sai sozinho no horário, só com dono online; ajustes em Configurações > Geral > Retorno com a loja fechada) | Regra: `src/regras/retorno-fechada.ts` (+ `proximaAbertura` e `situacaoDaLoja` em `regras/presenca.ts`). Ferramenta: `src/bot/ferramentas.ts` + `src/bot/executor.ts`. Rotina: `src/servicos/retorno-fechada.ts` (chamada por `rotinas.ts`). Modelo e botões: `src/regras/modelos.ts`; toque no botão: `servicos/conversa.ts` (`botao`) + `regras/optout.ts`. Cartão: `RetornoComLojaFechada` em `configuracoes.tsx` |
 | Presença dos vendedores e fila da loja fechada (tarefa 35: offline no fechamento, "Ficar online", fila repartida X min depois da abertura, aviso de quem não ficou online com compromisso, "Passar os de hoje"; ajustes em Configurações > Geral > Presença e fila) | Regra: `src/regras/presenca.ts` (horário vem de `regras/agenda.ts`). Rotinas e transferência: `src/servicos/presenca.ts` (chamada por `rotinas.ts`). Cartão: `PresencaEFila` em `src/componentes/configuracoes/configuracoes.tsx`. Botões: `src/componentes/presenca.tsx`. Janela: `src/componentes/equipe/passar-hoje.tsx` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Abas, filtros de uma opção só, animação do menu | `src/componentes/entalhe/` (`Abas` para abas, com a pílula elástica; `Entalhe` para o menu). Toda aba nova usa `Abas` |
@@ -59,7 +60,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Tabela | Guarda |
 |---|---|
 | `Usuario` | Admin e consultores (perfil, status online/almoço/offline; offline = não recebe lead, vira sozinho no fechamento da loja) |
-| `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
+| `Lead` | Ficha do cliente (inclui, nas vendas: `retornoModeloEm` (retorno marcado pelo bot com a loja fechada; vale para o envio automático do modelo só enquanto for igual a `proximoContatoEm`), `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
@@ -120,6 +121,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
 | `src/app/api/equipe/status/route.ts` | Consultor online/almoço/offline. Só volta quando ele (ou o admin) clica; offline sozinho só no fechamento da loja (rotina de presença) | `distribuicao` |
 | `src/app/api/equipe/passar-hoje/route.ts` | GET: o que o vendedor ausente tem hoje e para quem dá para passar. POST: passar os leads e compromissos de hoje (qualquer logado; vai na ficha com o nome de quem passou) | `presenca` |
+| `src/app/api/configuracoes/retorno-fechada/route.ts` | Gravar as regras do retorno com a loja fechada (só admin) | `configuracoes` |
 | `src/app/api/configuracoes/presenca/route.ts` | Gravar as regras de presença e fila (só admin) | `configuracoes` |
 | `src/app/api/configuracoes/usuarios/route.ts` | Criar usuário (só admin) | `usuarios` |
 | `src/app/api/configuracoes/usuarios/[id]/route.ts` | Editar nome/perfil, redefinir senha, desativar/reativar (desativar consultor com leads exige `transferirPara`). Só admin | `usuarios` |
@@ -178,6 +180,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
 | `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Parou de responder" (Perdido), limpeza de arquivados (30 dias; quem está em Fechado espera 180 dias) e exclusão de clientes que fecharam 180 dias depois do fechamento (com registro LGPD), limpeza de logs antigos, relógio (também confere os prazos vermelhos) |
+| `src/servicos/retorno-fechada.ts` | Rotina do retorno automático: no horário do retorno marcado pelo bot (`Lead.retornoModeloEm` igual a `proximoContatoEm`), com a janela de 24h fechada, envia o modelo; só com dono online (senão passa para quem está online; ninguém online: espera e avisa todos `retorno_sem_online`); nunca para quem pediu parar |
 | `src/servicos/presenca.ts` | Rotinas de presença (a cada minuto, com marca por fechamento/abertura para não repetir): offline no fechamento, repartir a fila, verificar presença (aviso `ausencia`), aviso de compromisso cedo; `passarOsDeHoje` (leads com compromisso ou retorno hoje + visitas de hoje; horário ocupado do destino fica de fora) e `resumoDeHoje` |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), status "entregue"/"lido" que chega antes da mensagem estar gravada fica pendente e é reaplicado (2 s, 10 s, 1 min, depois a rotina), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
@@ -201,6 +204,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
+| `src/regras/retorno-fechada.ts` | Retorno com a loja fechada: regras (padrão, validação) e `horarioDoRetorno` (horário pedido só vale no futuro e com a loja aberta; senão reabertura + X min) |
 | `src/regras/presenca.ts` | Presença e fila da loja fechada: regras (padrão, validação), loja aberta/fechada pela agenda, último fechamento, abertura atual, horários de repartir e verificar, `filaPodeSerEntregue`, `leadNovoPodeTerDono`, resumo dos itens do dia |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
@@ -229,7 +233,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
 | `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
-| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação. O bot não agenda (sem ferramenta de horários/agendamento) |
+| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação (inclui `registrar_retorno`, tarefa 36). O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
 | `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente |
 
@@ -343,6 +347,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
 | `testes/unit/provedor-gpt.test.ts` | GPT como IA do texto: conversão de histórico/ferramentas/resposta, bot com a OpenAI simulada, troca de provedor |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
+| `testes/unit/retorno-fechada.test.ts` | Retorno com a loja fechada: próxima abertura, situação da loja para o bot, horário do retorno, `registrar_retorno`, modelo com botões, botão como PARAR, rotina (dono online, passa para quem está online, ninguém online, nunca parar/janela aberta/desligado) |
 | `testes/unit/presenca.test.ts` | Presença: regras puras (loja aberta, fechamento, fila), offline no fechamento, lead sem dono fora do horário, repartir a fila, verificação e aviso de ausência (todos/só admin), compromisso cedo, passar os de hoje |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
@@ -356,6 +361,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/ajuda.ts` | Limpar banco, criar consultores de teste e um roteiro de EXEMPLO para os testes do bot (não é o que o bot usa) |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
 | `testes/e2e/telas.spec.ts` | Telas no computador e no celular, com prints |
+| `testes/e2e/presenca-retorno.spec.ts` | Telas das tarefas 35 e 36 (só no computador): botões online/offline do consultor, cartões Presença e fila e Retorno com a loja fechada, "Passar os de hoje" na Equipe, botões do modelo de retorno no simulador e "Não tenho interesse" como parar |
 
 ## Fora do código
 - `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.
