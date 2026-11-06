@@ -1,11 +1,15 @@
 import { db } from "@/lib/db";
+import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { escolherConsultor, type StatusConsultor } from "@/regras/distribuicao";
-import { CHAVE_ULTIMO_RODIZIO, gravarConfig, lerConfig, modoDistribuicao } from "./configuracoes";
+import { filaPodeSerEntregue, leadNovoPodeTerDono } from "@/regras/presenca";
+import { CHAVE_ULTIMO_RODIZIO, gravarConfig, lerConfig, modoDistribuicao, regrasDaAgenda, regrasDePresenca } from "./configuracoes";
 import { registrarAlteracao } from "./historico";
 
 /** Escolhe quem recebe o próximo lead e, no rodízio, guarda quem foi. Sem consultor online: null. */
 export async function escolherProximoConsultor(): Promise<string | null> {
+  // Loja fechada: o lead é atendido pelo bot e fica na fila, sem dono (tarefa 35).
+  if (!leadNovoPodeTerDono(await agora(), await regrasDePresenca(), await regrasDaAgenda())) return null;
   const consultores = await db.usuario.findMany({
     where: { perfil: "consultor", ativo: true },
     orderBy: [{ criadoEm: "asc" }, { nome: "asc" }],
@@ -30,8 +34,12 @@ export function leadsNaFila() {
   });
 }
 
-/** Entrega a fila para quem está online (chamada quando um consultor volta). */
+/**
+ * Entrega a fila para quem está online (chamada quando um consultor volta e pela rotina de repartir).
+ * Com a loja fechada, ou antes do horário de repartir (Configurações > Presença e fila), não entrega nada.
+ */
 export async function distribuirFila(): Promise<number> {
+  if (!filaPodeSerEntregue(await agora(), await regrasDePresenca(), await regrasDaAgenda())) return 0;
   let total = 0;
   for (const lead of await leadsNaFila()) {
     const consultorId = await escolherProximoConsultor();

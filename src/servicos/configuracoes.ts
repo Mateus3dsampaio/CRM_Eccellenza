@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
 import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
+import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
 const CHAVE_MODO = "distribuicao_modo";
@@ -62,5 +63,26 @@ export async function modoDistribuicao(): Promise<ModoDistribuicao> {
 
 export async function definirModoDistribuicao(modo: ModoDistribuicao): Promise<void> {
   await gravarConfig(CHAVE_MODO, modo);
+  await marcarMudanca();
+}
+
+const CHAVE_PRESENCA = "presenca";
+
+/** Regras de presença e fila da loja fechada (tarefa 35). Sem valor (ou inválido) vale o padrão decidido com o Mateus. */
+export async function regrasDePresenca(): Promise<RegrasPresenca> {
+  const bruto = await lerConfig(CHAVE_PRESENCA);
+  if (!bruto) return REGRAS_PRESENCA_PADRAO;
+  try {
+    const r = completarRegrasPresenca(JSON.parse(bruto) as Partial<RegrasPresenca>);
+    return validarRegrasPresenca(r) === null ? r : REGRAS_PRESENCA_PADRAO;
+  } catch {
+    return REGRAS_PRESENCA_PADRAO;
+  }
+}
+
+export async function definirRegrasDePresenca(regras: RegrasPresenca): Promise<void> {
+  const erro = validarRegrasPresenca(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_PRESENCA, JSON.stringify(regras));
   await marcarMudanca();
 }

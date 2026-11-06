@@ -1,6 +1,6 @@
 # Tarefa 35 – Presença dos vendedores e fila da loja fechada
 
-Decidida com o Mateus em 06/11/2026. **Status: a fazer.** Fazer **antes** da tarefa 36 (o retorno automático depende desta para não disparar sem ninguém online).
+Decidida com o Mateus em 06/11/2026. **Status: feita (06/11/2026), falta o Mateus conferir no simulador.** Fazer **antes** da tarefa 36 (o retorno automático depende desta para não disparar sem ninguém online).
 
 ## Problema
 - Vendedor que adoece ou falta continua recebendo lead e tem compromisso marcado que ninguém cumpre.
@@ -33,15 +33,15 @@ Valem para todo período com a loja fechada: **dia de semana das 18h às 8h** e 
 - "Repartir" desligado = comportamento de hoje (fila vai para quem fica online primeiro).
 
 ## Etapas
-1. [ ] Regra pura em `src/regras/` (ex.: `presenca.ts`): loja aberta/fechada a partir da agenda, próximo fechamento, próxima abertura, horário de repartir e de verificar. Testes unitários (dia de semana, sábado meio-dia, domingo, feriado não existe ainda).
-2. [ ] Status `offline` no usuário + rotina no agendador (`servicos/agendador.ts` / `rotinas.ts`) que desliga todos no fechamento.
-3. [ ] Botão online/offline do vendedor (junto do almoço). Ficar online antes do horário de repartir não puxa a fila.
-4. [ ] Rotina de repartir a fila no horário configurado (rodízio só entre quem está online).
-5. [ ] Rotina de verificação de presença + aviso a todos + botão "Passar os de hoje para…". Aviso de compromisso cedo.
-6. [ ] Cartão "Presença e fila" nas Configurações (+ rota da API, gravação em `Configuracao`).
-7. [ ] Simulador: o "+1 hora" precisa permitir testar fechamento, abertura, repartição e verificação.
-8. [ ] Atualizar `docs/mapa-do-codigo.md`, `docs/requisitos.md` se couber, e `docs/pendencias.md`.
-9. [ ] Testes (`npm run tipos`, `npm run lint`, `npm test`) e teste de tela do botão online/offline e do aviso.
+1. [x] Regra pura em `src/regras/` (ex.: `presenca.ts`): loja aberta/fechada a partir da agenda, próximo fechamento, próxima abertura, horário de repartir e de verificar. Testes unitários (dia de semana, sábado meio-dia, domingo, feriado não existe ainda).
+2. [x] Status `offline` no usuário + rotina no agendador (`servicos/agendador.ts` / `rotinas.ts`) que desliga todos no fechamento.
+3. [x] Botão online/offline do vendedor (junto do almoço). Ficar online antes do horário de repartir não puxa a fila.
+4. [x] Rotina de repartir a fila no horário configurado (rodízio só entre quem está online).
+5. [x] Rotina de verificação de presença + aviso a todos + botão "Passar os de hoje para…". Aviso de compromisso cedo.
+6. [x] Cartão "Presença e fila" nas Configurações (+ rota da API, gravação em `Configuracao`).
+7. [x] Simulador: o "+1 hora" precisa permitir testar fechamento, abertura, repartição e verificação.
+8. [x] Atualizar `docs/mapa-do-codigo.md`, `docs/requisitos.md` se couber, e `docs/pendencias.md`.
+9. [x] Testes (`npm run tipos`, `npm run lint`, `npm test`) e teste de tela do botão online/offline e do aviso.
 
 ## Pronto quando
 Fora do horário ninguém recebe lead; a fila é repartida no horário configurado; vendedor ausente com compromisso gera aviso para todos com transferência em um clique; tudo ligável/desligável na tela.

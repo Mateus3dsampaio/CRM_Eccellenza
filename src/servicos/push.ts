@@ -79,6 +79,7 @@ interface AlertaParaPush {
   consultorId: string | null;
   consultorNome: string | null;
   texto: string | null;
+  paraTodos?: boolean;
 }
 
 type AssinaturaComUsuario = { id: number; endpoint: string; p256dh: string; auth: string };
@@ -109,7 +110,7 @@ export async function enviarPushDoAlerta(alerta: AlertaParaPush): Promise<number
     if (!chaves) return 0;
     const assinaturas = await db.assinaturaPush.findMany({ include: { usuario: { select: { id: true, perfil: true, ativo: true } } } });
     const destinos: DestinoPush[] = assinaturas.filter((a) => a.usuario.ativo).map((a) => ({ usuarioId: a.usuario.id, perfil: a.usuario.perfil }));
-    const quem = new Set(quemRecebePush({ tipo: alerta.tipo as TipoAlerta, consultorId: alerta.consultorId }, destinos));
+    const quem = new Set(quemRecebePush({ tipo: alerta.tipo as TipoAlerta, consultorId: alerta.consultorId, paraTodos: alerta.paraTodos }, destinos));
     let enviados = 0;
     for (const a of assinaturas) {
       if (!quem.has(a.usuario.id)) continue;

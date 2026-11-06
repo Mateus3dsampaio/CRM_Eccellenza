@@ -34,6 +34,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Avisos (som, notificação do navegador, número na aba) | Quando nasce o aviso: `src/servicos/alertas.ts` (chamado por `mensagens`, `agenda` e `bot/executor`). Texto: `src/regras/alertas.ts`. Tela: `src/componentes/alertas/` |
 | Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
+| Presença dos vendedores e fila da loja fechada (tarefa 35: offline no fechamento, "Ficar online", fila repartida X min depois da abertura, aviso de quem não ficou online com compromisso, "Passar os de hoje"; ajustes em Configurações > Geral > Presença e fila) | Regra: `src/regras/presenca.ts` (horário vem de `regras/agenda.ts`). Rotinas e transferência: `src/servicos/presenca.ts` (chamada por `rotinas.ts`). Cartão: `PresencaEFila` em `src/componentes/configuracoes/configuracoes.tsx`. Botões: `src/componentes/presenca.tsx`. Janela: `src/componentes/equipe/passar-hoje.tsx` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Abas, filtros de uma opção só, animação do menu | `src/componentes/entalhe/` (`Abas` para abas, com a pílula elástica; `Entalhe` para o menu). Toda aba nova usa `Abas` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
@@ -57,7 +58,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Banco (`prisma/schema.prisma`)
 | Tabela | Guarda |
 |---|---|
-| `Usuario` | Admin e consultores (perfil, status online/almoço) |
+| `Usuario` | Admin e consultores (perfil, status online/almoço/offline; offline = não recebe lead, vira sozinho no fechamento da loja) |
 | `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
@@ -67,7 +68,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `EventoWebhook` | Caixa de entrada do webhook da Meta: o corpo (traz texto e telefone do cliente) é gravado antes do 200, processado depois e ESVAZIADO ao terminar; a linha some em 2 dias. Excluir um cliente apaga também os eventos pendentes dele |
 | `EventoMetrica` | Contadores anônimos do painel |
 | `AssinaturaPush` | Navegadores que aceitaram avisos com o CRM fechado: pessoa, endereço do navegador (único) e as chaves que só servem para criptografar o aviso para ele |
-| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
+| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe; presença: `ausencia` e `compromisso_cedo`, com `paraTodos` = todos recebem): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
 | `Configuracao` | Pares chave/valor (chaves de API criptografadas, modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
@@ -115,9 +116,11 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/painel/route.ts` | Métricas (atalho ou datas, filtro de vendedor). Só admin (`ver_metricas`; consultor recebe 403) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG). Acha o cliente com ou sem o 9; modelo exige consentimento (pede como o cliente autorizou) e não vale para quem pediu para parar | `conversa`, `leads`, `lgpd`, `consultas` |
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
-| `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |
+| `src/app/api/relogio/route.ts` | Avançar o relógio (horas ou 5–59 minutos) e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
-| `src/app/api/equipe/status/route.ts` | Consultor online/almoço. Só volta do almoço quando ele (ou o admin) clica: nada é automático | `distribuicao` |
+| `src/app/api/equipe/status/route.ts` | Consultor online/almoço/offline. Só volta quando ele (ou o admin) clica; offline sozinho só no fechamento da loja (rotina de presença) | `distribuicao` |
+| `src/app/api/equipe/passar-hoje/route.ts` | GET: o que o vendedor ausente tem hoje e para quem dá para passar. POST: passar os leads e compromissos de hoje (qualquer logado; vai na ficha com o nome de quem passou) | `presenca` |
+| `src/app/api/configuracoes/presenca/route.ts` | Gravar as regras de presença e fila (só admin) | `configuracoes` |
 | `src/app/api/configuracoes/usuarios/route.ts` | Criar usuário (só admin) | `usuarios` |
 | `src/app/api/configuracoes/usuarios/[id]/route.ts` | Editar nome/perfil, redefinir senha, desativar/reativar (desativar consultor com leads exige `transferirPara`). Só admin | `usuarios` |
 | `src/app/api/configuracoes/usuarios/transferir/route.ts` | Passar os leads em andamento de um consultor para outro. Só admin | `distribuicao` |
@@ -175,6 +178,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
 | `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Parou de responder" (Perdido), limpeza de arquivados (30 dias; quem está em Fechado espera 180 dias) e exclusão de clientes que fecharam 180 dias depois do fechamento (com registro LGPD), limpeza de logs antigos, relógio (também confere os prazos vermelhos) |
+| `src/servicos/presenca.ts` | Rotinas de presença (a cada minuto, com marca por fechamento/abertura para não repetir): offline no fechamento, repartir a fila, verificar presença (aviso `ausencia`), aviso de compromisso cedo; `passarOsDeHoje` (leads com compromisso ou retorno hoje + visitas de hoje; horário ocupado do destino fica de fora) e `resumoDeHoje` |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), status "entregue"/"lido" que chega antes da mensagem estar gravada fica pendente e é reaplicado (2 s, 10 s, 1 min, depois a rotina), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
@@ -197,6 +201,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
+| `src/regras/presenca.ts` | Presença e fila da loja fechada: regras (padrão, validação), loja aberta/fechada pela agenda, último fechamento, abertura atual, horários de repartir e verificar, `filaPodeSerEntregue`, `leadNovoPodeTerDono`, resumo dos itens do dia |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead (blocos: conversa, resumo, etapa, compromissos, dados, medidas). `ajustarLayoutSalvo` aproveita layout salvo com blocos antigos (tarefa 28). Padrão: conversa à esquerda e ficha à direita |
@@ -255,7 +260,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
 | `src/componentes/texto.ts` | Formatação de texto |
 | `src/componentes/chat.tsx` | Bolhas de conversa |
-| `src/componentes/almoco.tsx` | Botão de almoço do consultor |
+| `src/componentes/presenca.tsx` | Botões do consultor no cabeçalho: "Ficar online" / "Offline" e almoço |
+| `src/componentes/equipe/passar-hoje.tsx` | Janela "Passar os de hoje" (aviso de ausência e cartão Equipe) |
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/decisao.tsx` | Janela de decisão da data vencida (medição feita/remarcar/desistiu; fechou/negociando/não veio/desistiu; fechou/ainda negociando/não fechou). Cada botão abre a janela que já existe (agenda ou dados da etapa) |
@@ -273,8 +279,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) Cor e ícone por tipo; compromisso longo (medição) aparece em todas as horas que ocupa. |
 | `src/componentes/painel/painel.tsx` | Painel de métricas (grade 3×3 de leads + conversão da agenda com "Clientes que faltaram", botão "Exportar" do admin abre `exportar-desempenho` numa janela, tarefa 30): atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
-| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
-| `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
+| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (+15 min, +30 min, horas e dias; saltos de +7 dias ou mais pedem confirmação) |
+| `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço, colocar online e passar os de hoje de quem está offline; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/barra-salvar.tsx` | Barra "Alterações não salvas · Descartar · Salvar" fixa no rodapé das Configurações (tarefa 31): `useBlocoSalvavel` registra cada bloco com rascunho; `pedirSaida` pergunta antes de trocar de seção |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical, pílula de mola que anda entre as opções (`Pilula` com `eixo="y"`) e barra de rolagem sempre reservada para o menu não pular (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
@@ -337,6 +343,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
 | `testes/unit/provedor-gpt.test.ts` | GPT como IA do texto: conversão de histórico/ferramentas/resposta, bot com a OpenAI simulada, troca de provedor |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
+| `testes/unit/presenca.test.ts` | Presença: regras puras (loja aberta, fechamento, fila), offline no fechamento, lead sem dono fora do horário, repartir a fila, verificação e aviso de ausência (todos/só admin), compromisso cedo, passar os de hoje |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
 | `testes/unit/push.test.ts` | Web Push (biblioteca trocada por uma falsa): quem recebe, texto do aviso, 410 remove o navegador, trocar de pessoa no mesmo navegador, chaves criptografadas, teste do sino |

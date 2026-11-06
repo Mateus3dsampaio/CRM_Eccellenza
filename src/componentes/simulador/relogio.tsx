@@ -8,7 +8,9 @@ import { Botao, Modal } from "../ui";
 
 const LIMITE_SALTO_GRANDE_HORAS = 24 * 7; // de +7 dias para cima pede confirmação
 
-const PASSOS = [
+const PASSOS: { horas: number; minutos?: number; rotulo: string }[] = [
+  { horas: 0, minutos: 15, rotulo: "+15 min" },
+  { horas: 0, minutos: 30, rotulo: "+30 min" },
   { horas: 1, rotulo: "+1 hora" },
   { horas: 24, rotulo: "+1 dia" },
   { horas: 72, rotulo: "+3 dias" },
@@ -55,11 +57,12 @@ export function Relogio() {
       </div>
       <div className="grid grid-cols-3 gap-2">
         {PASSOS.map((p) => (
-          <Botao key={p.horas} onClick={() => (p.horas >= LIMITE_SALTO_GRANDE_HORAS ? setConfirmar(p) : mudar({ horas: p.horas }))} disabled={ocupado} className="whitespace-nowrap px-2">
+          <Botao key={p.horas} onClick={() => (p.horas >= LIMITE_SALTO_GRANDE_HORAS ? setConfirmar(p) : mudar(p.minutos ? { minutos: p.minutos } : { horas: p.horas }))} disabled={ocupado} className="whitespace-nowrap px-2">
             {p.rotulo}
           </Botao>
         ))}
       </div>
+      <p className="text-xs text-texto-fraco">Presença (tarefa 35): ao passar do horário de fechamento da loja todos os vendedores ficam offline; depois da abertura, use +15 min e +30 min para ver a fila ser repartida e o aviso de quem não ficou online.</p>
       <p className="text-xs text-texto-fraco">O relógio só anda para a frente. Para recomeçar do zero, rode <code>npm run seed</code>.</p>
       <p className="text-xs text-texto-fraco">Regras: retomada após 3 dias sem resposta (só cards no &quot;Novo&quot; com o bot atendendo); 4 dias depois vai para &quot;Perdido&quot; com o motivo &quot;Parou de responder&quot; (PROVISÓRIO); arquivados excluídos em 30 dias.</p>
       <div>

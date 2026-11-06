@@ -18,7 +18,7 @@ model Usuario {
   ativo     Boolean  @default(true)
   criadoEm  DateTime @default(now())
   // Disponibilidade para receber leads novos: online | almoco. Quem está em almoço não recebe lead novo.
-  status    String   @default("online")
+  status    String   @default("online") // online | almoco | offline (tarefa 35)
   // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
   almocoSeq Int      @default(0)
 
@@ -142,12 +142,13 @@ model Mensagem {
 // Sem relação com Lead de propósito: o aviso é descartável e some em 1 dia.
 model Alerta {
   id            Int      @id @default(autoincrement())
-  tipo          String // mensagem | lead_passado | visita_marcada
+  tipo          String // mensagem | lead_passado | visita_marcada | prazo_vermelho | retorno | decisao_vencida | ausencia | compromisso_cedo
   leadId        String
   leadNome      String
   consultorId   String? // dono do lead na hora do aviso; sem dono, só o admin recebe
   consultorNome String?
   texto         String? // prévia da mensagem ou horário da visita
+  paraTodos     Boolean  @default(false) // aviso de presença (tarefa 35): todos recebem, não só o dono e o admin
   criadoEm      DateTime
 }
 

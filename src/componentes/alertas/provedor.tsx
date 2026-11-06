@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { agruparAlertas, lerPreferencias, textoDoAlerta, textoDoGrupo, tituloDaAba, type AlertaTela, type PreferenciasAlertas } from "@/regras/alertas";
 import { chamarApi, useAviso, useVersao } from "../dados";
 import { useAguardando } from "../espera";
+import { JanelaPassarHoje } from "../equipe/passar-hoje";
 import { useUsuario } from "../usuario";
 import { liberarSom, tocarSom } from "./som";
 
@@ -47,6 +48,8 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
 
   const [preferencias, setPreferencias] = useState<PreferenciasAlertas>({ som: true, notificacoes: true });
   const [permissao, setPermissao] = useState<PermissaoNotificacao>("indisponivel");
+  // Vendedor ausente cujos leads de hoje a pessoa vai passar (aviso de ausência, tarefa 35).
+  const [passarDe, setPassarDe] = useState<string | null>(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- lê o que o navegador guardou, só depois de abrir a tela */
@@ -92,9 +95,10 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
     (a: AlertaTela, naTela: boolean) => {
       const { titulo, corpo } = textoDoAlerta(a, usuario.id);
       // Abre a gaveta do lead na tela em que a pessoa está (tarefa 23).
-      const abrir = () => router.push(`${vivo.current.caminho}?lead=${a.leadId}`);
+      // Aviso de ausência não tem lead: o botão abre a janela de passar os de hoje.
+      const abrir = a.tipo === "ausencia" ? () => setPassarDe(a.leadId) : () => router.push(`${vivo.current.caminho}?lead=${a.leadId}`);
       if (naTela) {
-        avisarNaTela(corpo ? `${titulo}: ${corpo}` : titulo, "alerta", { acao: { rotulo: "Abrir", aoClicar: abrir } });
+        avisarNaTela(corpo ? `${titulo}: ${corpo}` : titulo, "alerta", { acao: { rotulo: a.tipo === "ausencia" ? "Passar os de hoje…" : "Abrir", aoClicar: abrir } });
         return;
       }
       const atual = vivo.current;
@@ -122,10 +126,12 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
       const leadNaTela = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lead") : null;
       const relevantes = novos.filter((a) => !(olhando && (atual.caminho === `/lead/${a.leadId}` || leadNaTela === a.leadId)));
       if (!relevantes.length) return;
-      if (atual.preferencias.som && relevantes.some((a) => a.tipo === "mensagem" || a.tipo === "retorno")) tocarSom();
+      if (atual.preferencias.som && relevantes.some((a) => a.tipo === "mensagem" || a.tipo === "retorno" || a.tipo === "ausencia" || a.tipo === "compromisso_cedo")) tocarSom();
       if (olhando) {
         // Na tela, avisos do mesmo tipo que chegaram juntos viram um toast só (tarefa 25). O detalhe fica em "Esperando" e "Retornos".
-        agruparAlertas(relevantes).forEach((item) => (item.grupo ? avisarNaTela(textoDoGrupo(item.tipo, item.total), "alerta") : mostrar(item.alerta, true)));
+        // Aviso de ausência nunca é agrupado: cada um tem o seu botão de passar os de hoje.
+        relevantes.filter((a) => a.tipo === "ausencia").forEach((a) => mostrar(a, true));
+        agruparAlertas(relevantes.filter((a) => a.tipo !== "ausencia")).forEach((item) => (item.grupo ? avisarNaTela(textoDoGrupo(item.tipo, item.total), "alerta") : mostrar(item.alerta, true)));
         return;
       }
       relevantes.slice(0, MAXIMO_NOTIFICACOES).forEach((a) => mostrar(a, false));
@@ -210,5 +216,10 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
     [preferencias, permissao, gravar, pedirPermissao, avisarNaTela],
   );
 
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={valor}>
+      {children}
+      <JanelaPassarHoje deId={passarDe} aoFechar={() => setPassarDe(null)} />
+    </Contexto.Provider>
+  );
 }

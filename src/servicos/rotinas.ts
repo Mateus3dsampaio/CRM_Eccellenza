@@ -12,6 +12,7 @@ import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
+import { rodarPresenca } from "./presenca";
 import { garantirMotivoParouDeResponder } from "./vendas";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
@@ -102,6 +103,13 @@ async function executar(): Promise<ResultadoRotinas> {
   }
   await limparLogsAntigos();
   await reprocessarEventosPendentes();
+
+  // Presença (tarefa 35): desliga no fechamento, reparte a fila e avisa quem não ficou online. Erro aqui não para o resto.
+  try {
+    await rodarPresenca();
+  } catch (erro) {
+    console.error("[rotinas] presença falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
 
   // O relógio simulado pode ter andado: confere os prazos de espera.
   await avisarPrazosVermelhos();

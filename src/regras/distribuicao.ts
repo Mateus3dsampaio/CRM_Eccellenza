@@ -1,6 +1,7 @@
 // Distribuição de leads entre os consultores (etapas H e I).
 export type ModoDistribuicao = "menos_leads" | "rodizio";
-export type StatusConsultor = "online" | "almoco";
+/** offline = fora do expediente ou ainda não chegou (tarefa 35): não recebe lead. */
+export type StatusConsultor = "online" | "almoco" | "offline";
 
 export const MODOS_DISTRIBUICAO: { codigo: ModoDistribuicao; nome: string; descricao: string }[] = [
   { codigo: "rodizio", nome: "Rodízio", descricao: "O primeiro lead vai para o consultor 1, o segundo para o 2, e assim por diante. Com dois consultores, alterna entre eles." },

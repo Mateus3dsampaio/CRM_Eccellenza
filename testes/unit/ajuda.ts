@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { gerarHashSenha } from "@/lib/senha";
+import { REGRAS_PRESENCA_DESLIGADA } from "@/regras/presenca";
 
 export async function limparBanco() {
   await db.eventoMetrica.deleteMany();
@@ -10,6 +11,8 @@ export async function limparBanco() {
   await db.usuario.deleteMany();
   await db.registroRotina.deleteMany();
   await db.configuracao.deleteMany();
+  // Os testes de outras áreas não dependem do horário da loja: presença desligada. Os testes de presença ligam.
+  await db.configuracao.create({ data: { chave: "presenca", valor: JSON.stringify(REGRAS_PRESENCA_DESLIGADA) } });
   await db.instrucao.deleteMany();
   await db.motivoPerda.deleteMany();
   await db.usoApi.deleteMany();

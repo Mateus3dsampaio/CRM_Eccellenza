@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TEXTO_REGRA_SENHA } from "@/regras/senha";
 import { chamarApi, useAviso } from "../dados";
 import { juntar } from "../estilos";
+import { JanelaPassarHoje } from "../equipe/passar-hoje";
 import { Botao, Campo, Modal, classeEntrada } from "../ui";
 import { useUsuario } from "../usuario";
 
@@ -32,12 +33,12 @@ export function EquipeConfig({ equipe, recarregar }: { equipe: Membro[]; recarre
   const avisar = useAviso();
   const eu = useUsuario();
   const [janela, setJanela] = useState<Janela | null>(null);
+  const [passarDe, setPassarDe] = useState<string | null>(null);
 
-  async function almoco(m: Membro) {
-    const volta = m.status === "almoco";
+  async function mudarStatus(m: Membro, status: "online" | "almoco") {
     try {
-      await chamarApi("/api/equipe/status", { method: "POST", json: { usuarioId: m.id, status: volta ? "online" : "almoco" } });
-      avisar(volta ? `${m.nome} voltou.` : `${m.nome} saiu para o almoço.`);
+      await chamarApi("/api/equipe/status", { method: "POST", json: { usuarioId: m.id, status } });
+      avisar(status === "almoco" ? `${m.nome} saiu para o almoço.` : m.status === "offline" ? `${m.nome} agora está online.` : `${m.nome} voltou.`);
     } catch (e) {
       avisar(e instanceof Error ? e.message : "Não foi possível mudar o status.", "erro");
     } finally {
@@ -90,8 +91,8 @@ export function EquipeConfig({ equipe, recarregar }: { equipe: Membro[]; recarre
                 <span className="rounded-pilula bg-marca-suave px-2.5 py-1 font-medium text-marca-texto">{nomePerfil(u.perfil)}</span>
                 {!u.ativo && <span className="rounded-pilula bg-superficie-suave px-2.5 py-1 text-texto-suave">Inativo</span>}
                 {u.perfil === "consultor" && u.ativo && (
-                  <span className={juntar("rounded-pilula px-2.5 py-1 font-medium", u.status === "almoco" ? "bg-aviso-suave text-aviso" : "bg-sucesso-suave text-sucesso")}>
-                    {u.status === "almoco" ? "Em almoço" : "Online"}
+                  <span className={juntar("rounded-pilula px-2.5 py-1 font-medium", u.status === "almoco" ? "bg-aviso-suave text-aviso" : u.status === "offline" ? "bg-superficie-suave text-texto-suave" : "bg-sucesso-suave text-sucesso")}>
+                    {u.status === "almoco" ? "Em almoço" : u.status === "offline" ? "Offline" : "Online"}
                   </span>
                 )}
               </div>
@@ -107,9 +108,20 @@ export function EquipeConfig({ equipe, recarregar }: { equipe: Membro[]; recarre
                   </Botao>
                   {u.perfil === "consultor" && (
                     <>
-                      <Botao variante="fantasma" onClick={() => almoco(u)}>
-                        {u.status === "almoco" ? "Voltou do almoço" : "Mandar almoçar"}
-                      </Botao>
+                      {u.status === "offline" ? (
+                        <>
+                          <Botao variante="fantasma" onClick={() => mudarStatus(u, "online")}>
+                            Colocar online
+                          </Botao>
+                          <Botao variante="fantasma" icone={<ArrowRightLeft className="size-4" aria-hidden />} onClick={() => setPassarDe(u.id)}>
+                            Passar os de hoje
+                          </Botao>
+                        </>
+                      ) : (
+                        <Botao variante="fantasma" onClick={() => mudarStatus(u, u.status === "almoco" ? "online" : "almoco")}>
+                          {u.status === "almoco" ? "Voltou do almoço" : "Mandar almoçar"}
+                        </Botao>
+                      )}
                       <Botao variante="fantasma" icone={<ArrowRightLeft className="size-4" aria-hidden />} disabled={u.leadsEmAndamento === 0} onClick={() => setJanela({ tipo: "transferir", membro: u })}>
                         Transferir leads
                       </Botao>
@@ -131,6 +143,7 @@ export function EquipeConfig({ equipe, recarregar }: { equipe: Membro[]; recarre
         ))}
       </ul>
 
+      <JanelaPassarHoje deId={passarDe} aoFechar={() => setPassarDe(null)} />
       {janela?.tipo === "novo" && <JanelaNovo aoFechar={() => setJanela(null)} aoConcluir={recarregar} />}
       {janela?.tipo === "editar" && <JanelaEditar membro={janela.membro} euId={eu.id} aoFechar={() => setJanela(null)} aoConcluir={recarregar} />}
       {janela?.tipo === "senha" && <JanelaSenha membro={janela.membro} aoFechar={() => setJanela(null)} />}
