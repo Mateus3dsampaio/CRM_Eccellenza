@@ -8,6 +8,7 @@ import { marcarMudanca } from "@/lib/versao";
 import { variantesTelefone } from "@/regras/telefone";
 import { ETAPAS_COM_RETORNO, exigeRetorno, faltaParaMover, formatarReais, MOTIVO_PAROU_DE_RESPONDER, nomeMotivo, type DadosDeVenda, type RegrasDeVendas } from "@/regras/vendas";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
+import { formatarVisitaCurta } from "@/regras/tempo";
 import { motivosDePerda, regrasDeVendas } from "./vendas";
 import { ETAPAS_ANTIGAS, ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
 import { nomesDasEtapas } from "./etapas";
@@ -54,10 +55,12 @@ export interface OpcoesMover {
   dados?: DadosDeVenda;
   /** Movimento automático que devolve o lead à etapa onde estava (ex.: voltou da retomada): não exige dados. */
   semExigencias?: boolean;
+  /** O vendedor confirmou: voltar para Em qualificação cancela a medição/apresentação marcada na agenda. */
+  cancelarCompromissos?: boolean;
 }
 
 /** Só confere (sem gravar) se o lead pode ir para a etapa com esses dados. Lança erro em português se não puder. */
-export async function conferirMudanca(leadId: string, etapa: CodigoEtapa, dados: DadosDeVenda) {
+export async function conferirMudanca(leadId: string, etapa: CodigoEtapa, dados: DadosDeVenda, cancelarCompromissos = false) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   if (lead.etapa === etapa) return;
   const falta = faltaParaMover(
@@ -73,6 +76,26 @@ export async function conferirMudanca(leadId: string, etapa: CodigoEtapa, dados:
   if (falta) throw new ErroHttp(400, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${falta}`);
   const semAgenda = await faltaCompromisso(leadId, etapa);
   if (semAgenda) throw new ErroHttp(400, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${semAgenda}`);
+  if (!cancelarCompromissos) {
+    const impedem = await compromissosQueImpedemVoltar(leadId, etapa);
+    if (impedem.length) throw new ErroHttp(409, `${lead.nome ?? lead.nomePerfil ?? lead.telefone}: ${textoDosCompromissos(impedem)}`);
+  }
+}
+
+type CompromissoMarcado = { id: string; tipo: string; inicio: Date };
+
+/**
+ * Voltar para Em qualificação com medição ou apresentação marcada não faz sentido (decisão do Mateus 06/11/2026):
+ * só com a confirmação de que o compromisso será cancelado. Visita à loja não conta (não move o card).
+ */
+async function compromissosQueImpedemVoltar(leadId: string, etapa: CodigoEtapa): Promise<CompromissoMarcado[]> {
+  if (etapa !== "qualificacao") return [];
+  return db.visita.findMany({ where: { leadId, status: "agendada", tipo: { in: ["medicao", "apresentacao"] } }, orderBy: { inicio: "asc" }, select: { id: true, tipo: true, inicio: true } });
+}
+
+function textoDosCompromissos(lista: CompromissoMarcado[]): string {
+  const itens = lista.map((v) => `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso].toLowerCase()} de ${formatarVisitaCurta(v.inicio)}`).join(" e ");
+  return `há ${itens} na agenda. Confirme o cancelamento para voltar para Em qualificação.`;
 }
 
 /** Medição/Apresentação agendada só recebe o card com o compromisso marcado na agenda (tarefa 21). */
@@ -101,6 +124,8 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
     const falta = faltaParaMover(etapa, final, regras) ?? (await faltaCompromisso(leadId, etapa));
     if (falta) throw new ErroHttp(400, falta);
   }
+  const compromissos = opcoes.semExigencias ? [] : await compromissosQueImpedemVoltar(leadId, etapa);
+  if (compromissos.length && !opcoes.cancelarCompromissos) throw new ErroHttp(409, `Este card tem ${textoDosCompromissos(compromissos)}`);
   const pergunta = regras.motivos.find((m) => m.codigo === final.motivoPerda)?.pergunta ?? null;
   const quando = await agora();
   const vaiTerRetorno = ETAPAS_COM_RETORNO.includes(etapa);
@@ -122,6 +147,11 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
       concorrente: etapa === "perdido" && pergunta ? final.concorrente?.trim() || null : lead.etapa === "perdido" || etapa === "perdido" ? null : lead.concorrente,
     },
   });
+  // Voltou para qualificação e o vendedor confirmou: os compromissos marcados saem da agenda.
+  for (const v of compromissos) {
+    await db.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
+    await registrarAlteracao(leadId, autor, `Cancelou ${NOMES_COMPROMISSO[v.tipo as TipoCompromisso].toLowerCase()} de ${formatarVisitaCurta(v.inicio)} (card voltou para qualificação)`);
+  }
   // Funil (MET-02): ao avançar, conta também as etapas do funil que o card pulou (ex.: Novo → Apresentação conta "Aguardando" e "Em qualificação").
   // Medição conta como Em qualificação e Negociação como Apresentação (regras/etapas.ts).
   const posicao = POSICAO_NO_FUNIL[etapa] ?? -1;

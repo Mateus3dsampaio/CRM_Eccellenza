@@ -152,7 +152,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
                       dia={d}
                       principal={desloc === 0}
                       vagas={porDia.get(d) ?? []}
-                      motivoVazio={d < dados.primeiroDia ? (d === hoje ? "Hoje não dá para marcar" : "Dia já passou") : fechado(diaSemanaChave(d)) ? "Loja fechada" : "Sem horário livre"}
+                      motivoVazio={d < dados.primeiroDia ? (d === hoje ? "Não há mais horário hoje" : "Dia já passou") : fechado(diaSemanaChave(d)) ? "Loja fechada" : "Sem horário livre"}
                       escolhido={escolhido}
                       aoEscolher={setEscolhido}
                       aoAbrirDia={desloc === 0 ? undefined : () => irPara(d)}

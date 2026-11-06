@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { PASTA_MIDIAS } from "@/lib/midias";
 import { avancarRelogio, agora } from "@/lib/relogio";
 import { lerLista } from "@/lib/json";
-import { DIA, HORA, chaveDia, inicioDoDiaLocal, somarDias } from "@/regras/tempo";
+import { DIA, HORA, chaveDia, dataLocal, inicioDoDiaLocal, partesLocais, somarDias } from "@/regras/tempo";
 import { janelaDeAgendamento } from "@/regras/agenda";
 import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresEmTorno, horariosLivresParaLead } from "@/servicos/agenda";
 import { converterFunilAntigo } from "@/servicos/conversao-funil";
@@ -195,11 +195,101 @@ describe("calendário da janela de agendar", () => {
     await criarConsultores();
     const lead = await obterOuCriarLead("+5588900004646");
     const r = await horariosLivresEmTorno(lead.id, "apresentacao");
-    const [primeira] = await horariosLivresParaLead(lead.id, 1, undefined, "apresentacao");
+    const primeira = r.livres.find((v) => v.inicio.getTime() >= r.primeiroDia.getTime())!;
     expect(chaveDia(r.centro)).toBe(chaveDia(primeira.inicio));
     expect(r.livres.every((v) => v.inicio.getTime() >= r.primeiroDia.getTime())).toBe(true);
     const passado = await horariosLivresEmTorno(lead.id, "apresentacao", somarDias(await agora(), -10));
     expect(passado.livres).toHaveLength(0);
+  });
+});
+
+describe("agendar no mesmo dia (decisão do Mateus 06/11/2026)", () => {
+  /** Segunda-feira 9 de novembro de 2026, 9h30 em Fortaleza. */
+  async function segundaAs9h30() {
+    await avancarRelogio(dataLocal(2026, 11, 9, 9, 30).getTime() - Date.now());
+  }
+
+  it("às 9h30 oferece hoje a partir das 10h e deixa marcar às 14h do mesmo dia", async () => {
+    await segundaAs9h30();
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900004747");
+    const r = await horariosLivresEmTorno(lead.id, "apresentacao");
+    expect(chaveDia(r.primeiroDia)).toBe("2026-11-09");
+    expect(chaveDia(r.centro)).toBe("2026-11-09");
+    const hoje = r.livres.filter((v) => chaveDia(v.inicio) === "2026-11-09").map((v) => partesLocais(v.inicio).hora);
+    expect(Math.min(...hoje)).toBe(10);
+    expect(hoje).toContain(14);
+    await agendarVisita({ leadId: lead.id, inicio: dataLocal(2026, 11, 9, 14), autor: "teste", tipo: "apresentacao" });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("apresentacao");
+  });
+
+  it("não deixa marcar antes da próxima hora cheia", async () => {
+    await segundaAs9h30();
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900004848");
+    await expect(agendarVisita({ leadId: lead.id, inicio: dataLocal(2026, 11, 9, 9), autor: "teste", tipo: "medicao" })).rejects.toThrow(/passou/);
+    await avancarRelogio(-30 * 60 * 1000); // 9h em ponto: 9h já está no passado ou é agora; a próxima hora é 10h
+    await expect(agendarVisita({ leadId: lead.id, inicio: dataLocal(2026, 11, 9, 9, 59), autor: "teste", tipo: "medicao" })).rejects.toThrow();
+    await agendarVisita({ leadId: lead.id, inicio: dataLocal(2026, 11, 9, 10), autor: "teste", tipo: "medicao" });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).etapa).toBe("medicao");
+  });
+
+  it("depois do último horário do dia o primeiro dia possível é o próximo dia aberto", async () => {
+    await avancarRelogio(dataLocal(2026, 11, 9, 17, 30).getTime() - Date.now());
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900004949");
+    const r = await horariosLivresEmTorno(lead.id, "apresentacao");
+    expect(chaveDia(r.primeiroDia)).toBe("2026-11-10");
+  });
+});
+
+describe("voltar para qualificação com compromisso marcado (decisão do Mateus 06/11/2026)", () => {
+  const ficha = (id: string) => db.lead.findUniqueOrThrow({ where: { id } });
+
+  async function leadComMedicao() {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900005050");
+    const [vaga] = await horariosLivresParaLead(lead.id, 1, undefined, "medicao");
+    await agendarVisita({ leadId: lead.id, inicio: vaga.inicio, autor: "teste", tipo: "medicao" });
+    expect((await ficha(lead.id)).etapa).toBe("medicao");
+    return lead;
+  }
+
+  it("sem confirmação não volta e o compromisso continua marcado", async () => {
+    const lead = await leadComMedicao();
+    await expect(moverEtapa(lead.id, "qualificacao", "teste")).rejects.toThrow(/medição de/);
+    await expect(conferirMudanca(lead.id, "qualificacao", {})).rejects.toThrow(/medição de/);
+    expect((await ficha(lead.id)).etapa).toBe("medicao");
+    expect(await db.visita.count({ where: { leadId: lead.id, status: "agendada" } })).toBe(1);
+  });
+
+  it("o card informa os compromissos marcados para a tela perguntar", async () => {
+    const lead = await leadComMedicao();
+    const card = (await cardsDoKanban()).find((c) => c.id === lead.id)!;
+    expect(card.agendados).toHaveLength(1);
+    expect(card.agendados[0].rotulo).toMatch(/^Medição /);
+  });
+
+  it("com confirmação volta para qualificação e cancela o compromisso, liberando a vaga", async () => {
+    const lead = await leadComMedicao();
+    await conferirMudanca(lead.id, "qualificacao", {}, true);
+    await moverEtapa(lead.id, "qualificacao", "Mateus", { cancelarCompromissos: true });
+    expect((await ficha(lead.id)).etapa).toBe("qualificacao");
+    const visita = await db.visita.findFirstOrThrow({ where: { leadId: lead.id } });
+    expect(visita.status).toBe("cancelada");
+    expect(visita.vagaChave).toBeNull();
+    const historico = await db.alteracao.findMany({ where: { leadId: lead.id } });
+    expect(historico.some((h) => /Cancelou medição de .*voltou para qualificação/.test(h.descricao))).toBe(true);
+  });
+
+  it("visita à loja não impede voltar e continua marcada", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900005151");
+    const [vaga] = await horariosLivresParaLead(lead.id, 1);
+    await agendarVisita({ leadId: lead.id, inicio: vaga.inicio, autor: "teste" });
+    await moverEtapa(lead.id, "negociacao", "teste", { dados: { proximoContatoEm: new Date(Date.now() + DIA) } });
+    await moverEtapa(lead.id, "qualificacao", "teste");
+    expect(await db.visita.count({ where: { leadId: lead.id, status: "agendada" } })).toBe(1);
   });
 });
 

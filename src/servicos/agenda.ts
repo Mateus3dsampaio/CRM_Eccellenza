@@ -9,6 +9,8 @@ import {
   horariosLivres,
   janelaDeAgendamento,
   naLoja,
+  primeiroDiaAgendavel,
+  primeiroHorarioPossivel,
   NOMES_COMPROMISSO,
   vagaLivre,
   type Intervalo,
@@ -16,7 +18,7 @@ import {
 } from "@/regras/agenda";
 import { ETAPAS, type CodigoEtapa } from "@/regras/etapas";
 import { venceu } from "@/regras/decisao";
-import { formatarVisitaCurta, inicioDoDiaLocal, somarDias } from "@/regras/tempo";
+import { formatarVisitaCurta, inicioDoDiaLocal, partesLocais, somarDias } from "@/regras/tempo";
 import { regrasDaAgenda } from "./configuracoes";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
@@ -65,24 +67,27 @@ export async function horariosLivresParaLead(leadId: string, limite = 3, aPartir
 export async function horariosLivresEmTorno(leadId: string, tipo: TipoCompromisso = "visita", dia?: Date | null) {
   const quando = await agora();
   const regras = await regrasDaAgenda();
-  const primeiroDia = janelaDeAgendamento(quando, regras).de;
+  const primeiroDia = primeiroDiaAgendavel(quando, regras, tipo);
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { consultorId: true } });
+  const consultores = await consultoresAtivos();
+  const livresEm = async (periodo: { de: Date; ate: Date }, limite: number) =>
+    horariosLivres({
+      agora: quando,
+      consultores,
+      ocupados: await ocupados(periodo.de, periodo.ate, { leadId, tipo }),
+      consultorPreferido: lead?.consultorId,
+      limite,
+      regras,
+      tipo,
+      periodo,
+    });
   let centro = dia ? inicioDoDiaLocal(dia) : null;
   if (!centro) {
-    const [primeira] = await horariosLivresParaLead(leadId, 1, undefined, tipo);
+    // Sem dia escolhido: o primeiro dia com horário livre, contando hoje (depois da próxima hora cheia).
+    const [primeira] = await livresEm({ de: primeiroDia, ate: janelaDeAgendamento(quando, regras).ate }, 1);
     centro = primeira ? inicioDoDiaLocal(primeira.inicio) : primeiroDia;
   }
-  const periodo = { de: somarDias(centro, -1), ate: somarDias(centro, 2) };
-  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { consultorId: true } });
-  const livres = horariosLivres({
-    agora: quando,
-    consultores: await consultoresAtivos(),
-    ocupados: await ocupados(periodo.de, periodo.ate, { leadId, tipo }),
-    consultorPreferido: lead?.consultorId,
-    limite: Number.POSITIVE_INFINITY,
-    regras,
-    tipo,
-    periodo,
-  });
+  const livres = await livresEm({ de: somarDias(centro, -1), ate: somarDias(centro, 2) }, Number.POSITIVE_INFINITY);
   return { centro, primeiroDia, livres };
 }
 
@@ -114,7 +119,10 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   const { inicio } = params;
   const regras = await regrasDaAgenda();
   if (!horarioDentroDaRegra(inicio, regras, tipo)) throw new ErroAgenda(tipo === "medicao" ? "Horário fora do funcionamento da loja (a medição inteira precisa caber no horário)." : "Horário fora do funcionamento da loja.");
-  if (inicio.getTime() <= quando.getTime()) throw new ErroAgenda("Horário já passou.");
+  // Dá para marcar no mesmo dia, a partir da próxima hora cheia (às 9h30, só 10h em diante).
+  if (inicio.getTime() < primeiroHorarioPossivel(quando).getTime()) {
+    throw new ErroAgenda(inicio.getTime() <= quando.getTime() ? "Horário já passou." : `Só dá para marcar a partir das ${partesLocais(primeiroHorarioPossivel(quando)).hora}h.`);
+  }
   const fim = new Date(inicio.getTime() + duracaoVisitaMs(regras, tipo));
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
 

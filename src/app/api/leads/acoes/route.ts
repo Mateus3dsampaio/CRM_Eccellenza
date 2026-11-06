@@ -10,7 +10,7 @@ import { excluirComRegistro } from "@/servicos/lgpd";
 const ids = z.array(z.string().min(1).max(40)).min(1).max(500);
 
 const esquema = z.discriminatedUnion("acao", [
-  z.object({ acao: z.literal("mover"), ids, etapa: z.enum(CODIGOS_ETAPA as [string, ...string[]]), dados: esquemaDadosDeVenda.optional() }),
+  z.object({ acao: z.literal("mover"), ids, etapa: z.enum(CODIGOS_ETAPA as [string, ...string[]]), dados: esquemaDadosDeVenda.optional(), cancelarCompromissos: z.boolean().optional() }),
   z.object({ acao: z.literal("arquivar"), ids }),
   z.object({ acao: z.literal("excluir"), ids }),
   z.object({ acao: z.literal("etiqueta"), ids, etiqueta: z.string(), ativa: z.boolean() }),
@@ -25,8 +25,8 @@ export const POST = rota(async (req: Request) => {
   switch (corpo.acao) {
     case "mover":
       // Confere todos antes de mexer em qualquer um: lote com um card sem os dados não move metade.
-      for (const id of corpo.ids) await conferirMudanca(id, corpo.etapa as never, dadosDeVenda(corpo.dados));
-      for (const id of corpo.ids) await moverEtapa(id, corpo.etapa as never, usuario.nome, { dados: dadosDeVenda(corpo.dados) });
+      for (const id of corpo.ids) await conferirMudanca(id, corpo.etapa as never, dadosDeVenda(corpo.dados), corpo.cancelarCompromissos);
+      for (const id of corpo.ids) await moverEtapa(id, corpo.etapa as never, usuario.nome, { dados: dadosDeVenda(corpo.dados), cancelarCompromissos: corpo.cancelarCompromissos });
       return { ok: true };
     case "arquivar":
       await exigirUsuario("arquivar_lead");
