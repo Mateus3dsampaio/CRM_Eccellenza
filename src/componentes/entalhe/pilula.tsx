@@ -11,7 +11,9 @@ interface Props {
   /** Aba escolhida; -1 esconde a pílula. */
   indice: number;
   /** `vidro` (abas): pílula de vidro escuro entre as abas. `anel` (temas): anel fino em volta do item, que estica ao andar. */
-  variante?: "vidro" | "anel";
+  variante?: "vidro" | "anel" | "marca";
+  /** `y`: abas empilhadas (menu vertical); a pílula anda para cima e para baixo. */
+  eixo?: "x" | "y";
 }
 
 /** Borda da frente chega rápido; a de trás sai um instante depois e passa um pouco do ponto antes de assentar (efeito de mola). */
@@ -24,7 +26,8 @@ const ATRASO_TRAS = 0.05; // s
  * separadas: ao ir para a direita a borda direita chega primeiro e a esquerda a alcança com um leve estalo.
  * Anima direto no DOM (sem re-renderizar a tela a cada quadro).
  */
-export function Pilula({ raiz, itens, indice, variante = "vidro" }: Props) {
+export function Pilula({ raiz, itens, indice, variante = "vidro", eixo = "x" }: Props) {
+  const vertical = eixo === "y";
   const margem = variante === "anel" ? 5 : 0;
   const pilulaRef = useRef<HTMLDivElement>(null);
   const irParaRef = useRef<(i: number) => void>(() => {});
@@ -53,9 +56,14 @@ export function Pilula({ raiz, itens, indice, variante = "vidro" }: Props) {
       if (!el) return;
       const tem = est.ativo >= 0 && !!est.medidas[est.ativo];
       el.style.opacity = tem && est.pronto ? "1" : "0";
-      const largura = Math.max(est.d.x - est.e.x, 8);
-      el.style.width = `${largura.toFixed(2)}px`;
-      el.style.transform = `translateX(${est.e.x.toFixed(2)}px)`;
+      const tamanho = Math.max(est.d.x - est.e.x, 8);
+      if (vertical) {
+        el.style.height = `${tamanho.toFixed(2)}px`;
+        el.style.transform = `translateY(${est.e.x.toFixed(2)}px)`;
+      } else {
+        el.style.width = `${tamanho.toFixed(2)}px`;
+        el.style.transform = `translateX(${est.e.x.toFixed(2)}px)`;
+      }
     }
 
     const passo = (agora: number) => {
@@ -84,7 +92,7 @@ export function Pilula({ raiz, itens, indice, variante = "vidro" }: Props) {
       est.medidas = itens.current.map((el) => {
         if (!el) return null;
         const b = el.getBoundingClientRect();
-        return { e: b.left - caixa.left - margem, d: b.right - caixa.left + margem };
+        return vertical ? { e: b.top - caixa.top - margem, d: b.bottom - caixa.top + margem } : { e: b.left - caixa.left - margem, d: b.right - caixa.left + margem };
       });
       const alvo = est.medidas[est.ativo];
       if (alvo) {
@@ -156,11 +164,21 @@ export function Pilula({ raiz, itens, indice, variante = "vidro" }: Props) {
     <div
       ref={pilulaRef}
       aria-hidden
-      className={variante === "anel" ? "pointer-events-none absolute left-0" : "pointer-events-none absolute left-0 rounded-controle"}
-      style={variante === "anel" ? ESTILO_ANEL : ESTILO_VIDRO}
+      className={juntarClasses("pointer-events-none absolute", vertical ? "inset-x-0 top-0" : "left-0", variante !== "anel" && "rounded-controle")}
+      style={vertical ? { ...ESTILO_MARCA, willChange: "transform, height" } : variante === "anel" ? ESTILO_ANEL : variante === "marca" ? ESTILO_MARCA : ESTILO_VIDRO}
     />
   );
 }
+
+const juntarClasses = (...c: (string | false)[]) => c.filter(Boolean).join(" ");
+
+/** Pílula da cor da marca, em relevo, igual ao botão "afundado" do sistema. */
+const ESTILO_MARCA: CSSProperties = {
+  opacity: 0,
+  willChange: "transform, width",
+  background: "linear-gradient(to bottom, color-mix(in srgb, var(--color-marca) 78%, #000), var(--color-marca) 55%)",
+  boxShadow: "var(--shadow-afundado)",
+};
 
 const ESTILO_VIDRO: CSSProperties = {
   top: 5,

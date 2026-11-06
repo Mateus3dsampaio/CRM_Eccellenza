@@ -43,6 +43,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Limites do bot por cliente e uso da API | `src/regras/limite-bot.ts` (limites aprovados) + `src/bot/atendimento.ts` + `src/servicos/uso-api.ts` |
 | LGPD (parar de receber, exportar, excluir com registro) | `src/regras/midia.ts` | Imagem, vídeo e PDF: tipos aceitos (imagem, vídeo, PDF, Word, Excel, DWG, ZIP e "arquivo genérico" só no recebimento, com lista de extensões bloqueadas; reconhece documento pela extensão quando o tipo vem genérico) e tipos que o vendedor pode enviar, limites por tamanho (PROVISÓRIOS), 180 dias, nome seguro de arquivo, Range de vídeo, rótulos e prévias |
 | `src/regras/consentimento.ts` | Consentimento para modelos (mensagem iniciada pela loja): origens, `temConsentimento` e a decisão PROVISÓRIA "cliente que escreveu primeiro conta" |
+| `src/regras/importar-instrucoes.ts` | Importar instruções de .txt: título (primeira linha, sem o número, maiúsculas viram frase), número (começo do texto ou nome do arquivo) e o plano por arquivo (atualiza a de mesmo número, nova, igual, erro). Roda na prévia da tela e no servidor |
 | `src/regras/privacidade.ts` | Texto da política de privacidade e da página de exclusão de dados `secoesExclusao` (aprovada em 05/11/2026, prazo de 15 dias) (razão social, CNPJ, e-mail de contato e prazos já preenchidos pelo Mateus em 04/11/2026; sem base legal por decisão dele) |
 | `src/regras/optout.ts` (frases e texto de confirmação PROVISÓRIO) + `src/servicos/lgpd.ts` |
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
@@ -150,6 +151,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir (o manual só edita o texto) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/reordenar/route.ts` | Reordenar | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/importar/route.ts` | Importar instruções de arquivos .txt (vários de uma vez; só admin) | `instrucoes`, `regras/importar-instrucoes` |
 | `src/app/api/configuracoes/instrucoes/exportar/route.ts` | Exportar .txt ou .zip | `instrucoes`, `lib/zip` |
 
 ## Serviços (`src/servicos`) – gravam no banco
@@ -164,7 +166,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/push.ts` | Avisos com o CRM fechado (biblioteca `web-push`): chaves VAPID (variáveis `VAPID_*` ou criadas sozinhas e guardadas no banco, a privada criptografada com a `CHAVE_MESTRA`), guardar/cancelar o navegador de cada pessoa, enviar o aviso de cada alerta (`registrarAlerta` chama) a quem deve receber, remover navegador morto (404/410), aviso de teste. Nunca lança |
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
-| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
+| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
 | `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor (inclui "Clientes que faltaram": medição/apresentação remarcada depois da data): contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) Tarefa 21: apresentações e medições agendadas (principal), apresentações por consultor e conversão da agenda (`conversoesDoPeriodo`, a partir da tabela `Visita`). |
@@ -275,7 +277,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/barra-salvar.tsx` | Barra "Alterações não salvas · Descartar · Salvar" fixa no rodapé das Configurações (tarefa 31): `useBlocoSalvavel` registra cada bloco com rascunho; `pedirSaida` pergunta antes de trocar de seção |
-| `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
+| `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical, pílula de mola que anda entre as opções (`Pilula` com `eixo="y"`) e barra de rolagem sempre reservada para o menu não pular (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
 | `src/componentes/galeria/galeria.tsx` | Galeria: tamanho dos blocos pequeno/médio/grande (como no Windows; guardado no navegador), filtros por tipo e vendedor, baixar, abrir, ver a conversa, apagar (só admin), aviso de "será apagado em N dias" |
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
@@ -285,7 +287,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
-| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
+| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: botão Importar (seletor de vários .txt do Windows + prévia do que será criado/atualizado), lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
 | Arquivo | Faz |

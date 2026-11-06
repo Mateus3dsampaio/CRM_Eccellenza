@@ -2,7 +2,8 @@
 
 import { CalendarClock, HardDrive, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Pilula } from "../entalhe/pilula";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import type { PrazosEspera } from "@/regras/espera";
@@ -58,6 +59,8 @@ function ConfiguracoesComBarra() {
   const { dados, erro, carregando, recarregar } = useDados<Dados>("/api/configuracoes");
   const secaoDaUrl = params.get("secao");
   const aba: Secao = SECOES.some((s) => s.codigo === secaoDaUrl) ? (secaoDaUrl as Secao) : "geral";
+  const raizMenu = useRef<HTMLDivElement>(null);
+  const botoesMenu = useRef<(HTMLButtonElement | null)[]>([]);
   const irPara = (codigo: Secao) => pedirSaida(() => router.replace(`${caminho}?secao=${codigo}`, { scroll: false }));
 
   async function chamar(url: string, metodo: string, json: object, sucesso: string) {
@@ -72,22 +75,29 @@ function ConfiguracoesComBarra() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:flex-row md:items-start">
+    <div data-config-raiz className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:min-h-[calc(100dvh-var(--spacing-topo))] md:flex-row md:items-start">
       <h1 className="sr-only">Configurações</h1>
-      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+1rem)] md:w-56 md:shrink-0">
-        <div role="tablist" aria-orientation="vertical" className="rolagem-fina flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-          {SECOES.map((s) => {
+      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+1rem)] md:w-60 md:shrink-0">
+        <div ref={raizMenu} role="tablist" aria-orientation="vertical" className="rolagem-fina relative flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+          {/* No computador a pílula de mola anda de uma opção à outra; no celular (menu na horizontal) fica o fundo fixo. */}
+          <div className="hidden md:contents">
+            <Pilula raiz={raizMenu} itens={botoesMenu} indice={SECOES.findIndex((s) => s.codigo === aba)} variante="marca" eixo="y" />
+          </div>
+          {SECOES.map((s, i) => {
             const Icone = s.icone;
             const ativo = s.codigo === aba;
             return (
               <button
                 key={s.codigo}
+                ref={(el) => {
+                  botoesMenu.current[i] = el;
+                }}
                 role="tab"
                 aria-selected={ativo}
                 onClick={() => irPara(s.codigo)}
                 className={juntar(
-                  "flex min-h-toque shrink-0 items-center gap-3 rounded-controle px-3 text-left text-sm font-medium transition-colors",
-                  ativo ? "afundado text-sobre-marca" : "text-texto-suave hover:bg-superficie hover:text-texto",
+                  "relative flex min-h-toque shrink-0 items-center gap-3 rounded-controle px-3 text-left text-sm font-medium transition-colors",
+                  ativo ? "afundado text-sobre-marca md:bg-none md:shadow-none" : "text-texto-suave hover:bg-superficie hover:text-texto",
                 )}
               >
                 <Icone className="size-4 shrink-0" aria-hidden />

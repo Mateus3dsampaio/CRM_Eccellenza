@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowDown, ArrowUp, BookOpen, Download, FlaskConical, History, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Download, FileUp, FlaskConical, History, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { planejarImportacao, type ItemDoPlano } from "@/regras/importar-instrucoes";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Botao, Campo, Carregando, classeEntrada, EstadoErro, Modal } from "../ui";
@@ -37,6 +38,39 @@ export function InstrucoesAtendimento() {
   const aviso = useRef<HTMLParagraphElement>(null);
   const [desativando, setDesativando] = useState<Instrucao | null>(null);
   const [excluindo, setExcluindo] = useState<Instrucao | null>(null);
+  // Importar de arquivos .txt: o seletor do Windows deixa marcar vários; antes de gravar mostra o que vai acontecer com cada um.
+  const seletor = useRef<HTMLInputElement>(null);
+  const [arquivos, setArquivos] = useState<{ nome: string; texto: string }[] | null>(null);
+  const [importando, setImportando] = useState(false);
+
+  async function lerArquivos(lista: FileList | null) {
+    if (!lista?.length) return;
+    const lidos = await Promise.all(Array.from(lista).map(async (f) => ({ nome: f.name, texto: await f.text() })));
+    setArquivos(lidos);
+    if (seletor.current) seletor.current.value = ""; // deixa escolher os mesmos arquivos de novo depois
+  }
+
+  const plano: ItemDoPlano[] = arquivos ? planejarImportacao(arquivos, dados?.instrucoes ?? []) : [];
+  const algumErro = plano.some((p) => p.acao === "erro");
+  const algoParaGravar = plano.some((p) => p.acao === "nova" || p.acao === "atualizar");
+
+  async function confirmarImportacao() {
+    if (!arquivos) return;
+    setImportando(true);
+    let ok = false;
+    try {
+      const r = await chamarApi<{ atualizadas: number; novas: number; iguais: number }>("/api/configuracoes/instrucoes/importar", { method: "POST", json: { arquivos } });
+      avisar(`Importado: ${r.atualizadas} atualizada(s), ${r.novas} nova(s)${r.iguais ? `, ${r.iguais} sem mudança` : ""}. O bot já usa os novos textos.`);
+      setSalvouAgora(true);
+      ok = true;
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível importar.", "erro");
+    } finally {
+      await recarregar();
+    }
+    setImportando(false);
+    if (ok) setArquivos(null);
+  }
 
   // `mudaBot`: a ação muda o que o bot diz; mostra o atalho para testar no simulador.
   async function agir(fn: () => Promise<unknown>, sucesso: string, mudaBot = false) {
@@ -91,6 +125,43 @@ export function InstrucoesAtendimento() {
 
   return (
     <section className="space-y-3" aria-label="Instruções de atendimento">
+      <Modal aberto={arquivos !== null} aoFechar={() => !importando && setArquivos(null)} titulo="Importar instruções" largura="max-w-2xl">
+        <p className="text-sm text-texto-suave">O título vem da primeira linha de cada arquivo e o número, do começo do texto. Confira antes de importar: o bot passa a usar os novos textos na próxima mensagem.</p>
+        <ul className="mt-3 max-h-[50dvh] space-y-1.5 overflow-y-auto">
+          {plano.map((p) => (
+            <li key={p.lida.nome} className="flex items-start gap-3 rounded-controle border border-borda bg-superficie-suave/40 px-3 py-2 text-sm">
+              <span className="w-7 shrink-0 pt-0.5 text-right font-semibold tabular-nums text-marca-texto">{p.lida.numero !== null ? String(p.lida.numero).padStart(2, "0") : "–"}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block break-words font-medium">{p.lida.titulo || p.lida.nome}</span>
+                <span className="block truncate text-xs text-texto-fraco">{p.lida.nome}</span>
+                {p.lida.erro && <span className="block text-xs text-alerta">{p.lida.erro}</span>}
+                {p.acao === "atualizar" && p.tituloAtual !== p.lida.titulo && <span className="block text-xs text-texto-suave">Título atual: {p.tituloAtual}</span>}
+              </span>
+              <span
+                className={juntar(
+                  "shrink-0 rounded-pilula px-2 py-0.5 text-xs font-medium",
+                  p.acao === "nova" && "bg-sucesso-suave text-sucesso",
+                  p.acao === "atualizar" && "bg-marca-suave text-marca-texto",
+                  p.acao === "igual" && "bg-superficie-suave text-texto-suave",
+                  p.acao === "erro" && "bg-alerta-suave text-alerta",
+                )}
+              >
+                {p.acao === "nova" ? "Nova" : p.acao === "atualizar" ? "Atualiza" : p.acao === "igual" ? "Sem mudança" : "Com erro"}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {algumErro && <p className="mt-3 text-sm text-alerta">Há arquivo com erro. Corrija ou tire da seleção e escolha de novo: nada é importado enquanto houver erro.</p>}
+        {!algumErro && !algoParaGravar && <p className="mt-3 text-sm text-texto-suave">Todos os arquivos já estão iguais às instruções do sistema.</p>}
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao variante="fantasma" onClick={() => setArquivos(null)} disabled={importando}>
+            Cancelar
+          </Botao>
+          <Botao variante="primario" disabled={algumErro || !algoParaGravar} carregando={importando} onClick={() => void confirmarImportacao()}>
+            Importar
+          </Botao>
+        </div>
+      </Modal>
       <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
         <h2 className="font-semibold">Instruções de atendimento do bot</h2>
         <p className="mt-1 text-sm text-texto-suave">
@@ -99,6 +170,10 @@ export function InstrucoesAtendimento() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => { setSalvouAgora(false); setEdicao({ id: null, titulo: "", texto: "" }); }}>
             Nova instrução
+          </Botao>
+          <input ref={seletor} type="file" multiple accept=".txt,text/plain" className="sr-only" tabIndex={-1} aria-label="Escolher arquivos de instruções" onChange={(e) => void lerArquivos(e.target.files)} />
+          <Botao icone={<FileUp className="size-4" aria-hidden />} onClick={() => seletor.current?.click()}>
+            Importar
           </Botao>
           <Botao icone={<Download className="size-4" aria-hidden />} onClick={() => setExportando(true)} disabled={!manual}>
             Exportar
