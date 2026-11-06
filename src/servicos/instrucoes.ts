@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import { ErroHttp } from "@/lib/sessao";
 import { MANUAL_INICIAL } from "@/bot/manual-inicial";
+import { numeroDoTexto, planejarImportacao, type ArquivoBruto } from "@/regras/importar-instrucoes";
 
 // Instruções do bot (decisão do Mateus 04/11/2026): o projeto não traz roteiro nenhum. As instruções numeradas ("roteiro")
 // são coladas pelo admin na tela, a partir do repositório de instruções dele. O Manual do CRM ("manual") é uma instrução
@@ -195,4 +196,49 @@ export async function paraExportar(ids: string[] | null) {
     textos.push(manual.texto.trim());
   }
   return { texto: textos.join("\n\n"), arquivos };
+}
+
+/**
+ * Importa instruções de arquivos de texto: atualiza a de mesmo número (a versão atual vira "anterior", dá para voltar),
+ * cria as novas na posição do número e ignora as idênticas. Tudo ou nada: com qualquer arquivo com erro, nada é gravado.
+ */
+export async function importarInstrucoes(arquivos: ArquivoBruto[]) {
+  await garantirManual();
+  const resultado = await db.$transaction(async (tx) => {
+    const existentes = await tx.instrucao.findMany({ where: { tipo: ROTEIRO }, orderBy: { ordem: "asc" } });
+    const plano = planejarImportacao(arquivos, existentes);
+    const erro = plano.find((p) => p.acao === "erro");
+    if (erro) throw new ErroHttp(400, `${erro.lida.nome}: ${erro.lida.erro}`);
+    const agora = new Date();
+    let atualizadas = 0;
+    let novas = 0;
+    // Ordem final: as existentes na ordem atual; cada nova entra antes da primeira que tem número maior (ou no fim).
+    const ordemFinal: string[] = existentes.map((e) => e.id);
+    for (const item of plano) {
+      const { lida } = item;
+      if (item.acao === "atualizar" && item.existenteId) {
+        const atual = existentes.find((e) => e.id === item.existenteId)!;
+        const mudouTexto = lida.texto !== atual.texto.trim();
+        await tx.instrucao.update({
+          where: { id: atual.id },
+          data: { titulo: lida.titulo, texto: lida.texto, atualizadoEm: agora, ...(mudouTexto ? { anteriorTitulo: atual.titulo, anteriorTexto: atual.texto, anteriorEm: agora } : {}) },
+        });
+        atualizadas++;
+      } else if (item.acao === "nova") {
+        const criada = await tx.instrucao.create({ data: { tipo: ROTEIRO, titulo: lida.titulo, texto: lida.texto, ativa: true, ordem: existentes.length + novas + 1, criadoEm: agora, atualizadoEm: agora } });
+        const antes = lida.numero === null ? -1 : ordemFinal.findIndex((id) => {
+          const e = existentes.find((x) => x.id === id);
+          const n = e ? numeroDoTexto(e.texto) : null;
+          return n !== null && n > lida.numero!;
+        });
+        if (antes >= 0) ordemFinal.splice(antes, 0, criada.id);
+        else ordemFinal.push(criada.id);
+        novas++;
+      }
+    }
+    for (const [i, id] of ordemFinal.entries()) await tx.instrucao.update({ where: { id }, data: { ordem: i + 1 } });
+    return { atualizadas, novas, iguais: plano.filter((p) => p.acao === "igual").length };
+  });
+  await marcarMudanca();
+  return resultado;
 }

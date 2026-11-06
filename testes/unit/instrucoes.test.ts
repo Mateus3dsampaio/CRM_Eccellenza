@@ -3,10 +3,12 @@ import { MANUAL_INICIAL } from "@/bot/manual-inicial";
 import { montarPromptSistema } from "@/bot/prompt";
 import { db } from "@/lib/db";
 import { montarZip } from "@/lib/zip";
+import { lerInstrucao } from "@/regras/importar-instrucoes";
 import { pode } from "@/regras/permissoes";
 import {
   criarInstrucao,
   excluirInstrucao,
+  importarInstrucoes,
   editarInstrucao,
   instrucoesAtivas,
   listarInstrucoes,
@@ -190,5 +192,42 @@ describe("zip de exportação", () => {
     expect(zip.readUInt32LE(fim)).toBe(0x06054b50);
     expect(zip.readUInt16LE(fim + 10)).toBe(2);
     expect(zip.includes(Buffer.from("Olá, ação\n", "utf8"))).toBe(true);
+  });
+});
+
+describe("importar instruções de arquivos .txt", () => {
+  it("o título sai da primeira linha, sem o número e sem gritar em maiúsculas", () => {
+    const l = lerInstrucao({ nome: "02-roteiro-de-qualificacao.txt", texto: "\uFEFF02. ROTEIRO DE QUALIFICAÇÃO\r\nQuando o cliente..." });
+    expect(l).toMatchObject({ numero: 2, titulo: "Roteiro de qualificação", erro: null });
+    expect(l.texto).toBe("02. ROTEIRO DE QUALIFICAÇÃO\nQuando o cliente...");
+    expect(lerInstrucao({ nome: "x.txt", texto: "05. Convite para a loja\ntexto" }).titulo).toBe("Convite para a loja");
+    expect(lerInstrucao({ nome: "09-formas-de-pagamento.txt", texto: "Formas de pagamento\ntexto" })).toMatchObject({ numero: 9, titulo: "Formas de pagamento" });
+    expect(lerInstrucao({ nome: "a.txt", texto: "   " }).erro).toMatch(/vazio/);
+    expect(lerInstrucao({ nome: "a.txt", texto: "01. Papel ��" }).erro).toMatch(/UTF-8/);
+  });
+
+  it("atualiza a de mesmo número (guardando a anterior), cria a nova no lugar certo e ignora a idêntica", async () => {
+    await limparBanco();
+    await criarInstrucao({ titulo: "Papel e tom", texto: "01. PAPEL E TOM\nantigo" });
+    await criarInstrucao({ titulo: "Valores", texto: "03. VALORES\nvalores" });
+    const r = await importarInstrucoes([
+      { nome: "01-papel.txt", texto: "01. PAPEL E TOM\nnovo texto" },
+      { nome: "02-roteiro.txt", texto: "02. ROTEIRO DE QUALIFICAÇÃO\nroteiro" },
+      { nome: "03-valores.txt", texto: "03. VALORES\nvalores" },
+    ]);
+    expect(r).toEqual({ atualizadas: 1, novas: 1, iguais: 1 });
+    const lista = await listarInstrucoes();
+    expect(lista.map((i) => i.titulo)).toEqual(["Papel e tom", "Roteiro de qualificação", "Valores"]);
+    expect(lista.map((i) => i.ordem)).toEqual([1, 2, 3]);
+    expect(lista[0].anteriorTexto).toBe("01. PAPEL E TOM\nantigo");
+    expect(lista[2].anteriorTexto).toBeNull();
+    expect(await instrucoesAtivas()).toHaveLength(3);
+  });
+
+  it("com um arquivo com erro nada é gravado", async () => {
+    await limparBanco();
+    await criarInstrucao({ titulo: "Papel e tom", texto: "01. PAPEL E TOM\nantigo" });
+    await expect(importarInstrucoes([{ nome: "01.txt", texto: "01. PAPEL E TOM\nnovo" }, { nome: "vazio.txt", texto: "" }])).rejects.toThrow(/vazio/);
+    expect((await listarInstrucoes())[0].texto).toBe("01. PAPEL E TOM\nantigo");
   });
 });

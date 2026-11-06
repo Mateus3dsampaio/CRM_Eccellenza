@@ -10,7 +10,7 @@ import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vend
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
-import { Botao, Campo, Etiqueta, classeEntrada } from "../ui";
+import { Botao, Campo, Etiqueta, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
 import { JanelaMudanca } from "../vendas/janela-mudanca";
 import { useRegrasVendas } from "../vendas/regras";
@@ -114,6 +114,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
   const [editando, setEditando] = useState(false);
   const [agendar, setAgendar] = useState<TipoCompromisso | null>(null);
+  const [voltando, setVoltando] = useState(false);
   // Etapa que pede dados (retorno, valor fechado, motivo da perda): abre a janela; trocar só vale ao confirmar.
   const [pedido, setPedido] = useState<CodigoEtapa | null>(null);
 
@@ -190,6 +191,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
     );
   };
   const canceladas = ficha.visitas.filter((v) => v.status === "cancelada");
+  const compromissosMarcados = ficha.visitas.filter((v) => v.status === "agendada" && v.tipo !== "visita");
 
   const blocos = {
     resumo: (
@@ -227,6 +229,8 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
                   // Medição/Apresentação: o card só entra com o compromisso marcado (abre a agenda).
                   if (etapaComAgenda(etapa)) return setAgendar(etapa);
                   if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido(etapa as CodigoEtapa);
+                  // Voltar para qualificação com medição/apresentação marcada: pergunta antes de cancelar o compromisso.
+                  if (etapa === "qualificacao" && compromissosMarcados.length) return setVoltando(true);
                   void acaoLead({ acao: "mover", etapa }, "Etapa alterada.");
                 }}
               >
@@ -310,6 +314,26 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const janelas = (
     <>
       <AgendarVisita leadId={ficha.id} tipo={agendar ?? "visita"} aberto={agendar !== null} aoFechar={() => setAgendar(null)} aoAgendar={aoMudar} />
+      <Modal aberto={voltando} aoFechar={() => setVoltando(false)} titulo="Cancelar compromisso?" largura="max-w-md">
+        <p className="text-sm text-texto-suave">
+          Este card tem {compromissosMarcados.map((v) => `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso].toLowerCase()} de ${v.rotulo}`).join(" e ")} na agenda. Voltar para &quot;{nomesEtapas.nome("qualificacao")}&quot; cancela{" "}
+          {compromissosMarcados.length > 1 ? "esses compromissos" : "esse compromisso"}. Deseja cancelar e mover o card?
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao variante="fantasma" onClick={() => setVoltando(false)}>
+            Manter como está
+          </Botao>
+          <Botao
+            variante="perigo"
+            onClick={() => {
+              setVoltando(false);
+              void acaoLead({ acao: "mover", etapa: "qualificacao", cancelarCompromissos: true }, "Compromisso cancelado e etapa alterada.");
+            }}
+          >
+            Cancelar compromisso e mover
+          </Botao>
+        </div>
+      </Modal>
       {pedido && (
         <JanelaMudanca
           etapa={pedido}

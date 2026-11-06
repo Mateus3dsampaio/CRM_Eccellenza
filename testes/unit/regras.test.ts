@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horariosLivres, horarioDentroDaRegra, horasDeInicio, janelaDeAgendamento, validarRegrasAgenda, type RegrasAgenda, vagaLivre, chaveVaga } from "@/regras/agenda";
+import { REGRAS_AGENDA_PADRAO, primeiroDiaAgendavel, primeiroHorarioPossivel, descreverRegrasAgenda, horariosLivres, horarioDentroDaRegra, horasDeInicio, janelaDeAgendamento, validarRegrasAgenda, type RegrasAgenda, vagaLivre, chaveVaga } from "@/regras/agenda";
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
 import { escolherConsultor } from "@/regras/distribuicao";
@@ -89,6 +89,21 @@ describe("agenda (AGENDA-02)", () => {
     const { de, ate } = janelaDeAgendamento(dataLocal(2026, 11, 7, 9)); // sábado
     expect(partesLocais(de).diaSemana).toBe(1); // segunda
     expect(ate.getTime() - dataLocal(2026, 11, 7).getTime()).toBe(15 * DIA);
+  });
+  it("dá para marcar no mesmo dia, a partir da próxima hora cheia", () => {
+    expect(primeiroHorarioPossivel(dataLocal(2026, 11, 9, 9, 30)).getTime()).toBe(dataLocal(2026, 11, 9, 10).getTime());
+    expect(primeiroHorarioPossivel(dataLocal(2026, 11, 9, 9)).getTime()).toBe(dataLocal(2026, 11, 9, 10).getTime());
+    const agora = dataLocal(2026, 11, 9, 9, 30); // segunda
+    const livres = horariosLivres({ agora, consultores: ["a"], ocupados: [], limite: 100, periodo: { de: dataLocal(2026, 11, 9), ate: dataLocal(2026, 11, 10) } });
+    expect(livres[0].inicio.getTime()).toBe(dataLocal(2026, 11, 9, 10).getTime());
+    expect(livres.map((v) => partesLocais(v.inicio).hora)).toEqual([10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(primeiroDiaAgendavel(agora).getTime()).toBe(dataLocal(2026, 11, 9).getTime());
+    // 17h30 de segunda: a última visita começa às 17h, não sobra nada hoje → terça.
+    expect(partesLocais(primeiroDiaAgendavel(dataLocal(2026, 11, 9, 17, 30))).dia).toBe(10);
+    // Sábado 11h30: a loja fecha ao meio-dia → próximo dia aberto (segunda).
+    expect(partesLocais(primeiroDiaAgendavel(dataLocal(2026, 11, 7, 11, 30))).diaSemana).toBe(1);
+    // A lista automática continua começando no próximo dia aberto.
+    expect(partesLocais(janelaDeAgendamento(agora).de).dia).toBe(10);
   });
   it("segue as regras editadas: dia aberto, duração, janela e validação", () => {
     const regras: RegrasAgenda = { horario: [{ abre: 9, fecha: 12 }, ...REGRAS_AGENDA_PADRAO.horario.slice(1)], duracaoMin: 90, duracaoMedicaoMin: 120, visitasPorHorario: 2, diasAFrente: 3 };

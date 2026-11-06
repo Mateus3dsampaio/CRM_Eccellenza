@@ -55,7 +55,7 @@ function contagem(n: number) {
   return `${n.toLocaleString("pt-BR")} ${n === 1 ? "conversa" : "conversas"}`;
 }
 
-type Confirmacao = { titulo: string; texto: string; botao: string; perigo: boolean; midias?: { ids: string[] } | { etapa: string }; executar: () => Promise<void> } | null;
+type Confirmacao = { titulo: string; texto: string; botao: string; recusar?: string; perigo: boolean; midias?: { ids: string[] } | { etapa: string }; executar: () => Promise<void> } | null;
 
 export function Quadro() {
   const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
@@ -185,17 +185,29 @@ export function Quadro() {
   }
 
   function mover(id: string, etapa: string) {
+    // Voltar para qualificação com medição/apresentação marcada: pergunta antes e, se o vendedor aceitar, cancela o compromisso.
+    const agendados = etapa === "qualificacao" ? (cards.find((c) => c.id === id)?.agendados ?? []) : [];
+    if (agendados.length && cards.find((c) => c.id === id)?.etapa !== etapa) {
+      return setConfirmacao({
+        titulo: "Cancelar compromisso?",
+        texto: `Este card tem ${agendados.map((a) => a.rotulo.toLowerCase()).join(" e ")} na agenda. Voltar para "${nomesEtapas.nome(etapa)}" cancela ${agendados.length > 1 ? "esses compromissos" : "esse compromisso"}. Deseja cancelar e mover o card?`,
+        botao: "Cancelar compromisso e mover",
+        recusar: "Manter como está",
+        perigo: true,
+        executar: async () => moverAgora(id, etapa, undefined, true),
+      });
+    }
     if (etapaComAgenda(etapa)) return setAgendando({ id, tipo: etapa });
     // Etapas que exigem dados (retorno, valor fechado, motivo da perda): abre a janela e só move ao confirmar.
     if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido({ id, etapa: etapa as CodigoEtapa });
     moverAgora(id, etapa);
   }
 
-  function moverAgora(id: string, etapa: string, venda?: VendaParaApi) {
+  function moverAgora(id: string, etapa: string, venda?: VendaParaApi, cancelarCompromissos?: boolean) {
     const mesmaEtapa = cards.find((c) => c.id === id)?.etapa === etapa;
     // Atualiza na tela na hora; o servidor confirma em seguida.
     setDados((d) => (d ? { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, etapa } : c)) } : d));
-    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}) }, mesmaEtapa ? "Próximo contato atualizado." : `Movido para "${nomesEtapas.nome(etapa)}".`);
+    void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}), ...(cancelarCompromissos ? { cancelarCompromissos: true } : {}) }, mesmaEtapa ? "Próximo contato atualizado." : `Movido para "${nomesEtapas.nome(etapa)}".`);
   }
 
   function decidir(id: string, escolha: EscolhaDecisao) {
@@ -554,7 +566,7 @@ export function Quadro() {
         {confirmacao?.midias && <AvisoMidias alvo={confirmacao.midias} />}
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setConfirmacao(null)}>
-            Cancelar
+            {confirmacao?.recusar ?? "Cancelar"}
           </Botao>
           <Botao
             variante={confirmacao?.perigo ? "perigo" : "primario"}

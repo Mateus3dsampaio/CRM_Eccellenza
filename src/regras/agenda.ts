@@ -1,4 +1,4 @@
-import { dataLocal, partesLocais, somarDias } from "./tempo";
+import { HORA, dataLocal, inicioDoDiaLocal, partesLocais, somarDias } from "./tempo";
 
 // Regras da agenda: o admin edita em Configurações (chave `agenda`). Sem nada gravado vale o padrão abaixo (PROVISÓRIO).
 // O bot não agenda (decisão do Mateus 04/11/2026): quem marca é o consultor, pela agenda.
@@ -128,6 +128,22 @@ export function janelaDeAgendamento(agora: Date, r: RegrasAgenda = REGRAS_AGENDA
 }
 
 /**
+ * Primeiro instante em que dá para marcar um compromisso: a próxima hora cheia (às 9h30, 10h; às 9h em ponto, também 10h).
+ * Decisão do Mateus 06/11/2026: dá para marcar no mesmo dia, a partir da próxima hora.
+ */
+export function primeiroHorarioPossivel(agora: Date): Date {
+  return new Date((Math.floor(agora.getTime() / HORA) + 1) * HORA);
+}
+
+/** Primeiro dia que pode receber compromisso: hoje, se ainda sobra horário depois da próxima hora cheia; senão o próximo dia aberto. */
+export function primeiroDiaAgendavel(agora: Date, r: RegrasAgenda = REGRAS_AGENDA_PADRAO, tipo: TipoCompromisso = "visita"): Date {
+  const p = partesLocais(agora);
+  const minimo = primeiroHorarioPossivel(agora).getTime();
+  const sobraHoje = horasDeInicio(p.diaSemana, r, tipo).some((hora) => dataLocal(p.ano, p.mes, p.dia, hora).getTime() >= minimo);
+  return sobraHoje ? inicioDoDiaLocal(agora) : janelaDeAgendamento(agora, r).de;
+}
+
+/**
  * O consultor está livre (sem nenhum compromisso nem bloqueio no período: ele mede ou apresenta, nunca os dois) e,
  * se o compromisso é na loja, ainda cabe na loja (limite de visitas ao mesmo tempo; medição não ocupa a loja).
  */
@@ -152,7 +168,7 @@ export function horariosLivres(params: {
   aPartirDe?: Date;
   regras?: RegrasAgenda;
   tipo?: TipoCompromisso;
-  /** Período escolhido na tela (calendário). Sem ele vale a janela de `diasAFrente`. Nunca começa antes do próximo dia aberto. */
+  /** Período escolhido na tela (calendário). Sem ele vale a janela de `diasAFrente` (a partir de amanhã). Com ele, pode começar hoje (a partir da próxima hora cheia). */
   periodo?: { de: Date; ate: Date };
 }): Vaga[] {
   const { agora, ocupados, limite = 20 } = params;
@@ -162,13 +178,15 @@ export function horariosLivres(params: {
     ? [params.consultorPreferido, ...params.consultores.filter((c) => c !== params.consultorPreferido)]
     : params.consultores;
   const janela = janelaDeAgendamento(agora, r);
-  const de = params.periodo ? new Date(Math.max(params.periodo.de.getTime(), janela.de.getTime())) : janela.de;
+  const de = params.periodo ? new Date(Math.max(params.periodo.de.getTime(), inicioDoDiaLocal(agora).getTime())) : janela.de;
+  const minimo = primeiroHorarioPossivel(agora).getTime();
   const ate = params.periodo?.ate ?? janela.ate;
   const resultado: Vaga[] = [];
   for (let dia = de; dia.getTime() < ate.getTime() && resultado.length < limite; dia = somarDias(dia, 1)) {
     const p = partesLocais(dia);
     for (const hora of horasDeInicio(p.diaSemana, r, tipo)) {
       const inicio = dataLocal(p.ano, p.mes, p.dia, hora);
+      if (inicio.getTime() < minimo) continue;
       if (params.aPartirDe && inicio.getTime() < params.aPartirDe.getTime()) continue;
       const fim = new Date(inicio.getTime() + duracaoVisitaMs(r, tipo));
       const consultor = consultores.find((c) => vagaLivre({ consultorId: c, inicio, fim }, ocupados, r, tipo));
