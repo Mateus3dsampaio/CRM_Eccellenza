@@ -204,7 +204,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
-| `src/regras/retorno-fechada.ts` | Retorno com a loja fechada: regras (padrão, validação) e `horarioDoRetorno` (horário pedido só vale no futuro e com a loja aberta; senão reabertura + X min) |
+| `src/regras/retorno-fechada.ts` | Retorno com a loja fechada: regras (padrão, validação) e `horarioDoRetorno` (sem horário escolhido: reabertura + X min; horário pedido com a loja fechada ou no passado o bot nem grava: `registrar_retorno` devolve o horário de atendimento para ele informar o cliente) |
 | `src/regras/presenca.ts` | Presença e fila da loja fechada: regras (padrão, validação), loja aberta/fechada pela agenda, último fechamento, abertura atual, horários de repartir e verificar, `filaPodeSerEntregue`, `leadNovoPodeTerDono`, resumo dos itens do dia |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |

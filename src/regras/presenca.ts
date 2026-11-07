@@ -143,3 +143,20 @@ export function situacaoDaLoja(instante: Date, agenda: RegrasAgenda = REGRAS_AGE
   }
   return `${agora}; loja fechada; reabre ${dataHoraCurta(proximaAbertura(instante, agenda))}`;
 }
+
+/** Horário de funcionamento em frase, para o bot dizer ao cliente: "segunda a sexta das 8h às 18h; sábado das 8h às 12h". */
+export function descreverHorarioDeFuncionamento(agenda: RegrasAgenda = REGRAS_AGENDA_PADRAO): string {
+  const ordem = [1, 2, 3, 4, 5, 6, 0];
+  const grupos: { dias: number[]; faixa: string }[] = [];
+  for (const dia of ordem) {
+    const h = agenda.horario[dia];
+    if (!h) continue;
+    const faixa = `das ${h.abre}h às ${h.fecha}h`;
+    const ultimo = grupos[grupos.length - 1];
+    const anterior = ultimo ? ultimo.dias[ultimo.dias.length - 1] : null;
+    if (ultimo && ultimo.faixa === faixa && anterior !== null && ordem.indexOf(dia) === ordem.indexOf(anterior) + 1) ultimo.dias.push(dia);
+    else grupos.push({ dias: [dia], faixa });
+  }
+  const nome = (d: number) => DIAS_SEMANA[d];
+  return grupos.map((g) => `${g.dias.length > 1 ? `${nome(g.dias[0])} a ${nome(g.dias[g.dias.length - 1])}` : nome(g.dias[0])} ${g.faixa}`).join("; ");
+}

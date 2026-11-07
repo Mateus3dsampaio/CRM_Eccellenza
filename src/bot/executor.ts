@@ -8,6 +8,7 @@ import { registrarAlteracao } from "@/servicos/historico";
 import { escolherProximoConsultor } from "@/servicos/distribuicao";
 import { alterarEtiqueta, atualizarCampos, atualizarResumo, moverEtapa } from "@/servicos/leads";
 import { registrarUmaVez } from "@/servicos/metricas";
+import { descreverHorarioDeFuncionamento, lojaAberta } from "@/regras/presenca";
 import { horarioDoRetorno } from "@/regras/retorno-fechada";
 import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
 import { dataLocal, formatarDataHora } from "@/regras/tempo";
@@ -83,12 +84,20 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         }
         const m = pedidoTexto?.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
         const pedido = m ? dataLocal(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5])) : null;
-        const { quando, usouPadrao } = horarioDoRetorno(pedido, agoraData, await regrasDeRetorno(), await regrasDaAgenda());
+        const agenda = await regrasDaAgenda();
+        // Horário pedido com a loja fechada (ou que já passou): não grava. O bot avisa o cliente e pergunta outro horário dentro do funcionamento.
+        if (pedido && (pedido.getTime() <= agoraData.getTime() || !lojaAberta(pedido, agenda))) {
+          return {
+            conteudo: `Horário não gravado: ${pedido.getTime() <= agoraData.getTime() ? "esse horário já passou" : "a loja está fechada nesse horário"}. Horário de atendimento: ${descreverHorarioDeFuncionamento(agenda)}. Diga isso ao cliente e pergunte qual desses horários fica melhor para o consultor chamar; depois chame registrar_retorno de novo.`,
+            erro: true,
+          };
+        }
+        const { quando, usouPadrao } = horarioDoRetorno(pedido, agoraData, await regrasDeRetorno(), agenda);
         // retornoModeloEm: o envio automático do modelo só vale para este horário (se uma pessoa mudar a data, deixa de valer).
         await db.lead.update({ where: { id: leadId }, data: { proximoContatoEm: quando, lembreteNota: nota, retornoModeloEm: quando } });
         await registrarAlteracao(leadId, "bot", `Marcou retorno para ${formatarDataHora(quando)}${usouPadrao ? " (horário da reabertura da loja)" : ""}: ${nota}`);
         await marcarMudanca();
-        return { conteudo: `Retorno marcado para ${formatarDataHora(quando)}${usouPadrao ? " (horário pedido indisponível: usei a reabertura da loja)" : ""}. Confirme esse horário ao cliente.` };
+        return { conteudo: `Retorno marcado para ${formatarDataHora(quando)}${usouPadrao ? " (o cliente não escolheu horário: usei a reabertura da loja)" : ""}. Confirme esse horário ao cliente.` };
       }
 
       case "passar_para_consultor": {

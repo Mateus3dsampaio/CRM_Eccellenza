@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
 import { BOTAO_CONTINUAR, BOTAO_SEM_INTERESSE, MODELOS, buscarModelo } from "@/regras/modelos";
 import { recusouPeloBotao } from "@/regras/optout";
-import { proximaAbertura, situacaoDaLoja } from "@/regras/presenca";
+import { descreverHorarioDeFuncionamento, proximaAbertura, situacaoDaLoja } from "@/regras/presenca";
 import { REGRAS_RETORNO_PADRAO, horarioDoRetorno, validarRegrasRetorno } from "@/regras/retorno-fechada";
 import { dataLocal } from "@/regras/tempo";
 import { extrairEventos } from "@/regras/whatsapp";
@@ -41,6 +41,10 @@ describe("retorno com a loja fechada: regras puras", () => {
     expect(horarioDoRetorno(sab(14), sab(15), R, A).quando.getTime()).toBe(seg(8, 30).getTime()); // passado
     expect(horarioDoRetorno(null, sab(15), R, A)).toEqual({ quando: seg(8, 30), usouPadrao: true });
     expect(horarioDoRetorno(null, sab(15), { ...R, semHorarioMin: 0 }, A).quando.getTime()).toBe(seg(8).getTime());
+  });
+
+  it("descreve o horário de funcionamento em frase", () => {
+    expect(descreverHorarioDeFuncionamento(A)).toBe("segunda a sexta das 8h às 18h; sábado das 8h às 12h");
   });
 
   it("valida as regras", () => {
@@ -88,7 +92,7 @@ describe("retorno com a loja fechada: ferramenta e rotina", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("registrar_retorno grava o retorno e a nota; horário com a loja fechada vira reabertura mais 30 min", async () => {
+  it("registrar_retorno grava o retorno e a nota; sem horário escolhido usa a reabertura mais 30 min", async () => {
     const lead = await leadDoSabado("+5588900000031", null);
     const ok = await executarFerramenta(lead.id, "registrar_retorno", { quando: "2026-11-09 09:00", nota: "Pediu contato segunda de manhã" });
     expect(ok.erro).toBeUndefined();
@@ -97,11 +101,25 @@ describe("retorno com a loja fechada: ferramenta e rotina", () => {
     expect(l.lembreteNota).toBe("Pediu contato segunda de manhã");
     expect(l.retornoModeloEm?.getTime()).toBe(seg(9).getTime());
 
+    // Cliente não escolheu horário: reabertura + 30 min.
     const outro = await leadDoSabado("+5588900000032", null);
-    await executarFerramenta(outro.id, "registrar_retorno", { quando: "2026-11-08 10:00", nota: "Disse domingo" });
+    await executarFerramenta(outro.id, "registrar_retorno", { nota: "Sem horário" });
     l = await lerLead(outro.id);
     expect(l.proximoContatoEm?.getTime()).toBe(seg(8, 30).getTime());
-    expect(l.lembreteNota).toBe("Disse domingo");
+  });
+
+  it("horário pedido com a loja fechada ou no passado não é gravado: o bot recebe o horário de atendimento para informar ao cliente", async () => {
+    const lead = await leadDoSabado("+5588900000042", null);
+    const domingo = await executarFerramenta(lead.id, "registrar_retorno", { quando: "2026-11-08 10:00", nota: "Disse domingo" });
+    expect(domingo.erro).toBe(true);
+    expect(domingo.conteudo).toContain("segunda a sexta das 8h às 18h; sábado das 8h às 12h");
+    const passado = await executarFerramenta(lead.id, "registrar_retorno", { quando: "2026-11-07 10:00", nota: "x" });
+    expect(passado.erro).toBe(true);
+    const depoisDoFechamento = await executarFerramenta(lead.id, "registrar_retorno", { quando: "2026-11-09 19:00", nota: "x" });
+    expect(depoisDoFechamento.erro).toBe(true);
+    const l = await lerLead(lead.id);
+    expect(l.proximoContatoEm).toBeNull();
+    expect(l.retornoModeloEm).toBeNull();
   });
 
   it("registrar_retorno não sobrescreve retorno já marcado, nem aceita formato inválido", async () => {

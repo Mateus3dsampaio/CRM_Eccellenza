@@ -72,7 +72,7 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
   {
     name: "registrar_retorno",
     description:
-      "Agenda o retorno do consultor com o cliente e guarda uma nota. Use quando o cliente chegou com a loja fechada e disse quando prefere ser chamado. O sistema confere o horário: se a loja estiver fechada nessa hora ou o horário já passou, usa a reabertura. Não substitui um retorno que já esteja marcado.",
+      "Agenda o retorno do consultor com o cliente e guarda uma nota. Use quando o cliente chegou com a loja fechada e disse quando prefere ser chamado. O sistema confere o horário: se a loja estiver fechada nessa hora ou o horário já passou, NÃO grava e devolve o horário de atendimento para você informar ao cliente e perguntar outro. Omita `quando` só se o cliente não quiser escolher. Não substitui um retorno que já esteja marcado.",
     input_schema: {
       type: "object",
       properties: {
