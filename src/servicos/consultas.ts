@@ -100,6 +100,7 @@ export async function cardsDoKanban() {
       ordem: l.ordem,
       horario: l.ultimaMensagemEm ? formatarHorarioCard(l.ultimaMensagemEm, quando) : "",
       ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
+      ultimaMsgClienteEm: l.ultimaMsgClienteEm?.toISOString() ?? null,
       esperandoDesde: esperandoDesde?.toISOString() ?? null,
       naoLidas: l.naoLidas,
       previa: l.ultimaMensagemPrevia ?? "",

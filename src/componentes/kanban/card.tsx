@@ -16,6 +16,7 @@ import { Avatar, Etiqueta, Sino } from "../ui";
 import { CLASSE_CARD_RETORNO, CLASSE_TEXTO_RETORNO, useSituacaoRetorno } from "../retornos";
 import { CLASSE_BADGE_ESPERA, CLASSE_CARD_CRITICO, CLASSE_CARD_ESPERA, useSituacaoEspera } from "../espera";
 import { BolinhaNaoLidas } from "./bolinha";
+import { RelogioJanela } from "./relogio-janela";
 import { useGaveta } from "../ficha/gaveta";
 
 export interface AcoesCard {
@@ -51,6 +52,9 @@ export function ConteudoCard({ card, critico = false }: { card: CardKanban; crit
               {card.aguardandoHumano && !espera.esperando && <Sino />}
               <span className="text-xs text-texto-fraco">{card.horario}</span>
             </span>
+          </div>
+          <div className="mt-1">
+            <RelogioJanela etapa={card.etapa} ultimaMsgClienteEm={card.ultimaMsgClienteEm} critico={critico} />
           </div>
           {(card.previa || card.naoLidas > 0) && (
             <div className="mt-0.5 flex items-center gap-1.5 text-sm text-texto-suave">

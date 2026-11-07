@@ -6,7 +6,7 @@ Limites PROVISÓRIOS (Mateus, 07/11/2026): verde > 6 h, amarelo 2–6 h, vermelh
 
 ## Etapas (uma por vez, com validação)
 - [x] 1. Regra `situacaoDaJanela` em `src/regras/janela24h.ts`, com testes (`testes/unit/janela24h.test.ts`).
-- [ ] 2. Relógio (anel + horas) no card, só em etapa aberta; dica com a hora exata.
+- [x] 2. Relógio (anel + horas) no card, só em etapa aberta; dica com a hora exata.
 - [ ] 3. Botão "Janelas fechando" no topo (menos de 2 h, mais urgente primeiro; consultor vê os dele).
 - [ ] 4. Faixa na ficha com menos de 6 h (hora de fechar + mensagens prontas, textos aprovados pelo Mateus) e "Reabrir com modelo" quando fechada.
 - [ ] 5. (opcional) Painel: % de leads ativos com janela aberta.
