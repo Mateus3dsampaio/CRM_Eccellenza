@@ -200,7 +200,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/agenda.ts` | Regras da agenda como parâmetro (`primeiroHorarioPossivel`: marcar no mesmo dia vale a partir da próxima hora cheia; `primeiroDiaAgendavel`) (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco Tipos de compromisso (visita à loja, medição, apresentação), duração por tipo, medição não ocupa a loja. |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para Perdido ("Parou de responder") |
 | `src/regras/decisao.ts` | Decisão pendente do vendedor: data vencida (do dia seguinte em diante) de medição, apresentação ou retorno da Negociação; textos da etiqueta |
-| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
+| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta); `situacaoDaJanela` dá faixa (verde/amarelo/vermelho/fechada, limites 6 h e 2 h PROVISÓRIOS), tempo restante e fração para o relógio do card (tarefa 37) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
@@ -341,6 +341,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/producao.test.ts` | Modo simulador: rotas 404 e relógio real em produção |
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
 | `testes/unit/saida.test.ts` | Junção dos textos do bot sem repetir fala igual |
+| `testes/unit/janela24h.test.ts` | Faixas e tempo restante da janela de 24h |
 | `testes/unit/lgpd.test.ts` | Parar de receber, exportar, excluir com registro |
 | `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
