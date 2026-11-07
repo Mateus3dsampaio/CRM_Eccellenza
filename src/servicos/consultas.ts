@@ -213,6 +213,7 @@ export async function fichaDoLead(id: string) {
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,
     janelaAberta: janelaAberta(lead.ultimaMsgClienteEm, quando),
+    ultimaMsgClienteEm: lead.ultimaMsgClienteEm?.toISOString() ?? null,
     janelaFechaEm: fecha?.toISOString() ?? null,
     mensagens: lead.mensagens.map((m) => ({
       id: m.id,

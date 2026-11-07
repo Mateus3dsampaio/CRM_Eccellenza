@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bot, Headset, Info, Paperclip, Send, X } from "lucide-react";
+import { Bot, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
+import { situacaoDaJanela } from "@/regras/janela24h";
 import { MODELOS } from "@/regras/modelos";
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { ListaMensagens } from "../chat";
 import { chamarApi, useAviso } from "../dados";
+import { useAgoraDoServidor } from "../espera";
 import { juntar } from "../estilos";
 import { Botao, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
@@ -22,6 +24,8 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   const [apagar, setApagar] = useState<string | null>(null);
   const refArquivo = useRef<HTMLInputElement>(null);
   const podeApagarMidia = usePode("apagar_midia");
+  const agora = useAgoraDoServidor();
+  const janela = situacaoDaJanela(ficha.ultimaMsgClienteEm, agora);
 
   function escolherArquivo(arquivo: File | undefined) {
     if (!arquivo) return;
@@ -121,12 +125,30 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
       </div>
       <form onSubmit={enviar} className="space-y-2 border-t border-borda bg-superficie p-3">
         {!ficha.janelaAberta && (
-          <p className="flex gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-xs text-aviso">
+          <div className="flex flex-wrap items-center gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-xs text-aviso">
             <Info className="size-4 shrink-0" aria-hidden />
-            Fora da janela de 24h (regra da Meta): só é possível enviar um modelo aprovado. A janela reabre quando o cliente escrever.
-          </p>
+            <span className="min-w-0 flex-1">Fora da janela de 24h (regra da Meta): só é possível enviar um modelo aprovado. A janela reabre quando o cliente escrever.</span>
+            {/* Só escolhe o modelo e deixa o texto à vista: quem envia é o vendedor. */}
+            <button
+              type="button"
+              onClick={() => { setModelo("retomada"); setAnexo(null); }}
+              className="inline-flex min-h-toque items-center gap-1.5 rounded-controle border border-aviso/60 px-3 font-semibold hover:bg-aviso/10"
+            >
+              <RotateCcw className="size-3.5" aria-hidden />
+              Reabrir com modelo
+            </button>
+          </div>
         )}
-        {ficha.janelaAberta && ficha.janelaFechaEm && <p className="text-xs text-texto-fraco">Texto livre liberado até {formatarDataHora(new Date(ficha.janelaFechaEm))}.</p>}
+        {ficha.janelaAberta && ficha.janelaFechaEm && (janela.faixa === "amarelo" || janela.faixa === "vermelho") ? (
+          <p className={juntar("flex items-start gap-2 rounded-controle px-3 py-2 text-xs", janela.faixa === "vermelho" ? "bg-alerta-suave text-alerta" : "bg-aviso-suave text-aviso")}>
+            <Hourglass className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              A janela fecha em <strong>{janela.texto}</strong> (texto livre até {formatarDataHora(new Date(ficha.janelaFechaEm))}). Só a resposta do cliente renova: chame agora para ele responder.
+            </span>
+          </p>
+        ) : (
+          ficha.janelaAberta && ficha.janelaFechaEm && <p className="text-xs text-texto-fraco">Texto livre liberado até {formatarDataHora(new Date(ficha.janelaFechaEm))}.</p>
+        )}
         {anexo && (
           <p className="flex items-center gap-2 rounded-controle bg-superficie-suave px-3 py-2 text-sm">
             <Paperclip className="size-4 shrink-0 text-texto-suave" aria-hidden />

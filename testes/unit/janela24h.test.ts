@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { janelasFechando, situacaoDaJanela, textoDeRestante } from "@/regras/janela24h";
+import { janelasFechando, resumoDasJanelas, situacaoDaJanela, textoDeRestante } from "@/regras/janela24h";
 import { HORA } from "@/regras/tempo";
 
 const agora = new Date("2026-11-07T15:00:00Z");
@@ -51,5 +51,12 @@ describe("janelasFechando", () => {
       { id: "sem", ultimaMsgClienteEm: null },
     ];
     expect(janelasFechando(leads, agora).map((l) => l.id)).toEqual(["urgente", "quase"]);
+  });
+});
+
+describe("resumoDasJanelas", () => {
+  it("conta ativos, abertos, fechando e com atenção", () => {
+    const leads = [{ ultimaMsgClienteEm: hAtras(1) }, { ultimaMsgClienteEm: hAtras(19) }, { ultimaMsgClienteEm: hAtras(23) }, { ultimaMsgClienteEm: hAtras(30) }, { ultimaMsgClienteEm: null }];
+    expect(resumoDasJanelas(leads, agora)).toEqual({ total: 5, abertas: 3, fechando: 1, atencao: 1 });
   });
 });

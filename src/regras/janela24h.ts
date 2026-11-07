@@ -58,3 +58,10 @@ export function janelasFechando<T extends { ultimaMsgClienteEm: Instante }>(lead
     .filter((l) => l.janela.faixa === "vermelho")
     .sort((a, b) => a.janela.restanteMs - b.janela.restanteMs);
 }
+
+/** Situação das janelas de uma lista de leads ativos, para o painel (tarefa 37). */
+export function resumoDasJanelas(leads: Array<{ ultimaMsgClienteEm: Instante }>, agora: Date) {
+  const faixas = leads.map((l) => situacaoDaJanela(l.ultimaMsgClienteEm, agora).faixa);
+  const contar = (f: FaixaJanela) => faixas.filter((x) => x === f).length;
+  return { total: leads.length, abertas: leads.length - contar("fechada"), fechando: contar("vermelho"), atencao: contar("amarelo") };
+}
