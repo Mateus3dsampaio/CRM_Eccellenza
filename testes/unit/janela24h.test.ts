@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { situacaoDaJanela, textoDeRestante } from "@/regras/janela24h";
+import { janelasFechando, situacaoDaJanela, textoDeRestante } from "@/regras/janela24h";
 import { HORA } from "@/regras/tempo";
 
 const agora = new Date("2026-11-07T15:00:00Z");
@@ -38,5 +38,18 @@ describe("textoDeRestante", () => {
     expect(textoDeRestante(5 * HORA)).toBe("5 h");
     expect(textoDeRestante(35 * 60_000)).toBe("35 min");
     expect(textoDeRestante(30_000)).toBe("menos de 1 min");
+  });
+});
+
+describe("janelasFechando", () => {
+  it("só os de menos de 2 h, do mais urgente ao menos", () => {
+    const leads = [
+      { id: "verde", ultimaMsgClienteEm: hAtras(1) },
+      { id: "quase", ultimaMsgClienteEm: hAtras(23, 30) },
+      { id: "urgente", ultimaMsgClienteEm: hAtras(23, 50) },
+      { id: "fechada", ultimaMsgClienteEm: hAtras(25) },
+      { id: "sem", ultimaMsgClienteEm: null },
+    ];
+    expect(janelasFechando(leads, agora).map((l) => l.id)).toEqual(["urgente", "quase"]);
   });
 });

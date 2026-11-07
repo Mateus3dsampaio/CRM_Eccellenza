@@ -106,6 +106,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) | `consultas`, `rotinas` |
 | `src/app/api/alertas/route.ts` | Avisos novos para o usuário (`?depois=N`). Consultor: os dos seus leads; admin: todos | `alertas` |
 | `src/app/api/retornos/route.ts` | "Retornos de hoje": leads em Orçamento/Negociação com retorno hoje, atrasado ou sem data (consultor: os dele; admin: todos) | `consultas` |
+| `src/app/api/janelas/route.ts` | "Janelas fechando" (tarefa 37): leads em etapa aberta com a janela de 24h ainda aberta (consultor: os dele; admin: todos). A tela filtra os de menos de 2 h | `consultas` |
 | `src/app/api/aguardando/route.ts` | Leads esperando um humano (consultor: os dele; admin: todos) e os prazos de cor. Alimenta o contador do topo, a lista e a cor dos cards | `consultas`, `configuracoes` |
 | `src/app/api/leads/[id]/route.ts` | Ficha e correção de dados (inclui `venda`: data do retorno, valores, motivo) | `consultas`, `leads`, `historico` |
 | `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder, marcar como vista (zera a bolinha) | `conversa` |
@@ -173,7 +174,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
 | `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
-| `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
+| `src/servicos/consultas.ts` | Dados prontos para as telas (`janelasAbertas` para o botão "Janelas fechando"; cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor (inclui "Clientes que faltaram": medição/apresentação remarcada depois da data): contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) Tarefa 21: apresentações e medições agendadas (principal), apresentações por consultor e conversão da agenda (`conversoesDoPeriodo`, a partir da tabela `Visita`). |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita, hora do retorno, decisão vencida uma vez por dia) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarRetornos`: avisa o dono do lead (e o admin) na hora do próximo contato, uma vez por data marcada. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
@@ -200,7 +201,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/agenda.ts` | Regras da agenda como parâmetro (`primeiroHorarioPossivel`: marcar no mesmo dia vale a partir da próxima hora cheia; `primeiroDiaAgendavel`) (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco Tipos de compromisso (visita à loja, medição, apresentação), duração por tipo, medição não ocupa a loja. |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para Perdido ("Parou de responder") |
 | `src/regras/decisao.ts` | Decisão pendente do vendedor: data vencida (do dia seguinte em diante) de medição, apresentação ou retorno da Negociação; textos da etiqueta |
-| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta); `situacaoDaJanela` dá faixa (verde/amarelo/vermelho/fechada, limites 6 h e 2 h PROVISÓRIOS), tempo restante e fração para o relógio do card (tarefa 37) |
+| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta); `janelasFechando` (menos de 2 h) e `situacaoDaJanela` dá faixa (verde/amarelo/vermelho/fechada, limites 6 h e 2 h PROVISÓRIOS), tempo restante e fração para o relógio do card (tarefa 37) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
@@ -257,6 +258,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/alertas/push.ts` | Lado do navegador do Web Push: registrar `/sw.js`, pedir permissão, assinar, ligar/desligar, pausar ao sair do CRM e renovar ao abrir (quem já ligou neste navegador) |
 | `src/componentes/alertas/som.ts` | Som feito no navegador (sem arquivo de áudio) |
 | `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo (com retorno vencendo, pisca em âmbar: `animate-chamar` em `tokens.css`) e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
+| `src/componentes/janelas.tsx` | Botão "Janelas fechando" no topo (tarefa 37): leads com menos de 2 h de texto livre, do mais urgente ao menos, com a prévia; provedor com uma consulta a `/api/janelas`. O filtro usa o relógio do servidor, então a lista anda sozinha |
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
 | `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (Negociação: próximo contato + valor do orçamento; valor fechado; motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
@@ -343,6 +345,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
 | `testes/unit/saida.test.ts` | Junção dos textos do bot sem repetir fala igual |
 | `testes/unit/janela24h.test.ts` | Faixas e tempo restante da janela de 24h |
+| `testes/unit/janelas-abertas.test.ts` | Consulta das janelas abertas (etapa, arquivado, dono do lead) |
 | `testes/unit/lgpd.test.ts` | Parar de receber, exportar, excluir com registro |
 | `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |

@@ -8,6 +8,7 @@ import { formatarDataHora } from "@/regras/tempo";
 import { useVersao } from "./dados";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
+import { BotaoJanelas } from "./janelas";
 import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotoesDePresenca } from "./presenca";
 import { MenuUsuario } from "./menu-usuario";
@@ -58,6 +59,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
                 {formatarDataHora(new Date(agora))}
               </Link>
             )}
+            <BotaoJanelas />
             <BotaoRetornos />
             <BotaoAguardando />
             {usuario.perfil === "consultor" && <BotoesDePresenca />}

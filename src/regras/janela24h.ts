@@ -50,3 +50,11 @@ export function situacaoDaJanela(ultimaMsgClienteEm: Instante, agora: Date): Sit
   const faixa: FaixaJanela = restanteMs <= LIMITE_JANELA_VERMELHO_MS ? "vermelho" : restanteMs <= LIMITE_JANELA_AMARELO_MS ? "amarelo" : "verde";
   return { faixa, restanteMs, fracao: restanteMs / JANELA_MS, texto: textoDeRestante(restanteMs) };
 }
+
+/** Leads com a janela quase fechando (faixa vermelha), do mais urgente ao menos. Para o botão "Janelas fechando" (tarefa 37). */
+export function janelasFechando<T extends { ultimaMsgClienteEm: Instante }>(leads: T[], agora: Date): Array<T & { janela: SituacaoJanela }> {
+  return leads
+    .map((l) => ({ ...l, janela: situacaoDaJanela(l.ultimaMsgClienteEm, agora) }))
+    .filter((l) => l.janela.faixa === "vermelho")
+    .sort((a, b) => a.janela.restanteMs - b.janela.restanteMs);
+}
