@@ -19,7 +19,7 @@ import { executarFerramenta } from "./executor";
 import { FERRAMENTAS } from "./ferramentas";
 import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type MotivoDeParada } from "./openai-conversao";
 import { montarPromptSistema } from "./prompt";
-import { limparResposta, respostaDescartada } from "./saida";
+import { juntarTextos, limparResposta, respostaDescartada } from "./saida";
 
 // Modelo do bot: o Sonnet mais recente (docs/briefing.md).
 export const MODELO_BOT = "claude-sonnet-5-5";
@@ -275,7 +275,7 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       return { respostas: [], erro: mensagem };
     }
 
-    const original = textos.join("\n\n");
+    const original = juntarTextos(textos);
     const final = limparResposta(original);
     // Confere de novo antes de enviar: se o consultor assumiu enquanto o bot pensava, o bot não envia.
     if (interrompido || (await consultorAssumiu(leadId))) {
