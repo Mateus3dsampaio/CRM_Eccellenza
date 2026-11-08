@@ -18,3 +18,4 @@ Caderno de ideias do Mateus. **Não é pendência e não tem urgência.** Serve 
 | Tópico | Arquivo | Estado |
 |---|---|---|
 | Análises da equipe de vendas com o Claude | [`analises-com-claude.md`](analises-com-claude.md) | Ideia aprovada, sem etapa feita |
+| Teste do painel que falha dependendo do horário | [`teste-painel-horario.md`](teste-painel-horario.md) | Registrado em 08/11/2026, sem etapa feita |
