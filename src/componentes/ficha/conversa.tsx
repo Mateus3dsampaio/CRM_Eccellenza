@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bot, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { Bot, FileCheck2, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { situacaoDaJanela } from "@/regras/janela24h";
 import { MODELOS, faltaParaLembrete, preencherModelo, proximoCompromisso, variaveisDoHorario } from "@/regras/modelos";
@@ -26,7 +26,7 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   const podeApagarMidia = usePode("apagar_midia");
   const agora = useAgoraDoServidor();
   const janela = situacaoDaJanela(ficha.ultimaMsgClienteEm, agora);
-  const textoDoModelo = previaDoModelo(modelo, ficha, agora);
+  const previa = previaDoModelo(modelo, ficha, agora);
 
   function escolherArquivo(arquivo: File | undefined) {
     if (!arquivo) return;
@@ -161,8 +161,32 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
             </button>
           </p>
         )}
+        {previa && (
+          // Prévia inteira do modelo, como o cliente vai receber (o campo de texto some enquanto há modelo escolhido).
+          <div className={juntar("rounded-controle border px-3 py-2.5", previa.falta ? "border-aviso/50 bg-aviso-suave" : "border-marca/40 bg-superficie-suave")}>
+            <div className="mb-1.5 flex items-center gap-2">
+              <FileCheck2 className={juntar("size-4 shrink-0", previa.falta ? "text-aviso" : "text-marca-texto")} aria-hidden />
+              <span className="min-w-0 flex-1 text-xs font-semibold text-texto-suave">
+                Modelo aprovado: <span className="text-texto">{previa.nome}</span>
+              </span>
+              <button type="button" onClick={() => setModelo("")} className="inline-flex size-8 items-center justify-center rounded-controle text-texto-fraco hover:bg-superficie hover:text-texto" aria-label="Tirar o modelo">
+                <X className="size-4" aria-hidden />
+              </button>
+            </div>
+            {previa.falta ? (
+              <p role="alert" className="flex items-start gap-2 text-sm text-aviso">
+                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {previa.falta}
+              </p>
+            ) : (
+              <p className="rolagem-fina max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-texto" aria-label="Prévia do modelo">
+                {previa.texto}
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row">
-          <select className={juntar(classeEntrada, "sm:w-52")} value={modelo} onChange={(e) => setModelo(e.target.value)} aria-label="Modelo aprovado">
+          <select className={juntar(classeEntrada, previa ? "sm:min-w-0 sm:flex-1" : "sm:w-52")} value={modelo} onChange={(e) => setModelo(e.target.value)} aria-label="Modelo aprovado">
             <option value="">{ficha.janelaAberta ? "Texto livre" : "Escolha um modelo"}</option>
             {MODELOS.map((m) => (
               <option key={m.codigo} value={m.codigo}>
@@ -181,17 +205,17 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
           >
             <Paperclip className="size-4" aria-hidden />
           </button>
-          <input
-            className={classeEntrada}
-            value={modelo ? textoDoModelo : texto}
-            title={modelo ? textoDoModelo : undefined}
-            onChange={(e) => setTexto(e.target.value)}
-            readOnly={!!modelo}
-            disabled={!modelo && !ficha.janelaAberta}
-            placeholder={anexo ? "Legenda (opcional)" : ficha.janelaAberta ? "Responder como consultor..." : "Texto livre bloqueado fora da janela de 24h"}
-            aria-label="Mensagem"
-          />
-          <Botao type="submit" variante="primario" carregando={enviando} disabled={!anexo && !modelo && !texto.trim()} icone={<Send className="size-4" aria-hidden />}>
+          {!previa && (
+            <input
+              className={classeEntrada}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              disabled={!ficha.janelaAberta}
+              placeholder={anexo ? "Legenda (opcional)" : ficha.janelaAberta ? "Responder como consultor..." : "Texto livre bloqueado fora da janela de 24h"}
+              aria-label="Mensagem"
+            />
+          )}
+          <Botao type="submit" variante="primario" carregando={enviando} disabled={previa ? !!previa.falta : !anexo && !texto.trim()} icone={<Send className="size-4" aria-hidden />}>
             Enviar
           </Botao>
         </div>
@@ -208,12 +232,14 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   );
 }
 
-/** Texto do modelo como o cliente vai receber; nos lembretes, com a data e a hora do próximo compromisso (ou o aviso de que falta marcar). */
-function previaDoModelo(codigo: string, ficha: FichaLead, agora: Date): string {
+/** Texto do modelo como o cliente vai receber; nos lembretes, com a data e a hora do próximo compromisso. Sem compromisso marcado, `falta` traz o aviso e não há texto. */
+function previaDoModelo(codigo: string, ficha: FichaLead, agora: Date): { nome: string; texto: string; falta: string | null } | null {
   const modelo = MODELOS.find((m) => m.codigo === codigo);
-  if (!modelo) return "";
-  if (!modelo.compromisso) return modelo.texto;
+  if (!modelo) return null;
+  if (!modelo.compromisso) return { nome: modelo.nome, texto: modelo.texto, falta: null };
   const visitas = ficha.visitas.map((v) => ({ tipo: v.tipo, status: v.status, inicio: new Date(v.inicio) }));
   const compromisso = proximoCompromisso(visitas, modelo.compromisso, agora);
-  return compromisso ? preencherModelo(modelo.texto, variaveisDoHorario(compromisso.inicio)) : (faltaParaLembrete(modelo, null) ?? "");
+  return compromisso
+    ? { nome: modelo.nome, texto: preencherModelo(modelo.texto, variaveisDoHorario(compromisso.inicio)), falta: null }
+    : { nome: modelo.nome, texto: "", falta: faltaParaLembrete(modelo, null) };
 }
