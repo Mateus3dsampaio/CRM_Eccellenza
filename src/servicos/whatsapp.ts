@@ -30,8 +30,8 @@ export interface ResultadoEnvio {
   erro?: string;
 }
 
-/** Envia texto livre (dentro da janela de 24h) ou um modelo aprovado. O nome do modelo na Meta é o código do modelo no CRM. */
-export async function enviarPelaMeta(params: { para: string; texto?: string; modelo?: string; anexo?: { dados: Buffer; tipo: string; nome: string } }): Promise<ResultadoEnvio> {
+/** Envia texto livre (dentro da janela de 24h) ou um modelo aprovado. O nome do modelo na Meta é o código do modelo no CRM. `parametros`: variáveis nomeadas do corpo do modelo (ex.: data e hora dos lembretes). */
+export async function enviarPelaMeta(params: { para: string; texto?: string; modelo?: string; parametros?: Record<string, string>; anexo?: { dados: Buffer; tipo: string; nome: string } }): Promise<ResultadoEnvio> {
   const cfg = lerConfigWhatsapp();
   if (!cfg) return { ok: false, erro: "WhatsApp não configurado" };
   const para = params.para.replace(/\D/g, "");
@@ -51,7 +51,18 @@ export async function enviarPelaMeta(params: { para: string; texto?: string; mod
     corpo = { messaging_product: "whatsapp", to: para, type: chave, [chave]: conteudo };
   } else
   corpo = params.modelo
-    ? { messaging_product: "whatsapp", to: para, type: "template", template: { name: params.modelo, language: { code: cfg.idiomaModelos } } }
+    ? {
+        messaging_product: "whatsapp",
+        to: para,
+        type: "template",
+        template: {
+          name: params.modelo,
+          language: { code: cfg.idiomaModelos },
+          ...(params.parametros && Object.keys(params.parametros).length
+            ? { components: [{ type: "body", parameters: Object.entries(params.parametros).map(([nome, valor]) => ({ type: "text", parameter_name: nome, text: valor })) }] }
+            : {}),
+        },
+      }
     : { messaging_product: "whatsapp", to: para, type: "text", text: { body: params.texto ?? "", preview_url: false } };
   try {
     const resposta = await fetch(`https://graph.facebook.com/${cfg.versaoApi}/${cfg.numeroId}/messages`, {

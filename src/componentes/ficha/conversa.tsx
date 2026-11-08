@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Bot, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { situacaoDaJanela } from "@/regras/janela24h";
-import { MODELOS } from "@/regras/modelos";
+import { MODELOS, faltaParaLembrete, preencherModelo, proximoCompromisso, variaveisDoHorario } from "@/regras/modelos";
 import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { ListaMensagens } from "../chat";
@@ -26,6 +26,7 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   const podeApagarMidia = usePode("apagar_midia");
   const agora = useAgoraDoServidor();
   const janela = situacaoDaJanela(ficha.ultimaMsgClienteEm, agora);
+  const textoDoModelo = previaDoModelo(modelo, ficha, agora);
 
   function escolherArquivo(arquivo: File | undefined) {
     if (!arquivo) return;
@@ -182,7 +183,8 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
           </button>
           <input
             className={classeEntrada}
-            value={modelo ? MODELOS.find((m) => m.codigo === modelo)?.texto ?? "" : texto}
+            value={modelo ? textoDoModelo : texto}
+            title={modelo ? textoDoModelo : undefined}
             onChange={(e) => setTexto(e.target.value)}
             readOnly={!!modelo}
             disabled={!modelo && !ficha.janelaAberta}
@@ -204,4 +206,14 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
       </Modal>
     </div>
   );
+}
+
+/** Texto do modelo como o cliente vai receber; nos lembretes, com a data e a hora do próximo compromisso (ou o aviso de que falta marcar). */
+function previaDoModelo(codigo: string, ficha: FichaLead, agora: Date): string {
+  const modelo = MODELOS.find((m) => m.codigo === codigo);
+  if (!modelo) return "";
+  if (!modelo.compromisso) return modelo.texto;
+  const visitas = ficha.visitas.map((v) => ({ tipo: v.tipo, status: v.status, inicio: new Date(v.inicio) }));
+  const compromisso = proximoCompromisso(visitas, modelo.compromisso, agora);
+  return compromisso ? preencherModelo(modelo.texto, variaveisDoHorario(compromisso.inicio)) : (faltaParaLembrete(modelo, null) ?? "");
 }

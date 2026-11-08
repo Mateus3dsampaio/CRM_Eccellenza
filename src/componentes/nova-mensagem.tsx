@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Info, Send } from "lucide-react";
 import { ORIGENS_CONSENTIMENTO } from "@/regras/consentimento";
-import { MODELOS } from "@/regras/modelos";
+import { MODELOS_SEM_COMPROMISSO as MODELOS } from "@/regras/modelos";
 import { normalizarTelefone, formatarTelefone } from "@/regras/telefone";
 import { chamarApi, useAviso, useDados } from "./dados";
 import { juntar } from "./estilos";
@@ -136,7 +136,7 @@ export function NovaMensagem({ aberta, aoFechar }: { aberta: boolean; aoFechar: 
             </div>
           )}
 
-          <Campo rotulo="Modelo aprovado" dica="Modelos fictícios do simulador (PROVISÓRIO, textos ainda não aprovados pelo Mateus).">
+          <Campo rotulo="Modelo aprovado" dica="Modelos aprovados na Meta. Os lembretes de medição e apresentação saem pela conversa do cliente, com a data da agenda.">
             <select className={classeEntrada} value={modelo} onChange={(e) => setModelo(e.target.value)}>
               <option value="">{livre ? "Sem modelo (texto livre)" : "Escolha um modelo"}</option>
               {MODELOS.map((m) => (

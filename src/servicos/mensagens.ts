@@ -3,7 +3,7 @@ import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
-import { buscarModelo } from "@/regras/modelos";
+import { buscarModelo, faltaParaLembrete, preencherModelo, proximoCompromisso, variaveisDoHorario } from "@/regras/modelos";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { temConsentimento } from "@/regras/consentimento";
 import { nomeSeguroDeArquivo, previaDaMidia, tipoCanonico, tipoPodeEnviar } from "@/regras/midia";
@@ -115,13 +115,22 @@ export async function enviarMensagemLoja(params: {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
   const quando = await agora();
   let texto = params.texto?.trim() ?? "";
+  let parametros: Record<string, string> | undefined;
   if (params.modelo) {
     const modelo = buscarModelo(params.modelo);
     if (!modelo) throw new Error("Modelo de mensagem não encontrado.");
     // Modelo é mensagem iniciada pela loja: nunca para quem pediu para parar, e só com consentimento registrado.
     if (lead.naoReceberEm) throw new Error("Este cliente pediu para parar de receber mensagens: não dá para enviar modelo.");
     if (!temConsentimento(lead)) throw new Error("Não há registro de que este cliente aceitou receber mensagens da loja. Registre como ele autorizou antes de enviar o modelo.");
-    texto = modelo.texto;
+    if (modelo.compromisso) {
+      // Lembrete: data e hora do próximo compromisso deste tipo na agenda (variáveis {{data}} e {{hora}} do modelo na Meta).
+      const visitas = await db.visita.findMany({ where: { leadId: lead.id, tipo: modelo.compromisso, status: "agendada" }, select: { tipo: true, inicio: true, status: true } });
+      const compromisso = proximoCompromisso(visitas, modelo.compromisso, quando);
+      const falta = faltaParaLembrete(modelo, compromisso);
+      if (falta || !compromisso) throw new Error(falta ?? "Compromisso não encontrado.");
+      parametros = variaveisDoHorario(compromisso.inicio);
+    }
+    texto = parametros ? preencherModelo(modelo.texto, parametros) : modelo.texto;
   } else if (!janelaAberta(lead.ultimaMsgClienteEm, quando)) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
@@ -139,7 +148,7 @@ export async function enviarMensagemLoja(params: {
   try {
     if (whatsappRealAtivo()) {
       // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
-      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
+      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo, parametros, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
       falhou = !envio.ok;
       idExterno = envio.id;
       if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });

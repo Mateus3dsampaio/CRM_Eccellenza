@@ -57,7 +57,8 @@ describe("retorno com a loja fechada: regras puras", () => {
     const m = buscarModelo("retorno_atendimento");
     expect(m?.botoes).toEqual([BOTAO_CONTINUAR, BOTAO_SEM_INTERESSE]);
     expect(m?.texto).toContain("Responda PARAR para não receber mais mensagens.");
-    expect(MODELOS.filter((x) => x.botoes).length).toBe(1);
+    // Todo botão de recusa dos modelos aprovados na Meta (com ou sem ponto final) vale como PARAR.
+    for (const botao of MODELOS.flatMap((x) => x.botoes ?? []).filter((b) => /interesse/i.test(b) && /^n/i.test(b))) expect(recusouPeloBotao(botao)).toBe(true);
     expect(recusouPeloBotao("Não tenho interesse")).toBe(true);
     expect(recusouPeloBotao("quero continuar")).toBe(false);
   });
