@@ -38,6 +38,13 @@ describe("retomada (RET-01/03)", () => {
     expect(avaliarRetomada(enviada, new Date(base.getTime() + 7.1 * DIA))).toBe("mover_sem_resposta");
     expect(avaliarRetomada(enviada, new Date(base.getTime() + 30 * DIA))).toBe("mover_sem_resposta");
   });
+  it("cliente que já comprou (pós-venda) nunca recebe retomada nem vai para Perdido", () => {
+    const posVenda = { ...lead, classificacao: "pos_venda" };
+    expect(avaliarRetomada(posVenda, new Date(base.getTime() + 3.1 * DIA))).toBeNull();
+    const enviada = { ...posVenda, retomadaEnviadaEm: new Date(base.getTime() + 3 * DIA), ultimaMsgLojaEm: new Date(base.getTime() + 3 * DIA) };
+    expect(avaliarRetomada(enviada, new Date(base.getTime() + 30 * DIA))).toBeNull();
+    expect(avaliarRetomada({ ...lead, classificacao: "curioso" }, new Date(base.getTime() + 3.1 * DIA))).toBe("enviar_retomada");
+  });
   it("cliente respondeu depois da retomada: nada a fazer", () => {
     const respondeu = { ...lead, retomadaEnviadaEm: new Date(base.getTime() + 3 * DIA), ultimaMsgClienteEm: new Date(base.getTime() + 4 * DIA) };
     expect(avaliarRetomada(respondeu, new Date(base.getTime() + 9 * DIA))).toBeNull();

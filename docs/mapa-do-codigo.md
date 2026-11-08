@@ -203,7 +203,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/vendas.ts` | Acompanhamento de vendas: motivos de fábrica (carga inicial), dinheiro (centavos ↔ "R$ 1.621,00"), o que cada etapa exige para receber o card (próximo contato, valor fechado, motivo da perda; Negociação conforme o interruptor), data/hora de Fortaleza e situação do retorno (hoje, atrasado, sem data) |
 | `src/regras/etapas.ts` | Colunas do kanban (funil da tarefa 21), funil do painel, colunas que exigem compromisso na agenda, códigos antigos, etiquetas, classificações (cidades e faixas ficam só nas instruções) |
 | `src/regras/agenda.ts` | Regras da agenda como parâmetro (`primeiroHorarioPossivel`: marcar no mesmo dia vale a partir da próxima hora cheia; `primeiroDiaAgendavel`) (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco Tipos de compromisso (visita à loja, medição, apresentação), duração por tipo, medição não ocupa a loja. |
-| `src/regras/retomada.ts` | Quando retomar e quando ir para Perdido ("Parou de responder") |
+| `src/regras/retomada.ts` | Quando retomar e quando ir para Perdido ("Parou de responder"). Lead classificado como pós-venda nunca recebe retomada nem vai sozinho para Perdido |
 | `src/regras/decisao.ts` | Decisão pendente do vendedor: data vencida (do dia seguinte em diante) de medição, apresentação ou retorno da Negociação; textos da etiqueta |
 | `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta); `janelasFechando` (menos de 2 h), `resumoDasJanelas` (painel) e `situacaoDaJanela` dá faixa (verde/amarelo/vermelho/fechada, limites 6 h e 2 h PROVISÓRIOS), tempo restante e fração para o relógio do card (tarefa 37) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |

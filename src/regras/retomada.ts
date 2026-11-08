@@ -12,6 +12,8 @@ export interface EstadoRetomada {
   ultimaMsgClienteEm: Date | null;
   ultimaMsgLojaEm: Date | null;
   retomadaEnviadaEm: Date | null;
+  /** Classificação dada pelo bot (regras/etapas.ts). Pós-venda nunca recebe retomada. */
+  classificacao?: string | null;
 }
 
 export type AcaoRetomada = "enviar_retomada" | "mover_sem_resposta" | null;
@@ -20,10 +22,13 @@ export type AcaoRetomada = "enviar_retomada" | "mover_sem_resposta" | null;
  * Decide o que a rotina faz com um lead (RET-01 e RET-03).
  * Só vale para quem está com o bot, no "Novo", devendo resposta ao bot. Lead passado ao consultor, com visita marcada
  * ou esperando a loja nunca recebe retomada nem vai sozinho para Perdido ("Parou de responder", antiga coluna "Sem resposta").
+ * Cliente que já comprou (classificação "pos_venda") também não: ele fica com o bot pela instrução de pós-venda e não é
+ * lead de venda (decisão do Mateus 08/11/2026; não vai para Perdido para não distorcer as métricas de perda).
  */
 export function avaliarRetomada(lead: EstadoRetomada, agora: Date): AcaoRetomada {
   if (lead.arquivadoEm) return null;
   if (lead.etapa !== "novo") return null;
+  if (lead.classificacao === "pos_venda") return null;
   if (lead.modoAtendimento !== "bot" || lead.aguardandoHumano || lead.temVisitaFutura) return null;
   if (!lead.ultimaMsgLojaEm) return null;
 
