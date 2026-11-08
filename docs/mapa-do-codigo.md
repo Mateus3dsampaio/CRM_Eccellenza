@@ -23,6 +23,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): as numeradas são coladas pelo Mateus do repositório de instruções dele (o projeto não tem cópia) e o Manual do CRM (fixo, fora da numeração) ensina as ferramentas. Sem instrução ativa o bot não atende e passa o cliente ao consultor (`src/bot/atendimento.ts`). Montagem do prompt: `src/bot/prompt.ts` |
 | Abrir a ficha de um lead a partir de uma tela (card, lista, agenda) | Use `useGaveta().hrefDe(id)` (`src/componentes/ficha/gaveta.tsx`), nunca `/lead/ID` direto: abre a gaveta na tela atual. Só "Abrir ficha completa" vai para `/lead/[id]` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
+| O que o agente das instruções sabe do CRM (tarefa 38) | `docs/contrato-do-bot.md`, gerado por `src/bot/contrato.ts` (`npm run contrato:bot`); teste `testes/unit/contrato-bot.test.ts`. Mudou ferramenta, aviso, regra automática ou Manual: gere de novo |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração da visita e da medição, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Parou de responder" (vai para Perdido) | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
@@ -353,6 +354,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/producao.test.ts` | Modo simulador: rotas 404 e relógio real em produção |
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
 | `testes/unit/avisos.test.ts` | Textos que o bot recebe (abertura e avisos), fixados palavra por palavra |
+| `testes/unit/contrato-bot.test.ts` | `docs/contrato-do-bot.md` igual ao código (senão: rode `npm run contrato:bot`) |
 | `testes/unit/saida.test.ts` | Junção dos textos do bot sem repetir fala igual |
 | `testes/unit/janela24h.test.ts` | Faixas e tempo restante da janela de 24h |
 | `testes/unit/janelas-abertas.test.ts` | Consulta das janelas abertas (etapa, arquivado, dono do lead) |
