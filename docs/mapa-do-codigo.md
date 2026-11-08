@@ -157,6 +157,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/instrucoes/route.ts` | Listar (numeradas + manual) e criar instruções | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir (o manual só edita o texto) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/manual-do-codigo/route.ts` | Botão "Usar o texto do código": Manual volta ao texto do código (o da tela fica como anterior) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/reordenar/route.ts` | Reordenar | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/importar/route.ts` | Importar instruções de arquivos .txt (vários de uma vez; só admin) | `instrucoes`, `regras/importar-instrucoes` |
 | `src/app/api/configuracoes/instrucoes/exportar/route.ts` | Exportar .txt ou .zip | `instrucoes`, `lib/zip` |
@@ -173,7 +174,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/push.ts` | Avisos com o CRM fechado (biblioteca `web-push`): chaves VAPID (variáveis `VAPID_*` ou criadas sozinhas e guardadas no banco, a privada criptografada com a `CHAVE_MESTRA`), guardar/cancelar o navegador de cada pessoa, enviar o aviso de cada alerta (`registrarAlerta` chama) a quem deve receber, remover navegador morto (404/410), aviso de teste. Nunca lança |
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
-| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
+| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar; troca sozinho o Manual desatualizado (tarefa 38) e diz se está diferente do código |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
 | `src/servicos/consultas.ts` | Dados prontos para as telas (`janelasAbertas` para o botão "Janelas fechando"; cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
 | `src/servicos/painel.ts` | Dados do Painel por período e vendedor (inclui `janelas`: leads ativos com a janela de 24h aberta e fechando, de agora) (inclui "Clientes que faltaram": medição/apresentação remarcada depois da data): contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) Tarefa 21: apresentações e medições agendadas (principal), apresentações por consultor e conversão da agenda (`conversoesDoPeriodo`, a partir da tabela `Visita`). |
@@ -237,7 +238,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/avisos.ts` | Textos fixos que o bot recebe: abertura do prompt e avisos de cada mensagem (`<sistema>` com hora/loja/nome do perfil, arquivo que o bot não lê, imagem, mensagem de consultor/sistema). Funções puras, usadas pelo bot e pelo contrato do bot (tarefa 38) |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (de `avisos.ts`) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
-| `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
+| `src/bot/manual-inicial.ts` | Texto do Manual do CRM. Só muda aqui, com aprovação do Mateus; o sistema troca sozinho o do banco se ninguém editou na tela (ver `manual-versoes.ts`) |
+| `src/bot/manual-versoes.ts` | Impressão (sha256) de cada versão do Manual que o código já teve e a regra `situacaoDoManual` (igual, desatualizado → troca sozinho, editado → aviso na tela, voltou → respeita) |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação (inclui `registrar_retorno`, tarefa 36). O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
 | `src/bot/contrato.ts` | Monta o contrato do bot (`docs/contrato-do-bot.md`, tarefa 38): prompt, avisos de cada mensagem, ferramentas, o que o sistema faz sozinho e o Manual, a partir das mesmas constantes do bot. Função pura, sem data. Lido pelo agente das instruções (outro repositório) |
@@ -305,7 +307,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
-| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: botão Importar (seletor de vários .txt do Windows + prévia do que será criado/atualizado), lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
+| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: botão Importar (seletor de vários .txt do Windows + prévia do que será criado/atualizado), lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir; aviso "Manual diferente do código" com botão "Usar o texto do código" |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
 | Arquivo | Faz |
@@ -341,6 +343,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/fluxos.test.ts` | Fluxos com banco: retomada, distribuição, agenda, mensagens |
 | `testes/unit/decisao.test.ts` | Decisão pendente: regra (vence no dia seguinte), card, lista de retornos, aviso diário, falta ao remarcar |
 | `testes/unit/instrucoes.test.ts` | Instruções: banco vazio, Manual do CRM (criação, conversão do banco antigo, proteções), edição, versão anterior, exclusão, zip, bot sem instruções |
+| `testes/unit/manual-versoes.test.ts` | Versões do Manual: impressão atual na lista, troca automática, editado na tela, voltar para a anterior. Usa `manual-antigo.txt` (versão de 04/11 congelada) |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |

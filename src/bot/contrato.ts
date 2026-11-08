@@ -153,7 +153,7 @@ export function montarContratoDoBot(): string {
     "",
     "## 5. Manual do CRM",
     "",
-    "Texto do Manual no código do CRM. O Manual só muda junto com o código, por proposta aprovada pelo Mateus e aplicada no código e na tela na mesma vez (decisão de 08/11/2026). Se o da tela estiver diferente, avise o Mateus.",
+    "Texto do Manual no código do CRM. O Manual só muda no código, por proposta aprovada pelo Mateus (decisão de 08/11/2026); o CRM atualiza sozinho o da tela quando ninguém o editou lá. Se a tela do CRM avisar que o Manual está diferente do código, o bot está usando outro texto: avise o Mateus.",
     "",
     bloco(MANUAL_INICIAL),
     "",

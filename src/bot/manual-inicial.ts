@@ -1,6 +1,6 @@
-// Texto inicial do Manual do CRM: gravado no banco só quando o manual ainda não existe (primeiro uso ou banco antigo).
-// Depois disso a fonte é o banco e o admin edita em Configurações > Instruções de atendimento.
-// Mudar este texto NÃO muda o bot que já está rodando. Mudança no manual: propor o texto ao Mateus e aplicar pela tela.
+// Texto do Manual do CRM. O Manual só muda aqui, por proposta aprovada pelo Mateus (decisão de 08/11/2026, tarefa 38).
+// O sistema grava no banco quando o manual não existe e, quando este texto muda, troca sozinho o do banco se ninguém editou
+// na tela (servicos/instrucoes.ts + bot/manual-versoes.ts). Mudou aqui: acrescente a impressão em manual-versoes.ts e rode npm run contrato:bot.
 export const MANUAL_INICIAL = `MANUAL DO CRM (ferramentas e registro)
 Status: PROVISÓRIO. Definido para o simulador; nada aqui vale para clientes reais antes da aprovação do Mateus.
 
