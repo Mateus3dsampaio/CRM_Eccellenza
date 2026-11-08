@@ -8,6 +8,7 @@ import { CLASSIFICACOES } from "@/regras/etapas";
 import { LIMITE_POR_DIA, LIMITE_POR_MINUTO } from "@/regras/limite-bot";
 import { descricaoDoTipo } from "@/regras/midia";
 import { buscarModelo, MODELOS } from "@/regras/modelos";
+import { REGRAS_RETORNO_PADRAO } from "@/regras/retorno-fechada";
 import { PEDIDOS_PARA_PARAR, TEXTO_CONFIRMA_PARAR } from "@/regras/optout";
 import { descreverHorarioDeFuncionamento, situacaoDaLoja } from "@/regras/presenca";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
@@ -148,6 +149,7 @@ export function montarContratoDoBot(): string {
     `- **Não responder:** se o bot responder exatamente \`${SEM_RESPOSTA}\`, nada é enviado.`,
     "- **Limpeza da resposta:** antes de enviar, o sistema apaga linhas que parecem anotação interna: linha inteira entre colchetes, \"Nota:\", \"nota interna\", \"Instrução 07…\", \"…insistência:\" e tags `<cliente>`/`<sistema>`. Se sobrar nada, a conversa vai para um humano.",
     "- **Falha da IA** (sem chave, recusa, resposta longa demais, repetição): a conversa vai para um humano com aviso no card.",
+    `- **Retorno com a loja fechada (depois de \`registrar_retorno\`):** o card fica com o horário do retorno para o consultor. Sem horário escolhido pelo cliente, o sistema usa a reabertura da loja + ${REGRAS_RETORNO_PADRAO.semHorarioMin} minutos (padrão de fábrica; o Mateus pode mudar em Configurações), por isso o bot deve confirmar ao cliente o horário que a ferramenta devolveu, sem calcular por conta própria. No horário do retorno, se a janela de 24h da Meta já tiver fechado (o cliente não escreveu nas últimas 24h), o sistema envia sozinho o modelo "${buscarModelo(REGRAS_RETORNO_PADRAO.modelo)?.nome ?? REGRAS_RETORNO_PADRAO.modelo}" se o consultor dono do lead estiver online; senão passa o lead a quem estiver online; sem ninguém online, espera e avisa a equipe. Com a janela aberta, não envia modelo: o consultor responde normalmente. O envio automático pode ser desligado em Configurações; aí o consultor recebe o aviso e envia.`,
     `- **Mensagens automáticas (modelos aprovados da Meta):** o sistema envia sozinho, conforme as regras do CRM, e o bot é avisado como na seção 2. Textos: ${MODELOS.map((m) => `${m.nome} – "${m.texto}"${m.botoes ? ` (botões: ${m.botoes.map((b) => `"${b}"`).join(", ")})` : ""}`).join("; ")}.`,
     `- **Almoço do consultor:** se o cliente já passado ao consultor escrever enquanto ele almoça, o sistema envia uma vez por almoço: "${AVISO_ALMOCO}"`,
     "",
