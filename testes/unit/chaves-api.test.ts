@@ -33,50 +33,53 @@ describe("chaves de API na tela", () => {
   });
 
   it("salva criptografada, a tela vale e a situação mostra só o final", async () => {
-    await salvarChave("texto", `  ${CHAVE}  `);
+    await salvarChave("anthropic", `  ${CHAVE}  `);
     const linha = await db.configuracao.findUnique({ where: { chave: "api_chave_texto" } });
     expect(linha!.valor).not.toContain(CHAVE);
-    expect(await obterChave("texto")).toBe(CHAVE);
+    expect(await obterChave("anthropic")).toBe(CHAVE);
     const s = await situacaoDasChaves();
-    expect(s.chaves.texto).toMatchObject({ configurada: true, origem: "tela", final: "WXYZ" });
+    expect(s.chaves.anthropic).toMatchObject({ configurada: true, origem: "tela", final: "WXYZ" });
     expect(JSON.stringify(s)).not.toContain(CHAVE);
-    expect(s.chaves.audio.configurada).toBe(false);
+    expect(s.chaves.openai.configurada).toBe(false);
   });
 
   it("sem chave na tela vale a variável de ambiente; a tela vence a variável", async () => {
     vi.stubEnv("OPENAI_API_KEY", "sk-ambiente-0123456789abcd");
-    expect(await obterChave("audio")).toBe("sk-ambiente-0123456789abcd");
-    expect((await situacaoDasChaves()).chaves.audio.origem).toBe("ambiente");
-    await salvarChave("audio", CHAVE);
-    expect(await obterChave("audio")).toBe(CHAVE);
-    await removerChave("audio");
-    expect(await obterChave("audio")).toBe("sk-ambiente-0123456789abcd");
+    expect(await obterChave("openai")).toBe("sk-ambiente-0123456789abcd");
+    expect((await situacaoDasChaves()).chaves.openai.origem).toBe("ambiente");
+    await salvarChave("openai", CHAVE);
+    expect(await obterChave("openai")).toBe(CHAVE);
+    await removerChave("openai");
+    expect(await obterChave("openai")).toBe("sk-ambiente-0123456789abcd");
   });
 
-  it("a mesma chave pode ir nos dois campos", async () => {
-    await salvarChave("texto", CHAVE);
-    await salvarChave("audio", CHAVE);
-    expect(await obterChave("texto")).toBe(await obterChave("audio"));
+  it("chaves salvas antes da troca de nomes continuam valendo (texto = Anthropic, áudio = OpenAI)", async () => {
+    await salvarChave("anthropic", CHAVE);
+    await salvarChave("openai", "sk-openai-0123456789abcdefGHIJ");
+    expect(await db.configuracao.findUnique({ where: { chave: "api_chave_texto" } })).not.toBeNull();
+    expect(await db.configuracao.findUnique({ where: { chave: "api_chave_audio" } })).not.toBeNull();
+    expect(await obterChave("anthropic")).toBe(CHAVE);
+    expect(await obterChave("openai")).toBe("sk-openai-0123456789abcdefGHIJ");
     expect(await transcricaoConfigurada()).toBe(true);
   });
 
   it("chave inválida é recusada sem gravar", async () => {
-    await expect(salvarChave("texto", "curta")).rejects.toThrow();
+    await expect(salvarChave("anthropic", "curta")).rejects.toThrow();
     expect(await db.configuracao.findUnique({ where: { chave: "api_chave_texto" } })).toBeNull();
   });
 
   it("CHAVE_MESTRA trocada: a chave salva fica ilegível e cai na variável de ambiente", async () => {
-    await salvarChave("texto", CHAVE);
+    await salvarChave("anthropic", CHAVE);
     vi.stubEnv("CHAVE_MESTRA", "outra-mestra-bem-longa-123");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ambiente-0123456789abcd");
-    expect(await obterChave("texto")).toBe("sk-ambiente-0123456789abcd");
-    expect((await situacaoDasChaves()).chaves.texto.ilegivel).toBe(true);
+    expect(await obterChave("anthropic")).toBe("sk-ambiente-0123456789abcd");
+    expect((await situacaoDasChaves()).chaves.anthropic.ilegivel).toBe(true);
   });
 
   it("em produção sem CHAVE_MESTRA não salva", async () => {
     vi.stubEnv("CHAVE_MESTRA", "");
     vi.stubEnv("NODE_ENV", "production");
     expect((await situacaoDasChaves()).podeSalvar).toBe(false);
-    await expect(salvarChave("texto", CHAVE)).rejects.toThrow(/CHAVE_MESTRA/);
+    await expect(salvarChave("anthropic", CHAVE)).rejects.toThrow(/CHAVE_MESTRA/);
   });
 });

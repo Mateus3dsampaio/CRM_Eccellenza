@@ -24,6 +24,7 @@ interface DadosPainel {
   tempos: { geral: EstatisticaTempo; consultor: EstatisticaTempo; primeiraResposta: EstatisticaTempo & { aguardando: number }; bot: EstatisticaTempo; semResposta: number };
   apresentacoesPorConsultor: { nome: string; total: number }[];
   conversoes: { medicoes: number; medicoesComApresentacao: number; apresentacoes: number; apresentacoesFechadas: number };
+  janelas: { total: number; abertas: number; fechando: number; atencao: number };
   vendas: {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
@@ -217,6 +218,27 @@ export function Painel() {
                 </div>
               );
             })()}
+          </div>
+
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Janela de 24h da Meta (agora)</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Leads com a janela aberta</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(dados.janelas.abertas, dados.janelas.total)}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.janelas.total ? `${dados.janelas.abertas.toLocaleString("pt-BR")} de ${dados.janelas.total.toLocaleString("pt-BR")} ${dados.janelas.total === 1 ? "lead ativo" : "leads ativos"} (só o cliente reabre a janela)` : "nenhum lead ativo"}
+              </p>
+              <div className="mt-2 h-2 rounded-pilula bg-superficie-suave">
+                <div className="h-2 rounded-pilula bg-sucesso transition-[width] duration-300" style={{ width: `${dados.janelas.total ? (dados.janelas.abertas / dados.janelas.total) * 100 : 0}%` }} />
+              </div>
+            </div>
+            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <p className="text-sm text-texto-suave">Janelas fechando em menos de 2 h</p>
+              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}>{dados.janelas.fechando.toLocaleString("pt-BR")}</p>
+              <p className="mt-1 text-xs text-texto-fraco">
+                {dados.janelas.atencao.toLocaleString("pt-BR")} {dados.janelas.atencao === 1 ? "lead" : "leads"} com 2 a 6 h sobrando
+              </p>
+            </div>
           </div>
 
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>

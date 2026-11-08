@@ -6,21 +6,24 @@ import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { avaliarLimiteDoBot } from "@/regras/limite-bot";
 import { descricaoDoTipo } from "@/regras/midia";
+import { situacaoDaLoja } from "@/regras/presenca";
 import { formatarDataHora, formatarDiaSemana } from "@/regras/tempo";
+import { regrasDaAgenda } from "@/servicos/configuracoes";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
 import { instrucoesAtivas } from "@/servicos/instrucoes";
+import { familiaClaude } from "@/regras/modelos-ia";
 import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
+import { avisoArquivoNaoLido, avisoDoTurno, avisoImagem, avisoMensagemEnviada, mensagemDoCliente } from "./avisos";
 import { FERRAMENTAS } from "./ferramentas";
 import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type MotivoDeParada } from "./openai-conversao";
 import { montarPromptSistema } from "./prompt";
-import { limparResposta, respostaDescartada } from "./saida";
+import { juntarTextos, limparResposta, respostaDescartada } from "./saida";
 
-// Modelo do bot: o Sonnet mais recente (docs/briefing.md).
-export const MODELO_BOT = "claude-sonnet-5-5";
+// O modelo do bot é escolhido pelo admin (Configurações > Chaves de API; padrão em regras/modelos-ia.ts).
 const MAX_VOLTAS = 8;
 
 type MensagemApi = Anthropic.Beta.Messages.BetaMessageParam;
@@ -42,12 +45,15 @@ interface VoltaDoModelo {
   parada: MotivoDeParada;
 }
 
-async function voltaComClaude(chave: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+// Reserva automática quando o modelo recusa: só nas famílias que aceitam (o Haiku não tem).
+const FAMILIAS_COM_RESERVA = new Set(["sonnet", "opus", "fable"]);
+
+async function voltaComClaude(chave: string, modelo: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+  const reserva = FAMILIAS_COM_RESERVA.has(familiaClaude(modelo) ?? "");
   const resposta = await clienteApi(chave).beta.messages.create({
-    model: MODELO_BOT,
+    model: modelo,
     max_tokens: 8000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...(reserva ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     output_config: { effort: "medium" },
     // Cache de 1 hora (o máximo da API): cada uso renova o prazo, então com clientes escrevendo ao longo
     // do dia o prompt é gravado poucas vezes. Os dois pontos de cache usam o mesmo prazo.
@@ -89,10 +95,6 @@ function naFila<T>(leadId: string, tarefa: () => Promise<T>): Promise<T> {
   return atual;
 }
 
-function escapar(texto: string): string {
-  return texto.replace(/</g, "‹").replace(/>/g, "›");
-}
-
 /** Monta o turno do usuário com tudo o que aconteceu na conversa desde a última resposta do bot. */
 async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ blocos: BlocoEntrada[]; ids: string[] }> {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
@@ -103,16 +105,14 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
   });
   const quando = await agora();
   const blocos: BlocoEntrada[] = [];
-  const contexto = [`Agora: ${formatarDiaSemana(quando)} ${formatarDataHora(quando)} (horário de Fortaleza).`];
-  if (primeiraVez) contexto.push(`Nome do perfil do cliente no WhatsApp: ${lead.nomePerfil ? escapar(lead.nomePerfil) : "(sem nome)"}.`);
-  blocos.push({ type: "text", text: `<sistema>${contexto.join(" ")}</sistema>` });
+  const situacaoLoja = situacaoDaLoja(quando, await regrasDaAgenda());
+  blocos.push({ type: "text", text: avisoDoTurno({ diaSemana: formatarDiaSemana(quando), dataHora: formatarDataHora(quando), situacaoLoja, primeiraVez, nomePerfil: lead.nomePerfil }) });
 
   for (const m of novas) {
     if (m.autor === "cliente") {
       // Vídeo e documento (PDF, Word, Excel, DWG, ZIP) ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
       if (m.midiaArquivo && m.midiaTipo && !m.midiaTipo.startsWith("image/")) {
-        const rotulo = descricaoDoTipo(m.midiaTipo);
-        blocos.push({ type: "text", text: `<cliente>[enviou ${rotulo}${m.midiaNome ? ` chamado "${escapar(m.midiaNome)}"` : ""}; o sistema guardou o arquivo para o consultor, mas você não consegue ver o conteúdo]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
+        blocos.push({ type: "text", text: avisoArquivoNaoLido(descricaoDoTipo(m.midiaTipo), m.midiaNome, m.texto) });
         continue;
       }
       if (m.midiaArquivo && m.midiaTipo) {
@@ -122,15 +122,16 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
             type: "image",
             source: { type: "base64", media_type: m.midiaTipo as "image/png", data: dados.toString("base64") },
           });
-          blocos.push({ type: "text", text: `<cliente>[enviou a imagem acima]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
+          blocos.push({ type: "text", text: avisoImagem(m.texto) });
           continue;
         }
       }
-      blocos.push({ type: "text", text: `<cliente>${escapar(m.texto ?? "")}</cliente>` });
+      blocos.push({ type: "text", text: mensagemDoCliente(m.texto) });
     } else {
-      const quem = m.autor === "consultor" ? `o consultor ${m.autorNome ?? ""}`.trim() : "o sistema (mensagem automática)";
-      const arquivo = m.midiaTipo ? ` [enviou ${descricaoDoTipo(m.midiaTipo)}]` : "";
-      blocos.push({ type: "text", text: `<sistema>Mensagem enviada ao cliente por ${quem}:${arquivo} "${escapar(m.texto ?? "")}"</sistema>` });
+      blocos.push({
+        type: "text",
+        text: avisoMensagemEnviada({ autor: m.autor === "consultor" ? "consultor" : "sistema", autorNome: m.autorNome, rotuloArquivo: m.midiaTipo ? descricaoDoTipo(m.midiaTipo) : null, texto: m.texto }),
+      });
     }
   }
   return { blocos, ids: novas.map((m) => m.id) };
@@ -178,6 +179,7 @@ function mensagemDeErro(erro: unknown): string {
   if (erro instanceof OpenAI.APIConnectionError) return "sem conexão com a API da OpenAI.";
   if (erro instanceof OpenAI.APIError) return `a API da OpenAI está com problema (código ${erro.status ?? "?"}).`;
   if (erro instanceof Anthropic.AuthenticationError) return "a chave da API do Claude é inválida. Confira em Configurações > Chaves de API.";
+  if (erro instanceof Anthropic.NotFoundError) return "a Anthropic não achou o modelo escolhido (ou a conta não tem acesso). Escolha outro em Configurações > Chaves de API.";
   if (erro instanceof Anthropic.RateLimitError) return "limite de uso da API atingido. Tente de novo em instantes.";
   if (erro instanceof Anthropic.BadRequestError) return "a API recusou a requisição.";
   if (erro instanceof Anthropic.APIConnectionError) return "sem conexão com a API do Claude.";
@@ -231,13 +233,13 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
 
     const textos: string[] = [];
     try {
-      const chaveApi = await obterChave("texto");
-      if (!chaveApi) throw new ErroBot("a chave da API de texto não está configurada (Configurações > Chaves de API).");
-      const { provedor, modeloOpenai } = await configDoBot();
+      const { provedor, modeloClaude, modeloOpenai } = await configDoBot();
+      const chaveApi = await obterChave(provedor === "openai" ? "openai" : "anthropic");
+      if (!chaveApi) throw new ErroBot(`a chave ${provedor === "openai" ? "da OpenAI" : "do Claude"} não está configurada (Configurações > Chaves de API).`);
       const sistema = await montarPromptSistema();
 
       for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-        const resposta = provedor === "openai" ? await voltaComGpt(chaveApi, modeloOpenai, sistema, historico) : await voltaComClaude(chaveApi, sistema, historico);
+        const resposta = provedor === "openai" ? await voltaComGpt(chaveApi, modeloOpenai, sistema, historico) : await voltaComClaude(chaveApi, modeloClaude, sistema, historico);
         if (resposta.parada === "refusal") throw new ErroBot("o modelo recusou responder esta conversa.");
         historico.push({ role: "assistant", content: resposta.content });
         const texto = textoDasRespostas(resposta.content);
@@ -273,7 +275,7 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       return { respostas: [], erro: mensagem };
     }
 
-    const original = textos.join("\n\n");
+    const original = juntarTextos(textos);
     const final = limparResposta(original);
     // Confere de novo antes de enviar: se o consultor assumiu enquanto o bot pensava, o bot não envia.
     if (interrompido || (await consultorAssumiu(leadId))) {

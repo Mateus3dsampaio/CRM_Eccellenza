@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { rota } from "@/lib/api";
 import { exigirUsuario } from "@/lib/sessao";
-import { criarInstrucao, listarInstrucoes, obterManual } from "@/servicos/instrucoes";
+import { criarInstrucao, listarInstrucoes, obterManual, situacaoDoManualNoBanco } from "@/servicos/instrucoes";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ const corpo = z.object({
 // Instruções de atendimento do bot (só admin): as numeradas e o Manual do CRM (fixo, editado pela rota [id]).
 export const GET = rota(async () => {
   await exigirUsuario("configurar");
-  return { instrucoes: await listarInstrucoes(), manual: await obterManual() };
+  return { instrucoes: await listarInstrucoes(), manual: await obterManual(), manualSituacao: await situacaoDoManualNoBanco() };
 });
 
 export const POST = rota(async (req: Request) => {

@@ -15,6 +15,19 @@ export function linhaInterna(linha: string): boolean {
   return false;
 }
 
+/** Junta os textos das voltas do bot sem repetir o que já foi dito (o modelo às vezes fala, chama ferramenta e repete a fala). */
+export function juntarTextos(textos: string[]): string {
+  const norm = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+  const vistos = new Set<string>();
+  const unicos = textos.filter((t) => {
+    const n = norm(t);
+    if (!n || vistos.has(n)) return false;
+    vistos.add(n);
+    return true;
+  });
+  return unicos.join("\n\n");
+}
+
 export function limparResposta(texto: string): string {
   return texto
     .replaceAll(SEM_RESPOSTA, "")

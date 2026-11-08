@@ -1,6 +1,6 @@
 // Avisos para quem atende (Bloco 1, tarefa 3): textos, título da aba e preferências. Só regra, sem banco.
 
-export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada" | "prazo_vermelho" | "retorno" | "decisao_vencida";
+export type TipoAlerta = "mensagem" | "lead_passado" | "visita_marcada" | "prazo_vermelho" | "retorno" | "decisao_vencida" | "ausencia" | "compromisso_cedo" | "retorno_sem_online";
 
 export interface AlertaTela {
   id: number;
@@ -10,6 +10,8 @@ export interface AlertaTela {
   consultorId: string | null;
   consultorNome: string | null;
   texto: string | null;
+  /** Aviso de presença (tarefa 35): todos recebem, não só o dono do lead e o admin. */
+  paraTodos?: boolean;
 }
 
 /** Quanto tempo um aviso fica guardado no banco. */
@@ -46,6 +48,13 @@ export function textoDoAlerta(a: Pick<AlertaTela, "tipo" | "leadNome" | "consult
     case "decisao_vencida":
       // Vai para o dono do lead e para o admin (pedido do Mateus 04/11/2026: avisar os atrasos na hora).
       return { titulo: `Decisão pendente: ${a.leadNome}`, corpo: `${a.texto ?? "Data vencida sem decisão."}${ehDono || !a.consultorNome ? "" : ` Consultor: ${a.consultorNome}.`}` };
+    case "ausencia":
+      // Para `ausencia`, `leadId` guarda o id do vendedor ausente e `leadNome` o nome dele.
+      return { titulo: `${a.leadNome} não ficou online`, corpo: `Tem hoje: ${a.texto ?? "compromissos"}.` };
+    case "retorno_sem_online":
+      return { titulo: `${a.leadNome} aguarda o modelo de retorno`, corpo: "Ninguém está online para assumir o lead. O modelo sai assim que alguém ficar online." };
+    case "compromisso_cedo":
+      return { titulo: `${a.consultorNome ?? "O vendedor"} não está online`, corpo: `${a.texto ?? "Compromisso cedo"} com ${a.leadNome}.` };
     case "visita_marcada":
       return { titulo: `Visita marcada: ${a.leadNome}`, corpo: ehDono || !a.consultorNome ? (a.texto ?? "") : `${a.texto ?? ""} com ${a.consultorNome}`.trim() };
   }
@@ -67,6 +76,12 @@ export function textoDoGrupo(tipo: TipoAlerta, total: number): string {
       return `${total} decisões pendentes (data vencida)`;
     case "visita_marcada":
       return `${total} visitas marcadas`;
+    case "ausencia":
+      return `${total} vendedores não ficaram online e têm compromissos hoje`;
+    case "compromisso_cedo":
+      return `${total} compromissos cedo sem vendedor online`;
+    case "retorno_sem_online":
+      return `${total} retornos esperando alguém ficar online`;
   }
 }
 

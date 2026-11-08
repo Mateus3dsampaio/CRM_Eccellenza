@@ -7,7 +7,8 @@ import { gravarConfig, lerConfig } from "./configuracoes";
 // Quem vale: a da tela; sem ela, a variável de ambiente (ANTHROPIC_API_KEY / OPENAI_API_KEY).
 // NUNCA registrar, devolver inteira ou colocar a chave em mensagem de erro.
 
-const CHAVE_BANCO: Record<TipoChave, string> = { texto: "api_chave_texto", audio: "api_chave_audio" };
+// Os nomes no banco ficaram os de antes ("texto" guardava a da Anthropic, "audio" a da OpenAI): as chaves já salvas continuam valendo sem colar de novo.
+const CHAVE_BANCO: Record<TipoChave, string> = { anthropic: "api_chave_texto", openai: "api_chave_audio" };
 const CHAVE_SEGREDO_LOCAL = "segredo_sessao"; // só no computador, quando não há CHAVE_MESTRA
 
 export class ErroChave extends Error {}
@@ -42,13 +43,6 @@ export async function salvarChave(tipo: TipoChave, chave: string): Promise<void>
   const segredo = await segredoDeCifra();
   if (!segredo) throw new ErroChave("Para salvar chaves pela tela, defina a variável CHAVE_MESTRA no Railway (um texto longo e secreto, mínimo 16 caracteres) e reinicie. Veja docs/colocar-no-ar.md.");
   await gravarConfig(CHAVE_BANCO[tipo], cifrarChave(limpa, segredo));
-}
-
-/** "Usar a mesma chave" (ex.: uma conta só na OpenAI): copia a chave que vale agora de um campo para o outro, sem passar pela tela. */
-export async function copiarChave(de: TipoChave, para: TipoChave): Promise<void> {
-  const chave = await obterChave(de);
-  if (!chave) throw new ErroChave("Não há chave configurada no campo de origem.");
-  await salvarChave(para, chave);
 }
 
 export async function removerChave(tipo: TipoChave): Promise<void> {

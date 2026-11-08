@@ -2,11 +2,13 @@ import { db } from "@/lib/db";
 import { marcarMudanca } from "@/lib/versao";
 import { ErroHttp } from "@/lib/sessao";
 import { MANUAL_INICIAL } from "@/bot/manual-inicial";
+import { situacaoDoManual } from "@/bot/manual-versoes";
 import { numeroDoTexto, planejarImportacao, type ArquivoBruto } from "@/regras/importar-instrucoes";
 
 // Instruções do bot (decisão do Mateus 04/11/2026): o projeto não traz roteiro nenhum. As instruções numeradas ("roteiro")
 // são coladas pelo admin na tela, a partir do repositório de instruções dele. O Manual do CRM ("manual") é uma instrução
-// fixa, fora da numeração, que ensina o bot a usar as ferramentas; é o único texto que o CRM grava sozinho, uma vez.
+// fixa, fora da numeração, que ensina o bot a usar as ferramentas; é o único texto que o CRM grava sozinho: cria uma vez e,
+// quando o código traz versão nova, troca sozinho se ninguém editou na tela (bot/manual-versoes.ts, tarefa 38).
 const ROTEIRO = "roteiro";
 const MANUAL = "manual";
 export const TITULO_MANUAL = "Manual do CRM";
@@ -17,7 +19,7 @@ const ANTIGA_14 = /^\s*14\s*\.\s*DADOS DA LOJA/i;
 
 let preparo: Promise<void> | null = null;
 
-/** Garante que o Manual do CRM existe (cria ou converte a antiga instrução 15, uma vez só). */
+/** Garante que o Manual do CRM existe (cria ou converte a antiga instrução 15, uma vez só) e está na versão do código. */
 export function garantirManual(): Promise<void> {
   // Chamadas simultâneas esperam o mesmo preparo (evita "banco ocupado" no SQLite e manual duplicado).
   preparo ??= prepararManual().finally(() => {
@@ -27,7 +29,12 @@ export function garantirManual(): Promise<void> {
 }
 
 async function prepararManual(): Promise<void> {
-  if (await db.instrucao.count({ where: { tipo: MANUAL } })) return;
+  const existente = await db.instrucao.findFirst({ where: { tipo: MANUAL } });
+  if (existente) {
+    // Versão antiga do código que ninguém editou: troca pela nova e guarda a antiga para "Voltar para a anterior".
+    if (situacaoDoManual(existente, MANUAL_INICIAL) === "desatualizado") await trocarPeloCodigo(existente);
+    return;
+  }
   const agora = new Date();
   await db.$transaction(async (tx) => {
     const roteiro = await tx.instrucao.findMany({ where: { tipo: ROTEIRO }, orderBy: { ordem: "asc" } });
@@ -48,6 +55,27 @@ async function prepararManual(): Promise<void> {
       for (const [n, r] of restantes.entries()) await tx.instrucao.update({ where: { id: r.id }, data: { ordem: n + 1 } });
     }
   });
+}
+
+async function trocarPeloCodigo(atual: { id: string; titulo: string; texto: string }) {
+  const agora = new Date();
+  await db.instrucao.update({
+    where: { id: atual.id },
+    data: { texto: MANUAL_INICIAL, anteriorTitulo: atual.titulo, anteriorTexto: atual.texto, anteriorEm: agora, atualizadoEm: agora },
+  });
+  await marcarMudanca();
+}
+
+/** O Manual do banco comparado com o do código (para a tela avisar quando foi editado). */
+export async function situacaoDoManualNoBanco() {
+  return situacaoDoManual(await obterManual(), MANUAL_INICIAL);
+}
+
+/** Botão "Usar o texto do código": volta o Manual para a versão do código (a da tela fica como anterior). */
+export async function usarManualDoCodigo() {
+  const atual = await obterManual();
+  if (situacaoDoManual(atual, MANUAL_INICIAL) !== "igual") await trocarPeloCodigo(atual);
+  return obterManual();
 }
 
 /** Instruções numeradas (roteiro), em ordem. O manual não entra. */

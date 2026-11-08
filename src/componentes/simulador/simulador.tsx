@@ -43,15 +43,17 @@ export function Simulador() {
   const jaSalva = pendente !== null && iguaisSalvas > baseIguais;
   const mensagens = [...(conversa?.mensagens ?? []), ...(pendente && !jaSalva ? [pendente] : [])];
 
-  async function enviar(e?: React.FormEvent) {
+  async function enviar(e?: React.FormEvent, botao?: string) {
     e?.preventDefault();
-    if (!telefone || (!texto.trim() && !imagem)) return;
+    const textoEnviado = botao ?? texto;
+    if (!telefone || (!textoEnviado.trim() && !imagem)) return;
     const form = new FormData();
     form.set("telefone", telefone);
     if (nomeNovo) form.set("nome", nomeNovo);
-    form.set("texto", texto);
+    form.set("texto", textoEnviado);
+    if (botao) form.set("botao", "1");
     if (imagem) form.set("imagem", imagem);
-    const textoPendente = texto || (imagem ? "📷 Imagem" : "");
+    const textoPendente = textoEnviado || (imagem ? "📷 Imagem" : "");
     setBaseIguais((conversa?.mensagens ?? []).filter((m) => m.autor === "cliente" && m.texto === textoPendente).length);
     setPendente({ id: "pendente", autor: "cliente", texto: textoPendente, midia: null, enviadaEm: new Date().toISOString(), status: null });
     setTexto("");
@@ -130,7 +132,7 @@ export function Simulador() {
               )}
             </header>
             <div className="rolagem-fina flex-1 overflow-y-auto p-4">
-              <ListaMensagens mensagens={mensagens} lado="cliente" digitando={enviando} />
+              <ListaMensagens mensagens={mensagens} lado="cliente" digitando={enviando} aoTocarBotao={(b) => void enviar(undefined, b)} />
             </div>
             {conversa?.erroBot && <p className="bg-alerta-suave px-4 py-2 text-xs text-alerta">Aviso do sistema: o bot não respondeu ({conversa.erroBot}).</p>}
             <form onSubmit={enviar} className="space-y-2 bg-superficie-suave p-2">

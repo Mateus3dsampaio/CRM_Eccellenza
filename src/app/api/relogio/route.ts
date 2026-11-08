@@ -23,14 +23,16 @@ export const GET = rota(async () => {
 });
 
 // O relógio só anda para a frente (voltar o tempo bagunçaria janelas de 24h e retomadas).
-const esquema = z.object({ horas: z.number().int().min(1).max(24 * 60) });
+// Horas, ou minutos (de 5 em 5 a 59) para testar o horário de repartir a fila e de verificar a presença.
+const esquema = z.union([z.object({ horas: z.number().int().min(1).max(24 * 60) }), z.object({ minutos: z.number().int().min(5).max(59) })]);
 
 export const POST = rota(async (req: Request) => {
   exigirModoSimulador();
   await exigirUsuario();
-  const { horas } = esquema.parse(await req.json());
-  const novo = await avancarRelogio(horas * HORA);
-  const texto = horas % 24 === 0 ? `${horas / 24} dia(s)` : `${horas} hora(s)`;
+  const corpo = esquema.parse(await req.json());
+  const ms = "minutos" in corpo ? corpo.minutos * 60_000 : corpo.horas * HORA;
+  const novo = await avancarRelogio(ms);
+  const texto = "minutos" in corpo ? `${corpo.minutos} minuto(s)` : corpo.horas % 24 === 0 ? `${corpo.horas / 24} dia(s)` : `${corpo.horas} hora(s)`;
   await registrarAvanco(`Relógio avançado ${texto}: agora é ${formatarDataHora(novo)}.`);
   const resultado = await rodarRotinas();
   await marcarMudanca();

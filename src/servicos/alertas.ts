@@ -17,7 +17,7 @@ const LIMITE_POR_CONSULTA = 50;
  * Guarda um aviso para quem atende. O dono é o consultor do lead nesta hora; sem dono, só o admin recebe.
  * Quem chama já vai marcar a mudança (as telas então buscam os avisos novos).
  */
-export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string; texto?: string | null }): Promise<void> {
+export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string; texto?: string | null; paraTodos?: boolean }): Promise<void> {
   const lead = await db.lead.findUnique({ where: { id: params.leadId }, include: { consultor: { select: { id: true, nome: true } } } });
   if (!lead) return;
   const quando = await agora();
@@ -29,6 +29,7 @@ export async function registrarAlerta(params: { tipo: TipoAlerta; leadId: string
       consultorId: lead.consultor?.id ?? null,
       consultorNome: lead.consultor?.nome ?? null,
       texto: params.texto ?? null,
+      paraTodos: params.paraTodos ?? false,
       criadoEm: quando,
     },
   });
@@ -47,7 +48,10 @@ export async function alertasDesde(usuario: { id: string; perfil: string }, depo
   if (depois === undefined) return { eventos: [], ultimoId: ultimo };
   const linhas = await db.alerta.findMany({
     // Prazo vencido é aviso para o admin; o consultor só recebe os avisos dos seus leads.
-    where: { id: { gt: depois }, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id, tipo: { not: "prazo_vermelho" } }) },
+    where: {
+      id: { gt: depois },
+      ...(usuario.perfil === "admin" ? {} : { OR: [{ consultorId: usuario.id, tipo: { not: "prazo_vermelho" } }, { paraTodos: true }] }),
+    },
     orderBy: { id: "asc" },
     take: LIMITE_POR_CONSULTA,
   });
@@ -61,6 +65,7 @@ export async function alertasDesde(usuario: { id: string; perfil: string }, depo
       consultorId: a.consultorId,
       consultorNome: a.consultorNome,
       texto: a.texto,
+      paraTodos: a.paraTodos,
     })),
     // Se veio muita coisa de uma vez, a próxima consulta continua de onde esta parou.
     ultimoId: cheio ? linhas[linhas.length - 1].id : ultimo,

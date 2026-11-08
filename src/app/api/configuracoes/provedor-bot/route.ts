@@ -5,7 +5,7 @@ import { configDoBot, definirConfigDoBot, PROVEDORES_BOT } from "@/servicos/prov
 
 export const dynamic = "force-dynamic";
 
-// Qual IA atende o texto (Claude ou GPT) e o modelo do GPT. Só admin.
+// Qual IA atende o texto (Claude ou GPT) e o modelo de cada uma. Só admin. Grava só os campos enviados.
 export const GET = rota(async () => {
   await exigirUsuario("configurar");
   return configDoBot();
@@ -13,9 +13,11 @@ export const GET = rota(async () => {
 
 export const PUT = rota(async (req: Request) => {
   await exigirUsuario("configurar");
-  const { provedor, modeloOpenai } = z.object({ provedor: z.enum(PROVEDORES_BOT), modeloOpenai: z.string().max(100) }).parse(await req.json());
+  const mudanca = z
+    .object({ provedor: z.enum(PROVEDORES_BOT).optional(), modeloClaude: z.string().max(100).optional(), modeloOpenai: z.string().max(100).optional() })
+    .parse(await req.json());
   try {
-    await definirConfigDoBot(provedor, modeloOpenai);
+    await definirConfigDoBot(mudanca);
   } catch (erro) {
     throw new ErroHttp(400, erro instanceof Error ? erro.message : "Configuração inválida.");
   }

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI } from "@/bot/openai-conversao";
 import { FERRAMENTAS } from "@/bot/ferramentas";
 import { responderCliente } from "@/bot/atendimento";
-import { configDoBot, definirConfigDoBot, MODELO_OPENAI_PADRAO } from "@/servicos/provedor-bot";
+import { configDoBot, definirConfigDoBot, MODELO_CLAUDE_PADRAO, MODELO_OPENAI_PADRAO } from "@/servicos/provedor-bot";
 import { salvarChave } from "@/servicos/chaves-api";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { registrarMensagemCliente } from "@/servicos/mensagens";
@@ -50,15 +50,18 @@ describe("bot com GPT", () => {
   });
 
   it("padrão é Claude; o provedor e o modelo são gravados", async () => {
-    expect(await configDoBot()).toEqual({ provedor: "claude", modeloOpenai: MODELO_OPENAI_PADRAO });
-    await definirConfigDoBot("openai", " gpt-x.1 ");
-    expect(await configDoBot()).toEqual({ provedor: "openai", modeloOpenai: "gpt-x.1" });
-    await expect(definirConfigDoBot("openai", "nome inválido!")).rejects.toThrow();
+    expect(await configDoBot()).toEqual({ provedor: "claude", modeloClaude: MODELO_CLAUDE_PADRAO, modeloOpenai: MODELO_OPENAI_PADRAO });
+    await definirConfigDoBot({ provedor: "openai", modeloOpenai: " gpt-x.1 " });
+    expect(await configDoBot()).toEqual({ provedor: "openai", modeloClaude: MODELO_CLAUDE_PADRAO, modeloOpenai: "gpt-x.1" });
+    await definirConfigDoBot({ modeloClaude: "claude-haiku-5-5" });
+    expect((await configDoBot()).modeloClaude).toBe("claude-haiku-5-5");
+    await expect(definirConfigDoBot({ provedor: "claude", modeloOpenai: "nome inválido!" })).rejects.toThrow();
+    expect((await configDoBot()).provedor).toBe("openai");
   });
 
   it("responde pela OpenAI, usa a ferramenta e guarda o histórico no formato da Anthropic", async () => {
-    await salvarChave("texto", "sk-openai-teste-0123456789abcd");
-    await definirConfigDoBot("openai", "gpt-teste");
+    await salvarChave("openai", "sk-openai-teste-0123456789abcd");
+    await definirConfigDoBot({ provedor: "openai", modeloOpenai: "gpt-teste" });
     const respostas = [
       { choices: [{ finish_reason: "tool_calls", message: { content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "atualizar_lead", arguments: '{"cidade":"Juazeiro do Norte"}' } }] } }], usage: { prompt_tokens: 100, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 40 } } },
       { choices: [{ finish_reason: "stop", message: { content: "Anotei, obrigado!" } }], usage: { prompt_tokens: 120, completion_tokens: 5 } },
@@ -82,8 +85,8 @@ describe("bot com GPT", () => {
 
   it("chave recusada pela OpenAI vira aviso em português, sem a chave", async () => {
     // chave diferente da do teste anterior: o cliente da OpenAI é guardado por chave e prenderia o fetch falso antigo
-    await salvarChave("texto", "sk-openai-outra-0123456789abcd");
-    await definirConfigDoBot("openai", "gpt-teste");
+    await salvarChave("openai", "sk-openai-outra-0123456789abcd");
+    await definirConfigDoBot({ provedor: "openai", modeloOpenai: "gpt-teste" });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ error: { message: "bad key" } }), { status: 401, headers: { "content-type": "application/json" } }));
     const lead = await obterOuCriarLead("+5588999990002", "Bia");
     await registrarMensagemCliente(lead.id, "oi");

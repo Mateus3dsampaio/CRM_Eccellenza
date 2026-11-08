@@ -28,7 +28,7 @@ export function tipoAudioAceito(tipo: string): boolean {
 }
 
 export async function transcricaoConfigurada(): Promise<boolean> {
-  return !!(await obterChave("audio"));
+  return !!(await obterChave("openai"));
 }
 
 function clienteOpenAI(apiKey: string): OpenAI {
@@ -38,7 +38,7 @@ function clienteOpenAI(apiKey: string): OpenAI {
 
 /** Devolve o texto falado, ou null se não deu (sem chave, formato não aceito, grande demais, erro ou áudio sem fala). Nunca lança. */
 export async function transcreverAudio(dados: Buffer, tipo: string): Promise<string | null> {
-  const chave = await obterChave("audio");
+  const chave = await obterChave("openai");
   if (!chave) return null;
   const extensao = EXTENSOES[tipo.split(";")[0].trim().toLowerCase()];
   if (!extensao || dados.length === 0 || dados.length > LIMITE_AUDIO_BYTES) return null;

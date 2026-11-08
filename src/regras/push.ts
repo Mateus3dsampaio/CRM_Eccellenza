@@ -13,9 +13,9 @@ export const TRECHO_MAXIMO_PUSH = 110;
  * Quem recebe: o admin recebe tudo; o consultor só os avisos dos seus leads, e nunca o de prazo vencido
  * (o mesmo que a tela já faz com os avisos de dentro do CRM).
  */
-export function quemRecebePush(alerta: { tipo: TipoAlerta; consultorId: string | null }, destinos: DestinoPush[]): string[] {
+export function quemRecebePush(alerta: { tipo: TipoAlerta; consultorId: string | null; paraTodos?: boolean }, destinos: DestinoPush[]): string[] {
   const ids = destinos
-    .filter((d) => d.perfil === "admin" || (alerta.tipo !== "prazo_vermelho" && alerta.consultorId !== null && alerta.consultorId === d.usuarioId))
+    .filter((d) => d.perfil === "admin" || alerta.paraTodos || (alerta.tipo !== "prazo_vermelho" && alerta.consultorId !== null && alerta.consultorId === d.usuarioId))
     .map((d) => d.usuarioId);
   return [...new Set(ids)];
 }
@@ -36,7 +36,8 @@ function trecho(texto: string): string {
 
 /** Mensagem nova do cliente: nome do cliente no título e o trecho da mensagem embaixo (como no WhatsApp). Os outros avisos usam o texto de sempre. */
 export function montarAvisoPush(alerta: Pick<AlertaTela, "id" | "tipo" | "leadId" | "leadNome" | "consultorId" | "consultorNome" | "texto">, usuarioId: string, textoDoAlerta: (a: Pick<AlertaTela, "tipo" | "leadNome" | "consultorId" | "consultorNome" | "texto">, usuarioId: string) => { titulo: string; corpo: string }): AvisoPush {
-  const base = { tag: `alerta-${alerta.id}`, url: `/lead/${alerta.leadId}` };
+  // Aviso de ausência não tem lead (o campo guarda o vendedor): o clique leva ao início.
+  const base = { tag: `alerta-${alerta.id}`, url: alerta.tipo === "ausencia" ? "/" : `/lead/${alerta.leadId}` };
   if (alerta.tipo === "mensagem") return { ...base, titulo: alerta.leadNome, corpo: trecho(alerta.texto ?? "") || "Nova mensagem" };
   const { titulo, corpo } = textoDoAlerta(alerta, usuarioId);
   return { ...base, titulo, corpo: trecho(corpo) };

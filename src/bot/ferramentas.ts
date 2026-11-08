@@ -70,6 +70,20 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "registrar_retorno",
+    description:
+      "Agenda o retorno do consultor com o cliente e guarda uma nota. Use quando o cliente chegou com a loja fechada e disse quando prefere ser chamado. O sistema confere o horário: se a loja estiver fechada nessa hora ou o horário já passou, NÃO grava e devolve o horário de atendimento para você informar ao cliente e perguntar outro. Omita `quando` só se o cliente não quiser escolher. Não substitui um retorno que já esteja marcado.",
+    input_schema: {
+      type: "object",
+      properties: {
+        quando: { type: "string", description: "Melhor horário para o consultor chamar, no horário de Fortaleza, no formato AAAA-MM-DD HH:MM. Omita se o cliente não escolheu." },
+        nota: { type: "string", description: "O que o cliente disse, para o consultor (ex.: \"Cliente pediu contato segunda de manhã – chegou com a loja fechada\")." },
+      },
+      required: ["nota"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "passar_para_consultor",
     description: "Encerra a parte do bot: gera o resumo, move o card para \"Em qualificação\" e pausa o bot nesta conversa.",
     input_schema: {
@@ -117,3 +131,14 @@ export const esquemaMedidas = z
   .strict();
 
 export const esquemaPassar = z.object({ motivo: z.string().max(300).optional() }).strict();
+
+export const esquemaRetorno = z
+  .object({
+    quando: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/, "Use o formato AAAA-MM-DD HH:MM.")
+      .optional(),
+    nota: z.string().trim().min(1).max(500),
+  })
+  .strict();

@@ -23,6 +23,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | O que o bot diz / como atende | Tudo fica nas instruções (tela Configurações, banco): as numeradas são coladas pelo Mateus do repositório de instruções dele (o projeto não tem cópia) e o Manual do CRM (fixo, fora da numeração) ensina as ferramentas. Sem instrução ativa o bot não atende e passa o cliente ao consultor (`src/bot/atendimento.ts`). Montagem do prompt: `src/bot/prompt.ts` |
 | Abrir a ficha de um lead a partir de uma tela (card, lista, agenda) | Use `useGaveta().hrefDe(id)` (`src/componentes/ficha/gaveta.tsx`), nunca `/lead/ID` direto: abre a gaveta na tela atual. Só "Abrir ficha completa" vai para `/lead/[id]` |
 | Ferramentas do bot (o que ele grava) | `src/bot/ferramentas.ts` (esquemas) + `src/bot/executor.ts` (execução) |
+| O que o agente das instruções sabe do CRM (tarefa 38) | `docs/contrato-do-bot.md`, gerado por `src/bot/contrato.ts` (`npm run contrato:bot`); teste `testes/unit/contrato-bot.test.ts`. Mudou ferramenta, aviso, regra automática ou Manual: gere de novo |
 | Colunas, etiquetas, classificações | `src/regras/etapas.ts` (nomes de fábrica). Nome das colunas editável pelo admin no Kanban (lápis ao lado do título): `src/servicos/etapas.ts` + `src/app/api/etapas/route.ts` + `src/componentes/etapas.tsx` (provedor `useNomesEtapas`). Qualquer tela que mostre o nome de uma etapa usa o provedor, não `nomeEtapa` |
 | Regras da agenda (horário por dia, duração da visita e da medição, vagas, dias à frente): o admin edita em Configurações > Geral, gravado em `Configuracao` (chave `agenda`) | `src/regras/agenda.ts` (padrão e validação) + `src/servicos/configuracoes.ts` + `src/servicos/agenda.ts` |
 | Retomada / "Parou de responder" (vai para Perdido) | `src/regras/retomada.ts` + `src/servicos/rotinas.ts` |
@@ -34,6 +35,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Avisos (som, notificação do navegador, número na aba) | Quando nasce o aviso: `src/servicos/alertas.ts` (chamado por `mensagens`, `agenda` e `bot/executor`). Texto: `src/regras/alertas.ts`. Tela: `src/componentes/alertas/` |
 | Espera do cliente (cor do card, prazos, ordem das colunas, bolinha de não lidas) | `src/regras/espera.ts` + `src/servicos/mensagens.ts` (grava) + `src/servicos/configuracoes.ts` (prazos) |
 | Quem recebe cada lead | `src/regras/distribuicao.ts` + `src/servicos/distribuicao.ts` |
+| Retorno do lead que chegou com a loja fechada (tarefa 36: bot grava o retorno com `registrar_retorno`, modelo `retorno_atendimento` com botões sai sozinho no horário, só com dono online; ajustes em Configurações > Geral > Retorno com a loja fechada) | Regra: `src/regras/retorno-fechada.ts` (+ `proximaAbertura` e `situacaoDaLoja` em `regras/presenca.ts`). Ferramenta: `src/bot/ferramentas.ts` + `src/bot/executor.ts`. Rotina: `src/servicos/retorno-fechada.ts` (chamada por `rotinas.ts`). Modelo e botões: `src/regras/modelos.ts`; toque no botão: `servicos/conversa.ts` (`botao`) + `regras/optout.ts`. Cartão: `RetornoComLojaFechada` em `configuracoes.tsx` |
+| Presença dos vendedores e fila da loja fechada (tarefa 35: offline no fechamento, "Ficar online", fila repartida X min depois da abertura, aviso de quem não ficou online com compromisso, "Passar os de hoje"; ajustes em Configurações > Geral > Presença e fila) | Regra: `src/regras/presenca.ts` (horário vem de `regras/agenda.ts`). Rotinas e transferência: `src/servicos/presenca.ts` (chamada por `rotinas.ts`). Cartão: `PresencaEFila` em `src/componentes/configuracoes/configuracoes.tsx`. Botões: `src/componentes/presenca.tsx`. Janela: `src/componentes/equipe/passar-hoje.tsx` |
 | Cores, sombras, espaçamentos | `src/app/tokens.css` |
 | Abas, filtros de uma opção só, animação do menu | `src/componentes/entalhe/` (`Abas` para abas, com a pílula elástica; `Entalhe` para o menu). Toda aba nova usa `Abas` |
 | Quem pode fazer o quê | `src/regras/permissoes.ts` |
@@ -57,8 +60,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Banco (`prisma/schema.prisma`)
 | Tabela | Guarda |
 |---|---|
-| `Usuario` | Admin e consultores (perfil, status online/almoço) |
-| `Lead` | Ficha do cliente (inclui, nas vendas: `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
+| `Usuario` | Admin e consultores (perfil, status online/almoço/offline; offline = não recebe lead, vira sozinho no fechamento da loja) |
+| `Lead` | Ficha do cliente (inclui, nas vendas: `retornoModeloEm` (retorno marcado pelo bot com a loja fechada; vale para o envio automático do modelo só enquanto for igual a `proximoContatoEm`), `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
 | `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
@@ -67,7 +70,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `EventoWebhook` | Caixa de entrada do webhook da Meta: o corpo (traz texto e telefone do cliente) é gravado antes do 200, processado depois e ESVAZIADO ao terminar; a linha some em 2 dias. Excluir um cliente apaga também os eventos pendentes dele |
 | `EventoMetrica` | Contadores anônimos do painel |
 | `AssinaturaPush` | Navegadores que aceitaram avisos com o CRM fechado: pessoa, endereço do navegador (único) e as chaves que só servem para criptografar o aviso para ele |
-| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
+| `Alerta` | Avisos para quem atende (mensagem nova, lead passado, visita marcada, hora do retorno com o cliente, prazo vermelho vencido — este só o admin recebe; presença: `ausencia` e `compromisso_cedo`, com `paraTodos` = todos recebem): tipo, lead, dono na hora, texto. A tela busca só os novos pelo `id`; some em 1 dia |
 | `Configuracao` | Pares chave/valor (chaves de API criptografadas, modo de distribuição, exigir próximo contato em Negociação, layout da ficha, versão dos dados, segredo da sessão) |
 | `RegistroRotina` | Log das rotinas e do relógio simulado |
 | `MotivoPerda` | Motivos de perda editáveis (código, nome, pergunta extra, ordem, ativo). O lead guarda o código. Motivo em uso só desativa. Os 5 originais entram sozinhos na primeira consulta |
@@ -104,6 +107,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/kanban/route.ts` | Cards do quadro (já ordenados) | `consultas`, `rotinas` |
 | `src/app/api/alertas/route.ts` | Avisos novos para o usuário (`?depois=N`). Consultor: os dos seus leads; admin: todos | `alertas` |
 | `src/app/api/retornos/route.ts` | "Retornos de hoje": leads em Orçamento/Negociação com retorno hoje, atrasado ou sem data (consultor: os dele; admin: todos) | `consultas` |
+| `src/app/api/janelas/route.ts` | "Janelas fechando" (tarefa 37): leads em etapa aberta com a janela de 24h ainda aberta (consultor: os dele; admin: todos). A tela filtra os de menos de 2 h | `consultas` |
 | `src/app/api/aguardando/route.ts` | Leads esperando um humano (consultor: os dele; admin: todos) e os prazos de cor. Alimenta o contador do topo, a lista e a cor dos cards | `consultas`, `configuracoes` |
 | `src/app/api/leads/[id]/route.ts` | Ficha e correção de dados (inclui `venda`: data do retorno, valores, motivo) | `consultas`, `leads`, `historico` |
 | `src/app/api/leads/[id]/conversa/route.ts` | Assumir, devolver ao bot, responder, marcar como vista (zera a bolinha) | `conversa` |
@@ -115,9 +119,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/painel/route.ts` | Métricas (atalho ou datas, filtro de vendedor). Só admin (`ver_metricas`; consultor recebe 403) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG). Acha o cliente com ou sem o 9; modelo exige consentimento (pede como o cliente autorizou) e não vale para quem pediu para parar | `conversa`, `leads`, `lgpd`, `consultas` |
 | `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
-| `src/app/api/relogio/route.ts` | Avançar o relógio e rodar rotinas. 404 fora do modo simulador | `rotinas` |
+| `src/app/api/relogio/route.ts` | Avançar o relógio (horas ou 5–59 minutos) e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
-| `src/app/api/equipe/status/route.ts` | Consultor online/almoço. Só volta do almoço quando ele (ou o admin) clica: nada é automático | `distribuicao` |
+| `src/app/api/equipe/status/route.ts` | Consultor online/almoço/offline. Só volta quando ele (ou o admin) clica; offline sozinho só no fechamento da loja (rotina de presença) | `distribuicao` |
+| `src/app/api/equipe/passar-hoje/route.ts` | GET: o que o vendedor ausente tem hoje e para quem dá para passar. POST: passar os leads e compromissos de hoje (qualquer logado; vai na ficha com o nome de quem passou) | `presenca` |
+| `src/app/api/configuracoes/retorno-fechada/route.ts` | Gravar as regras do retorno com a loja fechada (só admin) | `configuracoes` |
+| `src/app/api/configuracoes/presenca/route.ts` | Gravar as regras de presença e fila (só admin) | `configuracoes` |
 | `src/app/api/configuracoes/usuarios/route.ts` | Criar usuário (só admin) | `usuarios` |
 | `src/app/api/configuracoes/usuarios/[id]/route.ts` | Editar nome/perfil, redefinir senha, desativar/reativar (desativar consultor com leads exige `transferirPara`). Só admin | `usuarios` |
 | `src/app/api/configuracoes/usuarios/transferir/route.ts` | Passar os leads em andamento de um consultor para outro. Só admin | `distribuicao` |
@@ -134,8 +141,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/saude/route.ts` | "Está de pé?" para o Railway (pública, sem dados) | `lib/db` |
 | `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
 | `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
-| `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (texto e áudio): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
-| `src/app/api/configuracoes/provedor-bot/route.ts` | Ler/gravar qual IA atende o texto (Claude ou GPT) e o modelo do GPT. Só admin | `provedor-bot` |
+| `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (Anthropic e OpenAI): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
+| `src/app/api/configuracoes/provedor-bot/route.ts` | Ler/gravar qual IA atende o texto (Claude ou GPT) e o modelo de cada uma (grava só os campos enviados). Só admin | `provedor-bot` |
+| `src/app/api/configuracoes/modelos-ia/route.ts` | Modelos disponíveis na conta da empresa (`?provedor=claude|openai`) para a escolha na tela. Só admin | `modelos-ia` |
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
@@ -150,6 +158,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/instrucoes/route.ts` | Listar (numeradas + manual) e criar instruções | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir (o manual só edita o texto) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/manual-do-codigo/route.ts` | Botão "Usar o texto do código": Manual volta ao texto do código (o da tela fica como anterior) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/reordenar/route.ts` | Reordenar | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/importar/route.ts` | Importar instruções de arquivos .txt (vários de uma vez; só admin) | `instrucoes`, `regras/importar-instrucoes` |
 | `src/app/api/configuracoes/instrucoes/exportar/route.ts` | Exportar .txt ou .zip | `instrucoes`, `lib/zip` |
@@ -166,21 +175,24 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/configuracoes.ts` | Ler/gravar configurações, modo de distribuição, prazos de espera |
 | `src/servicos/push.ts` | Avisos com o CRM fechado (biblioteca `web-push`): chaves VAPID (variáveis `VAPID_*` ou criadas sozinhas e guardadas no banco, a privada criptografada com a `CHAVE_MESTRA`), guardar/cancelar o navegador de cada pessoa, enviar o aviso de cada alerta (`registrarAlerta` chama) a quem deve receber, remover navegador morto (404/410), aviso de teste. Nunca lança |
 | `src/servicos/etapas.ts` | Nomes das colunas do Kanban: ler (de fábrica + o que o admin trocou, chave `nomes_etapas` em `Configuracao`) e renomear (valida, recusa repetido, guarda só o que difere do padrão) |
-| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar |
+| `src/servicos/instrucoes.ts` | Instruções do bot: CRUD das numeradas, importar de arquivos .txt (tudo ou nada; atualizar guarda a versão anterior), Manual do CRM (cria uma vez; em banco antigo converte a antiga 15 e tira a 14), versão anterior, exportar; troca sozinho o Manual desatualizado (tarefa 38) e diz se está diferente do código |
 | `src/servicos/exportacao.ts` | Monta o .zip de desempenho do vendedor: resumo, leads, mudanças de etapa, uma conversa por lead, mídias (opcional). Sem telefone/nome do cliente. Bot e consultor separados |
-| `src/servicos/consultas.ts` | Dados prontos para as telas (cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
-| `src/servicos/painel.ts` | Dados do Painel por período e vendedor (inclui "Clientes que faltaram": medição/apresentação remarcada depois da data): contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) Tarefa 21: apresentações e medições agendadas (principal), apresentações por consultor e conversão da agenda (`conversoesDoPeriodo`, a partir da tabela `Visita`). |
+| `src/servicos/consultas.ts` | Dados prontos para as telas (`janelasAbertas` para o botão "Janelas fechando"; cards e ficha trazem os dados de venda) (kanban, ficha, agenda, arquivados, lista de aguardando). O kanban sai ordenado: quem espera resposta primeiro, depois pela última mensagem |
+| `src/servicos/painel.ts` | Dados do Painel por período e vendedor (inclui `janelas`: leads ativos com a janela de 24h aberta e fechando, de agora) (inclui "Clientes que faltaram": medição/apresentação remarcada depois da data): contadores anônimos (geral) ou leads do vendedor, funil, tempo de resposta (bot e consultor) e vendas (total em negociação agora, total vendido e motivos de perda no período) Tarefa 21: apresentações e medições agendadas (principal), apresentações por consultor e conversão da agenda (`conversoesDoPeriodo`, a partir da tabela `Visita`). |
 | `src/servicos/resumo.ts` | Resumo da ficha para o consultor copiar |
 | `src/servicos/alertas.ts` | Guarda o aviso (mensagem do cliente, bot passou o lead, bot marcou visita, hora do retorno, decisão vencida uma vez por dia) e entrega os novos por usuário. Limpa os de mais de 1 dia. `avisarRetornos`: avisa o dono do lead (e o admin) na hora do próximo contato, uma vez por data marcada. `avisarPrazosVermelhos`: avisa o admin uma vez por espera quando um lead passa do prazo vermelho |
 | `src/servicos/historico.ts` | Registro de quem mudou o quê |
 | `src/servicos/metricas.ts` | Contadores anônimos |
 | `src/servicos/rotinas.ts` | Retomada (pula quem pediu para parar), "Parou de responder" (Perdido), limpeza de arquivados (30 dias; quem está em Fechado espera 180 dias) e exclusão de clientes que fecharam 180 dias depois do fechamento (com registro LGPD), limpeza de logs antigos, relógio (também confere os prazos vermelhos) |
+| `src/servicos/retorno-fechada.ts` | Rotina do retorno automático: no horário do retorno marcado pelo bot (`Lead.retornoModeloEm` igual a `proximoContatoEm`), com a janela de 24h fechada, envia o modelo; só com dono online (senão passa para quem está online; ninguém online: espera e avisa todos `retorno_sem_online`); nunca para quem pediu parar |
+| `src/servicos/presenca.ts` | Rotinas de presença (a cada minuto, com marca por fechamento/abertura para não repetir): offline no fechamento, repartir a fila, verificar presença (aviso `ausencia`), aviso de compromisso cedo; `passarOsDeHoje` (leads com compromisso ou retorno hoje + visitas de hoje; horário ocupado do destino fica de fora) e `resumoDeHoje` |
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), status "entregue"/"lido" que chega antes da mensagem estar gravada fica pendente e é reaplicado (2 s, 10 s, 1 min, depois a rotina), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
-| `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API): `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
-| `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo do GPT (PROVISÓRIO `gpt-5.5`, editável na tela). Chaves `bot_provedor` e `bot_modelo_openai` em `Configuracao` |
-| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave da tela ou `OPENAI_API_KEY`; modelo padrão `gpt-4o-mini-transcribe`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
+| `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API), uma por empresa: `anthropic` (Claude) e `openai` (GPT no texto e transcrição de áudio). `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. No banco ficaram os nomes antigos (`api_chave_texto` = Anthropic, `api_chave_audio` = OpenAI). Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
+| `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo de cada uma (padrões em `regras/modelos-ia.ts`). Chaves `bot_provedor`, `bot_modelo_claude` e `bot_modelo_openai` em `Configuracao` |
+| `src/servicos/modelos-ia.ts` | Lista de modelos buscada na conta da Anthropic ou da OpenAI (com a chave de cada uma); sem chave ou com erro devolve a lista de reserva e o motivo. Nunca lança nem expõe a chave |
+| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave OpenAI da tela ou `OPENAI_API_KEY`; modelo padrão `gpt-4o-mini-transcribe`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
 | `src/servicos/usuarios.ts` | Criar usuário, listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
@@ -193,10 +205,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/agenda.ts` | Regras da agenda como parâmetro (`primeiroHorarioPossivel`: marcar no mesmo dia vale a partir da próxima hora cheia; `primeiroDiaAgendavel`) (`RegrasAgenda`, padrão PROVISÓRIO, validação, vagas livres, janela). Não lê banco Tipos de compromisso (visita à loja, medição, apresentação), duração por tipo, medição não ocupa a loja. |
 | `src/regras/retomada.ts` | Quando retomar e quando ir para Perdido ("Parou de responder") |
 | `src/regras/decisao.ts` | Decisão pendente do vendedor: data vencida (do dia seguinte em diante) de medição, apresentação ou retorno da Negociação; textos da etiqueta |
-| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta) |
+| `src/regras/janela24h.ts` | Texto livre só até 24h depois do cliente (Meta); `janelasFechando` (menos de 2 h), `resumoDasJanelas` (painel) e `situacaoDaJanela` dá faixa (verde/amarelo/vermelho/fechada, limites 6 h e 2 h PROVISÓRIOS), tempo restante e fração para o relógio do card (tarefa 37) |
 | `src/regras/modelos.ts` | Modelos de mensagem aprovados (fictícios) |
 | `src/regras/distribuicao.ts` | Modos de distribuição de leads |
 | `src/regras/espera.ts` | Espera do cliente por um humano: faixa (normal, amarelo, vermelho), prazos padrão PROVISÓRIOS (10 e 30 min), desde quando o lead espera, validação, texto "12 min", ordem das colunas `idsCriticosDaColuna` (tarefa 33, PROVISÓRIO): só o pior vermelho da coluna (ou 24 h+) ganha o fundo vermelho inteiro |
+| `src/regras/retorno-fechada.ts` | Retorno com a loja fechada: regras (padrão, validação) e `horarioDoRetorno` (sem horário escolhido: reabertura + X min; horário pedido com a loja fechada ou no passado o bot nem grava: `registrar_retorno` devolve o horário de atendimento para ele informar o cliente) |
+| `src/regras/presenca.ts` | Presença e fila da loja fechada: regras (padrão, validação), loja aberta/fechada pela agenda, último fechamento, abertura atual, horários de repartir e verificar, `filaPodeSerEntregue`, `leadNovoPodeTerDono`, resumo dos itens do dia |
 | `src/regras/almoco.ts` | Aviso ao cliente durante o almoço do consultor |
 | `src/regras/permissoes.ts` | Quem pode o quê |
 | `src/regras/layout-ficha.ts` | Grade da ficha do lead (blocos: conversa, resumo, etapa, compromissos, dados, medidas). `ajustarLayoutSalvo` aproveita layout salvo com blocos antigos (tarefa 28). Padrão: conversa à esquerda e ficha à direita |
@@ -208,11 +222,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador `agruparAlertas`/`textoDoGrupo`: avisos do mesmo tipo que chegam juntos viram um toast só (tarefa 25) |
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
-| `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
+| `src/regras/whatsapp.ts` | Webhook da Meta (e os textos que o bot recebe para áudio que falhou e tipos não suportados): assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
 | `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
-| `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/chaves-api.ts` | Chaves de API: tipos (anthropic, openai), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/modelos-ia.ts` | Modelos de IA para a escolha: filtro da lista de cada empresa (Claude: o mais novo de cada família da geração 5+; GPT: só conversa, sem versão datada, até 8), frase de cada modelo, lista de reserva do Claude, padrões (`claude-sonnet-5-5`; GPT PROVISÓRIO `gpt-5.5`) |
 | `src/regras/push.ts` | Web Push, só regra: quem recebe (admin tudo; consultor só os seus leads e nunca prazo vencido) e como o aviso é escrito (mensagem nova = nome do cliente no título + trecho de 110 letras; os outros usam `textoDoAlerta`) |
 | `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
@@ -220,13 +235,16 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Bot (`src/bot`)
 | Arquivo | Faz |
 |---|---|
-| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
+| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`, com o modelo escolhido na tela e a chave da empresa; reserva automática de recusa só em Sonnet/Opus/Fable): histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
-| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
-| `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
-| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação. O bot não agenda (sem ferramenta de horários/agendamento) |
+| `src/bot/avisos.ts` | Textos fixos que o bot recebe: abertura do prompt e avisos de cada mensagem (`<sistema>` com hora/loja/nome do perfil, arquivo que o bot não lê, imagem, mensagem de consultor/sistema). Funções puras, usadas pelo bot e pelo contrato do bot (tarefa 38) |
+| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (de `avisos.ts`) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
+| `src/bot/manual-inicial.ts` | Texto do Manual do CRM. Só muda aqui, com aprovação do Mateus; o sistema troca sozinho o do banco se ninguém editou na tela (ver `manual-versoes.ts`) |
+| `src/bot/manual-versoes.ts` | Impressão (sha256) de cada versão do Manual que o código já teve e a regra `situacaoDoManual` (igual, desatualizado → troca sozinho, editado → aviso na tela, voltou → respeita) |
+| `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação (inclui `registrar_retorno`, tarefa 36). O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
-| `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente |
+| `src/bot/contrato.ts` | Monta o contrato do bot (`docs/contrato-do-bot.md`, tarefa 38): prompt, avisos de cada mensagem, ferramentas, o que o sistema faz sozinho e o Manual, a partir das mesmas constantes do bot. Função pura, sem data. Lido pelo agente das instruções (outro repositório) |
+| `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente e junta os textos das voltas sem repetir fala igual |
 
 ## Componentes (`src/componentes`)
 | Arquivo | Faz |
@@ -248,6 +266,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/alertas/push.ts` | Lado do navegador do Web Push: registrar `/sw.js`, pedir permissão, assinar, ligar/desligar, pausar ao sair do CRM e renovar ao abrir (quem já ligou neste navegador) |
 | `src/componentes/alertas/som.ts` | Som feito no navegador (sem arquivo de áudio) |
 | `src/componentes/retornos.tsx` | Botão "Retornos de hoje" no topo (com retorno vencendo, pisca em âmbar: `animate-chamar` em `tokens.css`) e a lista, provedor (uma consulta a `/api/retornos` para a tela toda), situação e destaque do retorno no card |
+| `src/componentes/janelas.tsx` | Botão "Janelas fechando" no topo (tarefa 37): leads com menos de 2 h de texto livre, do mais urgente ao menos, com a prévia; provedor com uma consulta a `/api/janelas`. O filtro usa o relógio do servidor, então a lista anda sozinha |
 | `src/componentes/aguardando.tsx` | Botão "X aguardando você" no topo e a lista que ele abre |
 | `src/componentes/vendas/regras.tsx` | Provedor das regras de vendas (uma consulta para a tela toda): motivos e se Negociação exige o retorno |
 | `src/componentes/vendas/janela-mudanca.tsx` | Janela que pede o que a etapa exige ao mover o card (Negociação: próximo contato + valor do orçamento; valor fechado; motivo da perda) e `CampoDinheiro` (máscara R$ 1.621,00, biblioteca react-currency-input-field). Usada no quadro e na ficha |
@@ -255,26 +274,28 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/usuario.tsx` | Usuário logado no contexto |
 | `src/componentes/texto.ts` | Formatação de texto |
 | `src/componentes/chat.tsx` | Bolhas de conversa |
-| `src/componentes/almoco.tsx` | Botão de almoço do consultor |
+| `src/componentes/presenca.tsx` | Botões do consultor no cabeçalho: "Ficar online" / "Offline" e almoço |
+| `src/componentes/equipe/passar-hoje.tsx` | Janela "Passar os de hoje" (aviso de ausência e cartão Equipe) |
 | `src/componentes/nova-mensagem.tsx` | Janela de nova mensagem |
 | `src/componentes/arquivados.tsx` | Lista de arquivados (Excluir discreto, em vermelho, afastado de Restaurar) |
 | `src/componentes/kanban/decisao.tsx` | Janela de decisão da data vencida (medição feita/remarcar/desistiu; fechou/negociando/não veio/desistiu; fechou/ainda negociando/não fechou). Cada botão abre a janela que já existe (agenda ou dados da etapa) |
 | `src/componentes/kanban/quadro.tsx` | Abre a janela de decisão pela etiqueta do card. Quadro com arrastar e soltar; o admin renomeia a coluna pelo lápis ao lado do título (`NomeDaColuna`) (etapas que exigem dados abrem a janela antes de mover), busca e filtros (inclui "Esperando resposta" e "Meus leads"; etiqueta/cidade/zoom num popover, filtros ligados viram chips com "x", tarefa 27; Fechado/Perdido recolhidas e zoom automático, tarefa 24) Arrastar para Medição/Apresentação abre a janela de agendar (agendar já move o card). Arrastar para Em qualificação um card com medição/apresentação marcada pergunta se cancela o compromisso (`agendados` do card). |
-| `src/componentes/kanban/card.tsx` | Card do lead: cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante de decisão pendente (abre a janela de decisão; card com borda vermelha), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
+| `src/componentes/kanban/card.tsx` | Card do lead: relógio da janela de 24h logo abaixo do nome (`RelogioJanela`), cor por espera (vermelho com halo que "respira", `animate-respirar` em `tokens.css`), etiqueta piscante de decisão pendente (abre a janela de decisão; card com borda vermelha), etiqueta piscante "Sem data – marque na agenda" em Medição/Apresentação sem o compromisso marcado (`semData`, calculado em `consultas.ts`; `animate-piscar`), "esperando há X min", bolinha de não lidas, retorno (hoje/atrasado destacado), valor (orçamento ou fechado). Sem consultor (fila): etiqueta "Na fila – sem consultor"; lembrete com a nota |
+| `src/componentes/kanban/relogio-janela.tsx` | Relógio da janela de 24h da Meta no card (tarefa 37): anel que esvazia, horas restantes, cor por faixa (verde/amarelo/vermelho piscando) e "Só modelo" quando fechada; some em Fechado e Perdido; dica com a hora exata |
 | `src/componentes/kanban/bolinha.tsx` | Bolinha verde com o número de mensagens não lidas |
 | `src/componentes/kanban/zoom.ts` | Zoom do quadro: níveis fixos ou "auto" (padrão, tarefa 24), que `zoomParaCaber` calcula para as colunas abertas caberem na tela (mínimo 75%) |
 | `src/componentes/ficha/gaveta.tsx` | Gaveta do lead (tarefa 23): `ProvedorGaveta` (no layout) lê `?lead=ID` da URL e abre um painel à direita com resumo, conversa e etapa, por cima de qualquer tela; `useGaveta().hrefDe(id)` é o link que todo card/lista usa para abrir (kanban, agenda, arquivados, retornos, esperando, galeria). "Abrir ficha completa" leva a `/lead/[id]`. Fechar usa `replace` para "voltar" não reabrir |
 | `src/componentes/ficha/ficha.tsx` | Ficha completa: grade arrastável (PC) e abas Conversa/Ficha (celular). Painel da conversa com abas Conversa | Notas | Histórico; ações raras (layout, exportar LGPD, excluir) no menu "⋯"; cliente na barra de cima (tarefa 28). Com a aba visível, marca a conversa como vista (zera as não lidas) |
 | `src/componentes/ficha/dados-lead.tsx` | Blocos de dados da ficha (inclui retorno, valores e motivo da perda, com a janela para editar). "Dados do lead" esconde campos vazios atrás de "Mostrar campos vazios"; quadro "Compromissos" (visita à loja, medição, apresentação numa linha cada, tarefa 28); escolher Medição/Apresentação na etapa abre a agenda. |
-| `src/componentes/ficha/conversa.tsx` | Conversa na ficha |
+| `src/componentes/ficha/conversa.tsx` | Conversa na ficha. Faixa da janela de 24h (tarefa 37): com menos de 6 h avisa a hora de fechar; fora da janela, botão "Reabrir com modelo" só escolhe o modelo `retomada` (o vendedor envia) |
 | `src/componentes/ficha/lembrete.tsx` | Bloco Lembrete da ficha (tarefa 22): data, hora e nota opcional em qualquer etapa aberta; concluir apaga. Em Negociação é o próximo contato (obrigatório conforme o interruptor) |
 | `src/componentes/ficha/agendar.tsx` | Agendar/remarcar visita à loja, medição ou apresentação (pela ficha, pela agenda ou ao arrastar o card), só com horários livres do tipo . Calendário para escolher hoje (se ainda há horário depois da próxima hora cheia) ou qualquer data futura (até 12 meses) e, ao lado, os horários livres da véspera, do dia escolhido e do dia seguinte |
 | `src/componentes/ficha/calendario.tsx` | `Calendario`: calendário de um mês para escolher o dia (bloqueia dias passados e dias em que a loja fecha) e utilitários de data "AAAA-MM-DD" |
 | `src/componentes/agenda/agenda.tsx` | Grade da agenda. Marca o dia de hoje (pelo relógio do servidor); o "+" de bloquear só aparece ao passar o mouse (sempre visível em telas de toque) Cor e ícone por tipo; compromisso longo (medição) aparece em todas as horas que ocupa. |
-| `src/componentes/painel/painel.tsx` | Painel de métricas (grade 3×3 de leads + conversão da agenda com "Clientes que faltaram", botão "Exportar" do admin abre `exportar-desempenho` numa janela, tarefa 30): atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
+| `src/componentes/painel/painel.tsx` | Painel de métricas (cartões "Janela de 24h da Meta (agora)", tarefa 37; grade 3×3 de leads + conversão da agenda com "Clientes que faltaram", botão "Exportar" do admin abre `exportar-desempenho` numa janela, tarefa 30): atalhos e datas, filtro de vendedor (admin), total em negociação, total vendido, motivos de perda, tempo médio de resposta, funil. Resultado em cima; variação dos indicadores diz "+2 em relação ao período anterior (era 1)" e a cor segue o sentido bom/ruim de cada indicador (PROVISÓRIO: só "Sem resposta" é pior ao subir) Bloco "Conversão da agenda" (tarefa 21). |
 | `src/componentes/simulador/simulador.tsx` | Tela do simulador |
-| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (saltos de +7 dias ou mais pedem confirmação) |
-| `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço; e `JanelaMinhaSenha` (cabeçalho) |
+| `src/componentes/simulador/relogio.tsx` | Controle do relógio simulado (+15 min, +30 min, horas e dias; saltos de +7 dias ou mais pedem confirmação) |
+| `src/componentes/configuracoes/equipe.tsx` | Cartão Equipe: novo usuário, editar, nova senha, transferir leads, desativar/reativar, almoço, colocar online e passar os de hoje de quem está offline; e `JanelaMinhaSenha` (cabeçalho) |
 | `src/componentes/configuracoes/vendas.tsx` | Aba Vendas: interruptor do próximo contato em Negociação e lista editável de motivos de perda |
 | `src/componentes/configuracoes/barra-salvar.tsx` | Barra "Alterações não salvas · Descartar · Salvar" fixa no rodapé das Configurações (tarefa 31): `useBlocoSalvavel` registra cada bloco com rascunho; `pedirSaida` pergunta antes de trocar de seção |
 | `src/componentes/configuracoes/configuracoes.tsx` | Configurações com submenu vertical, pílula de mola que anda entre as opções (`Pilula` com `eixo="y"`) e barra de rolagem sempre reservada para o menu não pular (Geral, Equipe, Vendas, Instruções, Chaves de API, Armazenamento, Temas; `?secao=` na URL, tarefa 31). A Geral tem distribuição, prazos de espera, regras da agenda, equipe (cadastro em `equipe.tsx`) e armazenamento. A Chave API reúne chaves de API, uso do bot e WhatsApp |
@@ -282,12 +303,12 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
-| `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": escolha Claude/GPT para o texto e modelo do GPT, dois campos em pontinhos (texto e áudio), "usar a mesma do texto" no áudio, mostra só o final, salvar/remover |
+| `src/componentes/configuracoes/chaves-api.tsx` | Aba Chaves de API, dois cartões. "Atendimento por texto": abas Claude/GPT, lista de modelos da conta (escolher um troca quem atende), chave da empresa da aba. "Transcrição de áudio": sempre OpenAI, chave OpenAI (a mesma do GPT). Chave em pontinhos, mostra só o final, salvar/remover |
 | `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
-| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: botão Importar (seletor de vários .txt do Windows + prévia do que será criado/atualizado), lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir |
+| `src/componentes/configuracoes/instrucoes.tsx` | Aba de instruções: botão Importar (seletor de vários .txt do Windows + prévia do que será criado/atualizado), lista numerada, aviso de "sem instruções", cartão do Manual do CRM, edição, exportar, excluir; aviso "Manual diferente do código" com botão "Usar o texto do código" |
 
 ## Infra (`src/lib`, `scripts`, `prisma`)
 | Arquivo | Faz |
@@ -307,6 +328,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/lib/cifra.ts` | Criptografia AES-256-GCM de segredos guardados no banco (chaves de API) |
 | `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
 | `prisma/seed.ts` | Dados fictícios (apaga tudo e recria, menos as instruções do bot) |
+| `scripts/gerar-contrato-bot.ts` | `npm run contrato:bot`: grava `docs/contrato-do-bot.md`. Rodar ao mudar ferramenta, aviso do bot, regra automática ou Manual |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
 | `scripts/gerar-planta.ts` | Gera a planta fictícia de teste |
 | `scripts/criar-usuario.ts` | Cria usuário no banco configurado |
@@ -322,6 +344,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/fluxos.test.ts` | Fluxos com banco: retomada, distribuição, agenda, mensagens |
 | `testes/unit/decisao.test.ts` | Decisão pendente: regra (vence no dia seguinte), card, lista de retornos, aviso diário, falta ao remarcar |
 | `testes/unit/instrucoes.test.ts` | Instruções: banco vazio, Manual do CRM (criação, conversão do banco antigo, proteções), edição, versão anterior, exclusão, zip, bot sem instruções |
+| `testes/unit/manual-versoes.test.ts` | Versões do Manual: impressão atual na lista, troca automática, editado na tela, voltar para a anterior. Usa `manual-antigo.txt` (versão de 04/11 congelada) |
 | `testes/unit/painel.test.ts` | Painel: período, duração, filtro por vendedor, tempo de resposta |
 | `testes/unit/exportacao.test.ts` | Exportação de desempenho: período, tempo de resposta, CSV, zip por vendedor |
 | `testes/unit/alertas.test.ts` | Avisos: textos, título da aba, quem recebe cada um, passar o lead e visita marcada pelo bot, limpeza, prazo vermelho (uma vez por espera, só admin) |
@@ -330,13 +353,21 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/agendador.test.ts` | Rotinas rodam sozinhas, uma vez, erro não derruba |
 | `testes/unit/producao.test.ts` | Modo simulador: rotas 404 e relógio real em produção |
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
+| `testes/unit/avisos.test.ts` | Textos que o bot recebe (abertura e avisos), fixados palavra por palavra |
+| `testes/unit/contrato-bot.test.ts` | `docs/contrato-do-bot.md` igual ao código (senão: rode `npm run contrato:bot`) |
+| `testes/unit/saida.test.ts` | Junção dos textos do bot sem repetir fala igual |
+| `testes/unit/janela24h.test.ts` | Faixas e tempo restante da janela de 24h |
+| `testes/unit/janelas-abertas.test.ts` | Consulta das janelas abertas (etapa, arquivado, dono do lead) |
 | `testes/unit/lgpd.test.ts` | Parar de receber, exportar, excluir com registro |
 | `testes/unit/whatsapp.test.ts` | Webhook: assinatura, verificação, payloads, duplicata, envio real (simulado com fetch falso), status, mídia, produção sem chaves |
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
 | `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
+| `testes/unit/modelos-ia.test.ts` | Escolha de modelo: filtro das listas Claude e GPT, modelo salvo sempre visível, busca na conta (OpenAI simulada), sem chave e chave recusada (reserva sem vazar a chave) |
 | `testes/unit/provedor-gpt.test.ts` | GPT como IA do texto: conversão de histórico/ferramentas/resposta, bot com a OpenAI simulada, troca de provedor |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
+| `testes/unit/retorno-fechada.test.ts` | Retorno com a loja fechada: próxima abertura, situação da loja para o bot, horário do retorno, `registrar_retorno`, modelo com botões, botão como PARAR, rotina (dono online, passa para quem está online, ninguém online, nunca parar/janela aberta/desligado) |
+| `testes/unit/presenca.test.ts` | Presença: regras puras (loja aberta, fechamento, fila), offline no fechamento, lead sem dono fora do horário, repartir a fila, verificação e aviso de ausência (todos/só admin), compromisso cedo, passar os de hoje |
 | `testes/unit/equipe.test.ts` | Regra da senha, redefinir/trocar senha, desativar (último admin, leads), transferir leads (em lote e um só), almoço só manual |
 | `testes/unit/esquema.test.ts` | Esquema Postgres em sincronia e migrações cobrindo todas as tabelas e colunas |
 | `testes/unit/push.test.ts` | Web Push (biblioteca trocada por uma falsa): quem recebe, texto do aviso, 410 remove o navegador, trocar de pessoa no mesmo navegador, chaves criptografadas, teste do sino |
@@ -349,6 +380,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/ajuda.ts` | Limpar banco, criar consultores de teste e um roteiro de EXEMPLO para os testes do bot (não é o que o bot usa) |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
 | `testes/e2e/telas.spec.ts` | Telas no computador e no celular, com prints |
+| `testes/e2e/presenca-retorno.spec.ts` | Telas das tarefas 35 e 36 (só no computador): botões online/offline do consultor, cartões Presença e fila e Retorno com a loja fechada, "Passar os de hoje" na Equipe, botões do modelo de retorno no simulador e "Não tenho interesse" como parar |
 
 ## Fora do código
 - `public/sw.js`: service worker dos avisos (recebe o push e mostra o cartão do sistema; sem cache). `next.config.ts` serve ele sem cache. Ícones e PWA também ficam em `public/`.

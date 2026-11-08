@@ -29,7 +29,7 @@ type Edicao = { id: string | null; titulo: string; texto: string; manual?: boole
 
 export function InstrucoesAtendimento() {
   const avisar = useAviso();
-  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[]; manual: Instrucao }>("/api/configuracoes/instrucoes");
+  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[]; manual: Instrucao; manualSituacao: "igual" | "voltou" | "desatualizado" | "editado" }>("/api/configuracoes/instrucoes");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -293,6 +293,21 @@ export function InstrucoesAtendimento() {
               <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm text-texto-suave">{manual.texto.split(/\r?\n/).slice(1).join("\n").trim()}</p>
             </div>
           </div>
+          {(dados?.manualSituacao === "editado" || dados?.manualSituacao === "voltou") && (
+            <div role="alert" className="mt-3 flex flex-wrap items-start gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-sm text-aviso">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p className="min-w-0 flex-1">
+                O Manual daqui está diferente do texto do código do CRM. O bot usa o daqui, mas o Manual só deve mudar junto com o código: assim
+                as novas versões chegam sozinhas. Enquanto estiver diferente, as atualizações do código não são aplicadas.
+              </p>
+              <Botao
+                variante="fantasma"
+                onClick={() => void agir(() => chamarApi("/api/configuracoes/instrucoes/manual-do-codigo", { method: "POST" }), "Manual do CRM igual ao do código. O texto anterior ficou guardado.", true)}
+              >
+                Usar o texto do código
+              </Botao>
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t border-borda pt-3 text-sm">
             {manual.anteriorTexto !== null && (
               <Botao

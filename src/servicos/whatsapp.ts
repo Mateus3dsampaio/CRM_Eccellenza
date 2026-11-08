@@ -5,7 +5,7 @@ import { LIMITE_AUDIO_BYTES, tipoAudioAceito, transcreverAudio, transcricaoConfi
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
-import { extrairEventos, PREFIXO_AUDIO, type MensagemRecebida, type StatusRecebido } from "@/regras/whatsapp";
+import { AUDIO_NAO_PROCESSADO, AUDIO_NAO_TRANSCRITO, extrairEventos, PREFIXO_AUDIO, type MensagemRecebida, type StatusRecebido } from "@/regras/whatsapp";
 import { ErroConversa, receberMensagemCliente } from "./conversa";
 
 // Integração com a API oficial do WhatsApp (Meta). Nada aqui roda sem as variáveis de ambiente.
@@ -153,11 +153,11 @@ async function aplicarStatus(s: StatusRecebido) {
 async function textoDoAudio(m: MensagemRecebida): Promise<string | null> {
   if (!m.midiaId || !(await transcricaoConfigurada())) return m.texto; // mensagem padrão de "não consigo ouvir"
   const audio = await baixarMidiaDaMeta(m.midiaId, "audio");
-  if (!audio) return "[o cliente enviou um áudio que o sistema não conseguiu processar]";
+  if (!audio) return AUDIO_NAO_PROCESSADO;
   const falado = await transcreverAudio(audio.dados, audio.tipo);
   if (!falado) {
     await registrarLogWebhook("mensagem", `Áudio de …${fim(m.telefone)} não pôde ser transcrito`, false);
-    return "[o cliente enviou um áudio que o sistema não conseguiu transcrever]";
+    return AUDIO_NAO_TRANSCRITO;
   }
   // Só o tamanho vai para o log, nunca o que o cliente disse.
   await registrarLogWebhook("mensagem", `Áudio de …${fim(m.telefone)} transcrito (${Math.ceil(audio.dados.length / 1024)} KB)`);
@@ -188,7 +188,7 @@ async function aplicarMensagem(m: MensagemRecebida) {
   // Duas tentativas: a primeira pode esbarrar numa corrida (cliente novo mandando 2 mensagens quase juntas, ou a Meta reenviando).
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
     try {
-      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, midia, idExterno: m.idExterno, waId: m.telefone });
+      await receberMensagemCliente({ telefone: `+${m.telefone}`, nomePerfil: m.nomePerfil, texto, midia, idExterno: m.idExterno, waId: m.telefone, botao: m.tipo === "button" || m.tipo === "interactive" });
       await registrarLogWebhook("mensagem", `Mensagem (${m.tipo}) de …${fim(m.telefone)} recebida`);
       return;
     } catch (erro) {

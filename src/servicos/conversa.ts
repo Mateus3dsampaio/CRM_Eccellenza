@@ -10,7 +10,7 @@ import { registrarAlteracao } from "./historico";
 import { obterOuCriarLead } from "./leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "./mensagens";
 import { liberarPedidoParar, registrarPedidoParar } from "./lgpd";
-import { pediuParaParar } from "@/regras/optout";
+import { pediuParaParar, recusouPeloBotao } from "@/regras/optout";
 import { PREFIXO_AUDIO } from "@/regras/whatsapp";
 
 export class ErroConversa extends Error {}
@@ -26,6 +26,8 @@ export async function receberMensagemCliente(params: {
   idExterno?: string | null;
   /** Número como a Meta o conhece (wa_id). Guardado para as respostas irem para o formato certo. */
   waId?: string | null;
+  /** A mensagem veio do toque num botão de resposta rápida (modelo com botões). */
+  botao?: boolean;
 }) {
   const telefone = normalizarTelefone(params.telefone);
   if (!telefone) throw new ErroConversa("Telefone inválido.");
@@ -52,7 +54,8 @@ export async function receberMensagemCliente(params: {
   }
   // LGPD: pedido claro para parar. Registra, confirma e não chama o bot.
   // (Áudio transcrito também vale: "parar" falado em voz alta é um pedido.)
-  if (!midia && pediuParaParar(texto?.startsWith(PREFIXO_AUDIO) ? texto.slice(PREFIXO_AUDIO.length) : texto)) {
+  // O botão "Não tenho interesse" do modelo de retorno tem o mesmo efeito (tarefa 36).
+  if (!midia && (pediuParaParar(texto?.startsWith(PREFIXO_AUDIO) ? texto.slice(PREFIXO_AUDIO.length) : texto) || (params.botao && recusouPeloBotao(texto)))) {
     await registrarPedidoParar(lead.id);
     return { leadId: lead.id, respostas: [] as string[] };
   }

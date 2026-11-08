@@ -8,6 +8,7 @@ import { ProvedorAvisos, ProvedorVersao } from "@/componentes/dados";
 import { ProvedorAlertas } from "@/componentes/alertas/provedor";
 import { ProvedorEspera } from "@/componentes/espera";
 import { ProvedorRetornos } from "@/componentes/retornos";
+import { ProvedorJanelas } from "@/componentes/janelas";
 import { ProvedorEtapas } from "@/componentes/etapas";
 import { ProvedorVendas } from "@/componentes/vendas/regras";
 import { ProvedorUsuario } from "@/componentes/usuario";
@@ -28,6 +29,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
             <ProvedorVendas>
               <ProvedorEtapas>
               <ProvedorRetornos>
+              <ProvedorJanelas>
                 <ProvedorAlertas>
                   {/* Gaveta do lead (?lead=ID) por cima de qualquer tela. Suspense: lê a URL no cliente. */}
                   <Suspense>
@@ -44,6 +46,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
                   </ProvedorTituloTela>
                   </Suspense>
                 </ProvedorAlertas>
+              </ProvedorJanelas>
               </ProvedorRetornos>
               </ProvedorEtapas>
             </ProvedorVendas>

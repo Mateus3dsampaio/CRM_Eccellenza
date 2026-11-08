@@ -8,8 +8,9 @@ import { formatarDataHora } from "@/regras/tempo";
 import { useVersao } from "./dados";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
+import { BotaoJanelas } from "./janelas";
 import { BotaoAvisos } from "./alertas/botao-avisos";
-import { BotaoAlmoco } from "./almoco";
+import { BotoesDePresenca } from "./presenca";
 import { MenuUsuario } from "./menu-usuario";
 import { NovaMensagem } from "./nova-mensagem";
 import { useUsuario } from "./usuario";
@@ -58,9 +59,10 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
                 {formatarDataHora(new Date(agora))}
               </Link>
             )}
+            <BotaoJanelas />
             <BotaoRetornos />
             <BotaoAguardando />
-            {usuario.perfil === "consultor" && <BotaoAlmoco />}
+            {usuario.perfil === "consultor" && <BotoesDePresenca />}
             <button
               onClick={() => setNovaAberta(true)}
               className="tecla-pri inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle px-3 text-sm font-semibold text-sobre-marca sm:px-4"

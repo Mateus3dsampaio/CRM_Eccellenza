@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
 import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
-import { janelaAberta, janelaFechaEm } from "@/regras/janela24h";
+import { janelaAberta, janelaFechaEm, JANELA_MS } from "@/regras/janela24h";
 import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { etapaComAgenda } from "@/regras/etapas";
@@ -36,6 +36,32 @@ export async function leadsAguardando(usuario: { id: string; perfil: string }) {
     ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
   }));
   return ordenarParaColuna(lista);
+}
+
+/**
+ * Leads com a janela de 24h da Meta ainda aberta, em etapa aberta (tarefa 37). A tela filtra os que estão fechando
+ * com o relógio do servidor, então a lista se atualiza sozinha. O consultor vê os seus; o admin vê todos.
+ */
+export async function janelasAbertas(usuario: { id: string; perfil: string }) {
+  const quando = await agora();
+  const leads = await db.lead.findMany({
+    where: {
+      arquivadoEm: null,
+      etapa: { notIn: ["fechado", "perdido"] },
+      ultimaMsgClienteEm: { gt: new Date(quando.getTime() - JANELA_MS) },
+      ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }),
+    },
+    include: { consultor: { select: { id: true, nome: true } } },
+    orderBy: { ultimaMsgClienteEm: "asc" },
+  });
+  return leads.map((l) => ({
+    id: l.id,
+    nome: nomeExibicao(l),
+    etapa: l.etapa,
+    previa: l.ultimaMensagemPrevia ?? "",
+    ultimaMsgClienteEm: l.ultimaMsgClienteEm?.toISOString() ?? null,
+    consultor: l.consultor,
+  }));
 }
 
 const PESO_RETORNO = { atrasado: 0, hoje: 1, sem_data: 2, futuro: 3 } as const;
@@ -100,6 +126,7 @@ export async function cardsDoKanban() {
       ordem: l.ordem,
       horario: l.ultimaMensagemEm ? formatarHorarioCard(l.ultimaMensagemEm, quando) : "",
       ultimaMensagemEm: l.ultimaMensagemEm?.toISOString() ?? null,
+      ultimaMsgClienteEm: l.ultimaMsgClienteEm?.toISOString() ?? null,
       esperandoDesde: esperandoDesde?.toISOString() ?? null,
       naoLidas: l.naoLidas,
       previa: l.ultimaMensagemPrevia ?? "",
@@ -186,6 +213,7 @@ export async function fichaDoLead(id: string) {
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,
     janelaAberta: janelaAberta(lead.ultimaMsgClienteEm, quando),
+    ultimaMsgClienteEm: lead.ultimaMsgClienteEm?.toISOString() ?? null,
     janelaFechaEm: fecha?.toISOString() ?? null,
     mensagens: lead.mensagens.map((m) => ({
       id: m.id,

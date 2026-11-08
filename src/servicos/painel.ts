@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
 import { resolverPeriodoPainel, datasDosAtalhos } from "@/regras/painel";
+import { resumoDasJanelas } from "@/regras/janela24h";
 import { ETAPAS_FUNIL, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
 import { nomesDasEtapas } from "./etapas";
 import { motivosDePerda } from "./vendas";
@@ -111,6 +112,9 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
 
   const vendas = await vendasDoPeriodo(inicio, fim, vendedor?.id);
   const conversoes = await conversoesDoPeriodo(inicio, fim, vendedor?.id);
+  // Situação de agora (não do período): leads ativos (etapa aberta, não arquivados) com a janela de 24h aberta.
+  const ativos = await db.lead.findMany({ where: { arquivadoEm: null, etapa: { notIn: ["fechado", "perdido"] }, ...(vendedor ? { consultorId: vendedor.id } : {}) }, select: { ultimaMsgClienteEm: true } });
+  const janelas = resumoDasJanelas(ativos, quando);
 
   return {
     de: periodo.de,
@@ -124,6 +128,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     funil,
     vendas,
     conversoes,
+    janelas,
     tempos,
     apresentacoesPorConsultor: consultores.map((c) => ({
       nome: c.nome,
