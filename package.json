@@ -12,6 +12,7 @@
     "test:tela": "playwright test",
     "seed": "tsx scripts/bloquear-producao.ts && prisma db push --skip-generate --accept-data-loss && tsx prisma/seed.ts",
     "simular": "tsx scripts/simular.ts",
+    "contrato:bot": "tsx scripts/gerar-contrato-bot.ts",
     "postinstall": "prisma generate",
     "esquema:postgres": "tsx scripts/gerar-esquema-postgres.ts",
     "test:postgres": "tsx scripts/testar-postgres.ts"

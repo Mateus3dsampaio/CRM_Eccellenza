@@ -220,7 +220,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/alertas.ts` | Avisos: texto de cada tipo (inclui o do retorno) ("para você" ou o nome do consultor), número no título da aba, preferências guardadas no navegador `agruparAlertas`/`textoDoGrupo`: avisos do mesmo tipo que chegam juntos viram um toast só (tarefa 25) |
 | `src/regras/telefone.ts` | Telefone E.164, nome de exibição do lead e `variantesTelefone` (Brasil com e sem o 9) |
 | `src/regras/tempo.ts` | Fuso de Fortaleza e contas de data |
-| `src/regras/whatsapp.ts` | Webhook da Meta: assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
+| `src/regras/whatsapp.ts` | Webhook da Meta (e os textos que o bot recebe para áudio que falhou e tipos não suportados): assinatura HMAC, verificação do token, leitura do payload (texto, imagem, botões, tipos não suportados, status) |
 | `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
@@ -240,6 +240,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação (inclui `registrar_retorno`, tarefa 36). O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
+| `src/bot/contrato.ts` | Monta o contrato do bot (`docs/contrato-do-bot.md`, tarefa 38): prompt, avisos de cada mensagem, ferramentas, o que o sistema faz sozinho e o Manual, a partir das mesmas constantes do bot. Função pura, sem data. Lido pelo agente das instruções (outro repositório) |
 | `src/bot/saida.ts` | Limpa o texto do bot antes de ir ao cliente e junta os textos das voltas sem repetir fala igual |
 
 ## Componentes (`src/componentes`)
@@ -324,6 +325,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/lib/cifra.ts` | Criptografia AES-256-GCM de segredos guardados no banco (chaves de API) |
 | `src/lib/zip.ts` | Gerador de .zip simples, texto ou binário (exportar instruções e desempenho) |
 | `prisma/seed.ts` | Dados fictícios (apaga tudo e recria, menos as instruções do bot) |
+| `scripts/gerar-contrato-bot.ts` | `npm run contrato:bot`: grava `docs/contrato-do-bot.md`. Rodar ao mudar ferramenta, aviso do bot, regra automática ou Manual |
 | `scripts/simular.ts` | `npm run simular`: conversa com o bot pelo terminal |
 | `scripts/gerar-planta.ts` | Gera a planta fictícia de teste |
 | `scripts/criar-usuario.ts` | Cria usuário no banco configurado |

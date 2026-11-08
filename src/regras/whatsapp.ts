@@ -50,12 +50,16 @@ const texto = (v: unknown): string | null => (typeof v === "string" && v.trim() 
 export const PREFIXO_AUDIO = "[áudio transcrito automaticamente] ";
 
 // PROVISÓRIO: texto que o bot "lê" quando o cliente manda algo que o sistema ainda não entende. O Mateus pode trocar.
-const NAO_ENTENDIDO: Record<string, string> = {
+export const NAO_ENTENDIDO: Record<string, string> = {
   audio: "[o cliente enviou um áudio, que o sistema ainda não consegue ouvir]",
   sticker: "[o cliente enviou uma figurinha]",
   location: "[o cliente enviou uma localização]",
   contacts: "[o cliente enviou um contato]",
 };
+export const NAO_ENTENDIDO_OUTRO = "[o cliente enviou algo que o sistema não entende]";
+/** Áudio com a transcrição ligada, mas que falhou. */
+export const AUDIO_NAO_PROCESSADO = "[o cliente enviou um áudio que o sistema não conseguiu processar]";
+export const AUDIO_NAO_TRANSCRITO = "[o cliente enviou um áudio que o sistema não conseguiu transcrever]";
 
 /** Lê o payload da Meta e separa mensagens recebidas e atualizações de status. Ignora o que não conhece. */
 export function extrairEventos(payload: unknown): EventosWebhook {
@@ -97,7 +101,7 @@ export function extrairEventos(payload: unknown): EventosWebhook {
         else if (tipo === "interactive") {
           const i = obj(msg.interactive);
           conteudo = texto(obj(i.button_reply).title) ?? texto(obj(i.list_reply).title);
-        } else conteudo = NAO_ENTENDIDO[tipo] ?? "[o cliente enviou algo que o sistema não entende]";
+        } else conteudo = NAO_ENTENDIDO[tipo] ?? NAO_ENTENDIDO_OUTRO;
         if (!conteudo && !midiaId) continue;
         saida.mensagens.push({ idExterno: id, telefone: de, nomePerfil: nomes.get(de) ?? null, texto: conteudo, midiaId, nomeArquivo, tipo });
       }

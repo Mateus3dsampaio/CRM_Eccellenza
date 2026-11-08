@@ -19,7 +19,7 @@ O agente que escreve as instruções do bot fica no outro repositório (`agente-
 
 ## Etapas (uma por vez, com validação do Mateus)
 - [x] 1. **Mapear as fontes**: listar de onde sai cada item acima no código. O que hoje está só dentro de função (ex.: frases dos avisos `<sistema>` em `src/bot/atendimento.ts`, abertura em `src/bot/prompt.ts`) passa a ser constante exportada, para o gerador e o bot usarem o mesmo texto. Sem mudar o comportamento do bot.
-- [ ] 2. **Gerador**: `scripts/gerar-contrato-bot.ts` + comando `npm run contrato:bot`, que escreve `docs/contrato-do-bot.md`. Mostrar o arquivo gerado ao Mateus para validar se está claro e no tamanho certo.
+- [ ] 2. **Gerador** (pronto; falta o Mateus validar o arquivo): `scripts/gerar-contrato-bot.ts` + comando `npm run contrato:bot`, que escreve `docs/contrato-do-bot.md`. Mostrar o arquivo gerado ao Mateus para validar se está claro e no tamanho certo.
 - [ ] 3. **Teste de atualização**: `testes/unit/contrato-bot.test.ts` gera o texto em memória e compara com o arquivo; falha com a mensagem "rode `npm run contrato:bot`".
 - [ ] 4. **Regras do CRM**: no `CLAUDE.md` do CRM, regra "mudou ferramenta, aviso `<sistema>`, regra automática ou manual do bot → `npm run contrato:bot` na mesma alteração". Atualizar `docs/mapa-do-codigo.md` (gerador, teste, contrato).
 - [ ] 5. **Projeto de instruções** (outro repositório; pelas regras de lá, só com autorização do Mateus para cada mudança):
