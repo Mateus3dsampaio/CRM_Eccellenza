@@ -23,11 +23,11 @@ O agente que escreve as instruções do bot fica no outro repositório (`agente-
 - [x] 3. **Teste de atualização**: `testes/unit/contrato-bot.test.ts` gera o texto em memória e compara com o arquivo; falha com a mensagem "rode `npm run contrato:bot`".
 - [x] 4. **Regras do CRM**: no `CLAUDE.md` do CRM, regra "mudou ferramenta, aviso `<sistema>`, regra automática ou manual do bot → `npm run contrato:bot` na mesma alteração". Atualizar `docs/mapa-do-codigo.md` (gerador, teste, contrato).
 - [x] 4b. **Manual atualiza sozinho** (pedido do Mateus 08/11/2026): `src/bot/manual-versoes.ts` guarda a impressão de cada versão do Manual. Ao subir uma versão nova, o sistema troca o Manual do banco se ele for uma versão antiga sem edição (a antiga fica como "anterior"). Editado na tela: não mexe, a tela avisa e oferece "Usar o texto do código". "Voltar para a anterior" é respeitado.
-- [ ] 5. **Projeto de instruções** (outro repositório; pelas regras de lá, só com autorização do Mateus para cada mudança):
+- [x] 5. **Projeto de instruções** (08/11/2026, PR #1 do `agente-whatsapp-eccellenza`; `painel-meta/` apagado por decisão do Mateus; `/revisar` e `/simular` passam a usar o contrato) (outro repositório; pelas regras de lá, só com autorização do Mateus para cada mudança):
   - No `CLAUDE.md` de lá: "Antes de qualquer trabalho, traga o repositório `Mateus3dsampaio/CRM_Eccellenza` para a sessão e leia só `docs/contrato-do-bot.md` da branch `main`. É a única fonte sobre o CRM. Não abra outros arquivos do CRM. Se uma instrução precisar de algo que não está lá, avise o Mateus para pedir ao CRM."
   - Apagar `contexto/manual-crm.md` e as referências a ele.
   - Tirar do caminho do agente o legado da Meta (`painel-meta/` e a seção do painel no `CLAUDE.md`): apagar ou mover para uma pasta `arquivo/` que o agente não lê (Mateus escolhe).
-- [ ] 6. **Teste real**: abrir uma sessão na nuvem do projeto de instruções e conferir que o agente traz o CRM, lê o contrato e responde corretamente "o que o bot faz quando a loja está fechada?".
+- [ ] 6. **Teste real** (depois dos dois PRs juntados; já se sabe que a instrução 05 conflita com o CRM: período "manhã/tarde" e "reabertura + 30 min"): abrir uma sessão na nuvem do projeto de instruções e conferir que o agente traz o CRM, lê o contrato e responde corretamente "o que o bot faz quando a loja está fechada?".
 
 ## Fontes de cada parte do contrato (etapa 1, 08/11/2026)
 | Parte | De onde sai |
