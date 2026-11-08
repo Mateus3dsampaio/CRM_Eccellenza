@@ -140,8 +140,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/saude/route.ts` | "Está de pé?" para o Railway (pública, sem dados) | `lib/db` |
 | `src/app/api/leads/[id]/exportar/route.ts` | LGPD: baixa todos os dados de um cliente (.zip). Só admin | `lgpd` |
 | `src/app/api/configuracoes/whatsapp/route.ts` | Situação do WhatsApp (modo, nomes das variáveis que faltam, log do webhook). Só admin | `whatsapp`, `lib/whatsapp-config` |
-| `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (texto e áudio): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
-| `src/app/api/configuracoes/provedor-bot/route.ts` | Ler/gravar qual IA atende o texto (Claude ou GPT) e o modelo do GPT. Só admin | `provedor-bot` |
+| `src/app/api/configuracoes/chaves/route.ts` | Chaves de API (Anthropic e OpenAI): situação (só "configurada" e os 4 últimos caracteres), salvar, remover. Só admin | `chaves-api` |
+| `src/app/api/configuracoes/provedor-bot/route.ts` | Ler/gravar qual IA atende o texto (Claude ou GPT) e o modelo de cada uma (grava só os campos enviados). Só admin | `provedor-bot` |
+| `src/app/api/configuracoes/modelos-ia/route.ts` | Modelos disponíveis na conta da empresa (`?provedor=claude|openai`) para a escolha na tela. Só admin | `modelos-ia` |
 | `src/app/api/configuracoes/uso-bot/route.ts` | Uso da API do Claude nos últimos 30 dias. Só admin | `uso-api` |
 | `src/app/api/configuracoes/exportar-desempenho/route.ts` | Exporta .zip de desempenho de um vendedor (até 30 dias, mídia opcional). Só admin | `exportacao` |
 | `src/app/api/configuracoes/vendas/route.ts` | Interruptor do próximo contato em Negociação e CRUD dos motivos de perda (criar, editar, ativar/desativar, reordenar, excluir). Só admin | `vendas` |
@@ -186,9 +187,10 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/agendador.ts` | Liga as rotinas de minuto em minuto no servidor (produção ou `ROTINAS_AUTO=1`), uma vez por processo, erro não derruba |
 | `src/servicos/whatsapp.ts` | Meta: enviar texto/modelo (para o `wa_id`), status "entregue"/"lido" que chega antes da mensagem estar gravada fica pendente e é reaplicado (2 s, 10 s, 1 min, depois a rotina), baixar imagem e áudio (só de hosts da Meta, https, sem redirecionamento, com limite de tamanho), processar mensagens e status do webhook (sem duplicar), áudio → texto, caixa de entrada (`guardarEvento`, `processarEventoGuardado`, `reprocessarEventosPendentes`), log do webhook |
 | `src/servicos/midias.ts` | Apagar arquivo de mensagem (fica o aviso na conversa; só um pedido ganha se dois chegarem juntos), limpeza automática de mídia com mais de 180 dias (um erro não para os outros), varredura de arquivos soltos sem mensagem (mais de 1 dia), resumo para o aviso de exclusão, armazenamento e galeria por vendedor |
-| `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API): `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
-| `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo do GPT (PROVISÓRIO `gpt-5.5`, editável na tela). Chaves `bot_provedor` e `bot_modelo_openai` em `Configuracao` |
-| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave da tela ou `OPENAI_API_KEY`; modelo padrão `gpt-4o-mini-transcribe`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
+| `src/servicos/chaves-api.ts` | Chaves de API da tela (Configurações > Chaves de API), uma por empresa: `anthropic` (Claude) e `openai` (GPT no texto e transcrição de áudio). `obterChave` (a da tela, criptografada no banco, vale mais que a variável de ambiente), salvar, remover, situação. No banco ficaram os nomes antigos (`api_chave_texto` = Anthropic, `api_chave_audio` = OpenAI). Em produção exige `CHAVE_MESTRA`; no computador usa o segredo local |
+| `src/servicos/provedor-bot.ts` | Qual IA atende o texto (`claude` padrão ou `openai`) e o modelo de cada uma (padrões em `regras/modelos-ia.ts`). Chaves `bot_provedor`, `bot_modelo_claude` e `bot_modelo_openai` em `Configuracao` |
+| `src/servicos/modelos-ia.ts` | Lista de modelos buscada na conta da Anthropic ou da OpenAI (com a chave de cada uma); sem chave ou com erro devolve a lista de reserva e o motivo. Nunca lança nem expõe a chave |
+| `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave OpenAI da tela ou `OPENAI_API_KEY`; modelo padrão `gpt-4o-mini-transcribe`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
 | `src/servicos/usuarios.ts` | Criar usuário, listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
@@ -222,7 +224,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/limite-bot.ts` | Limite de mensagens do cliente por minuto e por dia (8 e 150) |
 | `src/regras/optout.ts` | Frases que contam como "parar" (a mensagem inteira) e o texto de confirmação (aprovado) |
 | `src/regras/tentativas-login.ts` | Limite de tentativas de login (5 erros em 15 min) |
-| `src/regras/chaves-api.ts` | Chaves de API: tipos (texto, áudio), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/chaves-api.ts` | Chaves de API: tipos (anthropic, openai), rótulos, conferência de formato e o final mostrável. Sem criptografia aqui (fica em `lib/cifra.ts`) |
+| `src/regras/modelos-ia.ts` | Modelos de IA para a escolha: filtro da lista de cada empresa (Claude: o mais novo de cada família da geração 5+; GPT: só conversa, sem versão datada, até 8), frase de cada modelo, lista de reserva do Claude, padrões (`claude-sonnet-5-5`; GPT PROVISÓRIO `gpt-5.5`) |
 | `src/regras/push.ts` | Web Push, só regra: quem recebe (admin tudo; consultor só os seus leads e nunca prazo vencido) e como o aviso é escrito (mensagem nova = nome do cliente no título + trecho de 110 letras; os outros usam `textoDoAlerta`) |
 | `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
@@ -230,7 +233,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Bot (`src/bot`)
 | Arquivo | Faz |
 |---|---|
-| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`): modelo, histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
+| `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`, com o modelo escolhido na tela e a chave da empresa; reserva automática de recusa só em Sonnet/Opus/Fable): histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
 | `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
 | `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
@@ -295,7 +298,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/midias/aviso-midias.tsx` | Aviso "também serão apagados N arquivos (X MB)" nas janelas de excluir (ficha, quadro, arquivados) |
 | `src/componentes/configuracoes/armazenamento.tsx` | Cartão "Armazenamento de arquivos" em Configurações |
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
-| `src/componentes/configuracoes/chaves-api.tsx` | Cartão "Chaves de API": escolha Claude/GPT para o texto e modelo do GPT, dois campos em pontinhos (texto e áudio), "usar a mesma do texto" no áudio, mostra só o final, salvar/remover |
+| `src/componentes/configuracoes/chaves-api.tsx` | Aba Chaves de API, dois cartões. "Atendimento por texto": abas Claude/GPT, lista de modelos da conta (escolher um troca quem atende), chave da empresa da aba. "Transcrição de áudio": sempre OpenAI, chave OpenAI (a mesma do GPT). Chave em pontinhos, mostra só o final, salvar/remover |
 | `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
@@ -351,6 +354,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/midias.test.ts` | Imagem, vídeo e PDF: regras, guardar com validação, receber e enviar pelo WhatsApp, bot sem imagem falsa, galeria por vendedor, apagar, aviso, 180 dias, armazenamento |
 | `testes/unit/pendencias-meta.test.ts` | Nono dígito, consentimento, bloqueio de modelo, caixa de entrada do webhook, transcrição de áudio (OpenAI simulada) |
 | `testes/unit/chaves-api.test.ts` | Chaves de API: criptografia, tela vale mais que a variável, mesma chave nos dois campos, CHAVE_MESTRA ausente/trocada |
+| `testes/unit/modelos-ia.test.ts` | Escolha de modelo: filtro das listas Claude e GPT, modelo salvo sempre visível, busca na conta (OpenAI simulada), sem chave e chave recusada (reserva sem vazar a chave) |
 | `testes/unit/provedor-gpt.test.ts` | GPT como IA do texto: conversão de histórico/ferramentas/resposta, bot com a OpenAI simulada, troca de provedor |
 | `testes/unit/seguranca.test.ts` | Limite de login, usuários, primeiro admin, cookie Secure |
 | `testes/unit/retorno-fechada.test.ts` | Retorno com a loja fechada: próxima abertura, situação da loja para o bot, horário do retorno, `registrar_retorno`, modelo com botões, botão como PARAR, rotina (dono online, passa para quem está online, ninguém online, nunca parar/janela aberta/desligado) |

@@ -13,6 +13,7 @@ import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
 import { instrucoesAtivas } from "@/servicos/instrucoes";
+import { familiaClaude } from "@/regras/modelos-ia";
 import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
@@ -21,8 +22,7 @@ import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type Moti
 import { montarPromptSistema } from "./prompt";
 import { juntarTextos, limparResposta, respostaDescartada } from "./saida";
 
-// Modelo do bot: o Sonnet mais recente (docs/briefing.md).
-export const MODELO_BOT = "claude-sonnet-5-5";
+// O modelo do bot é escolhido pelo admin (Configurações > Chaves de API; padrão em regras/modelos-ia.ts).
 const MAX_VOLTAS = 8;
 
 type MensagemApi = Anthropic.Beta.Messages.BetaMessageParam;
@@ -44,12 +44,15 @@ interface VoltaDoModelo {
   parada: MotivoDeParada;
 }
 
-async function voltaComClaude(chave: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+// Reserva automática quando o modelo recusa: só nas famílias que aceitam (o Haiku não tem).
+const FAMILIAS_COM_RESERVA = new Set(["sonnet", "opus", "fable"]);
+
+async function voltaComClaude(chave: string, modelo: string, sistema: string, historico: MensagemApi[]): Promise<VoltaDoModelo> {
+  const reserva = FAMILIAS_COM_RESERVA.has(familiaClaude(modelo) ?? "");
   const resposta = await clienteApi(chave).beta.messages.create({
-    model: MODELO_BOT,
+    model: modelo,
     max_tokens: 8000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...(reserva ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     output_config: { effort: "medium" },
     // Cache de 1 hora (o máximo da API): cada uso renova o prazo, então com clientes escrevendo ao longo
     // do dia o prompt é gravado poucas vezes. Os dois pontos de cache usam o mesmo prazo.
@@ -180,6 +183,7 @@ function mensagemDeErro(erro: unknown): string {
   if (erro instanceof OpenAI.APIConnectionError) return "sem conexão com a API da OpenAI.";
   if (erro instanceof OpenAI.APIError) return `a API da OpenAI está com problema (código ${erro.status ?? "?"}).`;
   if (erro instanceof Anthropic.AuthenticationError) return "a chave da API do Claude é inválida. Confira em Configurações > Chaves de API.";
+  if (erro instanceof Anthropic.NotFoundError) return "a Anthropic não achou o modelo escolhido (ou a conta não tem acesso). Escolha outro em Configurações > Chaves de API.";
   if (erro instanceof Anthropic.RateLimitError) return "limite de uso da API atingido. Tente de novo em instantes.";
   if (erro instanceof Anthropic.BadRequestError) return "a API recusou a requisição.";
   if (erro instanceof Anthropic.APIConnectionError) return "sem conexão com a API do Claude.";
@@ -233,13 +237,13 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
 
     const textos: string[] = [];
     try {
-      const chaveApi = await obterChave("texto");
-      if (!chaveApi) throw new ErroBot("a chave da API de texto não está configurada (Configurações > Chaves de API).");
-      const { provedor, modeloOpenai } = await configDoBot();
+      const { provedor, modeloClaude, modeloOpenai } = await configDoBot();
+      const chaveApi = await obterChave(provedor === "openai" ? "openai" : "anthropic");
+      if (!chaveApi) throw new ErroBot(`a chave ${provedor === "openai" ? "da OpenAI" : "do Claude"} não está configurada (Configurações > Chaves de API).`);
       const sistema = await montarPromptSistema();
 
       for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-        const resposta = provedor === "openai" ? await voltaComGpt(chaveApi, modeloOpenai, sistema, historico) : await voltaComClaude(chaveApi, sistema, historico);
+        const resposta = provedor === "openai" ? await voltaComGpt(chaveApi, modeloOpenai, sistema, historico) : await voltaComClaude(chaveApi, modeloClaude, sistema, historico);
         if (resposta.parada === "refusal") throw new ErroBot("o modelo recusou responder esta conversa.");
         historico.push({ role: "assistant", content: resposta.content });
         const texto = textoDasRespostas(resposta.content);

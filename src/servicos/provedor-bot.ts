@@ -1,32 +1,35 @@
+import { MODELO_CLAUDE_PADRAO, MODELO_OPENAI_PADRAO, problemaNoModelo } from "@/regras/modelos-ia";
 import { lerConfig, gravarConfig } from "./configuracoes";
 
-// Qual IA atende o texto: Claude (padrão) ou GPT (OpenAI). Escolha do admin em Configurações > Chaves de API.
+// Qual IA atende o texto (Claude, padrão, ou GPT) e o modelo de cada uma. Escolha do admin em Configurações > Chaves de API.
 export const PROVEDORES_BOT = ["claude", "openai"] as const;
 export type ProvedorBot = (typeof PROVEDORES_BOT)[number];
-/** PROVISÓRIO: o Mateus testa e troca pela tela. Não foi validado com o bot real. */
-export const MODELO_OPENAI_PADRAO = "gpt-5.5";
+export { MODELO_CLAUDE_PADRAO, MODELO_OPENAI_PADRAO, problemaNoModelo };
 
 const CHAVE_PROVEDOR = "bot_provedor";
+const CHAVE_MODELO_CLAUDE = "bot_modelo_claude";
 const CHAVE_MODELO_OPENAI = "bot_modelo_openai";
 
 export interface ConfigDoBot {
   provedor: ProvedorBot;
+  modeloClaude: string;
   modeloOpenai: string;
 }
 
 export async function configDoBot(): Promise<ConfigDoBot> {
   const provedor = (await lerConfig(CHAVE_PROVEDOR)) === "openai" ? "openai" : "claude";
+  const modeloClaude = (await lerConfig(CHAVE_MODELO_CLAUDE))?.trim() || MODELO_CLAUDE_PADRAO;
   const modeloOpenai = (await lerConfig(CHAVE_MODELO_OPENAI))?.trim() || MODELO_OPENAI_PADRAO;
-  return { provedor, modeloOpenai };
+  return { provedor, modeloClaude, modeloOpenai };
 }
 
-export function problemaNoModelo(modelo: string): string | null {
-  return /^[A-Za-z0-9._:-]{2,80}$/.test(modelo.trim()) ? null : "Nome de modelo inválido (use só letras, números, ponto e hífen).";
-}
-
-export async function definirConfigDoBot(provedor: ProvedorBot, modeloOpenai: string): Promise<void> {
-  const problema = problemaNoModelo(modeloOpenai);
-  if (problema) throw new Error(problema);
-  await gravarConfig(CHAVE_PROVEDOR, provedor);
-  await gravarConfig(CHAVE_MODELO_OPENAI, modeloOpenai.trim());
+/** Grava só o que veio. Modelo com nome inválido é recusado antes de gravar qualquer coisa. */
+export async function definirConfigDoBot(mudanca: Partial<ConfigDoBot>): Promise<void> {
+  for (const modelo of [mudanca.modeloClaude, mudanca.modeloOpenai]) {
+    const problema = modelo === undefined ? null : problemaNoModelo(modelo);
+    if (problema) throw new Error(problema);
+  }
+  if (mudanca.provedor) await gravarConfig(CHAVE_PROVEDOR, mudanca.provedor);
+  if (mudanca.modeloClaude !== undefined) await gravarConfig(CHAVE_MODELO_CLAUDE, mudanca.modeloClaude.trim());
+  if (mudanca.modeloOpenai !== undefined) await gravarConfig(CHAVE_MODELO_OPENAI, mudanca.modeloOpenai.trim());
 }

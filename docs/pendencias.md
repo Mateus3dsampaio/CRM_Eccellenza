@@ -23,7 +23,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Criar o projeto (Hobby) e conectar o repositório / branch (branch `main`, 04/11/2026).
 - [x] Adicionar o Postgres.
 - [x] Criar o Volume montado em `/data` (do tamanho que precisar; o Hobby tem 5 GB e vídeo enche rápido).
-- [x] Colar as variáveis (feito em 04/11/2026; `PRIVACIDADE_CONTATO`, `OPENAI_API_KEY` e `PRIVACIDADE_APROVADA` ficaram de fora por enquanto): `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_LOGIN`, `ADMIN_SENHA`, `ADMIN_NOME`, `MIDIAS_DIR=/data/midias`, `MIDIAS_LIMITE_MB`, `PRIVACIDADE_CONTATO`, as 4 do WhatsApp `CHAVE_MESTRA` (texto longo e secreto, para salvar chaves pela tela) e (opcional) `OPENAI_API_KEY`. As chaves de texto e áudio também podem ser coladas em Configurações > Chaves de API.
+- [x] Colar as variáveis (feito em 04/11/2026; `PRIVACIDADE_CONTATO`, `OPENAI_API_KEY` e `PRIVACIDADE_APROVADA` ficaram de fora por enquanto): `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_LOGIN`, `ADMIN_SENHA`, `ADMIN_NOME`, `MIDIAS_DIR=/data/midias`, `MIDIAS_LIMITE_MB`, `PRIVACIDADE_CONTATO`, as 4 do WhatsApp `CHAVE_MESTRA` (texto longo e secreto, para salvar chaves pela tela) e (opcional) `OPENAI_API_KEY`. As chaves da Anthropic (Claude) e da OpenAI (GPT e áudio) também podem ser coladas em Configurações > Chaves de API.
 - [x] Gerar o domínio e abrir `/api/saude` (deve responder `{"ok":true}`). Feito em 04/11/2026.
 - [x] Depois do primeiro acesso: **apagar `ADMIN_SENHA`** do Railway. Feito em 04/11/2026 (o login continuou funcionando).
 - [x] Conferir que a variável `MODO_SIMULADOR` **não existe** no Railway. Confirmado pelo Mateus em 04/11/2026.
