@@ -1,6 +1,6 @@
 // LGPD: o cliente pode pedir para parar de receber mensagens automáticas (retomada e bot).
 // Só vale quando a mensagem INTEIRA é um pedido claro. Frase comprida ("quero parar de pagar aluguel") não conta.
-const PEDIDOS = [
+export const PEDIDOS_PARA_PARAR = [
   "parar",
   "pare",
   "sair",
@@ -33,7 +33,7 @@ export function recusouPeloBotao(texto: string | null | undefined): boolean {
 
 export function pediuParaParar(texto: string | null | undefined): boolean {
   if (!texto) return false;
-  return PEDIDOS.includes(normalizar(texto));
+  return PEDIDOS_PARA_PARAR.includes(normalizar(texto));
 }
 
 // Texto aprovado pelo Mateus em 05/11/2026.

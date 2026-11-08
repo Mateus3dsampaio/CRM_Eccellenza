@@ -17,6 +17,7 @@ import { familiaClaude } from "@/regras/modelos-ia";
 import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
+import { avisoArquivoNaoLido, avisoDoTurno, avisoImagem, avisoMensagemEnviada, mensagemDoCliente } from "./avisos";
 import { FERRAMENTAS } from "./ferramentas";
 import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type MotivoDeParada } from "./openai-conversao";
 import { montarPromptSistema } from "./prompt";
@@ -94,10 +95,6 @@ function naFila<T>(leadId: string, tarefa: () => Promise<T>): Promise<T> {
   return atual;
 }
 
-function escapar(texto: string): string {
-  return texto.replace(/</g, "‹").replace(/>/g, "›");
-}
-
 /** Monta o turno do usuário com tudo o que aconteceu na conversa desde a última resposta do bot. */
 async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ blocos: BlocoEntrada[]; ids: string[] }> {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
@@ -108,16 +105,14 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
   });
   const quando = await agora();
   const blocos: BlocoEntrada[] = [];
-  const contexto = [`Agora: ${formatarDiaSemana(quando)} ${formatarDataHora(quando)} (horário de Fortaleza).`, `Situação da loja (${situacaoDaLoja(quando, await regrasDaAgenda())}).`];
-  if (primeiraVez) contexto.push(`Nome do perfil do cliente no WhatsApp: ${lead.nomePerfil ? escapar(lead.nomePerfil) : "(sem nome)"}.`);
-  blocos.push({ type: "text", text: `<sistema>${contexto.join(" ")}</sistema>` });
+  const situacaoLoja = situacaoDaLoja(quando, await regrasDaAgenda());
+  blocos.push({ type: "text", text: avisoDoTurno({ diaSemana: formatarDiaSemana(quando), dataHora: formatarDataHora(quando), situacaoLoja, primeiraVez, nomePerfil: lead.nomePerfil }) });
 
   for (const m of novas) {
     if (m.autor === "cliente") {
       // Vídeo e documento (PDF, Word, Excel, DWG, ZIP) ficam guardados para o consultor; o bot só é avisado de que chegaram (não "vê" o conteúdo).
       if (m.midiaArquivo && m.midiaTipo && !m.midiaTipo.startsWith("image/")) {
-        const rotulo = descricaoDoTipo(m.midiaTipo);
-        blocos.push({ type: "text", text: `<cliente>[enviou ${rotulo}${m.midiaNome ? ` chamado "${escapar(m.midiaNome)}"` : ""}; o sistema guardou o arquivo para o consultor, mas você não consegue ver o conteúdo]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
+        blocos.push({ type: "text", text: avisoArquivoNaoLido(descricaoDoTipo(m.midiaTipo), m.midiaNome, m.texto) });
         continue;
       }
       if (m.midiaArquivo && m.midiaTipo) {
@@ -127,15 +122,16 @@ async function montarTurno(leadId: string, primeiraVez: boolean): Promise<{ bloc
             type: "image",
             source: { type: "base64", media_type: m.midiaTipo as "image/png", data: dados.toString("base64") },
           });
-          blocos.push({ type: "text", text: `<cliente>[enviou a imagem acima]${m.texto ? ` ${escapar(m.texto)}` : ""}</cliente>` });
+          blocos.push({ type: "text", text: avisoImagem(m.texto) });
           continue;
         }
       }
-      blocos.push({ type: "text", text: `<cliente>${escapar(m.texto ?? "")}</cliente>` });
+      blocos.push({ type: "text", text: mensagemDoCliente(m.texto) });
     } else {
-      const quem = m.autor === "consultor" ? `o consultor ${m.autorNome ?? ""}`.trim() : "o sistema (mensagem automática)";
-      const arquivo = m.midiaTipo ? ` [enviou ${descricaoDoTipo(m.midiaTipo)}]` : "";
-      blocos.push({ type: "text", text: `<sistema>Mensagem enviada ao cliente por ${quem}:${arquivo} "${escapar(m.texto ?? "")}"</sistema>` });
+      blocos.push({
+        type: "text",
+        text: avisoMensagemEnviada({ autor: m.autor === "consultor" ? "consultor" : "sistema", autorNome: m.autorNome, rotuloArquivo: m.midiaTipo ? descricaoDoTipo(m.midiaTipo) : null, texto: m.texto }),
+      });
     }
   }
   return { blocos, ids: novas.map((m) => m.id) };

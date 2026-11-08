@@ -235,7 +235,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 |---|---|
 | `src/bot/atendimento.ts` | Chama a IA do texto (Claude, padrão, ou GPT conforme `servicos/provedor-bot`, com o modelo escolhido na tela e a chave da empresa; reserva automática de recusa só em Sonnet/Opus/Fable): histórico, cache, laço de ferramentas. As duas voltas (`voltaComClaude`, `voltaComGpt`) devolvem o mesmo formato. O bot só lê texto (áudio chega transcrito) e imagem (bloco `image`); PDF, vídeo e outros arquivos viram só um aviso de que chegaram (decisão do Mateus 05/11/2026) |
 | `src/bot/openai-conversao.ts` | Funções puras: histórico guardado (formato Anthropic) ↔ mensagens/ferramentas/resposta da OpenAI. Permite trocar Claude/GPT no meio da conversa |
-| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (identidade e tags) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
+| `src/bot/avisos.ts` | Textos fixos que o bot recebe: abertura do prompt e avisos de cada mensagem (`<sistema>` com hora/loja/nome do perfil, arquivo que o bot não lê, imagem, mensagem de consultor/sistema). Funções puras, usadas pelo bot e pelo contrato do bot (tarefa 38) |
+| `src/bot/prompt.ts` | Monta o prompt: abertura fixa (de `avisos.ts`) + instruções numeradas ativas + Manual do CRM, tudo do banco. Não lê nenhum arquivo |
 | `src/bot/manual-inicial.ts` | Texto inicial do Manual do CRM, gravado no banco só quando o manual ainda não existe. Editar aqui não muda o bot que já roda: mudança no manual é proposta ao Mateus e aplicada pela tela |
 | `src/bot/ferramentas.ts` | Esquemas das ferramentas e validação (inclui `registrar_retorno`, tarefa 36). O bot não agenda (sem ferramenta de horários/agendamento) |
 | `src/bot/executor.ts` | Executa cada ferramenta (grava no CRM) |
@@ -346,6 +347,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/agendador.test.ts` | Rotinas rodam sozinhas, uma vez, erro não derruba |
 | `testes/unit/producao.test.ts` | Modo simulador: rotas 404 e relógio real em produção |
 | `testes/unit/protecao-bot.test.ts` | Limite de mensagens, pausa do bot, uso da API, rota de saúde |
+| `testes/unit/avisos.test.ts` | Textos que o bot recebe (abertura e avisos), fixados palavra por palavra |
 | `testes/unit/saida.test.ts` | Junção dos textos do bot sem repetir fala igual |
 | `testes/unit/janela24h.test.ts` | Faixas e tempo restante da janela de 24h |
 | `testes/unit/janelas-abertas.test.ts` | Consulta das janelas abertas (etapa, arquivado, dono do lead) |
