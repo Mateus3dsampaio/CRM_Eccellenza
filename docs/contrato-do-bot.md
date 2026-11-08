@@ -81,8 +81,8 @@ Se a transcrição falhar ou estiver desligada, o bot recebe um destes textos:
 **Mensagem enviada ao cliente por um consultor ou pelo sistema** (o bot é avisado):
 
 ```
-<sistema>Mensagem enviada ao cliente por o consultor Carlos: "Bom dia! Aqui é o Carlos, da Eccellenza."</sistema>
-<sistema>Mensagem enviada ao cliente por o sistema (mensagem automática): "Oi! Passando para saber se você ainda tem interesse no seu projeto de móveis planejados. Se quiser, é só responder por aqui que seguimos com o atendimento. 😊 Responda PARAR para não receber mais mensagens."</sistema>
+<sistema>Mensagem enviada ao cliente pelo consultor Carlos: "Bom dia! Aqui é o Carlos, da Eccellenza."</sistema>
+<sistema>Mensagem enviada ao cliente pelo sistema (mensagem automática): "Oi! Passando para saber se você ainda tem interesse no seu projeto de móveis planejados. Se quiser, é só responder por aqui que seguimos com o atendimento. 😊 Responda PARAR para não receber mais mensagens."</sistema>
 ```
 
 ## 3. Ferramentas (o que o bot pode gravar ou fazer)

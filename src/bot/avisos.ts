@@ -40,7 +40,7 @@ export function mensagemDoCliente(texto: string | null): string {
 
 /** Consultor ou sistema mandou mensagem ao cliente: o bot é avisado. */
 export function avisoMensagemEnviada(dados: { autor: "consultor" | "sistema"; autorNome: string | null; rotuloArquivo: string | null; texto: string | null }): string {
-  const quem = dados.autor === "consultor" ? `o consultor ${dados.autorNome ?? ""}`.trim() : "o sistema (mensagem automática)";
+  const quem = dados.autor === "consultor" ? `pelo consultor ${dados.autorNome ?? ""}`.trim() : "pelo sistema (mensagem automática)";
   const arquivo = dados.rotuloArquivo ? ` [enviou ${dados.rotuloArquivo}]` : "";
-  return `<sistema>Mensagem enviada ao cliente por ${quem}:${arquivo} "${escapar(dados.texto ?? "")}"</sistema>`;
+  return `<sistema>Mensagem enviada ao cliente ${quem}:${arquivo} "${escapar(dados.texto ?? "")}"</sistema>`;
 }

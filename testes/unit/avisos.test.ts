@@ -32,13 +32,13 @@ describe("avisos do bot", () => {
 
   it("mensagem enviada por consultor ou sistema", () => {
     expect(avisoMensagemEnviada({ autor: "consultor", autorNome: "Carlos", rotuloArquivo: null, texto: "Bom dia!" })).toBe(
-      '<sistema>Mensagem enviada ao cliente por o consultor Carlos: "Bom dia!"</sistema>',
+      '<sistema>Mensagem enviada ao cliente pelo consultor Carlos: "Bom dia!"</sistema>',
     );
     expect(avisoMensagemEnviada({ autor: "consultor", autorNome: null, rotuloArquivo: "um PDF", texto: null })).toBe(
-      '<sistema>Mensagem enviada ao cliente por o consultor: [enviou um PDF] ""</sistema>',
+      '<sistema>Mensagem enviada ao cliente pelo consultor: [enviou um PDF] ""</sistema>',
     );
     expect(avisoMensagemEnviada({ autor: "sistema", autorNome: null, rotuloArquivo: null, texto: "Oi" })).toBe(
-      '<sistema>Mensagem enviada ao cliente por o sistema (mensagem automática): "Oi"</sistema>',
+      '<sistema>Mensagem enviada ao cliente pelo sistema (mensagem automática): "Oi"</sistema>',
     );
   });
 });
