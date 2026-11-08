@@ -15,7 +15,7 @@ const camposLead = {
   situacao_imovel: { ...textoOpcional, description: "Situação do imóvel: pronto, em obra, na planta, reformando etc." },
   prazo: { ...textoOpcional, description: "Para quando o cliente precisa dos móveis ou data-limite que ele citou (mudança, fim da obra)." },
   investimento: { ...textoOpcional, description: "Valor que o cliente disse ter em mente, como ele disse (ex.: \"uns 5 mil\")." },
-  pedidos_tecnicos: { ...lista, description: "Pedidos técnicos ou fora do padrão, com o texto EXATO do cliente (instrução 11)." },
+  pedidos_tecnicos: { ...lista, description: "Pedidos técnicos ou fora do padrão, com o texto EXATO do cliente." },
   observacoes: { ...textoOpcional, description: "Outras informações úteis ditas pelo cliente que não cabem nos campos acima." },
 };
 

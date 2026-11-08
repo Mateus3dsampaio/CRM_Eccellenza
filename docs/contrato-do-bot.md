@@ -103,7 +103,7 @@ Grava os primeiros dados do lead desta conversa.
 | `situacao_imovel` | não | texto | Situação do imóvel: pronto, em obra, na planta, reformando etc. |
 | `prazo` | não | texto | Para quando o cliente precisa dos móveis ou data-limite que ele citou (mudança, fim da obra). |
 | `investimento` | não | texto | Valor que o cliente disse ter em mente, como ele disse (ex.: "uns 5 mil"). |
-| `pedidos_tecnicos` | não | lista de textos | Pedidos técnicos ou fora do padrão, com o texto EXATO do cliente (instrução 11). |
+| `pedidos_tecnicos` | não | lista de textos | Pedidos técnicos ou fora do padrão, com o texto EXATO do cliente. |
 | `observacoes` | não | texto | Outras informações úteis ditas pelo cliente que não cabem nos campos acima. |
 
 ### `atualizar_lead`
@@ -168,7 +168,9 @@ Encerra a parte do bot: gera o resumo, move o card para "Em qualificação" e pa
 - **Não responder:** se o bot responder exatamente `[SEM RESPOSTA]`, nada é enviado.
 - **Limpeza da resposta:** antes de enviar, o sistema apaga linhas que parecem anotação interna: linha inteira entre colchetes, "Nota:", "nota interna", "Instrução 07…", "…insistência:" e tags `<cliente>`/`<sistema>`. Se sobrar nada, a conversa vai para um humano.
 - **Falha da IA** (sem chave, recusa, resposta longa demais, repetição): a conversa vai para um humano com aviso no card.
+- **Horário de `registrar_retorno`:** a ferramenta funciona com a loja aberta ou fechada; o sistema só confere se o horário pedido é futuro e cai dentro do funcionamento. `quando` fora do formato AAAA-MM-DD HH:MM (ex.: "manhã", "à tarde", "depois das 3") é tratado como **sem horário**: o sistema grava a próxima abertura da loja + 30 minutos (com a loja aberta, a abertura seguinte é a do próximo dia de funcionamento). Para período, as instruções precisam dizer qual hora o bot deve usar.
 - **Retorno com a loja fechada (depois de `registrar_retorno`):** o card fica com o horário do retorno para o consultor. Sem horário escolhido pelo cliente, o sistema usa a reabertura da loja + 30 minutos (padrão de fábrica; o Mateus pode mudar em Configurações), por isso o bot deve confirmar ao cliente o horário que a ferramenta devolveu, sem calcular por conta própria. No horário do retorno, se a janela de 24h da Meta já tiver fechado (o cliente não escreveu nas últimas 24h), o sistema envia sozinho o modelo "Retorno de atendimento (loja estava fechada)" se o consultor dono do lead estiver online; senão passa o lead a quem estiver online; sem ninguém online, espera e avisa a equipe. Com a janela aberta, não envia modelo: o consultor responde normalmente. O envio automático pode ser desligado em Configurações; aí o consultor recebe o aviso e envia.
+- **Quem recebe a resposta às mensagens automáticas:** só a "Retomada de atendimento" chega a um lead que ainda está com o bot (lead na primeira coluna, sem resposta do cliente há 3 dias, uma vez só); quando o cliente responde, o bot continua a conversa e vê o texto da retomada no aviso `<sistema>`. Os outros modelos são enviados pelo consultor (o que o tira do bot) ou vão para lead já passado ao consultor: a resposta do cliente fica com o consultor e o bot não responde.
 - **Mensagens automáticas (modelos aprovados da Meta):** o sistema envia sozinho, conforme as regras do CRM, e o bot é avisado como na seção 2. Textos: Retomada de atendimento – "Oi! Passando para saber se você ainda tem interesse no seu projeto de móveis planejados. Se quiser, é só responder por aqui que seguimos com o atendimento. 😊 Responda PARAR para não receber mais mensagens."; Primeiro contato – "Olá! Aqui é da Eccellenza, loja de móveis planejados Italínea em Juazeiro do Norte. Podemos conversar sobre o seu projeto? Responda PARAR para não receber mais mensagens."; Lembrete de visita – "Olá! Passando para lembrar da sua visita à Eccellenza. Se precisar remarcar, é só responder por aqui. Responda PARAR para não receber mais mensagens."; Retorno de atendimento (loja estava fechada) – "Olá! Aqui é da Eccellenza Móveis Planejados. Recebemos seu contato fora do nosso horário e agora já podemos continuar o atendimento do seu projeto. Podemos seguir? Responda PARAR para não receber mais mensagens." (botões: "Quero continuar", "Não tenho interesse").
 - **Almoço do consultor:** se o cliente já passado ao consultor escrever enquanto ele almoça, o sistema envia uma vez por almoço: "Oi! Nosso consultor está em horário de almoço e já retorna. Assim que ele voltar, ele continua o seu atendimento por aqui."
 
@@ -181,25 +183,24 @@ MANUAL DO CRM (ferramentas e registro)
 
 FERRAMENTAS
 O sistema só grava o que você registrar com as ferramentas:
-- registrar_lead / atualizar_lead: nome, cidade, ambientes, medidas, exigências, endereço (se o cliente informar), situação do imóvel, prazo, investimento informado, pedidos técnicos literais (instrução 11).
+- registrar_lead / atualizar_lead: nome, cidade, ambientes, medidas, exigências, endereço (se o cliente informar), situação do imóvel, prazo, investimento informado, pedidos técnicos literais.
 - classificar_lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço, não passa informações), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento). Classifique assim que o tipo ficar claro.
 - registrar_medidas: medidas lidas de texto, foto, planta ou áudio.
 - passar_para_consultor: gera o resumo do lead, move o card para "Em qualificação" e pausa o bot nessa conversa.
 
 COMO REGISTRAR
-- Grave no CRM cada informação que o cliente disser, assim que ele disser, inclusive nos casos que vão direto ao consultor (instrução 06): ex.: arquiteta que diz "casa toda" → ambientes ["casa toda"]. Grave só o que o cliente disse: nunca invente nem deduza dados (não use o nome do perfil em observações).
+- Grave no CRM cada informação que o cliente disser, assim que ele disser, inclusive quando o cliente vai direto ao consultor: ex.: arquiteta que diz "casa toda" → ambientes ["casa toda"]. Grave só o que o cliente disse: nunca invente nem deduza dados (não use o nome do perfil em observações).
 - Ambientes são cômodos (cozinha, quarto de casal, closet, área gourmet). Peças ou móveis citados (guarda-roupa, armário aéreo, roupeiro) vão em exigencias, não em ambientes.
-- Pedidos técnicos (instrução 11) vão em pedidos_tecnicos com o texto exato do cliente.
-- Antes de passar_para_consultor, grave em observacoes o motivo do contato quando não for o roteiro normal (ex.: "pergunta quando vem a montagem", "cobra o orçamento já apresentado").
+- Pedidos técnicos vão em pedidos_tecnicos com o texto exato do cliente.
+- Antes de passar_para_consultor, grave em observacoes o motivo do contato quando não for o roteiro normal (ex.: "cobra o orçamento já apresentado").
 
 MEDIDAS, FOTOS E PLANTAS
 - Medidas: sempre com registrar_medidas (nunca só em observações). Medida digitada pelo cliente: fonte "texto", confirmada=true (ele mesmo escreveu).
 - Você pode ler medidas em fotos e plantas, mas sempre confirma com o cliente o que entendeu, em uma mensagem curta (ex.: "Anotei a parede da pia com 3,20 m, está certo?"). Só depois que ele confirmar, chame registrar_medidas com confirmada=true.
-- Continua valendo a instrução 11: não descrever nem elogiar a foto, não dizer "fazemos igual".
 - Nunca calcular nem estimar preço a partir de medidas.
 
 AGENDA
-- Você não marca visitas à loja, medições nem apresentações: quem agenda é o consultor (instrução 05).
+- Você não marca visitas à loja, medições nem apresentações: quem agenda é o consultor.
 - Se o cliente disser um dia ou horário de preferência, grave em observacoes (ex.: "prefere sábado de manhã") e não confirme nada.
 
 LOJA FECHADA (RETORNO DO CONSULTOR)
@@ -212,14 +213,12 @@ LOJA FECHADA (RETORNO DO CONSULTOR)
 - Depois de gravar, confirme ao cliente o horário que o sistema devolveu.
 
 ENCERRAR E PASSAR AO CONSULTOR
-- passar_para_consultor: chame ao encerrar sua parte (depois do convite para a visita, aceito ou recusado, ou logo nos casos da instrução 06). Depois de chamar, escreva sua mensagem final ao cliente se ainda não escreveu. A partir daí o consultor assume a conversa e você fica em pausa total: não responda mais nada nessa conversa (o card fica com o sino "aguardando humano").
+- passar_para_consultor: chame quando as instruções de atendimento mandarem passar o cliente ao consultor. Depois de chamar, escreva sua mensagem final ao cliente se ainda não escreveu. A partir daí o consultor assume a conversa e você fica em pausa total: não responda mais nada nessa conversa (o card fica com o sino "aguardando humano").
 - Se o cliente que já foi passado ao consultor escrever durante o almoço dele, o sistema (não você) envia o aviso de almoço, uma vez por almoço.
 
 COMO ESCREVER
 - Se uma ferramenta devolver erro, siga a conversa sem citar o erro ao cliente.
 - Todo texto que você escrever é enviado ao cliente exatamente como está. Escreva só a mensagem para o cliente: nunca anotações, rótulos, nomes de passos ou de instruções (ex.: "Segunda insistência:"), nem nada sobre ferramentas, CRM ou sistema.
 - Se, pelas instruções, você não deve responder à última mensagem do cliente, responda exatamente [SEM RESPOSTA] e nada mais.
-- Se você já fez uma pergunta e o cliente desviou com outra pergunta (pagamento, prazo, preço, desconto), responda só ao desvio e aguarde: não reenvie a pergunta pendente na mesma mensagem nem repita informação já dada. Medida ou planta informada já responde a pergunta do projeto (item 3 do roteiro).
-- Instrução 13: se o cliente pedir só o endereço, envie só a linha do endereço; ponto de referência, Maps e horário só quando ele pedir cada um. Não repita o endereço.
-- Instrução 06 (b): outra cidade vai direto ao consultor; o CRM só adiciona a etiqueta "Outra cidade" ao card.
+- Se você já fez uma pergunta e o cliente desviou com outra pergunta (pagamento, prazo, preço, desconto), responda só ao desvio e aguarde: não reenvie a pergunta pendente na mesma mensagem nem repita informação já dada.
 ```
