@@ -23,7 +23,9 @@ export function completarRegrasRetorno(r: Partial<RegrasRetorno>): RegrasRetorno
 
 export function validarRegrasRetorno(r: RegrasRetorno): string | null {
   if (typeof r.automatico !== "boolean") return "Opção inválida.";
-  if (!buscarModelo(r.modelo)) return "Escolha um dos modelos cadastrados.";
+  const modelo = buscarModelo(r.modelo);
+  if (!modelo) return "Escolha um dos modelos cadastrados.";
+  if (modelo.compromisso) return "Lembrete de compromisso não serve para o retorno automático.";
   if (!Number.isInteger(r.semHorarioMin) || r.semHorarioMin < 0 || r.semHorarioMin > 240) return "Minutos depois da abertura: de 0 a 240.";
   return null;
 }

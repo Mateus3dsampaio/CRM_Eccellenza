@@ -1,31 +1,35 @@
 # Etapa 7 e 8: configurar o app e publicar (Live)
 
-**Só comece depois que `/privacidade` e `/exclusao-de-dados` estiverem no ar (etapa 4) e os textos aprovados.**
-
-## Configurar
-1. developers.facebook.com → seu app → **Configurações do app → Básico**.
-2. Preencher:
-   - **Ícone do app:** 1024×1024 px (aceita de 512 a 1024, JPEG, GIF ou PNG, até 5 MB). O `public/icone-512.png` é um "E" azul provisório; prefira a logo da Eccellenza.
-   - **URL da política de privacidade:** `https://crmeccellenza-production.up.railway.app/privacidade`
-   - **URL de instruções de exclusão de dados:** `https://crmeccellenza-production.up.railway.app/exclusao-de-dados` (se o campo não aparecer para o seu app, não é preciso).
-   - **E-mail de contato:** italinea.eccellenza@hotmail.com
-   - **Categoria** de negócios/comércio e **domínio do app:** `crmeccellenza-production.up.railway.app`
-3. Leia o checklist de publicação do próprio painel antes de publicar. Não achei na documentação o nome exato do botão/chave de Live; o painel mostra.
-4. Se o painel pedir App Review de alguma permissão, **pare** e fale com o Claude. Para uso interno isso não deveria ser necessário.
+## Configurar — FEITO (Mateus, 08/11/2026)
+developers.facebook.com → app **CRM Eccellenza** → **Configurações do app → Básico**:
+- [x] **Domínio do app:** `crmeccellenza-production.up.railway.app`
+- [x] **E-mail de contato**
+- [x] **URL da política de privacidade:** `https://crmeccellenza-production.up.railway.app/privacidade` (no ar, sem aviso de rascunho, conferido em 08/11/2026)
+- [x] **URL de instruções de exclusão de dados:** `https://crmeccellenza-production.up.railway.app/exclusao-de-dados` (no ar, conferido em 08/11/2026)
+- [x] **Categoria**
+- [x] **Ícone do app** (512 a 1024 px, PNG/JPG, até 5 MB)
+- [ ] **Termos de Serviço:** deixado vazio (opcional; o CRM não tem essa página). Se a Meta exigir ao publicar, pedir ao Claude um texto para aprovar. Não inventar.
+- **Namespace:** vazio (não usado).
 
 ## Antes de publicar
-- [ ] Etapa 1 concluída (mesmo portfólio)
-- [ ] Páginas no ar, sem aviso de rascunho
+- [x] **Modelos de mensagem aprovados** na Meta (08/11/2026): `retomada`, `primeiro_contato`, `lembrete_medicao`, `lembrete_apresentacao`. CRM igualado no mesmo dia.
+- [ ] Criar o `retorno_atendimento` (`03-modelos-de-mensagem.md`)
+- [ ] Etapa 1 concluída (app e conta do WhatsApp no mesmo portfólio)
+- [x] Páginas no ar, sem aviso de rascunho (08/11/2026)
 - [ ] Anotados (sem alterar): URL do webhook, campos assinados, e o GET de `subscribed_apps` mostrando o app
 - [ ] Mensagem de teste do celular → o bot responde
+- [ ] Leu o checklist de publicação do próprio painel (o nome exato do botão de Live não está confirmado; o painel mostra)
 - [ ] Horário calmo (fora do pico de atendimento)
+
+Se o painel pedir **App Review** de alguma permissão, **pare** e fale com o Claude. Para uso interno isso não deveria ser necessário.
 
 ## Publicar e conferir
 1. Publicar / mudar para Live.
 2. Logo depois: mandar mensagem de teste do celular e conferir que o bot responde.
 3. CRM → Configurações → WhatsApp: ver os últimos avisos da Meta, sem erros.
 4. Conferir que `subscribed_apps` continua com o app (GET no Explorador da Graph API, token temporário do Explorer, nunca o do CRM).
-5. Observar por 24 horas.
+5. Mandar um modelo aprovado para o seu próprio número pelo CRM e conferir que chega (o envio de modelo nunca foi testado de verdade).
+6. Observar por 24 horas.
 
 ## Se algo parar
 1. Voltar o app para modo de desenvolvimento (a Meta não deve bloquear a volta, mas não testei).

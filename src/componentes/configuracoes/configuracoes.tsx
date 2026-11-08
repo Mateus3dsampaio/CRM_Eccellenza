@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { Pilula } from "../entalhe/pilula";
 import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao";
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
-import { MODELOS } from "@/regras/modelos";
+import { MODELOS_SEM_COMPROMISSO } from "@/regras/modelos";
 import type { RegrasPresenca } from "@/regras/presenca";
 import type { RegrasRetorno } from "@/regras/retorno-fechada";
 import type { PrazosEspera } from "@/regras/espera";
@@ -408,7 +408,7 @@ function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; ao
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-56">Qual modelo usar</span>
             <select disabled={!rascunho.automatico} aria-label="Qual modelo usar" value={rascunho.modelo} onChange={(e) => setRascunho((r) => ({ ...r, modelo: e.target.value }))} className={juntar(classeEntrada, "w-72")}>
-              {MODELOS.map((m) => (
+              {MODELOS_SEM_COMPROMISSO.map((m) => (
                 <option key={m.codigo} value={m.codigo}>
                   {m.nome}
                 </option>

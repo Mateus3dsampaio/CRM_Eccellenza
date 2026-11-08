@@ -16,7 +16,8 @@ import { assinaturaValida, extrairEventos, responderVerificacao } from "@/regras
 import { enviarMensagemLoja, statusEfetivo } from "@/servicos/mensagens";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { guardarEvento, processarEventoGuardado, processarWebhook } from "@/servicos/whatsapp";
-import { limparBanco, criarRoteiroDeTeste } from "./ajuda";
+import { dataLocal } from "@/regras/tempo";
+import { limparBanco, criarConsultores, criarRoteiroDeTeste } from "./ajuda";
 
 const SEGREDO = "segredo-do-app";
 const assinar = (corpo: string) => `sha256=${createHmac("sha256", SEGREDO).update(corpo).digest("hex")}`;
@@ -208,6 +209,36 @@ describe("webhook no sistema", () => {
     await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
     await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", modelo: "retomada" });
     expect(corpo).toMatchObject({ type: "template", template: { name: "retomada", language: { code: "pt_BR" } } });
+  });
+
+  it("lembrete leva data e hora do próximo compromisso como variáveis nomeadas; sem compromisso marcado, recusa", async () => {
+    let corpo: { template?: { name?: string; components?: { type: string; parameters: { type: string; parameter_name: string; text: string }[] }[] } } = {};
+    let chamadas = 0;
+    vi.stubGlobal("fetch", async (_u: string, init: RequestInit) => {
+      chamadas++;
+      corpo = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({ messages: [{ id: "wamid.L" }] }), { status: 200 });
+    });
+    const [consultor] = await criarConsultores();
+    const lead = await obterOuCriarLead("+5588999995555", "Edu");
+    await db.lead.update({ where: { id: lead.id }, data: { consentimentoEm: new Date(), consentimentoOrigem: "balcao" } });
+    await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "lembrete_medicao" })).rejects.toThrow(/medição marcada/);
+    expect(chamadas).toBe(0);
+
+    const proxima = dataLocal(2099, 3, 10, 15, 30); // terça-feira
+    const depois = dataLocal(2099, 3, 12, 9);
+    for (const inicio of [depois, proxima]) {
+      await db.visita.create({ data: { leadId: lead.id, consultorId: consultor.id, inicio, fim: new Date(inicio.getTime() + 7_200_000), tipo: "medicao", criadoPor: "t", criadoEm: new Date() } });
+    }
+    const m = await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "lembrete_medicao" });
+    expect(corpo.template?.name).toBe("lembrete_medicao");
+    expect(corpo.template?.components).toEqual([
+      { type: "body", parameters: [{ type: "text", parameter_name: "data", text: "terça, 10/03" }, { type: "text", parameter_name: "hora", text: "15h30" }] },
+    ]);
+    expect(m.texto).toContain("marcada para terça, 10/03 às 15h30.");
+    expect(m.texto).not.toContain("{{");
+    // A apresentação não usa a medição.
+    await expect(enviarMensagemLoja({ leadId: lead.id, autor: "consultor", modelo: "lembrete_apresentacao" })).rejects.toThrow(/apresentação marcada/);
   });
 
   it("imagem do cliente é baixada só de servidor da Meta", async () => {

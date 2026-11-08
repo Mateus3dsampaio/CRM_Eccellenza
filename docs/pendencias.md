@@ -15,7 +15,10 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Aprovar o nome de exibição (ex.: "Eccellenza Móveis Planejados").
 - [ ] Cadastrar a forma de pagamento no WhatsApp Manager e conferir a tabela de preços em reais.
 - [x] Gerar o token permanente (permissões `whatsapp_business_messaging` e `whatsapp_business_management`). Gerado e colado no Railway em 04/11/2026. Validade "Nunca expira" escolhida pelo Mateus (04/11/2026). Houve vários tokens gerados; se um dia o envio falhar com erro de token, conferir se o colado no Railway é o de "Nunca expira".
-- [ ] Criar e aprovar os modelos de mensagem na Meta, com o mesmo nome do código (`retomada`, `primeiro_contato`, `lembrete_visita`), pt_BR, sem variáveis.
+- [x] Modelos aprovados na Meta em 08/11/2026 (Mateus): `retomada`, `primeiro_contato`, `lembrete_medicao` e `lembrete_apresentacao` (os dois lembretes com `{{data}}` e `{{hora}}`, preenchidos pela agenda). Código igualado no mesmo dia; `lembrete_visita` saiu.
+- [ ] Criar o modelo `retorno_atendimento` na Meta (texto e botões em `docs/publicacao-meta/03-modelos-de-mensagem.md`). Sem ele o retorno automático com a loja fechada falha.
+- [ ] Primeiro envio REAL de modelo (o lembrete leva variáveis nomeadas; nunca testado com a Meta): mandar para o número do Mateus e conferir que chega com a data certa.
+- [x] Configurações do app > Básico na Meta (domínio, e-mail, privacidade, exclusão de dados, categoria, ícone): Mateus, 08/11/2026. Termos de Serviço ficou vazio (opcional).
 - [x] Cadastrar o webhook (`SEU-ENDEREÇO/api/whatsapp/webhook`) e assinar o campo `messages` (só depois do Railway no ar). Feito em 04/11/2026 (`https://crmeccellenza-production.up.railway.app/api/whatsapp/webhook`).
 - [x] Conferir na página oficial da Meta: tipos aceitos no ENVIO (**DWG e ZIP são incertos**), limites de tamanho de vídeo e documento, versão atual da API (`WHATSAPP_API_VERSION`, padrão `v23.0`), se o app precisa estar em modo "Live". Feito pelo Mateus em 05/11/2026: a Meta aceitou tudo.
 
