@@ -30,7 +30,11 @@ export interface MensagemChat {
 export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTocarBotao }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean; aoApagarMidia?: (mensagemId: string) => void; aoTocarBotao?: (texto: string) => void }) {
   const fim = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    fim.current?.scrollIntoView({ block: "end" });
+    // Rola só a caixa da conversa até o fim. `scrollIntoView` rolava também a gaveta e a página,
+    // e a gaveta abria cortando o topo.
+    let caixa = fim.current?.parentElement ?? null;
+    while (caixa && !/(auto|scroll)/.test(getComputedStyle(caixa).overflowY)) caixa = caixa.parentElement;
+    if (caixa) caixa.scrollTop = caixa.scrollHeight;
   }, [mensagens.length, digitando]);
 
   const diaDe = (m: MensagemChat) => inicioDoDiaLocal(new Date(m.enviadaEm)).toISOString();
