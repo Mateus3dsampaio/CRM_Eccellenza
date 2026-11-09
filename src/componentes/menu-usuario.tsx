@@ -2,23 +2,28 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { KeyRound, LogOut, Palette } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Bell, BellOff, KeyRound, LogOut, Palette } from "lucide-react";
 import { TEMAS } from "@/regras/temas";
 import { chamarApi } from "./dados";
 import { juntar } from "./estilos";
 import { pausarPushAoSair } from "./alertas/push";
+import { JanelaAvisos, useAvisosSilenciados, useRenovarPush } from "./alertas/janela-avisos";
 import { JanelaMinhaSenha } from "./configuracoes/equipe";
 import { aplicarTema, lerTema } from "./tema";
 import { useUsuario } from "./usuario";
 
-/** Menu do avatar (tarefa 26): nome e perfil, trocar senha, tema e sair. Tira dois ícones da barra de cima. */
+/** Menu do avatar (tarefa 26): nome e perfil, avisos, trocar senha, tema e sair. Tira ícones da barra de cima (cabe no celular em pé). */
 export function MenuUsuario() {
   const usuario = useUsuario();
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [senhaAberta, setSenhaAberta] = useState(false);
+  const [avisosAbertos, setAvisosAbertos] = useState(false);
+  const silenciado = useAvisosSilenciados();
   const [tema, setTema] = useState("padrao");
   const raiz = useRef<HTMLDivElement>(null);
+  useRenovarPush();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a escolha vive no navegador (localStorage)
@@ -72,6 +77,19 @@ export function MenuUsuario() {
             className={classeItem}
             onClick={() => {
               setAberto(false);
+              setAvisosAbertos(true);
+            }}
+          >
+            {silenciado ? <BellOff className="size-4 text-texto-suave" aria-hidden /> : <Bell className="size-4 text-texto-suave" aria-hidden />}
+            <span className="flex-1">Avisos</span>
+            {silenciado && <span className="text-xs text-texto-fraco">silenciados</span>}
+          </button>
+          <button
+            role="menuitem"
+            type="button"
+            className={classeItem}
+            onClick={() => {
+              setAberto(false);
               setSenhaAberta(true);
             }}
           >
@@ -105,7 +123,9 @@ export function MenuUsuario() {
           </button>
         </div>
       )}
-      {senhaAberta && <JanelaMinhaSenha aoFechar={() => setSenhaAberta(false)} />}
+      {/* Fora do cabeçalho: o desfoque do topo (backdrop-blur) prende janelas "fixed" dentro dele e elas saíam cortadas no celular. */}
+      {senhaAberta && createPortal(<JanelaMinhaSenha aoFechar={() => setSenhaAberta(false)} />, document.body)}
+      {avisosAbertos && createPortal(<JanelaAvisos aoFechar={() => setAvisosAbertos(false)} />, document.body)}
     </div>
   );
 }

@@ -14,12 +14,13 @@ interface Janela {
   navigate?: (u: string) => Promise<void>;
 }
 
-function montar(janelas: Janela[]) {
+function montar(janelas: Janela[], userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130") {
   const ouvintes: Record<string, (e: unknown) => void> = {};
   const mostradas: { titulo: string; opcoes: Record<string, unknown> }[] = [];
   const abertas: string[] = [];
   const self = {
     location: { origin: "https://crm.exemplo.com" },
+    navigator: { userAgent },
     addEventListener: (nome: string, fn: (e: unknown) => void) => (ouvintes[nome] = fn),
     skipWaiting: () => undefined,
     clients: { claim: () => Promise.resolve(), matchAll: async () => janelas, openWindow: async (u: string) => void abertas.push(u) },
@@ -50,6 +51,13 @@ describe("service worker dos avisos", () => {
     const sw = montar([{ url: "https://crm.exemplo.com/", visibilityState: "visible", focused: true, focus: async () => undefined }]);
     await sw.esperar("push", dados(aviso));
     expect(sw.mostradas).toHaveLength(0);
+  });
+
+  it("no iPhone mostra o cartão mesmo com o CRM na frente (a Apple corta os avisos que não viram cartão)", async () => {
+    const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+    const sw = montar([{ url: "https://crm.exemplo.com/", visibilityState: "visible", focused: true, focus: async () => undefined }], iphone);
+    await sw.esperar("push", dados(aviso));
+    expect(sw.mostradas).toHaveLength(1);
   });
 
   it("aviso sem dados legíveis ainda mostra um cartão genérico (o navegador exige cartão a cada push)", async () => {
