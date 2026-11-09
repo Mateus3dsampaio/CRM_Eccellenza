@@ -52,6 +52,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Rotinas automáticas (retomada etc.) rodando sozinhas | `src/servicos/agendador.ts` + `src/instrumentation.ts` (liga em produção) |
 | Modo simulador (relógio, Simulador) ligado/desligado | `src/lib/modo.ts` (`MODO_SIMULADOR`; desligado em produção) + `src/lib/modo-rota.ts` |
 | Login, tentativas, primeiro admin, criar usuário | `src/regras/tentativas-login.ts` + `src/app/api/login/route.ts` + `src/servicos/usuarios.ts` + `scripts/criar-usuario.ts` |
+| Tela de login e a esfera de pontos (física, cores, colisão) | `src/app/login/page.tsx` + `src/componentes/login/esfera-3d.ts` (+ `esfera-shader.ts`) |
 | Cadastro de usuários (criar, editar, nova senha, desativar, transferir leads), trocar a própria senha, regra da senha (6+, letra, número e maiúscula) | Tela: `src/componentes/configuracoes/equipe.tsx` (cartão Equipe em Configurações > Geral; `JanelaMinhaSenha` abre pelo cabeçalho). Regra: `src/regras/senha.ts`. Gravação: `src/servicos/usuarios.ts` + `transferirLeads` em `src/servicos/distribuicao.ts`. Rotas: `/api/configuracoes/usuarios`, `/api/leads/[id]/transferir`, `/api/conta/senha` |
 | Colocar no ar (Railway, Postgres) | `Dockerfile`, `railway.json`, `prisma/postgres/` (esquema gerado + migrações), guia em `docs/colocar-no-ar.md` |
 | Enviar/receber imagem, vídeo e PDF; galeria; apagar mídia | Tipos, limites, nome seguro, Range de vídeo: `src/regras/midia.ts` (limites de vídeo e PDF PROVISÓRIOS). Disco: `src/lib/midias.ts`. Apagar, limpeza de 180 dias, galeria, resumo antes de excluir, armazenamento: `src/servicos/midias.ts`. Envio pela Meta: `enviarPelaMeta` (`servicos/whatsapp.ts`) e `enviarMensagemLoja` (`anexo`). Tela: `src/componentes/galeria/galeria.tsx` e anexo em `src/componentes/ficha/conversa.tsx` |
@@ -83,9 +84,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Tela |
 |---|---|
 | `src/app/layout.tsx` | Layout raiz (fonte). O sistema é só escuro |
-| `src/app/globals.css` | Estilos globais e as classes de "tecla" dos botões (`tecla`, `tecla-pri`, `tecla-perigo`) e `afundado` (selecionado) |
+| `src/app/globals.css` | Estilos globais e as classes de "tecla" dos botões (`tecla`, `tecla-pri`, `tecla-perigo`) e `afundado` (selecionado). No fim, o fundo, halo, anel do clique e entrada do cartão do login (`login-*`) |
 | `src/app/tokens.css` | Design tokens: todas as cores, sombras, raios e espaços. Paleta azul-ardósia do modelo do Mateus; sistema só escuro. No fim, os temas de cor (`:root[data-tema=...]`, seis paletas que só informam as cores-base; o resto sai por mistura) |
-| `src/app/login/page.tsx` | Login |
+| `src/app/login/page.tsx` | Login: esfera de pontos "Eccellenza" centralizada acima do cartão (título ECCELLENZA, "CRM de atendimento"), nas cores do tema deste aparelho. Sem 3D no navegador, mostra o nome parado. Estilos `login-*` em `globals.css` |
 | `src/app/manifest.ts` | App instalável (PWA): nome, cores e ícones (`public/icone-*.png`, `public/apple-touch-icon.png`, o "E" azul provisório). Sem service worker e sem avisos de propósito (decisão do Mateus). No iPhone: Safari > Compartilhar > Adicionar à Tela de Início |
 | `src/app/(app)/layout.tsx` | Moldura das telas logadas: exige login e põe cabeçalho, avisos e versão dos dados |
 | `src/app/(app)/page.tsx` | Kanban |
@@ -305,6 +306,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/componentes/configuracoes/whatsapp.tsx` | Cartão do WhatsApp em Configurações: modo, variáveis que faltam, endereço do webhook, últimos avisos da Meta |
 | `src/componentes/configuracoes/chaves-api.tsx` | Aba Chaves de API, dois cartões. "Atendimento por texto": abas Claude/GPT, lista de modelos da conta (escolher um troca quem atende), chave da empresa da aba. "Transcrição de áudio": sempre OpenAI, chave OpenAI (a mesma do GPT). Chave em pontinhos, mostra só o final, salvar/remover |
 | `src/componentes/configuracoes/temas.tsx` | Aba Temas: uma bolinha por tema (as cores por dentro); o anel de escolha anda de uma à outra como mola (`Pilula`, variante anel). A escolha vale só neste aparelho |
+| `src/componentes/login/esfera-3d.ts` | Esfera do login em Three.js (`iniciarEsfera`, devolve a função de parar): nuvem → nome → esfera, onda a cada ~8 s, mouse, clique de gel, arrastar e arremessar, colisão mole com a tela e o cartão (amassa reta na face, o canto arredondado afunda nela). Lança erro sem WebGL. Three.js só baixa nesta tela |
+| `src/componentes/login/esfera-shader.ts` | Shaders da esfera (placa de vídeo): mistura das formas, ondas, gel, esticão e o contato que prende os pontos fora do cartão e dentro da tela |
 | `src/componentes/tema.ts` | `lerTema` e `aplicarTema` (`data-tema` na página, localStorage `tema` e cor da barra do celular). O script de `src/app/layout.tsx` aplica o tema guardado antes de pintar |
 | `src/componentes/configuracoes/uso-bot.tsx` | Cartão "Uso do bot" (tokens em 30 dias e os limites) |
 | `src/componentes/configuracoes/exportar-desempenho.tsx` | Exportação de desempenho (aberta pelo botão "Exportar" do Painel, tarefa 30): vendedor, período, incluir mídia, baixar .zip |
