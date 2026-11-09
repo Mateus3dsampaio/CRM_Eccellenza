@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Bot, FileCheck2, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { situacaoDaJanela } from "@/regras/janela24h";
@@ -23,10 +23,20 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
   const [anexo, setAnexo] = useState<File | null>(null);
   const [apagar, setApagar] = useState<string | null>(null);
   const refArquivo = useRef<HTMLInputElement>(null);
+  const refTexto = useRef<HTMLTextAreaElement>(null);
   const podeApagarMidia = usePode("apagar_midia");
   const agora = useAgoraDoServidor();
   const janela = situacaoDaJanela(ficha.ultimaMsgClienteEm, agora);
   const previa = previaDoModelo(modelo, ficha, agora);
+  const podeEnviar = previa ? !previa.falta : !!anexo || !!texto.trim();
+
+  // Caixa de texto que cresce com o conteúdo até o limite do CSS (max-h); passou disso, rola por dentro.
+  useLayoutEffect(() => {
+    const campo = refTexto.current;
+    if (!campo) return;
+    campo.style.height = "auto";
+    campo.style.height = `${campo.scrollHeight + 2}px`;
+  }, [texto, previa]);
 
   function escolherArquivo(arquivo: File | undefined) {
     if (!arquivo) return;
@@ -98,12 +108,12 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-painel border border-borda bg-chat-fundo shadow-painel">
-      <div className="flex flex-wrap items-center gap-2 border-b border-borda bg-superficie px-4 py-2">
-        <span className={juntar("inline-flex items-center gap-1.5 text-sm font-medium", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
-          {ficha.modo === "bot" ? <Bot className="size-4" aria-hidden /> : <Headset className="size-4" aria-hidden />}
+      <div className="flex items-center gap-2 border-b border-borda bg-superficie px-4 py-2">
+        <span className={juntar("flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
+          {ficha.modo === "bot" ? <Bot className="size-4 shrink-0" aria-hidden /> : <Headset className="size-4 shrink-0" aria-hidden />}
           {modoTexto}
         </span>
-        <div className="ml-auto flex gap-2">
+        <div className="flex shrink-0 gap-2">
           {ficha.modo !== "humano" && (
             <Botao onClick={() => conversa({ acao: "assumir" }, "Você assumiu a conversa.")} disabled={enviando}>
               Assumir conversa
@@ -121,10 +131,11 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
           O bot não conseguiu responder: {ficha.erroBot} A conversa está aguardando um consultor.
         </p>
       )}
-      <div className="rolagem-fina min-h-64 flex-1 overflow-y-auto p-4">
+      <div className="rolagem-fina min-h-24 flex-1 overflow-y-auto p-4">
         <ListaMensagens mensagens={ficha.mensagens} lado="loja" aoApagarMidia={podeApagarMidia ? setApagar : undefined} />
       </div>
-      <form onSubmit={enviar} className="space-y-2 border-t border-borda bg-superficie p-3">
+      {/* Área de envio fixa embaixo: nunca encolhe nem é cortada; quem cede espaço é a lista de mensagens. */}
+      <form onSubmit={enviar} className="shrink-0 space-y-2 border-t border-borda bg-superficie p-3">
         {!ficha.janelaAberta && (
           <div className="flex flex-wrap items-center gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-xs text-aviso">
             <Info className="size-4 shrink-0" aria-hidden />
@@ -179,14 +190,34 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
                 {previa.falta}
               </p>
             ) : (
-              <p className="rolagem-fina max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-texto" aria-label="Prévia do modelo">
+              <p className="rolagem-fina max-h-[min(14rem,28vh)] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-texto" aria-label="Prévia do modelo">
                 {previa.texto}
               </p>
             )}
           </div>
         )}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <select className={juntar(classeEntrada, previa ? "sm:min-w-0 sm:flex-1" : "sm:w-52")} value={modelo} onChange={(e) => setModelo(e.target.value)} aria-label="Modelo aprovado">
+        {!previa && (
+          <textarea
+            ref={refTexto}
+            rows={1}
+            className={juntar(classeEntrada, "rolagem-fina block max-h-40 resize-none overflow-y-auto leading-relaxed")}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter envia; Shift+Enter quebra a linha (como no WhatsApp Web).
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                if (podeEnviar && !enviando) e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            disabled={!ficha.janelaAberta}
+            placeholder={anexo ? "Legenda (opcional)" : ficha.janelaAberta ? "Responder como consultor… (Enter envia, Shift+Enter quebra linha)" : "Texto livre bloqueado fora da janela de 24h"}
+            aria-label="Mensagem"
+          />
+        )}
+        {/* Barra de ferramentas: modelo e anexo à esquerda, Enviar sempre à vista na direita. */}
+        <div className="flex items-center gap-2">
+          <select className={juntar(classeEntrada, "w-auto min-w-0 max-w-[16rem] flex-1 sm:flex-none")} value={modelo} onChange={(e) => setModelo(e.target.value)} aria-label="Modelo aprovado">
             <option value="">{ficha.janelaAberta ? "Texto livre" : "Escolha um modelo"}</option>
             {MODELOS.map((m) => (
               <option key={m.codigo} value={m.codigo}>
@@ -199,23 +230,13 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
             type="button"
             onClick={() => refArquivo.current?.click()}
             disabled={!ficha.janelaAberta}
-            className="inline-flex min-h-toque items-center justify-center gap-2 rounded-controle border border-borda px-3 text-sm text-texto-suave hover:bg-superficie-suave disabled:opacity-50"
+            className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle border border-borda text-texto-suave hover:bg-superficie-suave disabled:opacity-50"
             title={ficha.janelaAberta ? "Enviar imagem, vídeo (MP4), PDF, Word, Excel, DWG ou ZIP" : "Arquivos só dentro da janela de 24h"}
             aria-label="Anexar arquivo"
           >
             <Paperclip className="size-4" aria-hidden />
           </button>
-          {!previa && (
-            <input
-              className={classeEntrada}
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              disabled={!ficha.janelaAberta}
-              placeholder={anexo ? "Legenda (opcional)" : ficha.janelaAberta ? "Responder como consultor..." : "Texto livre bloqueado fora da janela de 24h"}
-              aria-label="Mensagem"
-            />
-          )}
-          <Botao type="submit" variante="primario" carregando={enviando} disabled={previa ? !!previa.falta : !anexo && !texto.trim()} icone={<Send className="size-4" aria-hidden />}>
+          <Botao type="submit" variante="primario" carregando={enviando} disabled={!podeEnviar} className="ml-auto shrink-0" icone={<Send className="size-4" aria-hidden />}>
             Enviar
           </Botao>
         </div>

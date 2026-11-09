@@ -193,11 +193,8 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
   const canceladas = ficha.visitas.filter((v) => v.status === "cancelada");
   const compromissosMarcados = ficha.visitas.filter((v) => v.status === "agendada" && v.tipo !== "visita");
 
-  const blocos = {
-    resumo: (
-        <Painel
-          titulo="Resumo para o consultor"
-          acao={
+  // Partes soltas (sem o quadro): a gaveta usa as mesmas peças dentro de seções recolhíveis.
+  const copiarResumo = (
             <Botao
               variante="fantasma"
               icone={<ClipboardCopy className="size-4" aria-hidden />}
@@ -212,13 +209,11 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
             >
               Copiar
             </Botao>
-          }
-        >
-          <pre className="whitespace-pre-wrap rounded-controle bg-superficie-suave p-3 font-sans text-sm leading-relaxed text-texto">{ficha.resumo || "O resumo aparece quando o bot ou o consultor preencher a ficha."}</pre>
-        </Painel>
-    ),
-    etapa: (
-        <Painel titulo="Etapa e responsável">
+  );
+  const textoResumo = (
+    <pre className="whitespace-pre-wrap rounded-controle bg-superficie-suave p-3 font-sans text-sm leading-relaxed text-texto">{ficha.resumo || "O resumo aparece quando o bot ou o consultor preencher a ficha."}</pre>
+  );
+  const conteudoEtapa = (
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo rotulo="Etapa">
               <select
@@ -286,8 +281,15 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
             <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
             <Lembrete ficha={ficha} salvar={salvar} />
           </div>
-        </Painel>
+  );
+
+  const blocos = {
+    resumo: (
+      <Painel titulo="Resumo para o consultor" acao={copiarResumo}>
+        {textoResumo}
+      </Painel>
     ),
+    etapa: <Painel titulo="Etapa e responsável">{conteudoEtapa}</Painel>,
     // Quadro único "Compromissos" (tarefa 28): visita à loja, medição e apresentação, uma linha cada.
     compromissos: (
         <Painel titulo="Compromissos">
@@ -347,7 +349,7 @@ export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
       )}
     </>
   );
-  return { blocos, janelas };
+  return { blocos, partes: { copiarResumo, textoResumo, conteudoEtapa }, janelas };
 }
 
 function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; aoCancelar: () => void; aoSalvar: (corpo: object) => void }) {

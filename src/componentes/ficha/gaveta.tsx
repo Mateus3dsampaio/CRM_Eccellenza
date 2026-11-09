@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Maximize2, X } from "lucide-react";
+import { ChevronDown, ClipboardList, Maximize2, SlidersHorizontal, X } from "lucide-react";
+import { CLASSIFICACOES, type Classificacao } from "@/regras/etapas";
 import type { FichaLead } from "@/servicos/consultas";
 import { useNomesEtapas } from "../etapas";
 import { chamarApi, useDados } from "../dados";
@@ -86,7 +87,7 @@ function GavetaLead({ id, aoFechar }: { id: string | null; aoFechar: () => void 
           animate={semMovimento ? { opacity: 1 } : { x: 0 }}
           exit={semMovimento ? { opacity: 0 } : { x: "100%" }}
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-y-0 right-0 z-[56] flex w-full flex-col border-l border-borda bg-fundo shadow-flutuante sm:w-[600px]"
+          className="fixed inset-y-0 right-0 z-[56] flex w-full flex-col border-l border-borda bg-fundo shadow-flutuante sm:w-[640px]"
         >
           <ConteudoGaveta id={id} aoFechar={aoFechar} />
         </motion.aside>
@@ -129,7 +130,13 @@ function useMarcarComoVista(id: string, naoLidas: number) {
 
 function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; recarregar: () => void | Promise<void>; aoFechar: () => void }) {
   const nomesEtapas = useNomesEtapas();
-  const { blocos, janelas } = useBlocosDadosLead(ficha, recarregar);
+  const { partes, janelas } = useBlocosDadosLead(ficha, recarregar);
+  // Seções recolhidas ao abrir: a conversa ganha a altura toda e a gaveta abre no topo.
+  const [aberta, setAberta] = useState<"resumo" | "etapa" | null>(null);
+  const alternar = (secao: "resumo" | "etapa") => setAberta((a) => (a === secao ? null : secao));
+  const primeiraLinhaResumo = ficha.resumo?.split("\n").find((l) => l.trim()) ?? "Ainda sem resumo";
+  const classificacao = ficha.classificacao ? CLASSIFICACOES[ficha.classificacao as Classificacao] : "Sem classificação";
+  const resumoEtapa = `${nomesEtapas.nome(ficha.etapa)} · ${ficha.consultor?.nome ?? "Sem consultor"} · ${classificacao}`;
   useMarcarComoVista(ficha.id, ficha.naoLidas);
   return (
     <>
@@ -158,14 +165,75 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
           <X className="size-5" aria-hidden />
         </button>
       </header>
-      <div className="rolagem-fina flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-        <div className="shrink-0">{blocos.resumo}</div>
-        <div className="flex h-[30rem] shrink-0 flex-col">
+      {/* Corpo sem rolagem própria: duas seções recolhíveis em cima e a conversa ocupando o resto,
+          com o campo de envio sempre à vista embaixo. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
+        <SecaoRecolhivel
+          titulo="Resumo para o consultor"
+          icone={<ClipboardList className="size-4" aria-hidden />}
+          linha={primeiraLinhaResumo}
+          aberta={aberta === "resumo"}
+          aoAlternar={() => alternar("resumo")}
+          acao={partes.copiarResumo}
+        >
+          {partes.textoResumo}
+        </SecaoRecolhivel>
+        <SecaoRecolhivel
+          titulo="Etapa e responsável"
+          icone={<SlidersHorizontal className="size-4" aria-hidden />}
+          linha={resumoEtapa}
+          aberta={aberta === "etapa"}
+          aoAlternar={() => alternar("etapa")}
+        >
+          {partes.conteudoEtapa}
+        </SecaoRecolhivel>
+        <div className="flex min-h-0 flex-1 flex-col">
           <ConversaConsultor ficha={ficha} aoMudar={recarregar} />
         </div>
-        <div className="shrink-0">{blocos.etapa}</div>
       </div>
       {janelas}
     </>
+  );
+}
+
+/** Seção que abre e fecha com um clique no cabeçalho. Fechada, mostra só uma linha de resumo; aberta, rola por dentro. */
+function SecaoRecolhivel({ titulo, icone, linha, aberta, aoAlternar, acao, children }: { titulo: string; icone: ReactNode; linha: string; aberta: boolean; aoAlternar: () => void; acao?: ReactNode; children: ReactNode }) {
+  const semMovimento = useReducedMotion();
+  const idConteudo = useId();
+  return (
+    <section className={juntar("shrink-0 overflow-hidden rounded-painel border bg-superficie shadow-painel transition-colors", aberta ? "border-marca/40" : "border-borda")}>
+      <div className="flex items-center gap-2 pr-2">
+        <button
+          type="button"
+          onClick={aoAlternar}
+          aria-expanded={aberta}
+          aria-controls={idConteudo}
+          className="flex min-h-toque min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left hover:bg-superficie-suave/60"
+        >
+          <span className={juntar("inline-flex size-8 shrink-0 items-center justify-center rounded-controle", aberta ? "bg-marca-suave text-marca-texto" : "bg-superficie-suave text-texto-suave")}>{icone}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold leading-tight">{titulo}</span>
+            {!aberta && <span className="block truncate text-xs text-texto-suave">{linha}</span>}
+          </span>
+          <ChevronDown className={juntar("size-4 shrink-0 text-texto-suave transition-transform duration-200", aberta && "rotate-180")} aria-hidden />
+        </button>
+        {aberta && acao}
+      </div>
+      <AnimatePresence initial={false}>
+        {aberta && (
+          <motion.div
+            id={idConteudo}
+            key="conteudo"
+            initial={semMovimento ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="rolagem-fina max-h-[45vh] overflow-y-auto border-t border-borda p-3"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
