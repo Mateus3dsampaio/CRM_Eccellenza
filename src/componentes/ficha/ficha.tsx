@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import ReactGridLayout, { useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -63,7 +63,6 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   const [aba, setAba] = useState<Aba>("conversa");
   const [abaConversa, setAbaConversa] = useState<AbaConversa>("conversa");
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
-  const [menuAberto, setMenuAberto] = useState(false);
   const { dados: layoutSalvo, recarregar: recarregarLayout } = useDados<{ layout: ItemLayout[]; personalizado: boolean; ajustado: boolean }>("/api/configuracoes/layout-ficha");
   // Layout salvo antes de os blocos mudarem (tarefa 28): avisa uma vez.
   const avisouAjuste = useRef(false);
@@ -73,6 +72,24 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       avisar("O layout salvo da ficha foi ajustado aos blocos novos. Se quiser, personalize e salve de novo.");
     }
   }, [layoutSalvo, avisar]);
+
+  // Rascunho do admin enquanto personaliza (null = não está personalizando).
+  const [rascunho, setRascunho] = useState<ItemLayout[] | null>(null);
+  const [salvandoLayout, setSalvandoLayout] = useState(false);
+  const telaGrande = useTelaGrande();
+  const editando = rascunho !== null;
+  const layoutAtual = rascunho ?? layoutSalvo?.layout ?? LAYOUT_PADRAO_FICHA;
+  const alturaLinha = useAlturaLinha(layoutAtual);
+  // As ações moram na barra de cima, que só é refeita quando a `chave` muda: elas leem sempre a versão atual daqui.
+  const acoesRef = useRef<AcoesDaFicha>({ arquivar: () => {}, restaurar: () => {}, personalizar: () => {}, excluir: () => {} });
+  useEffect(() => {
+    acoesRef.current = {
+      arquivar: () => void acao({ acao: "arquivar" }, "Lead arquivado.", () => router.push("/")),
+      restaurar: () => void restaurar(),
+      personalizar: () => setRascunho(layoutAtual.map((l) => ({ ...l }))),
+      excluir: () => setConfirmarExclusao(true),
+    };
+  });
 
   // A barra de cima mostra o cliente (tarefa 28): o cabeçalho interno da ficha saiu.
   useDefinirTituloTela(
@@ -86,23 +103,21 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
           <span className="truncate">{ficha.nomeExibicao}</span>
           {ficha.aguardandoHumano && <Sino />}
         </h1>
-        <p className="flex flex-wrap items-center gap-x-3 text-xs text-texto-suave">
+        <p className="flex items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-texto-suave">
           <span>{ficha.telefone}</span>
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
             <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
             {nomesEtapas.nome(ficha.etapa)}
           </span>
           {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
         </p>
       </div>
+      {/* Arquivar e "⋯" ficam junto do nome do cliente: a linha só de botões que existia acima da ficha saiu. */}
+      {telaGrande && <AcoesFicha leadId={ficha.id} arquivado={ficha.arquivado} podeConfigurar={podeConfigurar} podeExcluir={podeExcluir} telaGrande={telaGrande} editando={editando} acoes={acoesRef} />}
     </>,
-    `${ficha.nomeExibicao}|${ficha.telefone}|${ficha.etapa}|${ficha.aguardandoHumano}|${ficha.arquivado}|${nomesEtapas.nome(ficha.etapa)}`,
+    `${ficha.nomeExibicao}|${ficha.telefone}|${ficha.etapa}|${ficha.aguardandoHumano}|${ficha.arquivado}|${nomesEtapas.nome(ficha.etapa)}|${podeConfigurar}|${podeExcluir}|${telaGrande}|${editando}`,
   );
-  // Rascunho do admin enquanto personaliza (null = não está personalizando).
-  const [rascunho, setRascunho] = useState<ItemLayout[] | null>(null);
-  const [salvandoLayout, setSalvandoLayout] = useState(false);
   const { width, containerRef, mounted } = useContainerWidth();
-  const telaGrande = useTelaGrande();
   const { blocos: blocosDados, janelas } = useBlocosDadosLead(ficha, recarregar);
   useMarcarComoVista(id, ficha.naoLidas);
 
@@ -176,76 +191,8 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
     ...blocosDados,
   };
 
-  const editando = rascunho !== null;
-  const layoutAtual = rascunho ?? layoutSalvo?.layout ?? LAYOUT_PADRAO_FICHA;
-
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-4 p-4">
-      {/* Ações: Arquivar à vista; o raro (layout, exportar, excluir) no menu "⋯" (tarefa 28). */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {ficha.arquivado ? (
-          <Botao onClick={restaurar} icone={<ArchiveRestore className="size-4" aria-hidden />}>Restaurar</Botao>
-        ) : (
-          <Botao onClick={() => acao({ acao: "arquivar" }, "Lead arquivado.", () => router.push("/"))} icone={<Archive className="size-4" aria-hidden />}>
-            Arquivar
-          </Botao>
-        )}
-        {(podeConfigurar || podeExcluir) && !editando && (
-          <Popover
-            aberto={menuAberto}
-            aoFechar={() => setMenuAberto(false)}
-            titulo="Mais ações"
-            largura="sm:w-64"
-            gatilho={
-              <button
-                type="button"
-                onClick={() => setMenuAberto((m) => !m)}
-                aria-expanded={menuAberto}
-                aria-haspopup="dialog"
-                aria-label="Mais ações"
-                title="Mais ações"
-                className="tecla inline-flex size-toque items-center justify-center rounded-controle"
-              >
-                <MoreHorizontal className="size-5" aria-hidden />
-              </button>
-            }
-          >
-            <div className="-mt-2 grid gap-0.5">
-              {podeConfigurar && telaGrande && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuAberto(false);
-                    setRascunho(layoutAtual.map((l) => ({ ...l })));
-                  }}
-                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
-                >
-                  <LayoutDashboard className="size-4 text-texto-suave" aria-hidden /> Personalizar layout
-                </button>
-              )}
-              {podeExcluir && (
-                // LGPD: baixa tudo o que o CRM guarda deste cliente. É um link normal; o servidor confere se é admin.
-                <a href={`/api/leads/${ficha.id}/exportar`} download onClick={() => setMenuAberto(false)} className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-sm hover:bg-superficie-suave" title="Baixar todos os dados deste cliente (LGPD)">
-                  <Download className="size-4 text-texto-suave" aria-hidden /> Exportar dados (LGPD)
-                </a>
-              )}
-              {podeExcluir && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuAberto(false);
-                    setConfirmarExclusao(true);
-                  }}
-                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
-                >
-                  <Trash2 className="size-4" aria-hidden /> Excluir de vez
-                </button>
-              )}
-            </div>
-          </Popover>
-        )}
-      </div>
-
       {editando && (
         <div className="flex flex-wrap items-center gap-2 rounded-card border border-marca/30 bg-marca-suave p-2 pl-4 text-sm">
           <span className="font-medium text-marca-texto">Personalizando o layout</span>
@@ -270,7 +217,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
             <ReactGridLayout
               width={width}
               layout={layoutAtual}
-              gridConfig={{ cols: COLUNAS_FICHA, rowHeight: ALTURA_LINHA_FICHA, margin: [12, 12], containerPadding: [0, 0] }}
+              gridConfig={{ cols: COLUNAS_FICHA, rowHeight: alturaLinha, margin: [12, 12], containerPadding: [0, 0] }}
               dragConfig={{ enabled: editando, handle: ".alca-bloco" }}
               resizeConfig={{ enabled: editando }}
               compactor={verticalCompactor}
@@ -293,6 +240,10 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
         </div>
       ) : (
         <>
+          {/* Celular: a barra de cima não tem espaço; as ações ficam numa linha própria, acima das abas. */}
+          <div className="flex justify-end">
+            <AcoesFicha leadId={ficha.id} arquivado={ficha.arquivado} podeConfigurar={podeConfigurar} podeExcluir={podeExcluir} telaGrande={telaGrande} editando={editando} acoes={acoesRef} />
+          </div>
           {/* Celular: abas */}
           <Abas itens={abas.map((a) => ({ codigo: a.id, rotulo: a.rotulo }))} valor={aba} aoMudar={setAba} rotuloAria="Seções da ficha" />
           {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{blocos.conversa}</div>}
@@ -317,6 +268,109 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       </Modal>
     </div>
   );
+}
+
+interface AcoesDaFicha {
+  arquivar: () => void;
+  restaurar: () => void;
+  personalizar: () => void;
+  excluir: () => void;
+}
+
+/** Arquivar (ou Restaurar) e o menu "⋯" com o raro (layout, exportar LGPD, excluir), na barra de cima ao lado do cliente. */
+function AcoesFicha({ leadId, arquivado, podeConfigurar, podeExcluir, telaGrande, editando, acoes }: { leadId: string; arquivado: boolean; podeConfigurar: boolean; podeExcluir: boolean; telaGrande: boolean; editando: boolean; acoes: RefObject<AcoesDaFicha> }) {
+  const [menuAberto, setMenuAberto] = useState(false);
+  return (
+    <div className="ml-1 flex shrink-0 items-center gap-1.5 border-l border-borda pl-3">
+      {arquivado ? (
+        <button type="button" onClick={() => acoes.current.restaurar()} className="tecla inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle px-3 text-sm font-medium" title="Restaurar lead">
+          <ArchiveRestore className="size-4" aria-hidden />
+          <span className="hidden 2xl:inline">Restaurar</span>
+          <span className="sr-only 2xl:hidden">Restaurar</span>
+        </button>
+      ) : (
+        <button type="button" onClick={() => acoes.current.arquivar()} className="tecla inline-flex min-h-toque min-w-toque items-center justify-center gap-2 rounded-controle px-3 text-sm font-medium" title="Arquivar lead">
+          <Archive className="size-4" aria-hidden />
+          <span className="hidden 2xl:inline">Arquivar</span>
+          <span className="sr-only 2xl:hidden">Arquivar</span>
+        </button>
+      )}
+      {(podeConfigurar || podeExcluir) && !editando && (
+        <Popover
+          aberto={menuAberto}
+          aoFechar={() => setMenuAberto(false)}
+          titulo="Mais ações"
+          largura="sm:w-64"
+          gatilho={
+            <button
+              type="button"
+              onClick={() => setMenuAberto((m) => !m)}
+              aria-expanded={menuAberto}
+              aria-haspopup="dialog"
+              aria-label="Mais ações"
+              title="Mais ações"
+              className="tecla inline-flex size-toque items-center justify-center rounded-controle"
+            >
+              <MoreHorizontal className="size-5" aria-hidden />
+            </button>
+          }
+        >
+          <div className="-mt-2 grid gap-0.5">
+            {podeConfigurar && telaGrande && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuAberto(false);
+                  acoes.current.personalizar();
+                }}
+                className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+              >
+                <LayoutDashboard className="size-4 text-texto-suave" aria-hidden /> Personalizar layout
+              </button>
+            )}
+            {podeExcluir && (
+              // LGPD: baixa tudo o que o CRM guarda deste cliente. É um link normal; o servidor confere se é admin.
+              <a href={`/api/leads/${leadId}/exportar`} download onClick={() => setMenuAberto(false)} className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-sm hover:bg-superficie-suave" title="Baixar todos os dados deste cliente (LGPD)">
+                <Download className="size-4 text-texto-suave" aria-hidden /> Exportar dados (LGPD)
+              </a>
+            )}
+            {podeExcluir && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuAberto(false);
+                  acoes.current.excluir();
+                }}
+                className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
+              >
+                <Trash2 className="size-4" aria-hidden /> Excluir de vez
+              </button>
+            )}
+          </div>
+        </Popover>
+      )}
+    </div>
+  );
+}
+
+function assinarAltura(aviso: () => void) {
+  window.addEventListener("resize", aviso);
+  return () => window.removeEventListener("resize", aviso);
+}
+
+/**
+ * Altura de cada linha da grade calculada pela altura da janela: o quadro da conversa (com o campo de envio)
+ * cabe inteiro na tela sem rolar a página. Os outros quadros acompanham na mesma proporção.
+ */
+function useAlturaLinha(layout: ItemLayout[]) {
+  const alturaJanela = useSyncExternalStore(assinarAltura, () => window.innerHeight, () => 900);
+  const conversa = layout.find((l) => l.i === "conversa");
+  if (!conversa) return ALTURA_LINHA_FICHA;
+  const MARGEM = 12;
+  // Barra de cima (64 px) + respiro em cima e embaixo da ficha (16 px cada) + folga.
+  const disponivel = alturaJanela - 64 - 32 - 4;
+  const linha = (disponivel - (conversa.h - 1) * MARGEM) / conversa.h;
+  return Math.max(22, Math.min(48, Math.floor(linha)));
 }
 
 function Notas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
