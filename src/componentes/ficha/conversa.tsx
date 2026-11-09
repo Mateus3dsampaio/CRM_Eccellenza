@@ -15,7 +15,7 @@ import { Botao, Modal, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
 
 // Conversa vista pelo consultor: assumir, devolver ao bot e responder (CHAT-03, BOT-05).
-export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
+export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLead; aoMudar: () => void; atalhos?: React.ReactNode }) {
   const avisar = useAviso();
   const [texto, setTexto] = useState("");
   const [modelo, setModelo] = useState("");
@@ -134,6 +134,8 @@ export function ConversaConsultor({ ficha, aoMudar }: { ficha: FichaLead; aoMuda
       <div className="rolagem-fina min-h-24 flex-1 overflow-y-auto p-4">
         <ListaMensagens mensagens={ficha.mensagens} lado="loja" aoApagarMidia={podeApagarMidia ? setApagar : undefined} />
       </div>
+      {/* Atalhos da gaveta (agendar, lembrete, nota): o que costuma nascer de uma conversa. */}
+      {atalhos && <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-t border-borda bg-coluna px-2 py-1">{atalhos}</div>}
       {/* Área de envio fixa embaixo: nunca encolhe nem é cortada; quem cede espaço é a lista de mensagens. */}
       <form onSubmit={enviar} className="shrink-0 space-y-2 border-t border-borda bg-superficie p-3">
         {!ficha.janelaAberta && (

@@ -209,6 +209,7 @@ export async function fichaDoLead(id: string) {
     consultor: lead.consultor,
     modo: lead.modoAtendimento,
     aguardandoHumano: lead.aguardandoHumano,
+    esperandoDesde: esperaDoLead(lead)?.toISOString() ?? null,
     naoLidas: lead.naoLidas,
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,

@@ -1,101 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
-import { CalendarPlus, Check, ClipboardCopy, Pencil, Plus, Presentation, Trash2, X } from "lucide-react";
-import { useNomesEtapas } from "../etapas";
-import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
-import { CLASSIFICACOES, ETIQUETAS, etapaComAgenda, type Classificacao, type CodigoEtapa } from "@/regras/etapas";
-import { ETAPAS_QUE_PEDEM_DADOS, formatarReais, nomeMotivo } from "@/regras/vendas";
+import { useState, type ReactNode } from "react";
+import { Check, ChevronDown, ClipboardCopy, Eye, EyeOff, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CLASSIFICACOES, ETIQUETAS, type Classificacao } from "@/regras/etapas";
+import { formatarDataHora } from "@/regras/tempo";
 import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
-import { Botao, Campo, Etiqueta, Modal, classeEntrada } from "../ui";
+import { Botao, Campo, Etiqueta, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
-import { JanelaMudanca } from "../vendas/janela-mudanca";
-import { useRegrasVendas } from "../vendas/regras";
-import { AgendarVisita } from "./agendar";
-import { Lembrete } from "./lembrete";
+import type { AcoesDoLead } from "./acoes-lead";
 
 const FONTES: Record<string, string> = { texto: "Texto", foto: "Foto", planta: "Planta", audio: "Áudio" };
 
-function Linha({ rotulo, valor, esmaecida }: { rotulo: string; valor: React.ReactNode; esmaecida?: boolean }) {
-  return (
-    <div className={juntar("grid grid-cols-[8.5rem_1fr] gap-2 py-1.5 text-sm", esmaecida && "opacity-60")}>
-      <dt className="text-texto-suave">{rotulo}</dt>
-      <dd className="min-w-0 break-words text-texto">{valor || <span className="text-texto-fraco">não informado</span>}</dd>
-    </div>
-  );
-}
-
-/** "Dados do lead" (tarefa 28): os preenchidos sempre à vista; os vazios ficam recolhidos atrás de um botão. */
-function DadosDoLead({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => void }) {
-  const [mostrarVazios, setMostrarVazios] = useState(false);
-  const linhas: [string, React.ReactNode][] = [
-    ["Nome", ficha.nome ?? ficha.nomePerfil],
-    ["Telefone", ficha.telefone],
-    ["Cidade", ficha.cidade],
-    ["Endereço", ficha.endereco],
-    ["Ambientes", ficha.ambientes.join(", ")],
-    ["Situação do imóvel", ficha.situacaoImovel],
-    ["Prazo", ficha.prazo],
-    ["Investimento", ficha.investimento],
-    ["Exigências", ficha.exigencias.join("; ")],
-    ["Pedidos técnicos", ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null],
-    ["Observações", ficha.observacoes],
-  ];
-  const vazias = linhas.filter(([, v]) => !v).length;
-  return (
-    <Painel
-      titulo="Dados do lead"
-      acao={
-        <Botao variante="fantasma" icone={<Pencil className="size-4" aria-hidden />} onClick={aoEditar}>
-          Editar
-        </Botao>
-      }
-    >
-      <dl className="divide-y divide-borda">
-        {linhas.map(([rotulo, valor]) => (!valor && !mostrarVazios ? null : <Linha key={rotulo} rotulo={rotulo} valor={valor} esmaecida={!valor} />))}
-      </dl>
-      {vazias > 0 && (
-        <button type="button" onClick={() => setMostrarVazios((v) => !v)} aria-expanded={mostrarVazios} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-controle px-2 text-xs font-medium text-texto-suave hover:bg-superficie-suave hover:text-texto">
-          {mostrarVazios ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
-          {mostrarVazios ? "Esconder campos vazios" : `Mostrar campos vazios (${vazias})`}
-        </button>
-      )}
-      {vazias === linhas.length && !mostrarVazios && <p className="text-sm text-texto-suave">Nada preenchido ainda.</p>}
-    </Painel>
-  );
-}
-
-/** Retorno marcado, valores e motivo da perda, conforme a etapa. Só aparece nas etapas que têm esses dados. */
-function DadosDeVenda({ ficha, aoEditar }: { ficha: FichaLead; aoEditar: () => void }) {
-  const podeEditar = usePode("editar_lead");
-  const { motivos } = useRegrasVendas();
-  if (!(ETAPAS_QUE_PEDEM_DADOS as string[]).includes(ficha.etapa)) return null;
-  const linhas: [string, string][] = [];
-  // A data do próximo contato aparece no bloco Lembrete, logo abaixo (tarefa 22).
-  if (ficha.etapa === "negociacao") linhas.push(["Valor do orçamento", formatarReais(ficha.valorOrcamento) || "não informado"]);
-  if (ficha.etapa === "fechado") linhas.push(["Valor fechado", formatarReais(ficha.valorFechado) || "não informado"]);
-  if (ficha.etapa === "perdido") linhas.push(["Motivo da perda", `${nomeMotivo(ficha.motivoPerda, motivos)}${ficha.concorrente ? ` – ${ficha.concorrente}` : ""}`]);
-  return (
-    <div className="sm:col-span-2 rounded-controle bg-superficie-suave p-3">
-      <dl>
-        {linhas.map(([r, v]) => (
-          <Linha key={r} rotulo={r} valor={v} />
-        ))}
-      </dl>
-      {podeEditar && (
-        <Botao variante="secundario" className="mt-1" icone={<Pencil className="size-4" aria-hidden />} onClick={aoEditar}>
-          Editar
-        </Botao>
-      )}
-    </div>
-  );
-}
-
-export function Painel({ titulo, acao, children }: { titulo: string; acao?: React.ReactNode; children: React.ReactNode }) {
-  // Dentro da grade da ficha o quadro tem altura própria: o conteúdo rola dentro dele.
+/** Quadro que ocupa a altura toda de onde está e rola por dentro (abas Notas e Histórico, ao lado da conversa). */
+export function Painel({ titulo, acao, children }: { titulo: string; acao?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex h-full min-h-0 flex-col rounded-painel border border-borda bg-superficie p-4 shadow-painel">
       <div className="mb-2 flex min-h-9 shrink-0 items-center justify-between gap-2">
@@ -107,249 +26,191 @@ export function Painel({ titulo, acao, children }: { titulo: string; acao?: Reac
   );
 }
 
-// Blocos da ficha (FICHA-01/02/04). Cada bloco é um quadro da grade; o estado compartilhado fica neste hook.
-export function useBlocosDadosLead(ficha: FichaLead, aoMudar: () => void) {
-  const avisar = useAviso();
-  const nomesEtapas = useNomesEtapas();
-  const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>("/api/agenda?visao=dia");
+/**
+ * Bloco da coluna da ficha: altura do próprio conteúdo, sem cor (só o "Próximo passo" tem destaque).
+ * Com `vazio`, vira uma linha só: título, o texto e a ação.
+ */
+export function Bloco({ titulo, junto, acao, vazio, children }: { titulo: string; junto?: ReactNode; acao?: ReactNode; vazio?: string; children?: ReactNode }) {
+  return (
+    <section className={juntar("shrink-0 rounded-painel border border-borda bg-coluna", vazio ? "py-1.5 pl-3.5 pr-2" : "p-3.5")}>
+      <div className={juntar("flex min-h-10 flex-wrap items-center gap-x-2", !vazio && "mb-1.5")}>
+        <h2 className="font-semibold">{titulo}</h2>
+        {junto}
+        <span className="min-w-0 flex-1 truncate text-sm text-texto-fraco">{vazio}</span>
+        {acao}
+      </div>
+      {!vazio && children}
+    </section>
+  );
+}
+
+/** Campos do cliente que o bot ou o consultor preencheram (nome e telefone ficam no cabeçalho). */
+function camposDoCliente(ficha: FichaLead): [string, string | null][] {
+  return [
+    ["Cidade", ficha.cidade],
+    ["Endereço", ficha.endereco],
+    ["Ambientes", ficha.ambientes.join(", ") || null],
+    ["Imóvel", ficha.situacaoImovel],
+    ["Prazo", ficha.prazo],
+    ["Investimento", ficha.investimento],
+    ["Exigências", ficha.exigencias.join("; ") || null],
+    ["Pedidos técnicos", ficha.pedidosTecnicos.length ? ficha.pedidosTecnicos.map((p) => `“${p}”`).join("; ") : null],
+    ["Observações", ficha.observacoes],
+  ];
+}
+
+/** Lista "rótulo: valor" só com o que está preenchido (ou tudo, com `mostrarVazios`). */
+export function CamposDoCliente({ ficha, mostrarVazios }: { ficha: FichaLead; mostrarVazios?: boolean }) {
+  const linhas = camposDoCliente(ficha).filter(([, valor]) => valor || mostrarVazios);
+  if (!linhas.length) return <p className="text-sm text-texto-suave">Nada preenchido ainda.</p>;
+  return (
+    <dl className="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-2 text-sm">
+      {linhas.map(([rotulo, valor]) => (
+        <div key={rotulo} className="contents">
+          <dt className="text-texto-fraco">{rotulo}</dt>
+          <dd className={juntar("min-w-0 whitespace-pre-line break-words", !valor && "text-texto-fraco")}>{valor || "não informado"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Uma linha que resume o cliente (gaveta): cidade, ambientes, imóvel e classificação. */
+export function linhaDoCliente(ficha: FichaLead): string {
+  const classificacao = ficha.classificacao ? CLASSIFICACOES[ficha.classificacao as Classificacao] : null;
+  return [ficha.cidade, ficha.ambientes.join(", "), ficha.situacaoImovel, classificacao].filter(Boolean).join(" · ") || "Ainda sem dados do cliente";
+}
+
+/** "Cliente": o antigo resumo e os dados do lead num bloco só, sem repetir. Vazios ficam atrás de um botão. */
+export function BlocoCliente({ ficha, acoes }: { ficha: FichaLead; acoes: AcoesDoLead }) {
   const [editando, setEditando] = useState(false);
-  const [agendar, setAgendar] = useState<TipoCompromisso | null>(null);
-  const [voltando, setVoltando] = useState(false);
-  // Etapa que pede dados (retorno, valor fechado, motivo da perda): abre a janela; trocar só vale ao confirmar.
-  const [pedido, setPedido] = useState<CodigoEtapa | null>(null);
-
-  async function salvar(corpo: object, sucesso = "Ficha atualizada.") {
-    try {
-      await chamarApi(`/api/leads/${ficha.id}`, { method: "PATCH", json: corpo });
-      avisar(sucesso);
-      return true;
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "Não foi possível salvar.", "erro");
-      return false;
-    } finally {
-      aoMudar();
-    }
-  }
-
-  const souAdmin = usePode("configurar");
-  async function transferir(para: string) {
-    try {
-      await chamarApi(`/api/leads/${ficha.id}/transferir`, { method: "POST", json: { para } });
-      avisar("Lead transferido.");
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "Não foi possível transferir.", "erro");
-    } finally {
-      aoMudar();
-    }
-  }
-
-  async function acaoLead(corpo: object, sucesso: string) {
-    try {
-      await chamarApi("/api/leads/acoes", { method: "POST", json: { ...corpo, ids: [ficha.id] } });
-      avisar(sucesso);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "Não foi possível concluir.", "erro");
-    } finally {
-      aoMudar();
-    }
-  }
-
-  async function cancelarVisita(visitaId: string) {
-    try {
-      await chamarApi("/api/agenda", { method: "POST", json: { acao: "cancelar", visitaId } });
-      avisar("Cancelado.");
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "Não foi possível cancelar.", "erro");
-    } finally {
-      aoMudar();
-    }
-  }
-
-  /** Uma linha de compromisso (visita à loja, medição ou apresentação): data e consultor com Remarcar/Cancelar, ou "não marcada" com Agendar. */
-  const linhaCompromisso = (tipo: TipoCompromisso) => {
-    const ativo = ficha.visitas.find((v) => v.status === "agendada" && v.tipo === tipo);
-    const nome = NOMES_COMPROMISSO[tipo];
-    const Icone = tipo === "apresentacao" ? Presentation : CalendarPlus;
-    const corAtivo = tipo === "medicao" ? "text-marca-texto" : tipo === "apresentacao" ? "text-alerta" : "text-sucesso";
-    return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-        <span className="w-28 shrink-0 font-medium">{nome}</span>
-        <span className={juntar("min-w-0 flex-1 break-words", ativo ? juntar("font-medium", corAtivo) : "text-texto-suave")} title={tipo === "visita" ? "Cliente vem conhecer a loja; não move o card." : undefined}>
-          {ativo ? `${ativo.rotulo} com ${ativo.consultor}` : "não marcada"}
-        </span>
-        <span className="ml-auto flex shrink-0 gap-1">
-          <Botao variante="fantasma" icone={<Icone className="size-4" aria-hidden />} onClick={() => setAgendar(tipo)} aria-label={`${ativo ? "Remarcar" : "Agendar"} ${nome.toLowerCase()}`}>
-            {ativo ? "Remarcar" : "Agendar"}
+  const [mostrarVazios, setMostrarVazios] = useState(false);
+  if (editando) return <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await acoes.salvar(corpo)) && setEditando(false)} />;
+  const vazias = camposDoCliente(ficha).filter(([, valor]) => !valor).length;
+  const classificacao = ficha.classificacao ? CLASSIFICACOES[ficha.classificacao as Classificacao] : null;
+  return (
+    <Bloco
+      titulo="Cliente"
+      junto={classificacao && <span className="rounded-pilula bg-superficie-suave px-2.5 py-0.5 text-xs font-semibold text-texto-suave">{classificacao}</span>}
+      acao={
+        <span className="flex items-center">
+          <Botao variante="fantasma" className="min-h-10 px-3" icone={<ClipboardCopy className="size-4" aria-hidden />} onClick={acoes.copiarResumo} title="Copia o resumo do cliente para colar onde precisar">
+            Copiar resumo
           </Botao>
-          {ativo && (
-            <Botao variante="fantasma" onClick={() => cancelarVisita(ativo.id)} aria-label={`Cancelar ${nome.toLowerCase()}`}>
-              Cancelar
+          <Botao variante="fantasma" className="min-h-10 px-3" icone={<Pencil className="size-4" aria-hidden />} onClick={() => setEditando(true)} aria-label="Editar dados do cliente">
+            Editar
+          </Botao>
+        </span>
+      }
+    >
+      <CamposDoCliente ficha={ficha} mostrarVazios={mostrarVazios} />
+      {vazias > 0 && (
+        <button type="button" onClick={() => setMostrarVazios((v) => !v)} aria-expanded={mostrarVazios} className="-ml-2 mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-controle px-2 text-xs font-medium text-texto-suave hover:bg-superficie-suave hover:text-texto">
+          {mostrarVazios ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
+          {mostrarVazios ? "Esconder campos vazios" : `Mostrar campos vazios (${vazias})`}
+        </button>
+      )}
+    </Bloco>
+  );
+}
+
+/** As notas mais recentes à vista, ao lado da conversa (a lista inteira fica na aba Notas). Sem nota, vira uma linha. */
+export function BlocoNotas({ ficha, acoes, aoVerTodas }: { ficha: FichaLead; acoes: AcoesDoLead; aoVerTodas?: () => void }) {
+  const recentes = ficha.notas.slice(0, 2);
+  return (
+    <Bloco
+      titulo="Notas"
+      vazio={recentes.length ? undefined : "nenhuma ainda"}
+      acao={
+        <span className="flex items-center">
+          {aoVerTodas && ficha.notas.length > recentes.length && (
+            <Botao variante="fantasma" className="min-h-10 px-3" onClick={aoVerTodas}>
+              Ver todas ({ficha.notas.length})
             </Botao>
           )}
+          <Botao variante="fantasma" className="min-h-10 px-3" icone={<Plus className="size-4" aria-hidden />} onClick={acoes.novaNota} aria-label="Adicionar nota">
+            Adicionar
+          </Botao>
         </span>
-      </div>
-    );
-  };
-  const canceladas = ficha.visitas.filter((v) => v.status === "cancelada");
-  const compromissosMarcados = ficha.visitas.filter((v) => v.status === "agendada" && v.tipo !== "visita");
+      }
+    >
+      <ul className="space-y-2">
+        {recentes.map((n) => (
+          <li key={n.id} className="rounded-controle bg-superficie px-3 py-2 text-sm">
+            <p className="whitespace-pre-wrap break-words">{n.texto}</p>
+            <p className="mt-0.5 text-xs text-texto-fraco">
+              {n.autorNome} · {formatarDataHora(new Date(n.criadoEm))}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Bloco>
+  );
+}
 
-  // Partes soltas (sem o quadro): a gaveta usa as mesmas peças dentro de seções recolhíveis.
-  const copiarResumo = (
-            <Botao
-              variante="fantasma"
-              icone={<ClipboardCopy className="size-4" aria-hidden />}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(ficha.resumo ?? "");
-                  avisar("Resumo copiado.");
-                } catch {
-                  avisar("Não foi possível copiar. Selecione o texto e copie.", "erro");
-                }
-              }}
-            >
-              Copiar
-            </Botao>
-  );
-  const textoResumo = (
-    <pre className="whitespace-pre-wrap rounded-controle bg-superficie-suave p-3 font-sans text-sm leading-relaxed text-texto">{ficha.resumo || "O resumo aparece quando o bot ou o consultor preencher a ficha."}</pre>
-  );
-  const conteudoEtapa = (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Campo rotulo="Etapa">
+/** "Gestão": o que muda raramente (consultor, classificação, etiquetas). Fica recolhido. */
+export function BlocoGestao({ ficha, acoes }: { ficha: FichaLead; acoes: AcoesDoLead }) {
+  const [aberto, setAberto] = useState(false);
+  const souAdmin = usePode("configurar");
+  const { dados: agenda } = useDados<{ consultores: { id: string; nome: string }[] }>(aberto ? "/api/agenda?visao=dia" : null);
+  const etiquetas = ficha.etiquetas.length ? `${ficha.etiquetas.length} ${ficha.etiquetas.length === 1 ? "etiqueta" : "etiquetas"}` : "sem etiquetas";
+  return (
+    <section className="shrink-0 overflow-hidden rounded-painel border border-borda bg-coluna">
+      <button type="button" onClick={() => setAberto((a) => !a)} aria-expanded={aberto} className="flex min-h-[52px] w-full items-center gap-2 px-3.5 text-left hover:bg-superficie-suave/50">
+        <span className="font-semibold">Gestão</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-texto-fraco">
+          {ficha.consultor?.nome ?? "Sem consultor"} · {etiquetas}
+        </span>
+        <ChevronDown className={juntar("size-4 shrink-0 text-texto-suave transition-transform duration-200", aberto && "rotate-180")} aria-hidden />
+      </button>
+      {aberto && (
+        <div className="grid animate-surgir gap-3 px-3.5 pb-3.5 sm:grid-cols-2">
+          <Campo rotulo="Consultor responsável" dica={souAdmin ? undefined : "Só o administrador transfere o lead para outro consultor."}>
+            <select className={classeEntrada} value={ficha.consultor?.id ?? ""} disabled={!souAdmin} onChange={(e) => e.target.value && void acoes.transferir(e.target.value)}>
+              {!ficha.consultor && <option value="">Sem consultor</option>}
+              {ficha.consultor && !agenda?.consultores.some((c) => c.id === ficha.consultor?.id) && <option value={ficha.consultor.id}>{ficha.consultor.nome}{agenda ? " (inativo)" : ""}</option>}
+              {agenda?.consultores.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Classificação">
+            <select className={classeEntrada} value={ficha.classificacao ?? ""} onChange={(e) => void acoes.salvar({ classificacao: e.target.value || null })}>
+              <option value="">Sem classificação</option>
+              {(Object.keys(CLASSIFICACOES) as Classificacao[]).map((c) => (
+                <option key={c} value={c}>
+                  {CLASSIFICACOES[c]}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <div className="space-y-1.5 sm:col-span-2">
+            <span className="text-sm font-medium">Etiquetas</span>
+            <div className="flex flex-wrap gap-1.5">
+              {ficha.etiquetas.map((e) => (
+                <Etiqueta key={e} codigo={e} aoRemover={() => void acoes.acaoLead({ acao: "etiqueta", etiqueta: e, ativa: false }, "Etiqueta removida.")} />
+              ))}
               <select
-                className={classeEntrada}
-                value={ficha.etapa}
-                onChange={(e) => {
-                  const etapa = e.target.value;
-                  // Medição/Apresentação: o card só entra com o compromisso marcado (abre a agenda).
-                  if (etapaComAgenda(etapa)) return setAgendar(etapa);
-                  if ((ETAPAS_QUE_PEDEM_DADOS as string[]).includes(etapa)) return setPedido(etapa as CodigoEtapa);
-                  // Voltar para qualificação com medição/apresentação marcada: pergunta antes de cancelar o compromisso.
-                  if (etapa === "qualificacao" && compromissosMarcados.length) return setVoltando(true);
-                  void acaoLead({ acao: "mover", etapa }, "Etapa alterada.");
-                }}
+                className="min-h-toque rounded-controle border border-dashed border-borda-forte bg-superficie px-3 text-sm text-texto-suave"
+                value=""
+                onChange={(e) => e.target.value && void acoes.acaoLead({ acao: "etiqueta", etiqueta: e.target.value, ativa: true }, "Etiqueta adicionada.")}
+                aria-label="Adicionar etiqueta"
               >
-                {nomesEtapas.lista.map((e) => (
+                <option value="">+ etiqueta</option>
+                {ETIQUETAS.filter((e) => !ficha.etiquetas.includes(e.codigo)).map((e) => (
                   <option key={e.codigo} value={e.codigo}>
                     {e.nome}
                   </option>
                 ))}
               </select>
-            </Campo>
-            <Campo rotulo="Consultor responsável" dica={souAdmin ? undefined : "Só o administrador transfere o lead para outro consultor."}>
-              <select className={classeEntrada} value={ficha.consultor?.id ?? ""} disabled={!souAdmin} onChange={(e) => e.target.value && void transferir(e.target.value)}>
-                {!ficha.consultor && <option value="">Sem consultor</option>}
-                {ficha.consultor && !agenda?.consultores.some((c) => c.id === ficha.consultor?.id) && <option value={ficha.consultor.id}>{ficha.consultor.nome} (inativo)</option>}
-                {agenda?.consultores.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-            <Campo rotulo="Classificação">
-              <select className={classeEntrada} value={ficha.classificacao ?? ""} onChange={(e) => salvar({ classificacao: e.target.value || null })}>
-                <option value="">Sem classificação</option>
-                {(Object.keys(CLASSIFICACOES) as Classificacao[]).map((c) => (
-                  <option key={c} value={c}>
-                    {CLASSIFICACOES[c]}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-            <div className="space-y-1.5">
-              <span className="text-sm font-medium">Etiquetas</span>
-              <div className="flex flex-wrap gap-1.5">
-                {ficha.etiquetas.map((e) => (
-                  <Etiqueta key={e} codigo={e} aoRemover={() => acaoLead({ acao: "etiqueta", etiqueta: e, ativa: false }, "Etiqueta removida.")} />
-                ))}
-                <select
-                  className="min-h-toque rounded-controle border border-dashed border-borda-forte bg-superficie px-3 text-sm text-texto-suave"
-                  value=""
-                  onChange={(e) => e.target.value && acaoLead({ acao: "etiqueta", etiqueta: e.target.value, ativa: true }, "Etiqueta adicionada.")}
-                  aria-label="Adicionar etiqueta"
-                >
-                  <option value="">+ etiqueta</option>
-                  {ETIQUETAS.filter((e) => !ficha.etiquetas.includes(e.codigo)).map((e) => (
-                    <option key={e.codigo} value={e.codigo}>
-                      {e.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
-            <DadosDeVenda ficha={ficha} aoEditar={() => setPedido(ficha.etapa as CodigoEtapa)} />
-            <Lembrete ficha={ficha} salvar={salvar} />
           </div>
-  );
-
-  const blocos = {
-    resumo: (
-      <Painel titulo="Resumo para o consultor" acao={copiarResumo}>
-        {textoResumo}
-      </Painel>
-    ),
-    etapa: <Painel titulo="Etapa e responsável">{conteudoEtapa}</Painel>,
-    // Quadro único "Compromissos" (tarefa 28): visita à loja, medição e apresentação, uma linha cada.
-    compromissos: (
-        <Painel titulo="Compromissos">
-          <div className="divide-y divide-borda">
-            {linhaCompromisso("visita")}
-            {linhaCompromisso("medicao")}
-            {linhaCompromisso("apresentacao")}
-          </div>
-          {canceladas.length > 0 && (
-            <p className="mt-3 text-xs text-texto-fraco">
-              Cancelados: {canceladas.map((v) => `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso] ?? "Visita"} ${v.rotulo}`).join(", ")}
-            </p>
-          )}
-        </Painel>
-    ),
-    dados: editando ? (
-      <FormularioDados ficha={ficha} aoCancelar={() => setEditando(false)} aoSalvar={async (corpo) => (await salvar(corpo)) && setEditando(false)} />
-    ) : (
-      <DadosDoLead ficha={ficha} aoEditar={() => setEditando(true)} />
-    ),
-    medidas: <Medidas ficha={ficha} aoMudar={aoMudar} />,
-  };
-  // Janela de agendar visita/apresentação: fica fora da grade.
-  const janelas = (
-    <>
-      <AgendarVisita leadId={ficha.id} tipo={agendar ?? "visita"} aberto={agendar !== null} aoFechar={() => setAgendar(null)} aoAgendar={aoMudar} />
-      <Modal aberto={voltando} aoFechar={() => setVoltando(false)} titulo="Cancelar compromisso?" largura="max-w-md">
-        <p className="text-sm text-texto-suave">
-          Este card tem {compromissosMarcados.map((v) => `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso].toLowerCase()} de ${v.rotulo}`).join(" e ")} na agenda. Voltar para &quot;{nomesEtapas.nome("qualificacao")}&quot; cancela{" "}
-          {compromissosMarcados.length > 1 ? "esses compromissos" : "esse compromisso"}. Deseja cancelar e mover o card?
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <Botao variante="fantasma" onClick={() => setVoltando(false)}>
-            Manter como está
-          </Botao>
-          <Botao
-            variante="perigo"
-            onClick={() => {
-              setVoltando(false);
-              void acaoLead({ acao: "mover", etapa: "qualificacao", cancelarCompromissos: true }, "Compromisso cancelado e etapa alterada.");
-            }}
-          >
-            Cancelar compromisso e mover
-          </Botao>
         </div>
-      </Modal>
-      {pedido && (
-        <JanelaMudanca
-          etapa={pedido}
-          atuais={ficha}
-          aoCancelar={() => setPedido(null)}
-          aoConfirmar={(venda) => {
-            void acaoLead({ acao: "mover", etapa: pedido, dados: venda }, pedido === ficha.etapa ? "Dados atualizados." : "Etapa alterada.");
-            setPedido(null);
-          }}
-        />
       )}
-    </>
+    </section>
   );
-  return { blocos, partes: { copiarResumo, textoResumo, conteudoEtapa }, janelas };
 }
 
 function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; aoCancelar: () => void; aoSalvar: (corpo: object) => void }) {
@@ -369,7 +230,7 @@ function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; ao
   const lista = (texto: string, separador: RegExp) => texto.split(separador).map((s) => s.trim()).filter(Boolean);
 
   return (
-    <Painel titulo="Editar dados">
+    <Bloco titulo="Editar dados">
       <form
         className="grid gap-3 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -403,11 +264,11 @@ function FormularioDados({ ficha, aoCancelar, aoSalvar }: { ficha: FichaLead; ao
           <Botao type="submit" variante="primario" icone={<Check className="size-4" aria-hidden />}>Salvar</Botao>
         </div>
       </form>
-    </Painel>
+    </Bloco>
   );
 }
 
-function Medidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
+export function BlocoMedidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
   const podeRemover = usePode("remover_medida");
   const avisar = useAviso();
   const [nova, setNova] = useState<{ ambiente: string; descricao: string } | null>(null);
@@ -427,17 +288,17 @@ function Medidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) 
   }
 
   return (
-    <Painel
+    <Bloco
       titulo="Medidas"
+      vazio={ficha.medidas.length === 0 && !nova ? "nenhuma ainda" : undefined}
       acao={
         !nova && (
-          <Botao variante="fantasma" icone={<Plus className="size-4" aria-hidden />} onClick={() => setNova({ ambiente: "", descricao: "" })}>
+          <Botao variante="fantasma" className="min-h-10 px-3" icone={<Plus className="size-4" aria-hidden />} onClick={() => setNova({ ambiente: "", descricao: "" })}>
             Adicionar
           </Botao>
         )
       }
     >
-      {ficha.medidas.length === 0 && !nova && <p className="text-sm text-texto-suave">Nenhuma medida registrada.</p>}
       <ul className="space-y-2">
         {ficha.medidas.map((m) => (
           <li key={m.id} className="rounded-controle border border-borda p-3 text-sm">
@@ -493,6 +354,6 @@ function Medidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) 
           <Botao type="button" variante="fantasma" onClick={() => setNova(null)}>Cancelar</Botao>
         </form>
       )}
-    </Painel>
+    </Bloco>
   );
 }

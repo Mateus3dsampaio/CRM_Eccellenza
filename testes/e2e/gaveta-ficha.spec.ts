@@ -1,5 +1,6 @@
-// Gaveta e ficha completa (arranjo de 09/11/2026): abrem no topo, resumo recolhido, prévia de modelo inteira
-// com o Enviar à vista e o campo de envio sem rolar a página. Só no computador, em 1440×900 e 1280×720.
+// Gaveta e ficha completa (arranjo de 09/11/2026): a gaveta mostra o que pede ação agora, uma linha do cliente e a
+// conversa (resumo recolhido, atalhos de agendar/lembrete/nota); a ficha tem a conversa e uma coluna em ordem de
+// prioridade que recolhe. Prévia de modelo inteira com o Enviar à vista, sem rolar a página. Só no computador.
 import { expect, test, type Page } from "@playwright/test";
 
 const PASTA = "docs/rodadas/evidencias/telas";
@@ -22,26 +23,34 @@ for (const tela of [
     test.skip(({ isMobile }) => isMobile, "Arranjo pensado para o PC");
     test.use({ viewport: tela });
 
-    test("gaveta abre no topo, resumo recolhido e modelo longo com Enviar à vista", async ({ page }) => {
+    test("gaveta: pílulas do que pede ação, resumo recolhido, atalhos e modelo longo com Enviar à vista", async ({ page }) => {
       await entrar(page);
-      await page.getByRole("link", { name: /Abrir ficha de Patrícia/ }).first().click();
+      // Bruno (seed) tem visita à loja e lembrete marcados: viram pílulas no topo da gaveta.
+      await page.getByRole("link", { name: /Abrir ficha de Bruno/ }).first().click();
       const gaveta = page.getByRole("complementary", { name: "Gaveta do lead" });
-      const resumo = gaveta.getByRole("button", { name: /Resumo para o consultor/ });
+      const resumo = gaveta.getByRole("button", { name: "Ver resumo" });
       await expect(resumo).toBeVisible();
       await expect(resumo).toHaveAttribute("aria-expanded", "false");
-      await expect(resumo).toBeInViewport({ ratio: 1 });
-      await expect(gaveta.getByRole("button", { name: /Etapa e responsável/ })).toHaveAttribute("aria-expanded", "false");
+      await expect(gaveta.getByRole("button", { name: /Etapa: .*Trocar etapa/ })).toBeVisible();
+      const pilulaVisita = gaveta.getByRole("button", { name: /Visita à loja/ });
+      await expect(pilulaVisita).toBeVisible();
+      for (const atalho of ["Agendar", "Lembrete", "Nota"]) await expect(gaveta.getByRole("button", { name: atalho, exact: true })).toBeVisible();
       const enviar = gaveta.getByRole("button", { name: "Enviar" });
       await expect(enviar).toBeInViewport({ ratio: 1 });
       await page.waitForTimeout(400);
       await page.screenshot({ path: `${PASTA}/gaveta-${nome}.png` });
 
+      // A pílula abre a linha com as ações daquele compromisso.
+      await pilulaVisita.click();
+      await expect(gaveta.getByRole("button", { name: "Remarcar" })).toBeVisible();
+      await pilulaVisita.click();
+
       await resumo.click();
-      await expect(resumo).toHaveAttribute("aria-expanded", "true");
-      await expect(gaveta.getByRole("button", { name: "Copiar" })).toBeVisible();
+      await expect(gaveta.getByRole("button", { name: "Copiar resumo" })).toBeVisible();
+      await expect(enviar).toBeInViewport({ ratio: 1 });
       await page.waitForTimeout(300);
       await page.screenshot({ path: `${PASTA}/gaveta-resumo-aberto-${nome}.png` });
-      await resumo.click();
+      await gaveta.getByRole("button", { name: "Fechar resumo" }).click();
 
       await gaveta.getByLabel("Modelo aprovado").selectOption({ label: "Modelo: Primeiro contato" });
       const previa = gaveta.getByLabel("Prévia do modelo");
@@ -53,7 +62,7 @@ for (const tela of [
       await page.screenshot({ path: `${PASTA}/gaveta-modelo-${nome}.png` });
     });
 
-    test("ficha completa: ações no cabeçalho, caixa de texto que cresce e envio sem rolar a página", async ({ page }) => {
+    test("ficha completa: próximo passo em destaque, coluna que recolhe, caixa de texto que cresce e envio sem rolar a página", async ({ page }) => {
       await entrar(page);
       // Bruno (seed) escreveu há poucas horas: janela de 24h aberta, dá para digitar.
       await page.getByRole("link", { name: /Abrir ficha de Bruno/ }).first().click();
@@ -64,6 +73,18 @@ for (const tela of [
       const topo = page.getByRole("banner");
       await expect(topo.getByRole("button", { name: "Arquivar" })).toBeVisible();
       await expect(topo.getByRole("button", { name: "Mais ações" })).toBeVisible();
+      // A etapa é um botão: na barra de cima a partir de 1440px; abaixo disso, na linha das abas da conversa.
+      await expect((tela.width >= 1440 ? topo : ficha).getByRole("button", { name: /Etapa: .*Trocar etapa/ })).toBeVisible();
+      // Coluna da direita em ordem de prioridade; recolhida, a conversa ocupa a tela e as urgências viram ícones.
+      const coluna = page.getByRole("complementary", { name: "Ficha do cliente" });
+      await expect(coluna.getByRole("heading", { name: "Próximo passo" })).toBeVisible();
+      await expect(coluna.getByRole("heading", { name: "Cliente" })).toBeVisible();
+      await coluna.getByRole("button", { name: "Recolher a ficha" }).click();
+      await expect(coluna).toHaveCount(0);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `${PASTA}/ficha-recolhida-${nome}.png` });
+      await page.getByRole("button", { name: "Mostrar a ficha" }).click();
+      await expect(coluna.getByRole("heading", { name: "Próximo passo" })).toBeVisible();
 
       const campo = ficha.getByRole("textbox", { name: "Mensagem" });
       const enviar = ficha.getByRole("button", { name: "Enviar" });
