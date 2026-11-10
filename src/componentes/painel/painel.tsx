@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, FileArchive, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Minus, RotateCcw } from "lucide-react";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
-import { useDados } from "../dados";
+import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
@@ -16,6 +16,8 @@ interface DadosPainel {
   de: string;
   ate: string;
   dias: number;
+  /** Quando o admin zerou o painel pela última vez (nada anterior aparece). */
+  zeradoEm: string | null;
   vendedores: { id: string; nome: string }[];
   vendedorId: string | null;
   vendedorNome: string | null;
@@ -29,6 +31,8 @@ interface DadosPainel {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
     perdidos: { quantidade: number; motivos: { codigo: string; nome: string; total: number; detalhes: string[] }[] };
+    /** Contatos que não eram lead (motivo "Não é lead"): não entram em perdidos. */
+    descartados: { quantidade: number; motivos: { codigo: string; nome: string; total: number; detalhes: string[] }[] };
   };
 }
 
@@ -73,6 +77,46 @@ export function Painel() {
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
   // Exportar desempenho (tarefa 30): saiu de Configurações; é uma ação do painel, só do admin. Dados só ao abrir a janela.
   const [exportar, setExportar] = useState(false);
+  const avisar = useAviso();
+  const [zerando, setZerando] = useState(false);
+  const [entendi, setEntendi] = useState(false);
+  const [ocupado, setOcupado] = useState<"html" | "zerar" | null>(null);
+
+  // Baixa o painel inteiro (tudo desde o último reset) num arquivo HTML com filtro de período.
+  async function baixarHtml() {
+    setOcupado("html");
+    try {
+      const resposta = await fetch("/api/painel/exportar");
+      if (!resposta.ok) throw new Error((await resposta.json().catch(() => ({}))).erro ?? "Não foi possível exportar.");
+      const arquivo = /filename="([^"]+)"/.exec(resposta.headers.get("Content-Disposition") ?? "")?.[1] ?? "painel.html";
+      const url = URL.createObjectURL(await resposta.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = arquivo;
+      link.click();
+      URL.revokeObjectURL(url);
+      avisar("Painel exportado. Abra o arquivo para conferir.");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível exportar.", "erro");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function zerarPainel() {
+    setOcupado("zerar");
+    try {
+      await chamarApi("/api/painel/zerar", { method: "POST", json: { confirmar: true } });
+      avisar("Painel zerado. Os números recomeçam daqui.");
+      setZerando(false);
+      setEntendi(false);
+      await recarregar();
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível zerar.", "erro");
+    } finally {
+      setOcupado(null);
+    }
+  }
   const { dados: dadosExportar } = useDados<{ equipe: { id: string; nome: string; perfil: string; ativo: boolean }[]; periodoExportacao: { de: string; ate: string } }>(exportar ? "/api/configuracoes" : null);
   // "Clientes que faltaram" fica junto da conversão da agenda (é sobre compromisso marcado), não entre os leads do período.
   const faltaram = dados?.indicadores.find((i) => i.tipo === "nao_compareceu");
@@ -111,15 +155,24 @@ export function Painel() {
           </label>
         )}
         {admin && (
-          <Botao className="ml-auto" onClick={() => setExportar(true)} icone={<FileArchive className="size-4" aria-hidden />} title="Exportar desempenho do vendedor (.zip)">
-            Exportar
-          </Botao>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Botao onClick={() => setExportar(true)} icone={<FileArchive className="size-4" aria-hidden />} title="Exportar desempenho do vendedor (.zip)">
+              Desempenho (.zip)
+            </Botao>
+            <Botao onClick={() => void baixarHtml()} carregando={ocupado === "html"} icone={<Download className="size-4" aria-hidden />} title="Baixar o painel inteiro num arquivo HTML, com filtro de período">
+              Exportar painel
+            </Botao>
+            <Botao variante="perigo" onClick={() => setZerando(true)} icone={<RotateCcw className="size-4" aria-hidden />} title="Apagar o histórico do painel e recomeçar a contar">
+              Zerar painel
+            </Botao>
+          </div>
         )}
       </div>
       {dados && (
         <p className="text-sm text-texto-suave">
           {dados.dias} {dados.dias === 1 ? "dia" : "dias"} · comparação com os {dados.dias} {dados.dias === 1 ? "dia" : "dias"} anteriores
           {dados.vendedorNome && <> · números dos leads de <strong className="text-texto">{dados.vendedorNome}</strong></>}
+          {dados.zeradoEm && <> · painel zerado em {new Date(dados.zeradoEm).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}: não há dados anteriores</>}
         </p>
       )}
       {erro && dados && <p className="rounded-controle bg-alerta-suave px-3 py-2 text-sm text-alerta">{erro}</p>}
@@ -181,6 +234,21 @@ export function Painel() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {dados.vendas.descartados.quantidade > 0 && (
+                <div className="mt-3 border-t border-borda pt-2">
+                  <p className="text-xs font-medium text-texto-suave">
+                    Descartados · {dados.vendas.descartados.quantidade} <span className="font-normal text-texto-fraco">(não eram lead, não contam como perdidos)</span>
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {dados.vendas.descartados.motivos.map((m) => (
+                      <li key={m.codigo} className="flex justify-between gap-2 text-xs text-texto-suave">
+                        <span>{m.nome}</span>
+                        <span className="tabular-nums">{m.total}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </section>
           </div>
@@ -305,12 +373,52 @@ export function Painel() {
                 ))}
               </ul>
               <p className="mt-4 text-xs text-texto-fraco">{dados.vendedorId
-                  ? "Com vendedor escolhido, os números vêm dos leads que são dele hoje (leads excluídos não contam). A etapa de cada lead só é registrada desde que esse histórico foi ativado."
-                  : "Os números são contadores anônimos gravados na hora de cada evento: excluir leads não muda o painel. O tempo de resposta vem das conversas."}</p>
+                  ? "Com vendedor escolhido, os números de funil e leads recebidos vêm dos leads que são dele hoje (leads excluídos não contam); vendido, perdidos e agenda contam também os excluídos. A etapa de cada lead só é registrada desde que esse histórico foi ativado."
+                  : "Os números são contadores anônimos gravados na hora de cada evento, e o que foi vendido, perdido ou marcado na agenda é guardado antes de o lead ser excluído: apagar, arquivar ou limpar colunas não muda o painel. Só o tempo de resposta vem das conversas."}</p>
             </section>
           </div>
         </>
       ) : null}
+      <Modal
+        aberto={zerando}
+        aoFechar={() => {
+          setZerando(false);
+          setEntendi(false);
+        }}
+        titulo="Zerar o painel"
+        largura="max-w-lg"
+      >
+        <div className="space-y-3 text-sm text-texto-suave">
+          <p>
+            Isso <strong className="text-texto">apaga o histórico do painel</strong> (contadores, vendido, perdidos, descartados e conversões da agenda) e recomeça a contar daqui. A partir daí, o que entrar não sai mais, mesmo se você apagar, arquivar ou excluir o lead.
+          </p>
+          <p>
+            Os leads, as conversas e a agenda <strong className="text-texto">não são apagados</strong>. Só o painel volta a zero. Não dá para desfazer.
+          </p>
+          <p>Quer guardar o que existe hoje? Baixe o arquivo antes e abra para conferir.</p>
+          <Botao onClick={() => void baixarHtml()} carregando={ocupado === "html"} icone={<Download className="size-4" aria-hidden />}>
+            Exportar painel agora
+          </Botao>
+          <label className="flex min-h-toque cursor-pointer items-start gap-3 text-texto">
+            <input type="checkbox" className="mt-0.5 size-5 accent-[var(--color-marca)]" checked={entendi} onChange={(e) => setEntendi(e.target.checked)} />
+            <span>Entendo que o histórico será apagado e não dá para desfazer.</span>
+          </label>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao
+            variante="fantasma"
+            onClick={() => {
+              setZerando(false);
+              setEntendi(false);
+            }}
+          >
+            Cancelar
+          </Botao>
+          <Botao variante="perigo" disabled={!entendi} carregando={ocupado === "zerar"} onClick={() => void zerarPainel()}>
+            Zerar painel
+          </Botao>
+        </div>
+      </Modal>
       <Modal aberto={exportar} aoFechar={() => setExportar(false)} titulo="Exportar desempenho" largura="max-w-2xl">
         {dadosExportar ? <ExportarDesempenho equipe={dadosExportar.equipe} periodoPadrao={dadosExportar.periodoExportacao} /> : <Carregando linhas={2} />}
       </Modal>

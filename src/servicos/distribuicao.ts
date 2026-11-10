@@ -28,7 +28,7 @@ export async function escolherProximoConsultor(): Promise<string | null> {
 /** Leads que o bot já passou, mas que ficaram sem consultor porque ninguém estava online. */
 export function leadsNaFila() {
   return db.lead.findMany({
-    where: { consultorId: null, arquivadoEm: null, modoAtendimento: { not: "bot" }, aguardandoHumano: true },
+    where: { consultorId: null, arquivadoEm: null, etapa: { not: "perdido" }, modoAtendimento: { not: "bot" }, aguardandoHumano: true },
     orderBy: { atualizadoEm: "asc" },
     select: { id: true },
   });

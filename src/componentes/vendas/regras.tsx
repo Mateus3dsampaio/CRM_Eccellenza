@@ -10,7 +10,7 @@ interface Resposta {
   motivos: MotivoDePerda[];
 }
 
-const PADRAO: Resposta = { exigirContatoNegociacao: true, motivos: MOTIVOS_PADRAO.map((m) => ({ ...m, ativo: true })) };
+const PADRAO: Resposta = { exigirContatoNegociacao: true, motivos: MOTIVOS_PADRAO.map((m) => ({ ...m, ativo: true, naoELead: false })) };
 const Contexto = createContext<Resposta>(PADRAO);
 
 /** Uma consulta só para a tela toda (janela de mover, ficha, destaque do card). Recarrega quando o admin muda as regras. */

@@ -12,7 +12,7 @@ interface Regras {
   motivos: MotivoDePerda[];
 }
 
-type Edicao = { codigo: string | null; nome: string; pergunta: string };
+type Edicao = { codigo: string | null; nome: string; pergunta: string; naoELead: boolean };
 
 /** Configurações > Vendas: se Negociação exige o próximo contato e a lista de motivos de perda. */
 export function VendasConfig() {
@@ -57,8 +57,8 @@ export function VendasConfig() {
   async function salvarEdicao() {
     if (!edicao) return;
     const ok = edicao.codigo
-      ? await agir({ acao: "editar_motivo", codigo: edicao.codigo, nome: edicao.nome, pergunta: edicao.pergunta.trim() || null }, "Motivo salvo.")
-      : await agir({ acao: "criar_motivo", nome: edicao.nome, pergunta: edicao.pergunta.trim() || null }, "Motivo criado.");
+      ? await agir({ acao: "editar_motivo", codigo: edicao.codigo, nome: edicao.nome, pergunta: edicao.pergunta.trim() || null, naoELead: edicao.naoELead }, "Motivo salvo.")
+      : await agir({ acao: "criar_motivo", nome: edicao.nome, pergunta: edicao.pergunta.trim() || null, naoELead: edicao.naoELead }, "Motivo criado.");
     if (ok) setEdicao(null);
   }
 
@@ -92,17 +92,18 @@ export function VendasConfig() {
           <h2 className="flex items-center gap-2 font-semibold">
             <XCircle className="size-4 text-texto-suave" aria-hidden /> Motivos de perda
           </h2>
-          <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => setEdicao({ codigo: null, nome: "", pergunta: "" })}>
+          <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => setEdicao({ codigo: null, nome: "", pergunta: "", naoELead: false })}>
             Novo motivo
           </Botao>
         </div>
-        <p className="mb-3 text-sm text-texto-suave">É a lista que aparece quando o vendedor move um card para Perdido. Motivo desativado some da lista, mas continua nos números do painel.</p>
+        <p className="mb-3 text-sm text-texto-suave">É a lista que aparece quando o vendedor move um card para Perdido. Motivo desativado some da lista, mas continua nos números do painel. Motivo marcado como &quot;Não é lead&quot; (pós-venda, parceiro, emprego, canal errado) não conta como lead perdido: o painel mostra à parte, em &quot;Descartados&quot;.</p>
         <ul className="divide-y divide-borda rounded-controle border border-borda">
           {motivos.map((m, i) => (
             <li key={m.codigo} className="flex flex-wrap items-center gap-2 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className={juntar("truncate text-sm font-medium", !m.ativo && "text-texto-fraco line-through")}>{m.nome}</p>
                 {m.pergunta && <p className="truncate text-xs text-texto-fraco">Pergunta: {m.pergunta}</p>}
+                {m.naoELead && <p className="text-xs text-texto-fraco">Não é lead: não conta como perdido no painel</p>}
                 {!m.ativo && <p className="text-xs text-texto-fraco">Desativado</p>}
               </div>
               <div className="flex items-center">
@@ -112,7 +113,7 @@ export function VendasConfig() {
                 <button title="Descer" aria-label={`Descer ${m.nome}`} disabled={ocupado || i === motivos.length - 1} onClick={() => mover(i, 1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
                   <ArrowDown className="size-4" aria-hidden />
                 </button>
-                <button title="Editar" aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "" })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave">
+                <button title="Editar" aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "", naoELead: m.naoELead })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave">
                   <Pencil className="size-4" aria-hidden />
                 </button>
                 <button
@@ -148,6 +149,13 @@ export function VendasConfig() {
             <Campo rotulo="Pergunta extra (opcional)" dica='Se preencher, o vendedor precisa responder ao escolher este motivo. Ex.: "Qual concorrente?"'>
               <input className={classeEntrada} value={edicao.pergunta} maxLength={100} onChange={(e) => setEdicao({ ...edicao, pergunta: e.target.value })} />
             </Campo>
+            <label className="flex min-h-toque cursor-pointer items-start gap-3 text-sm">
+              <input type="checkbox" className="mt-0.5 size-5 accent-[var(--color-marca)]" checked={edicao.naoELead} onChange={(e) => setEdicao({ ...edicao, naoELead: e.target.checked })} />
+              <span>
+                Não é lead
+                <span className="block text-xs text-texto-fraco">Para quem entrou pelo canal errado (pós-venda, parceiro, emprego, conversa fora do assunto). Não conta como perdido nem como lead novo no painel.</span>
+              </span>
+            </label>
             <div className="flex justify-end gap-2">
               <Botao type="button" variante="fantasma" onClick={() => setEdicao(null)}>
                 Cancelar

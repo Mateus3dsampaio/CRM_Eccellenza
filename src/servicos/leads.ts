@@ -14,6 +14,7 @@ import { ETAPAS_ANTIGAS, ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta
 import { nomesDasEtapas } from "./etapas";
 import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
+import { preservarLeadNoPainel } from "./painel-dados";
 import { gerarResumo } from "./resumo";
 
 /** Acha o lead pelo telefone nas duas formas do Brasil (com e sem o 9): é a mesma pessoa. */
@@ -138,6 +139,8 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
       // Ir para Perdido (pelo consultor ou pela rotina) guarda de onde saiu: se o cliente voltar a falar, o card volta para lá.
       etapaAnterior: opcoes.guardarAnterior || etapa === "perdido" ? lead.etapa : lead.etapaAnterior,
       semRespostaEm: parouDeResponder ? quando : lead.semRespostaEm,
+      // Perdido não espera resposta: some o "Responder · há X", o aviso de prazo e a contagem de não lidas.
+      ...(etapa === "perdido" ? { aguardandoHumano: false, esperandoDesde: null, naoLidas: 0, erroBot: null } : {}),
       // O lembrete/retorno acompanha o lead nas etapas abertas; Fechado e Perdido apagam a data e a nota.
       proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : null,
       lembreteNota: vaiTerRetorno && final.proximoContatoEm ? (dados.lembreteNota === undefined ? lead.lembreteNota : dados.lembreteNota?.trim() || null) : null,
@@ -343,8 +346,13 @@ export async function excluirLeads(ids: string[]): Promise<number> {
   for (const id of ids) {
     const midias = await db.mensagem.findMany({ where: { leadId: id, midiaArquivo: { not: null } }, select: { midiaArquivo: true } });
     const dono = await db.lead.findUnique({ where: { id }, select: { telefone: true, waId: true } });
+    // O painel guarda os números do lead (vendido, perdido, medição e apresentação marcadas) antes de ele sumir. Sem nome nem telefone.
+    const copiaNoPainel = await preservarLeadNoPainel(id);
     const r = await db.lead.deleteMany({ where: { id } });
-    if (!r.count) continue;
+    if (!r.count) {
+      if (copiaNoPainel) await db.leadExcluidoMetrica.delete({ where: { id: copiaNoPainel } }).catch(() => undefined);
+      continue;
+    }
     // O aviso guarda a prévia da mensagem do cliente e não tem ligação com o lead: sai junto (LGPD).
     await db.alerta.deleteMany({ where: { leadId: id } });
     // Eventos da Meta ainda não processados trazem o telefone e o texto do cliente: saem também.

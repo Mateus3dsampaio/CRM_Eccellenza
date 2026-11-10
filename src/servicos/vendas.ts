@@ -26,7 +26,7 @@ export async function motivosDePerda(): Promise<MotivoDePerda[]> {
     await db.motivoPerda.createMany({ data: MOTIVOS_PADRAO.map((m, i) => ({ ...m, ordem: i })) }).catch(() => undefined);
   }
   const linhas = await db.motivoPerda.findMany({ orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
-  return linhas.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta, ativo: m.ativo }));
+  return linhas.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta, ativo: m.ativo, naoELead: m.naoELead }));
 }
 
 /**
@@ -64,15 +64,15 @@ async function conferirNomeUnico(nome: string, ignorar?: string) {
   if (todos.some((m) => m.codigo !== ignorar && m.nome.toLowerCase() === nome.toLowerCase())) throw new ErroHttp(400, "Já existe um motivo com esse nome.");
 }
 
-export async function criarMotivo(entrada: { nome: string; pergunta?: string | null }): Promise<void> {
+export async function criarMotivo(entrada: { nome: string; pergunta?: string | null; naoELead?: boolean }): Promise<void> {
   const { nome, pergunta } = limpar(entrada.nome, entrada.pergunta);
   await conferirNomeUnico(nome);
   const ultimo = await db.motivoPerda.aggregate({ _max: { ordem: true } });
-  await db.motivoPerda.create({ data: { codigo: `m_${randomBytes(6).toString("hex")}`, nome, pergunta, ordem: (ultimo._max.ordem ?? -1) + 1 } });
+  await db.motivoPerda.create({ data: { codigo: `m_${randomBytes(6).toString("hex")}`, nome, pergunta, ordem: (ultimo._max.ordem ?? -1) + 1, naoELead: entrada.naoELead === true } });
   await marcarMudanca();
 }
 
-export async function editarMotivo(codigo: string, entrada: { nome?: string; pergunta?: string | null; ativo?: boolean }): Promise<void> {
+export async function editarMotivo(codigo: string, entrada: { nome?: string; pergunta?: string | null; ativo?: boolean; naoELead?: boolean }): Promise<void> {
   const atual = (await motivosDePerda()).find((m) => m.codigo === codigo);
   if (!atual) throw new ErroHttp(404, "Motivo não encontrado.");
   const { nome, pergunta } = limpar(entrada.nome ?? atual.nome, entrada.pergunta === undefined ? atual.pergunta : entrada.pergunta);
@@ -80,7 +80,7 @@ export async function editarMotivo(codigo: string, entrada: { nome?: string; per
   if (entrada.ativo === false && atual.ativo && (await motivosDePerda()).filter((m) => m.ativo).length <= 1) {
     throw new ErroHttp(400, "Precisa sobrar pelo menos um motivo ativo.");
   }
-  await db.motivoPerda.update({ where: { codigo }, data: { nome, pergunta, ...(entrada.ativo === undefined ? {} : { ativo: entrada.ativo }) } });
+  await db.motivoPerda.update({ where: { codigo }, data: { nome, pergunta, ...(entrada.ativo === undefined ? {} : { ativo: entrada.ativo }), ...(entrada.naoELead === undefined ? {} : { naoELead: entrada.naoELead }) } });
   await marcarMudanca();
 }
 
@@ -92,12 +92,14 @@ export async function reordenarMotivos(codigos: string[]): Promise<void> {
   await marcarMudanca();
 }
 
-/** Motivo que algum lead já usa não é apagado (o painel perderia o histórico): só desativa. */
+/** Motivo que algum lead já usa (ou que o painel guardou de um lead excluído) não é apagado: só desativa. */
 export async function excluirMotivo(codigo: string): Promise<void> {
   const todos = await motivosDePerda();
   const motivo = todos.find((m) => m.codigo === codigo);
   if (!motivo) throw new ErroHttp(404, "Motivo não encontrado.");
-  if (await db.lead.count({ where: { motivoPerda: codigo } })) throw new ErroHttp(400, "Algum lead já perdeu por este motivo. Desative em vez de excluir.");
+  if ((await db.lead.count({ where: { motivoPerda: codigo } })) || (await db.leadExcluidoMetrica.count({ where: { motivoPerda: codigo } }))) {
+    throw new ErroHttp(400, "Algum lead já perdeu por este motivo. Desative em vez de excluir.");
+  }
   if (motivo.ativo && todos.filter((m) => m.ativo).length <= 1) throw new ErroHttp(400, "Precisa sobrar pelo menos um motivo ativo.");
   await db.motivoPerda.delete({ where: { codigo } });
   await marcarMudanca();

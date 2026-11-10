@@ -6,8 +6,8 @@ import { criarMotivo, definirExigirContatoNegociacao, editarMotivo, excluirMotiv
 // Configurações de vendas (só admin): interruptor do próximo contato e motivos de perda.
 const esquema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("exigir_contato_negociacao"), exigir: z.boolean() }),
-  z.object({ acao: z.literal("criar_motivo"), nome: z.string(), pergunta: z.string().nullable().optional() }),
-  z.object({ acao: z.literal("editar_motivo"), codigo: z.string().max(60), nome: z.string().optional(), pergunta: z.string().nullable().optional(), ativo: z.boolean().optional() }),
+  z.object({ acao: z.literal("criar_motivo"), nome: z.string(), pergunta: z.string().nullable().optional(), naoELead: z.boolean().optional() }),
+  z.object({ acao: z.literal("editar_motivo"), codigo: z.string().max(60), nome: z.string().optional(), pergunta: z.string().nullable().optional(), ativo: z.boolean().optional(), naoELead: z.boolean().optional() }),
   z.object({ acao: z.literal("reordenar_motivos"), codigos: z.array(z.string().max(60)).max(100) }),
   z.object({ acao: z.literal("excluir_motivo"), codigo: z.string().max(60) }),
 ]);

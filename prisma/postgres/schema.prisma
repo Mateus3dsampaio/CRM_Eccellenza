@@ -245,6 +245,25 @@ model EventoMetrica {
   @@index([tipo, ocorridoEm])
 }
 
+// Cópia anônima do que o painel precisa de um lead, gravada na hora em que o lead é excluído (servicos/leads.ts, excluirLeads).
+// Sem nome, telefone, texto nem ligação com o lead: excluir, arquivar ou limpar a coluna Perdido não muda os números.
+// "Zerar painel" (servicos/painel-zerar.ts) apaga estas linhas e os contadores acima.
+model LeadExcluidoMetrica {
+  id                    String    @id @default(cuid())
+  consultorId           String?
+  etapa                 String // etapa em que o lead estava ao ser excluído
+  motivoPerda           String? // código do motivo (só em Perdido)
+  naoELead              Boolean   @default(false) // o motivo era "não é lead" quando foi excluído
+  concorrente           String?
+  valorFechado          Int? // centavos (só em Fechado)
+  encerradoEm           DateTime? // última entrada em Fechado ou Perdido
+  medicaoMarcadaEm      DateTime? // última medição agendada (data em que foi marcada)
+  apresentacaoMarcadaEm DateTime? // última apresentação agendada (data em que foi marcada)
+  criadoEm              DateTime  @default(now())
+
+  @@index([encerradoEm])
+}
+
 model Configuracao {
   chave String @id
   valor String
@@ -266,6 +285,8 @@ model MotivoPerda {
   pergunta String? // se preenchida, quem perde o lead precisa responder (ex.: "Qual concorrente?")
   ordem    Int
   ativo    Boolean  @default(true)
+  /// Motivo de contato que não era lead (pós-venda, parceiro, emprego, canal errado...): não conta como perdido no painel.
+  naoELead Boolean  @default(false)
   criadoEm DateTime @default(now())
 }
 
