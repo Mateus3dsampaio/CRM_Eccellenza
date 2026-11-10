@@ -14,7 +14,18 @@ import { gravarConfig, lerConfig } from "./configuracoes";
 const CHAVE_PUBLICA = "push_vapid_publica";
 const CHAVE_PRIVADA = "push_vapid_privada";
 // Contato exigido pelo protocolo (VAPID). Quem lê é o serviço de push do navegador, nunca o cliente.
-const CONTATO_PADRAO = "mailto:contato@eccellenza.local";
+// A Apple (iPhone) recusa contato inválido ou de domínio local (".local", "localhost") com 403 BadJwtToken; o Google e a Microsoft aceitam.
+// Por isso o padrão é o endereço público do CRM no Railway (variável que o próprio Railway cria).
+const CONTATO_LOCAL = "mailto:contato@example.com";
+
+/** Contato VAPID: PUSH_CONTATO (mailto: ou https:), senão o endereço público do Railway, senão um mailto válido (só no computador). */
+export function contatoVapid(): string {
+  const manual = process.env.PUSH_CONTATO?.trim();
+  if (manual && /^(mailto:[^@\s]+@[^@\s]+\.[^@\s]+|https:\/\/\S+)$/.test(manual)) return manual;
+  const dominio = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  if (dominio && !/(^|\.)localhost$|\.local$/.test(dominio)) return `https://${dominio}`;
+  return CONTATO_LOCAL;
+}
 
 export interface ChavesVapid {
   publica: string;
@@ -88,7 +99,7 @@ type AssinaturaComUsuario = { id: number; endpoint: string; p256dh: string; auth
 async function enviarParaNavegador(a: AssinaturaComUsuario, aviso: AvisoPush, chaves: ChavesVapid): Promise<boolean> {
   try {
     await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } }, JSON.stringify(aviso), {
-      vapidDetails: { subject: process.env.PUSH_CONTATO?.trim() || CONTATO_PADRAO, publicKey: chaves.publica, privateKey: chaves.privada },
+      vapidDetails: { subject: contatoVapid(), publicKey: chaves.publica, privateKey: chaves.privada },
       TTL: 60 * 60, // aviso que não chegou em 1 hora já não serve
       urgency: "high",
       timeout: 10_000,
@@ -98,7 +109,18 @@ async function enviarParaNavegador(a: AssinaturaComUsuario, aviso: AvisoPush, ch
     const status = (erro as { statusCode?: number }).statusCode;
     // 404/410: o navegador cancelou ou o endereço morreu. Tira da lista para não tentar para sempre.
     if (status === 404 || status === 410) await db.assinaturaPush.deleteMany({ where: { id: a.id } });
-    else console.error(`[push] não consegui avisar um navegador (HTTP ${status ?? "?"})`);
+    else {
+      // Motivo dado pelo serviço de push (ex.: "BadJwtToken" da Apple). Nunca contém chave; o endereço do navegador não vai para o log.
+      const motivo = String((erro as { body?: unknown }).body ?? "").replace(/\s+/g, " ").slice(0, 120);
+      const servico = (() => {
+        try {
+          return new URL(a.endpoint).host;
+        } catch {
+          return "?";
+        }
+      })();
+      console.error(`[push] não consegui avisar um navegador em ${servico} (HTTP ${status ?? "?"}) ${motivo}`);
+    }
     return false;
   }
 }

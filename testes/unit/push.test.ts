@@ -18,7 +18,7 @@ import { montarAvisoPush, quemRecebePush, TRECHO_MAXIMO_PUSH } from "@/regras/pu
 import { textoDoAlerta } from "@/regras/alertas";
 import { registrarAlerta } from "@/servicos/alertas";
 import { obterOuCriarLead } from "@/servicos/leads";
-import { assinarPush, cancelarPush, chavesVapid, enviarPushDeTeste, pushAtivo } from "@/servicos/push";
+import { assinarPush, cancelarPush, chavesVapid, contatoVapid, enviarPushDeTeste, pushAtivo } from "@/servicos/push";
 import { criarConsultores, limparBanco } from "./ajuda";
 
 const sub = (n: string) => ({ endpoint: `https://push.exemplo.com/${n}`, keys: { p256dh: "p".repeat(20), auth: "a".repeat(20) } });
@@ -125,5 +125,22 @@ describe("avisos com o CRM fechado (envio)", () => {
     await vi.waitFor(() => expect(enviados).toHaveLength(1));
     expect(enviados[0].endpoint).toBe("https://push.exemplo.com/a");
     expect(JSON.parse(enviados[0].corpo).titulo).toBe("Teste de aviso");
+  });
+});
+
+describe("contato do servidor de avisos (a Apple recusa contato inválido)", () => {
+  it("usa PUSH_CONTATO válido, senão o endereço público do Railway, senão um mailto válido; nunca domínio local", () => {
+    vi.stubEnv("PUSH_CONTATO", "");
+    vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "crm-eccellenza.up.railway.app");
+    expect(contatoVapid()).toBe("https://crm-eccellenza.up.railway.app");
+    vi.stubEnv("PUSH_CONTATO", "mailto:mateus@loja.com.br");
+    expect(contatoVapid()).toBe("mailto:mateus@loja.com.br");
+    vi.stubEnv("PUSH_CONTATO", "mateus sem mailto");
+    expect(contatoVapid()).toBe("https://crm-eccellenza.up.railway.app");
+    vi.stubEnv("PUSH_CONTATO", "");
+    vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "");
+    expect(contatoVapid()).toMatch(/^mailto:[^@]+@[^@]+\.com$/);
+    expect(contatoVapid()).not.toMatch(/\.local$|localhost/);
+    vi.unstubAllEnvs();
   });
 });
