@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, BarChart3, CalendarDays, Images, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
 import { juntar } from "./estilos";
 import { Entalhe } from "./entalhe/entalhe";
+import { MenuEsfera } from "./menu-esfera";
 import { usePode } from "./usuario";
 
 // Grupos (tarefa 32): 1 = trabalho do dia, 2 = arquivo, 3 = ferramenta de teste. Um traço separa os grupos no menu.
@@ -64,16 +65,30 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const indice = itensDesktop.findIndex((l) => ativo(l.href));
   const asideRef = useRef<HTMLElement>(null);
   const itensRef = useRef<(HTMLElement | null)[]>([]);
-  const indiceLinks = links.findIndex((l) => ativo(l.href));
   const movelRef = useRef<HTMLDivElement>(null);
   const itensMovelRef = useRef<(HTMLElement | null)[]>([]);
   const rotuloClasse = juntar("whitespace-nowrap transition-opacity duration-150 ease-out", mini && "pointer-events-none opacity-0");
-  // Com os traços entre grupos, a posição do indicador vem do próprio item ativo (não é mais múltiplo da altura).
-  const [topoAtivo, setTopoAtivo] = useState(0);
+  // O indicador anda por cima da barra toda (inclui Configurações, no rodapé): a posição vem do próprio item ativo,
+  // medida em relação à barra. Mede de novo quando a barra muda de tamanho (encolher, altura da janela).
+  const [topoAtivo, setTopoAtivo] = useState<number | null>(null);
+  const medirAtivo = () => {
+    const el = itensRef.current[indice];
+    const raiz = asideRef.current;
+    if (!el || !raiz) return;
+    setTopoAtivo(el.getBoundingClientRect().top - raiz.getBoundingClientRect().top);
+  };
+  const medirAtivoRef = useRef(medirAtivo);
   useLayoutEffect(() => {
-    const el = itensRef.current[indiceLinks];
-    if (el) setTopoAtivo(el.offsetTop);
-  }, [indiceLinks, links.length]);
+    medirAtivoRef.current = medirAtivo;
+    medirAtivo();
+  });
+  useEffect(() => {
+    const raiz = asideRef.current;
+    if (!raiz) return;
+    const obs = new ResizeObserver(() => medirAtivoRef.current());
+    obs.observe(raiz);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <>
@@ -81,34 +96,32 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
         ref={asideRef}
         aria-label="Módulos"
         className={juntar(
-          "sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-300 ease-mola md:flex",
+          "menu-fundo sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-300 ease-mola md:flex",
           mini ? "w-16" : "w-54",
         )}
       >
         <Link href="/" className="flex items-center gap-2.5 px-1 pb-3" aria-label="Eccellenza – início">
-          <span
-            className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca"
-            style={{
-              boxShadow: "0 3px 0 var(--color-marca-lado), inset 0 1px 0 rgb(255 255 255 / 0.35)",
-            }}
-          >
-            E
+          <span className="relative inline-flex size-9 shrink-0 items-center justify-center">
+            {/* Brilho suave atrás da esfera, como o halo do login. */}
+            <span aria-hidden className="absolute inset-0 rounded-full bg-marca/30 blur-md" />
+            <MenuEsfera tamanho={36} className="relative" />
           </span>
-          <span className={juntar("font-semibold text-marca-texto", rotuloClasse)}>Eccellenza</span>
+          <span className={juntar("text-[13px] font-extrabold tracking-[0.16em] text-texto", rotuloClasse)}>ECCELLENZA</span>
         </Link>
 
+        {/* Menu aberto: o indicador afundado (com luz e filete da marca) desliza entre os links e Configurações. */}
+        {!mini && indice >= 0 && topoAtivo !== null && (
+          <div
+            aria-hidden
+            className="afundado menu-ativo pointer-events-none absolute inset-x-2.5 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
+            style={{ height: ALTURA_ITEM, transform: `translateY(${topoAtivo}px)` }}
+          >
+            <span className="menu-ativo-filete" />
+          </div>
+        )}
+
         <nav className="relative grid grid-cols-[minmax(0,1fr)] gap-0.5" aria-label="Principal">
-          {/* Menu aberto: o indicador afundado desliza. Menu encolhido: entra o entalhe flutuante (mais abaixo). */}
-          {!mini && indiceLinks >= 0 && (
-            <div
-              aria-hidden
-              className="afundado pointer-events-none absolute inset-x-0 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
-              style={{
-                height: ALTURA_ITEM,
-                transform: `translateY(${topoAtivo}px)`,
-              }}
-            />
-          )}
+          {/* Menu encolhido: entra o entalhe flutuante (mais abaixo). */}
           {links.map(({ href, rotulo, icone: Icone, grupo }, i) => (
             <Link
               key={href}
@@ -154,9 +167,10 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
               title={LINK_CONFIG.rotulo}
               aria-current={ativo(LINK_CONFIG.href) ? "page" : undefined}
               className={juntar(
-                "flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm transition",
-                !ativo(LINK_CONFIG.href) ? "text-texto-suave hover:bg-superficie hover:text-texto" : !mini && "afundado",
+                "relative z-10 flex items-center gap-3 rounded-controle px-[11px] text-sm transition",
+                ativo(LINK_CONFIG.href) ? "text-sobre-marca" : "text-texto-suave hover:bg-superficie hover:text-texto",
               )}
+              style={{ height: ALTURA_ITEM }}
             >
               <Settings className="size-5 shrink-0" aria-hidden />
               <span className={rotuloClasse}>{LINK_CONFIG.rotulo}</span>
