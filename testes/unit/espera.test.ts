@@ -67,8 +67,8 @@ describe("regras de espera (Bloco 1)", () => {
   });
 });
 
-describe("card crítico da coluna (tarefa 33)", () => {
-  it("só o vermelho mais antigo é crítico; 24 h+ também; amarelo nunca", () => {
+describe("card crítico da coluna (tarefas 33 e 39)", () => {
+  it("só o vermelho mais antigo é crítico, um por coluna; amarelo nunca", () => {
     const agora = new Date("2026-11-04T12:00:00Z");
     const ha = (min: number) => new Date(agora.getTime() - min * 60_000).toISOString();
     const prazos = { amarelo: 10, vermelho: 30 };
@@ -78,8 +78,10 @@ describe("card crítico da coluna (tarefa 33)", () => {
       { id: "vermelho-antigo", esperandoDesde: ha(90) },
       { id: "um-dia", esperandoDesde: ha(25 * 60) },
       { id: "sem-espera", esperandoDesde: null },
+      { id: "dois-dias", esperandoDesde: ha(48 * 60) },
     ];
-    expect([...idsCriticosDaColuna(cards, agora, prazos)].sort()).toEqual(["um-dia"]);
+    expect([...idsCriticosDaColuna(cards, agora, prazos)]).toEqual(["dois-dias"]);
+    expect([...idsCriticosDaColuna(cards.slice(0, 5), agora, prazos)]).toEqual(["um-dia"]);
     expect([...idsCriticosDaColuna(cards.slice(0, 3), agora, prazos)]).toEqual(["vermelho-antigo"]);
     expect(idsCriticosDaColuna(cards.slice(0, 1), agora, prazos).size).toBe(0);
   });

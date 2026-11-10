@@ -152,6 +152,8 @@ export async function cardsDoKanban() {
       // Medição e apresentação marcadas: ao voltar o card para Em qualificação, a tela avisa que serão canceladas.
       agendados: l.visitas.filter((v) => v.tipo !== "visita").map((v) => ({ tipo: v.tipo, rotulo: `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso] ?? "Compromisso"} ${formatarVisitaCurta(v.inicio)}` })),
       visita: visita ? `${NOMES_COMPROMISSO[visita.tipo as TipoCompromisso] ?? "Visita"} ${formatarVisitaCurta(visita.inicio)}` : null,
+      // Início do próximo compromisso: a faixa do card fica azul quando é hoje (regras/acao-card.ts).
+      visitaEm: visita?.inicio.toISOString() ?? null,
       // Texto para a busca (nome, telefone e dados da ficha).
       busca: [nome, l.telefone, formatarTelefone(l.telefone), l.cidade, l.endereco, ambientes.join(" "), lerLista(l.exigencias).join(" "), l.situacaoImovel, l.prazo, l.investimento, lerLista(l.pedidosTecnicos).join(" "), l.observacoes, l.resumo, l.notas.map((n) => n.texto).join(" ")]
         .filter(Boolean)

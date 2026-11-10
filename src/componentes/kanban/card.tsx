@@ -1,20 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as CliqueReact, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, CalendarCheck, CalendarClock, CalendarX, Gavel, CircleDollarSign, Clock, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound } from "lucide-react";
+import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound, type LucideIcon } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
-import { formatarReais } from "@/regras/vendas";
-import { ETIQUETA_DECISAO } from "@/regras/decisao";
+import { formatarReaisCurto } from "@/regras/vendas";
 import { formatarVisitaCurta } from "@/regras/tempo";
+import { acoesDoCard, outrasPendencias, type AcaoCard, type CodigoAcao, type ContextoDaAcao, type CorAcao } from "@/regras/acao-card";
 import type { CardKanban } from "@/servicos/consultas";
 import { juntar } from "../estilos";
-import { Avatar, Etiqueta, Sino } from "../ui";
-import { CLASSE_CARD_RETORNO, CLASSE_TEXTO_RETORNO, useSituacaoRetorno } from "../retornos";
-import { CLASSE_BADGE_ESPERA, CLASSE_CARD_CRITICO, CLASSE_CARD_ESPERA, useSituacaoEspera } from "../espera";
+import { Avatar, Etiqueta, iniciais } from "../ui";
+import { useAgoraDoServidor, useAguardando, useSituacaoEspera } from "../espera";
+import { retornoObrigatorio, useRegrasVendas } from "../vendas/regras";
 import { BolinhaNaoLidas } from "./bolinha";
 import { RelogioJanela } from "./relogio-janela";
 import { useGaveta } from "../ficha/gaveta";
@@ -28,150 +29,198 @@ export interface AcoesCard {
   decidir?: (id: string) => void;
 }
 
-/** Valor mostrado no card: orçamento em Orçamento/Negociação, valor fechado em Fechado. Vazio nas outras etapas. */
+/** Hora do servidor, prazos de espera e regra do retorno: o que a faixa de ação precisa para ser calculada. */
+export function useContextoDaAcao(): ContextoDaAcao {
+  const { prazos } = useAguardando();
+  const agora = useAgoraDoServidor();
+  const regras = useRegrasVendas();
+  return useMemo(() => ({ agora, prazos, retornoObrigatorio: (etapa: string) => retornoObrigatorio(regras, etapa) }), [agora, prazos, regras]);
+}
+
+// Código de cores da faixa (tarefa 39): uma cor, um significado (regras/acao-card.ts). A cor nunca vai sozinha: a faixa sempre tem texto e ícone.
+const CLASSE_FAIXA: Record<CorAcao, string> = {
+  vermelho: "bg-alerta-suave text-alerta",
+  ambar: "bg-aviso-suave text-aviso",
+  azul: "bg-marca-suave text-marca-texto",
+  verde: "bg-sucesso-suave text-sucesso",
+  cinza: "bg-superficie-suave/55 font-medium text-texto-suave",
+};
+/** Faixa do card crítico (o que espera há mais tempo na coluna): vermelho cheio. */
+const CLASSE_FAIXA_CRITICA = "bg-alerta text-sobre-cor";
+
+const ICONE_ACAO: Record<CodigoAcao, LucideIcon> = {
+  responder_atrasado: Clock,
+  ia_travou: AlertTriangle,
+  responder_atencao: Clock,
+  na_fila: UserRound,
+  decidir: Gavel,
+  marcar_data: CalendarX,
+  retorno_atrasado: CalendarClock,
+  definir_retorno: CalendarClock,
+  responder: Clock,
+  retorno_hoje: CalendarClock,
+  compromisso: CalendarCheck,
+  retorno_futuro: CalendarClock,
+  ia_atendendo: Bot,
+  aguardando_cliente: MessageCircle,
+};
+
+/** Valor do card: orçamento em Apresentação/Negociação, valor fechado em Fechado. Vazio nas outras etapas. */
 function valorDoCard(card: CardKanban): string {
-  if (card.etapa === "fechado") return card.valorFechado ? `Fechado ${formatarReais(card.valorFechado)}` : "";
-  if (card.etapa === "apresentacao" || card.etapa === "negociacao") return card.valorOrcamento ? `Orçamento ${formatarReais(card.valorOrcamento)}` : "";
+  if (card.etapa === "fechado") return card.valorFechado ? `Fechado ${formatarReaisCurto(card.valorFechado)}` : "";
+  if (card.etapa === "apresentacao" || card.etapa === "negociacao") return card.valorOrcamento ? formatarReaisCurto(card.valorOrcamento) : "";
   return "";
 }
 
-/** Informações do card (KAN-02). */
-export function ConteudoCard({ card, critico = false }: { card: CardKanban; critico?: boolean }) {
-  const espera = useSituacaoEspera(card.esperandoDesde);
-  const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
+/** A faixa de ação: a pendência mais grave do lead, sempre no mesmo lugar. Com data vencida, vira o botão que abre a janela de decisão. */
+function FaixaDeAcao({ card, acoes, critico, aoDecidir }: { card: CardKanban; acoes: AcaoCard[]; critico: boolean; aoDecidir?: () => void }) {
+  const acao = acoes[0];
+  if (!acao) return null;
+  const Icone = ICONE_ACAO[acao.codigo];
+  const outras = outrasPendencias(acoes);
+  const classe = juntar("flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-semibold tabular-nums", critico && acao.cor === "vermelho" ? CLASSE_FAIXA_CRITICA : CLASSE_FAIXA[acao.cor]);
+  const conteudo = (
+    <>
+      <Icone className="size-3.5 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1">{acao.texto}</span>
+      {outras > 0 && (
+        <span className="shrink-0 rounded-md border border-current px-1 text-[11px] leading-4 opacity-85" title={`Mais ${outras} ${outras === 1 ? "pendência" : "pendências"}: ${acoes.slice(1).filter((a) => a.precisaDeVoce).map((a) => a.texto).join("; ")}`}>
+          +{outras}
+          <span className="sr-only"> {outras === 1 ? "pendência" : "pendências"}</span>
+        </span>
+      )}
+    </>
+  );
+  if (acao.codigo === "decidir" && card.decisao && aoDecidir) {
+    return (
+      <button type="button" data-acao={acao.codigo} data-cor={acao.cor} onClick={aoDecidir} onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} title={`Venceu em ${formatarVisitaCurta(new Date(card.decisao.venceuEm))}. Clique para decidir.`} className={juntar(classe, "transition hover:brightness-125")}>
+        {conteudo}
+      </button>
+    );
+  }
+  return (
+    <p data-acao={acao.codigo} data-cor={acao.cor} title={acao.dica} className={classe}>
+      {conteudo}
+    </p>
+  );
+}
+
+/**
+ * Informações do card, na ordem de prioridade aprovada (tarefa 39): 1) quem é; 2) o que fazer agora (faixa);
+ * 3) última mensagem; 4) valor, cidade e ambientes; 5) rodapé (etiquetas, janela de 24h, consultor, menu).
+ */
+function ConteudoCard({
+  card,
+  acoes,
+  critico = false,
+  nome,
+  direita,
+  aoDecidir,
+  aoRemoverEtiqueta,
+  menu,
+}: {
+  card: CardKanban;
+  acoes: AcaoCard[];
+  critico?: boolean;
+  /** O nome como link ou botão (o card inteiro também abre a ficha ao clicar). */
+  nome?: ReactNode;
+  /** Troca a hora/bolinha do topo (ex.: a marca de seleção). */
+  direita?: ReactNode;
+  aoDecidir?: () => void;
+  aoRemoverEtiqueta?: (etiqueta: string) => void;
+  menu?: ReactNode;
+}) {
+  const valor = valorDoCard(card);
+  // Com orçamento no card, a faixa de investimento declarada pelo cliente já não acrescenta.
+  const investimento = valor ? "" : (card.investimento ?? "");
+  const ambientes = card.ambientes.join(", ");
+  const temDetalhes = !!(valor || card.cidade || ambientes || investimento);
+  const quemAtende = card.modo === "bot" ? { Icone: Bot, titulo: "IA atendendo" } : card.modo === "humano" ? { Icone: Headset, titulo: "Consultor na conversa" } : null;
   return (
     <>
-      <div className="flex items-start gap-3">
-        <Avatar nome={card.nome} cor={card.avatarCor} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2">
-            {/* Nome em até 2 linhas: é a informação mais importante do card. */}
-            <p className="min-w-0 flex-1 break-words font-semibold leading-snug text-texto line-clamp-2">{card.nome}</p>
-            <span className="flex shrink-0 items-center gap-1.5">
-              {/* Quando o card já diz "esperando há X", o sino repetiria o aviso. */}
-              {card.aguardandoHumano && !espera.esperando && <Sino />}
-              <span className="text-xs text-texto-fraco">{card.horario}</span>
+      <div className="flex items-center gap-2 px-3 pb-2 pt-2.5">
+        <span className="relative shrink-0">
+          <Avatar nome={card.nome} cor={card.avatarCor} tamanho="sm" />
+          {quemAtende && (
+            <span title={quemAtende.titulo} className="absolute -bottom-1 -right-1 inline-flex size-4 items-center justify-center rounded-full bg-superficie-suave text-texto ring-2 ring-superficie">
+              <quemAtende.Icone className="size-2.5" aria-hidden />
+              <span className="sr-only">{quemAtende.titulo}</span>
             </span>
-          </div>
-          <div className="mt-1">
-            <RelogioJanela etapa={card.etapa} ultimaMsgClienteEm={card.ultimaMsgClienteEm} critico={critico} />
-          </div>
-          {(card.previa || card.naoLidas > 0) && (
-            <div className="mt-0.5 flex items-center gap-1.5 text-sm text-texto-suave">
-              {card.previa && (
-                <>
-                  <MessageCircle className="size-3.5 shrink-0 fill-whatsapp text-whatsapp" aria-label="WhatsApp" />
-                  <span className="truncate">{card.previa}</span>
-                </>
-              )}
-              <span className="ml-auto pl-1">
-                <BolinhaNaoLidas total={card.naoLidas} />
-              </span>
-            </div>
           )}
-
+        </span>
+        {/* Nome inteiro, em até 2 linhas: é a informação mais importante do card. */}
+        <p className="line-clamp-2 min-w-0 flex-1 break-words font-semibold leading-snug text-texto" title={card.nome}>
+          {nome ?? card.nome}
+        </p>
+        {direita ?? (card.naoLidas > 0 ? <BolinhaNaoLidas total={card.naoLidas} /> : <span className="shrink-0 text-[11px] tabular-nums text-texto-fraco">{card.horario}</span>)}
+      </div>
+      <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />
+      {card.previa && <p className="line-clamp-2 break-words px-3 pt-2 text-sm text-texto-suave">{card.previa}</p>}
+      {temDetalhes && (
+        // Cada dado com seu ícone, sem cortar (pedido do Mateus 10/11/2026): quando não cabe na linha, o dado desce e o card cresce.
+        <p className="flex flex-wrap items-start gap-x-2.5 gap-y-0.5 px-3 pt-1.5 text-xs text-texto-fraco">
+          {valor && <b className="font-semibold tabular-nums text-texto">{valor}</b>}
+          {card.cidade && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              {card.cidade}
+            </span>
+          )}
+          {investimento && (
+            <span className="inline-flex items-center gap-1">
+              <CircleDollarSign className="size-3.5 shrink-0" aria-hidden />
+              {investimento}
+            </span>
+          )}
+          {ambientes && (
+            // Lista de ambientes muito longa para em 3 linhas; a dica mostra todos.
+            <span className="inline-flex min-w-0 items-start gap-1" title={ambientes}>
+              <LayoutGrid className="mt-px size-3.5 shrink-0" aria-hidden />
+              <span className="line-clamp-3 break-words">{ambientes}</span>
+            </span>
+          )}
+        </p>
+      )}
+      {/* Etiquetas numa linha própria (quando existem), para o rodapé nunca mudar de formato. */}
+      {card.etiquetas.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
+          {card.etiquetas.map((e) => (
+            <Etiqueta key={e} codigo={e} aoRemover={aoRemoverEtiqueta ? () => aoRemoverEtiqueta(e) : undefined} />
+          ))}
         </div>
+      )}
+      {/* Rodapé com lugares fixos: anel da janela sempre no canto esquerdo, iniciais do consultor sempre no canto direito. */}
+      <div className="flex min-h-10 items-center justify-between gap-1.5 px-3 pb-2 pt-1.5">
+        <span className="shrink-0">
+          <RelogioJanela etapa={card.etapa} ultimaMsgClienteEm={card.ultimaMsgClienteEm} />
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1.5">
+          {card.consultor && (
+            <span title={`Consultor: ${card.consultor.nome}`} className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-superficie-suave text-[10px] font-bold text-texto-suave">
+              <span aria-hidden>{iniciais(card.consultor.nome)}</span>
+              <span className="sr-only">Consultor: {card.consultor.nome}</span>
+            </span>
+          )}
+          {menu}
+        </span>
       </div>
-      {espera.esperando && (
-        // Badge por faixa (tarefa 33). No card crítico (fundo vermelho vivo) o badge vai em branco e negrito.
-        <p className={juntar("mt-2 inline-flex items-center gap-1 rounded-pilula px-2 py-0.5 text-xs font-semibold", critico ? "bg-sobre-cor/15 font-bold text-texto" : CLASSE_BADGE_ESPERA[espera.faixa])}>
-          <Clock className="size-3.5 shrink-0" aria-hidden />
-          esperando há {espera.texto}
-        </p>
-      )}
-      {valorDoCard(card) && (
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-pilula bg-superficie-suave px-2.5 py-0.5 text-xs font-semibold tabular-nums text-texto">
-          <CircleDollarSign className="size-3.5" aria-hidden />
-          {valorDoCard(card)}
-        </p>
-      )}
-      {retorno && (
-        <p className={juntar("mt-2 flex items-center gap-1 text-xs font-medium", CLASSE_TEXTO_RETORNO[retorno.situacao])}>
-          <CalendarClock className="size-3.5 shrink-0" aria-hidden />
-          <span className="truncate" title={card.lembreteNota ?? undefined}>
-            Retorno {retorno.texto}
-            {card.lembreteNota && <span className="font-normal text-texto-suave"> · {card.lembreteNota}</span>}
-          </span>
-        </p>
-      )}
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-10 text-xs text-texto-suave">
-        {card.cidade && (
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="size-3.5" aria-hidden />
-            {card.cidade}
-          </span>
-        )}
-        {card.ambientes.length > 0 && (
-          <span className="inline-flex min-w-0 max-w-full items-center gap-1">
-            <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{card.ambientes.join(", ")}</span>
-          </span>
-        )}
-        {card.investimento && (
-          <span className="inline-flex items-center gap-1">
-            <CircleDollarSign className="size-3.5" aria-hidden />
-            {card.investimento}
-          </span>
-        )}
-        {card.consultor ? (
-          <span className="inline-flex items-center gap-1">
-            <UserRound className="size-3.5" aria-hidden />
-            {card.consultor.nome}
-          </span>
-        ) : card.modo !== "bot" ? (
-          // Bot repassou e nenhum consultor estava disponível: o lead espera na fila até alguém ficar online.
-          <span className="inline-flex items-center gap-1 rounded-pilula bg-aviso-suave px-2 py-0.5 font-medium text-aviso">
-            <UserRound className="size-3.5" aria-hidden />
-            Na fila – sem consultor
-          </span>
-        ) : null}
-        {card.modo === "humano" && (
-          <span className="inline-flex items-center gap-1 text-marca-texto">
-            <Headset className="size-3.5" aria-hidden />
-            Consultor na conversa
-          </span>
-        )}
-      </div>
-      {card.semData && (
-        <p className="mt-2 inline-flex animate-piscar items-center gap-1.5 rounded-pilula bg-alerta px-2.5 py-0.5 text-xs font-bold text-sobre-cor" title="Este card está numa coluna de compromisso, mas não há data marcada na agenda.">
-          <CalendarX className="size-3.5" aria-hidden />
-          Sem data – marque na agenda
-        </p>
-      )}
-      {card.visita && (
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-pilula bg-sucesso-suave px-2.5 py-0.5 text-xs font-medium text-sucesso">
-          <CalendarCheck className="size-3.5" aria-hidden />
-          {card.visita}
-        </p>
-      )}
-      {card.erroBot && (
-        <p className="mr-10 mt-2 flex items-start gap-1.5 rounded-controle bg-alerta-suave px-2 py-1 text-xs text-alerta">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          Bot sem resposta: {card.erroBot}
-        </p>
-      )}
     </>
   );
 }
 
 /** Versão do card que acompanha o ponteiro ao arrastar. */
 export function CardFlutuante({ card }: { card: CardKanban }) {
+  const ctx = useContextoDaAcao();
   return (
-    <div className="w-coluna rotate-2 rounded-card border border-borda bg-superficie p-3 shadow-flutuante">
-      <ConteudoCard card={card} />
-      {card.etiquetas.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {card.etiquetas.map((e) => (
-            <Etiqueta key={e} codigo={e} />
-          ))}
-        </div>
-      )}
+    <div className="w-coluna rotate-2 overflow-hidden rounded-card border border-borda bg-superficie shadow-flutuante">
+      <ConteudoCard card={card} acoes={acoesDoCard(card, ctx)} />
     </div>
   );
 }
 
 export function Card({
   card,
+  pendencias,
   acoes,
   selecionando,
   selecionado,
@@ -179,18 +228,20 @@ export function Card({
   critico = false,
 }: {
   card: CardKanban;
+  /** Pendências do lead, da mais grave à menos grave (regras/acao-card.ts); a primeira vira a faixa. */
+  pendencias: AcaoCard[];
   acoes: AcoesCard;
   selecionando: boolean;
   selecionado: boolean;
   aoSelecionar: (id: string) => void;
-  /** Pior espera da coluna (ou 24 h+): único com fundo vermelho inteiro (tarefa 33). */
+  /** O que espera há mais tempo na coluna: único que pulsa, com a faixa em vermelho cheio (tarefa 39). */
   critico?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
   const nomesEtapas = useNomesEtapas();
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
-  const retorno = useSituacaoRetorno(card.etapa, card.proximoContatoEm);
   const gaveta = useGaveta();
+  const router = useRouter();
   const abertoNaGaveta = gaveta.aberto === card.id;
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
@@ -240,6 +291,15 @@ export function Card({
     };
   }, [menu !== null]); // eslint-disable-line react-hooks/exhaustive-deps -- só ao abrir/fechar
 
+  const href = gaveta.hrefDe(card.id);
+  /** O card inteiro abre a ficha (ou marca, no modo de seleção); links, botões e o menu cuidam do próprio clique. */
+  function aoClicarNoCard(e: CliqueReact<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest("a,button,[role=menu]")) return;
+    if (selecionando) aoSelecionar(card.id);
+    else if (gaveta.aberto !== null) router.replace(href, { scroll: false });
+    else router.push(href, { scroll: false });
+  }
+
   return (
     <motion.div
       layout="position"
@@ -253,132 +313,120 @@ export function Card({
       data-espera={faixa}
       data-critico={critico || undefined}
       aria-roledescription="card arrastável"
+      onClick={aoClicarNoCard}
       className={juntar(
-        "group relative select-none rounded-card border p-3 shadow-card transition-[box-shadow,transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
-        critico ? CLASSE_CARD_CRITICO : CLASSE_CARD_ESPERA[faixa],
-        card.decisao ? "ring-2 ring-alerta" : retorno && CLASSE_CARD_RETORNO[retorno.situacao],
+        "group relative shrink-0 cursor-pointer select-none overflow-hidden rounded-card border bg-superficie shadow-card transition-[box-shadow,transform,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+        // Só o card crítico pulsa (halo vermelho); nada mais no card pisca (tarefa 39).
+        critico ? "border-alerta-vivo animate-respirar" : "border-borda hover:border-borda-forte",
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
         // Card aberto na gaveta: nível "selecionado" (docs/design.md).
         abertoNaGaveta && "ring-2 ring-marca shadow-card-hover",
       )}
     >
-      {selecionando ? (
-        <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="block w-full text-left">
-          <span className="sr-only">{selecionado ? "Desmarcar" : "Selecionar"} </span>
-          <ConteudoCard card={card} critico={critico} />
-        </button>
-      ) : (
-        <Link href={gaveta.hrefDe(card.id)} replace={gaveta.aberto !== null} scroll={false} draggable={false} className="block rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
-          <ConteudoCard card={card} critico={critico} />
-        </Link>
-      )}
-
-      {card.decisao && (
-        // Data vencida: o vendedor precisa decidir (pedido do Mateus 04/11/2026). Fora do link da ficha para não abrir as duas coisas.
-        <button
-          type="button"
-          onClick={() => acoes.decidir?.(card.id)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-          disabled={selecionando || !acoes.decidir}
-          title={`Venceu em ${formatarVisitaCurta(new Date(card.decisao.venceuEm))}. Clique para decidir.`}
-          className="mr-10 mt-2 inline-flex animate-piscar items-center gap-1.5 rounded-pilula bg-alerta px-2.5 py-0.5 text-left text-xs font-bold text-sobre-cor transition hover:brightness-110 disabled:cursor-default"
-        >
-          <Gavel className="size-3.5 shrink-0" aria-hidden />
-          {ETIQUETA_DECISAO[card.decisao.tipo]}
-        </button>
-      )}
-
-      {card.etiquetas.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5 pr-10">
-          {card.etiquetas.map((e) => (
-            <Etiqueta key={e} codigo={e} aoRemover={selecionando ? undefined : () => acoes.removerEtiqueta(card.id, e)} />
-          ))}
-        </div>
-      )}
-
-      {selecionando ? (
-        <span
-          aria-hidden
-          className={juntar(
-            "pointer-events-none absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-full border-2 text-xs",
-            selecionado ? "border-marca bg-marca text-sobre-marca" : "border-borda-forte bg-superficie",
-          )}
-        >
-          {selecionado && "✓"}
-        </span>
-      ) : (
-        <div className="absolute bottom-1 right-1" onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-          <button
-            ref={refBotao}
-            type="button"
-            onClick={abrirMenu}
-            aria-haspopup="menu"
-            aria-expanded={!!menu}
-            aria-label={`Ações para ${card.nome}`}
-            className="inline-flex size-toque items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie-suave hover:text-texto"
-          >
-            <MoreVertical className="size-4" aria-hidden />
-          </button>
-          {menu &&
-            createPortal(
-              <div
-                ref={refMenu}
-                role="menu"
+      <ConteudoCard
+        card={card}
+        acoes={pendencias}
+        critico={critico}
+        nome={
+          selecionando ? (
+            <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="rounded-controle text-left">
+              <span className="sr-only">{selecionado ? "Desmarcar" : "Selecionar"} </span>
+              {card.nome}
+            </button>
+          ) : (
+            <Link href={href} replace={gaveta.aberto !== null} scroll={false} draggable={false} className="rounded-controle" aria-label={`Abrir ficha de ${card.nome}`}>
+              {card.nome}
+            </Link>
+          )
+        }
+        direita={
+          selecionando ? (
+            <span aria-hidden className={juntar("inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2", selecionado ? "border-marca bg-marca text-sobre-marca" : "border-borda-forte bg-superficie")}>
+              {selecionado && <Check className="size-3.5" />}
+            </span>
+          ) : undefined
+        }
+        aoDecidir={selecionando || !acoes.decidir ? undefined : () => acoes.decidir!(card.id)}
+        aoRemoverEtiqueta={selecionando ? undefined : (e) => acoes.removerEtiqueta(card.id, e)}
+        menu={
+          selecionando ? undefined : (
+            <span className="-my-2 -mr-2 inline-flex md:absolute md:right-1.5 md:top-2 md:m-0" onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              {/* No computador o menu só aparece com o mouse no card (ou com o foco do teclado), por cima da hora, sem ocupar lugar no rodapé; no celular fica sempre à vista, no rodapé. */}
+              <button
+                ref={refBotao}
+                type="button"
+                onClick={abrirMenu}
+                aria-haspopup="menu"
+                aria-expanded={!!menu}
                 aria-label={`Ações para ${card.nome}`}
-                style={{ top: menu.top, left: menu.left }}
-                onKeyDown={(e) => {
-                  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-                  e.preventDefault();
-                  const itens = [...(refMenu.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-                  const i = itens.indexOf(document.activeElement as HTMLElement);
-                  itens[(i + (e.key === "ArrowDown" ? 1 : -1) + itens.length) % itens.length]?.focus();
-                }}
-                className="fixed z-50 w-60 animate-surgir rounded-controle border border-borda bg-superficie p-1 shadow-flutuante"
-              >
-                <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Mover para...</p>
-                {nomesEtapas.lista.filter((e) => e.codigo !== card.etapa).map((e) => (
-                  <button
-                    key={e.codigo}
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(null);
-                      acoes.mover(card.id, e.codigo);
-                    }}
-                    className="block min-h-11 w-full rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
-                  >
-                    {e.nome}
-                  </button>
-                ))}
-                <div className="my-1 border-t border-borda" />
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    setMenu(null);
-                    acoes.arquivar(card.id);
-                  }}
-                  className="block min-h-11 w-full rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
-                >
-                  Arquivar
-                </button>
-                {acoes.excluir && (
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(null);
-                      acoes.excluir!(card.id);
-                    }}
-                    className="block min-h-11 w-full rounded-controle px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
-                  >
-                    Excluir
-                  </button>
+                className={juntar(
+                  "inline-flex size-toque items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie-suave hover:text-texto focus-visible:opacity-100 md:size-7 md:bg-superficie-suave md:text-texto md:shadow-card md:group-hover:opacity-100",
+                  menu ? "bg-superficie-suave text-texto" : "md:opacity-0",
                 )}
-              </div>,
-              document.body,
-            )}
-        </div>
-      )}
+              >
+                <MoreVertical className="size-4" aria-hidden />
+              </button>
+              {menu &&
+                createPortal(
+                  <div
+                    ref={refMenu}
+                    role="menu"
+                    aria-label={`Ações para ${card.nome}`}
+                    style={{ top: menu.top, left: menu.left }}
+                    onKeyDown={(e) => {
+                      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+                      e.preventDefault();
+                      const itens = [...(refMenu.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
+                      const i = itens.indexOf(document.activeElement as HTMLElement);
+                      itens[(i + (e.key === "ArrowDown" ? 1 : -1) + itens.length) % itens.length]?.focus();
+                    }}
+                    className="fixed z-50 w-60 animate-surgir rounded-controle border border-borda bg-superficie p-1 shadow-flutuante"
+                  >
+                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Mover para...</p>
+                    {nomesEtapas.lista.filter((e) => e.codigo !== card.etapa).map((e) => (
+                      <button
+                        key={e.codigo}
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.mover(card.id, e.codigo);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+                      >
+                        {e.nome}
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-borda" />
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(null);
+                        acoes.arquivar(card.id);
+                      }}
+                      className="block min-h-11 w-full rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+                    >
+                      Arquivar
+                    </button>
+                    {acoes.excluir && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.excluir!(card.id);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
+                      >
+                        Excluir
+                      </button>
+                    )}
+                  </div>,
+                  document.body,
+                )}
+            </span>
+          )
+        }
+      />
     </motion.div>
   );
 }

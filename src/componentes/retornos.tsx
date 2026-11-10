@@ -4,12 +4,9 @@ import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CalendarClock } from "lucide-react";
 import { useNomesEtapas } from "./etapas";
-import { formatarHora, formatarVisitaCurta, partesLocais } from "@/regras/tempo";
-import { ETAPAS_COM_RETORNO, formatarReais, situacaoDoRetorno, type SituacaoRetorno } from "@/regras/vendas";
+import { formatarReais, textoDoRetorno, type SituacaoRetorno } from "@/regras/vendas";
 import type { retornosDeHoje } from "@/servicos/consultas";
 import { useDados } from "./dados";
-import { useAgoraDoServidor } from "./espera";
-import { retornoObrigatorio, useRegrasVendas } from "./vendas/regras";
 import { juntar } from "./estilos";
 import { useUsuario } from "./usuario";
 import { useGaveta } from "./ficha/gaveta";
@@ -27,41 +24,6 @@ export function ProvedorRetornos({ children }: { children: ReactNode }) {
 
 export const useRetornos = () => useContext(Contexto);
 
-export interface SituacaoDoCard {
-  situacao: SituacaoRetorno;
-  /** "hoje 14:30", "atrasado desde 03/11", "10/11 14:30" ou "defina o próximo contato". */
-  texto: string;
-}
-
-const dois = (n: number) => String(n).padStart(2, "0");
-
-/** Situação do lembrete/retorno de um lead nas etapas abertas; em Fechado e Perdido devolve null. */
-export function useSituacaoRetorno(etapa: string, proximoContatoEm: string | null): SituacaoDoCard | null {
-  const agora = useAgoraDoServidor();
-  const regras = useRegrasVendas();
-  if (!(ETAPAS_COM_RETORNO as string[]).includes(etapa)) return null;
-  const situacao = situacaoDoRetorno(proximoContatoEm, agora);
-  // Sem data só vira cobrança ("defina o próximo contato") onde a data é obrigatória.
-  if (situacao === "sem_data" && !retornoObrigatorio(regras, etapa)) return null;
-  return { situacao, texto: textoDoRetorno(situacao, proximoContatoEm) };
-}
-
-export function textoDoRetorno(situacao: SituacaoRetorno, proximoContatoEm: string | null): string {
-  if (situacao === "sem_data" || !proximoContatoEm) return "defina o próximo contato";
-  const d = new Date(proximoContatoEm);
-  const p = partesLocais(d);
-  if (situacao === "hoje") return `hoje ${formatarHora(d)}`;
-  if (situacao === "atrasado") return `atrasado desde ${dois(p.dia)}/${dois(p.mes)}`;
-  return formatarVisitaCurta(d);
-}
-
-/** Destaque do card: borda forte no dia do retorno (e quando atrasado). A cor nunca vai sozinha: o card também escreve o texto. */
-export const CLASSE_CARD_RETORNO: Record<SituacaoRetorno, string> = {
-  sem_data: "",
-  futuro: "",
-  hoje: "ring-2 ring-marca",
-  atrasado: "ring-2 ring-alerta",
-};
 export const CLASSE_TEXTO_RETORNO: Record<SituacaoRetorno, string> = {
   sem_data: "text-aviso",
   futuro: "text-texto-suave",

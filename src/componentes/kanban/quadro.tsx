@@ -19,7 +19,8 @@ import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, ETIQUETAS, NOME_ETAPA_MAX, etapaComAge
 import { useNomesEtapas } from "../etapas";
 import { idsCriticosDaColuna } from "@/regras/espera";
 import { useAgoraDoServidor, useAguardando } from "../espera";
-import { ETAPAS_QUE_PEDEM_DADOS } from "@/regras/vendas";
+import { ETAPAS_QUE_PEDEM_DADOS, resumirReais } from "@/regras/vendas";
+import { ETAPAS_COM_SOMA, acoesDoCard, separarColuna } from "@/regras/acao-card";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
@@ -29,7 +30,7 @@ import { usePode, useUsuario } from "../usuario";
 import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "../ficha/agendar";
 import { NIVEIS_ZOOM, definirZoom, useZoomKanban, zoomParaCaber } from "./zoom";
-import { Card, CardFlutuante, type AcoesCard } from "./card";
+import { Card, CardFlutuante, useContextoDaAcao, type AcoesCard } from "./card";
 import { JanelaDecisao, type EscolhaDecisao } from "./decisao";
 
 // Colunas recolhidas (tarefa 24): faixa fina com nome na vertical e contador. Fechado e Perdido começam assim.
@@ -641,6 +642,16 @@ function Coluna(props: {
   const { prazos } = useAguardando();
   const agora = useAgoraDoServidor();
   const criticos = useMemo(() => idsCriticosDaColuna(cards, agora, prazos), [cards, agora, prazos]);
+  // Faixa de ação de cada card e a divisão da coluna (tarefa 39): em cima o que precisa do vendedor, embaixo o que aguarda o cliente.
+  const contexto = useContextoDaAcao();
+  const pendencias = useMemo(() => new Map(cards.map((c) => [c.id, acoesDoCard(c, contexto)])), [cards, contexto]);
+  const grupos = useMemo(() => separarColuna(cards, (c) => pendencias.get(c.id) ?? []), [cards, pendencias]);
+  const comDivisor = grupos.precisaDeVoce.length > 0 && grupos.aguardando.length > 0;
+  const esperando = cards.filter((c) => c.esperandoDesde !== null).length;
+  const somaOrcamentos = (ETAPAS_COM_SOMA as string[]).includes(codigo) ? cards.reduce((s, c) => s + (c.valorOrcamento ?? 0), 0) : 0;
+  const cardDe = (c: CardKanban) => (
+    <Card key={c.id} card={c} pendencias={pendencias.get(c.id) ?? []} critico={criticos.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
+  );
   const { setNodeRef, isOver } = useDroppable({ id: codigo });
   const limpavel = (ETAPAS_LIMPAVEIS as string[]).includes(codigo);
   const telaGrande = useTelaGrande();
@@ -689,9 +700,17 @@ function Coluna(props: {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} />
-            <p className="text-xs text-texto-fraco">
-              {contagem(props.totalSemFiltro)}
-              {cards.length !== props.totalSemFiltro && ` · ${cards.length} no filtro`}
+            <p className="flex flex-wrap gap-x-2 text-xs text-texto-fraco">
+              <span>
+                {contagem(props.totalSemFiltro)}
+                {cards.length !== props.totalSemFiltro && ` · ${cards.length} no filtro`}
+              </span>
+              {esperando > 0 && <span className="font-semibold text-alerta">{esperando} esperando</span>}
+              {somaOrcamentos > 0 && (
+                <span className="font-semibold tabular-nums text-texto-suave" title="Soma dos orçamentos dos cards desta coluna">
+                  {resumirReais(somaOrcamentos)}
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -723,12 +742,24 @@ function Coluna(props: {
         {cards.length === 0 ? (
           <EstadoVazio titulo="Nenhum lead nesta etapa" />
         ) : (
-          cards.map((c) => (
-            <Card key={c.id} card={c} critico={criticos.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
-          ))
+          <>
+            {comDivisor && <TituloDoGrupo texto="Precisa de você" total={grupos.precisaDeVoce.length} />}
+            {grupos.precisaDeVoce.map(cardDe)}
+            {comDivisor && <TituloDoGrupo texto="Aguardando o cliente" total={grupos.aguardando.length} />}
+            {grupos.aguardando.map(cardDe)}
+          </>
         )}
       </div>
     </section>
+  );
+}
+
+/** Divisor dentro da coluna (tarefa 39). Só aparece quando a coluna tem os dois grupos. */
+function TituloDoGrupo({ texto, total }: { texto: string; total: number }) {
+  return (
+    <h3 className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-texto-fraco">
+      {texto} · <span className="tabular-nums">{total}</span>
+    </h3>
   );
 }
 

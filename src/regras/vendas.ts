@@ -1,7 +1,7 @@
 // Acompanhamento de vendas: o que cada etapa exige, motivos de perda e dinheiro.
 // Dinheiro é sempre guardado em centavos (inteiro) para não ter erro de arredondamento.
 import type { CodigoEtapa } from "./etapas";
-import { DIA, dataLocal, inicioDoDiaLocal, partesLocais } from "./tempo";
+import { DIA, dataLocal, formatarHora, formatarVisitaCurta, inicioDoDiaLocal, partesLocais } from "./tempo";
 
 /** Motivos de perda de fábrica: só a carga inicial. Depois o admin edita em Configurações > Vendas. */
 export const MOTIVOS_PADRAO: { codigo: string; nome: string; pergunta: string | null }[] = [
@@ -64,6 +64,20 @@ export function formatarReais(centavos: number | null | undefined): string {
     .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   const cents = (abs % 100).toString().padStart(2, "0");
   return `${negativo ? "-" : ""}R$ ${reais},${cents}`;
+}
+
+/** 162100 → "R$ 1.621" (sem os centavos quando são zero). Para o card do kanban, onde o espaço é curto. */
+export function formatarReaisCurto(centavos: number | null | undefined): string {
+  return formatarReais(centavos).replace(/,00$/, "");
+}
+
+/** 5121000 → "R$ 51,2 mil"; 120000000 → "R$ 1,2 mi". Para a soma no cabeçalho da coluna. */
+export function resumirReais(centavos: number): string {
+  const reais = Math.round(centavos / 100);
+  const curto = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  if (reais >= 1_000_000) return `R$ ${curto(reais / 1_000_000)} mi`;
+  if (reais >= 1_000) return `R$ ${curto(reais / 1_000)} mil`;
+  return `R$ ${reais.toLocaleString("pt-BR")}`;
 }
 
 /**
@@ -139,4 +153,15 @@ export function situacaoDoRetorno(proximoContatoEm: Date | string | null | undef
   const quando = new Date(proximoContatoEm).getTime();
   if (quando < inicioHoje) return "atrasado";
   return quando < inicioHoje + DIA ? "hoje" : "futuro";
+}
+
+/** "hoje 14:30", "atrasado desde 03/11", "10/11 14:30" ou "defina o próximo contato". */
+export function textoDoRetorno(situacao: SituacaoRetorno, proximoContatoEm: string | null): string {
+  if (situacao === "sem_data" || !proximoContatoEm) return "defina o próximo contato";
+  const d = new Date(proximoContatoEm);
+  const p = partesLocais(d);
+  const dois = (n: number) => String(n).padStart(2, "0");
+  if (situacao === "hoje") return `hoje ${formatarHora(d)}`;
+  if (situacao === "atrasado") return `atrasado desde ${dois(p.dia)}/${dois(p.mes)}`;
+  return formatarVisitaCurta(d);
 }
