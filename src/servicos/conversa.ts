@@ -5,6 +5,7 @@ import { tipoCanonico } from "@/regras/midia";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
+import { nomeParaCliente } from "@/regras/nome-cliente";
 import { normalizarTelefone } from "@/regras/telefone";
 import { registrarAlteracao } from "./historico";
 import { obterOuCriarLead } from "./leads";
@@ -63,14 +64,20 @@ export async function receberMensagemCliente(params: {
   return { leadId: lead.id, ...resultado };
 }
 
+/** Nome que o cliente vê para quem está enviando agora (de quem enviou, não do dono do lead: depois de transferir já sai o do novo). */
+async function nomeDoVendedor(usuario: { id?: string; nome: string }): Promise<string> {
+  const cadastro = usuario.id ? await db.usuario.findUnique({ where: { id: usuario.id }, select: { nome: true, nomeCliente: true } }) : null;
+  return nomeParaCliente(cadastro ?? usuario);
+}
+
 /** Consultor manda imagem, vídeo ou PDF (com legenda opcional). Só dentro da janela de 24h. Responder já assume a conversa. */
-export async function responderComoConsultorComArquivo(leadId: string, usuario: { nome: string }, anexo: { dados: Buffer; tipo: string; nome: string }, legenda?: string) {
+export async function responderComoConsultorComArquivo(leadId: string, usuario: { id?: string; nome: string }, anexo: { dados: Buffer; tipo: string; nome: string }, legenda?: string) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   if (!janelaAberta(lead.ultimaMsgClienteEm, await agora())) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado. Arquivos só dentro da janela.");
   }
   if (lead.modoAtendimento !== "humano") await assumirConversa(leadId, usuario);
-  return enviarMensagemLoja({ leadId, autor: "consultor", autorNome: usuario.nome, texto: legenda, anexo });
+  return enviarMensagemLoja({ leadId, autor: "consultor", autorNome: usuario.nome, nomeParaCliente: await nomeDoVendedor(usuario), texto: legenda, anexo });
 }
 
 export async function assumirConversa(leadId: string, usuario: { nome: string }) {
@@ -93,12 +100,12 @@ export async function marcarConversaVista(leadId: string) {
 }
 
 /** Consultor responde pela tela da conversa (CHAT-03). Responder já assume a conversa. */
-export async function responderComoConsultor(leadId: string, usuario: { nome: string }, texto?: string, modelo?: string) {
+export async function responderComoConsultor(leadId: string, usuario: { id?: string; nome: string }, texto?: string, modelo?: string) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Confere a regra das 24h antes de assumir a conversa: envio recusado não pausa o bot.
   if (!modelo && !janelaAberta(lead.ultimaMsgClienteEm, await agora())) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
   if (lead.modoAtendimento !== "humano") await assumirConversa(leadId, usuario);
-  return enviarMensagemLoja({ leadId, autor: "consultor", autorNome: usuario.nome, texto, modelo });
+  return enviarMensagemLoja({ leadId, autor: "consultor", autorNome: usuario.nome, nomeParaCliente: await nomeDoVendedor(usuario), texto, modelo });
 }

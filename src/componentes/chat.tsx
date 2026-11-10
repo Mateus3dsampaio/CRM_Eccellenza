@@ -67,7 +67,7 @@ export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTo
                   </p>
                 )}
                 {m.midia && <MidiaDaMensagem m={m} aoApagar={aoApagarMidia} />}
-                {m.texto && <p className="whitespace-pre-wrap break-words">{m.texto}</p>}
+                {m.texto && <p className="whitespace-pre-wrap break-words">{lado === "cliente" && m.autor === "consultor" ? <TextoComNome texto={m.texto} /> : m.texto}</p>}
                 {/* Botões de resposta rápida: só o do último movimento da conversa (depois que o cliente responde, somem). */}
                 {aoTocarBotao && m.botoes && i === mensagens.length - 1 && (
                   <div className="mt-2 flex flex-col gap-1">
@@ -96,6 +96,19 @@ export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTo
       )}
       <div ref={fim} />
     </div>
+  );
+}
+
+/** Simulador: o nome do vendedor na frente (`*Ana:*` + linha) aparece em negrito, como no WhatsApp. */
+function TextoComNome({ texto }: { texto: string }) {
+  const achou = /^\*([^*\n]+):\*\n([\s\S]*)$/.exec(texto);
+  if (!achou) return <>{texto}</>;
+  return (
+    <>
+      <strong>{achou[1]}:</strong>
+      {"\n"}
+      {achou[2]}
+    </>
   );
 }
 

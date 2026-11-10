@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { conferirSenha, gerarHashSenha } from "@/lib/senha";
 import { marcarMudanca } from "@/lib/versao";
+import { limparNomeParaCliente } from "@/regras/nome-cliente";
 import { problemaNaSenha } from "@/regras/senha";
 import { contarLeadsEmAndamento, transferirLeads } from "./distribuicao";
 
@@ -14,13 +15,13 @@ function exigirSenhaValida(senha: string) {
 }
 
 /** Cria um usuário (admin ou consultor). Recusa login repetido e senha fraca. */
-export async function criarUsuario(params: { nome: string; login: string; senha: string; perfil: Perfil }) {
+export async function criarUsuario(params: { nome: string; login: string; senha: string; perfil: Perfil; nomeCliente?: string | null }) {
   const login = params.login.trim().toLowerCase();
   if (!/^[a-z0-9._-]{2,30}$/.test(login)) throw new Error("Login inválido: use 2 a 30 letras minúsculas, números, ponto, traço ou sublinhado.");
   exigirSenhaValida(params.senha);
   if (!params.nome.trim()) throw new Error("Informe o nome.");
   if (await db.usuario.findUnique({ where: { login } })) throw new Error("Já existe um usuário com esse login.");
-  return db.usuario.create({ data: { nome: params.nome.trim(), login, senhaHash: gerarHashSenha(params.senha), perfil: params.perfil } });
+  return db.usuario.create({ data: { nome: params.nome.trim(), login, senhaHash: gerarHashSenha(params.senha), perfil: params.perfil, nomeCliente: limparNomeParaCliente(params.nomeCliente) || null } });
 }
 
 /** Equipe para a tela de Configurações, com quantos leads em andamento cada um tem. */
@@ -30,6 +31,7 @@ export async function listarEquipe() {
     select: {
       id: true,
       nome: true,
+      nomeCliente: true,
       login: true,
       perfil: true,
       ativo: true,
@@ -45,14 +47,14 @@ async function outrosAdminsAtivos(excetoId: string): Promise<number> {
 }
 
 /** Muda nome e/ou perfil. Não deixa o sistema ficar sem nenhum administrador ativo. */
-export async function editarUsuario(id: string, dados: { nome?: string; perfil?: Perfil }) {
+export async function editarUsuario(id: string, dados: { nome?: string; perfil?: Perfil; nomeCliente?: string | null }) {
   const usuario = await db.usuario.findUniqueOrThrow({ where: { id } });
   const nome = dados.nome?.trim();
   if (dados.nome !== undefined && !nome) throw new Error("Informe o nome.");
   if (dados.perfil && dados.perfil !== usuario.perfil && usuario.perfil === "admin" && usuario.ativo && (await outrosAdminsAtivos(id)) === 0) {
     throw new Error("Este é o único administrador ativo. Cadastre outro administrador antes de mudar o perfil dele.");
   }
-  await db.usuario.update({ where: { id }, data: { nome: nome ?? undefined, perfil: dados.perfil } });
+  await db.usuario.update({ where: { id }, data: { nome: nome ?? undefined, perfil: dados.perfil, nomeCliente: dados.nomeCliente === undefined ? undefined : limparNomeParaCliente(dados.nomeCliente) || null } });
   await marcarMudanca();
 }
 
