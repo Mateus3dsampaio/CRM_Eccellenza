@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as CliqueReact, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
-import { motion } from "framer-motion";
-import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound, type LucideIcon } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, Presentation, UserRound, type LucideIcon } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { formatarReaisCurto } from "@/regras/vendas";
 import { formatarVisitaCurta } from "@/regras/tempo";
@@ -19,6 +19,7 @@ import { retornoObrigatorio, useRegrasVendas } from "../vendas/regras";
 import { BolinhaNaoLidas } from "./bolinha";
 import { RelogioJanela } from "./relogio-janela";
 import { useGaveta } from "../ficha/gaveta";
+import { useUsuario } from "../usuario";
 
 export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
@@ -27,6 +28,10 @@ export interface AcoesCard {
   excluir?: (id: string) => void;
   /** Abre a janela de decisão (data vencida: medição, apresentação ou retorno da Negociação). */
   decidir?: (id: string) => void;
+  /** Abre a agenda da apresentação (lead pronto para marcar). */
+  marcarApresentacao?: (id: string) => void;
+  /** "Cliente tem projeto: pular medição" (ou desfazer), só em Em qualificação. */
+  pularMedicao?: (id: string, pular: boolean) => void;
 }
 
 /** Hora do servidor, prazos de espera e regra do retorno: o que a faixa de ação precisa para ser calculada. */
@@ -55,6 +60,7 @@ const ICONE_ACAO: Record<CodigoAcao, LucideIcon> = {
   na_fila: UserRound,
   decidir: Gavel,
   marcar_data: CalendarX,
+  marcar_apresentacao: Presentation,
   retorno_atrasado: CalendarClock,
   definir_retorno: CalendarClock,
   responder: Clock,
@@ -116,6 +122,7 @@ function ConteudoCard({
   nome,
   direita,
   aoDecidir,
+  aoMarcarApresentacao,
   aoRemoverEtiqueta,
   menu,
 }: {
@@ -127,6 +134,8 @@ function ConteudoCard({
   /** Troca a hora/bolinha do topo (ex.: a marca de seleção). */
   direita?: ReactNode;
   aoDecidir?: () => void;
+  /** Botão "Marcar apresentação" do lead pronto (some para quem não pode agendar para ele). */
+  aoMarcarApresentacao?: () => void;
   aoRemoverEtiqueta?: (etiqueta: string) => void;
   menu?: ReactNode;
 }) {
@@ -155,6 +164,21 @@ function ConteudoCard({
         {direita ?? (card.naoLidas > 0 ? <BolinhaNaoLidas total={card.naoLidas} /> : <span className="shrink-0 text-[11px] tabular-nums text-texto-fraco">{card.horario}</span>)}
       </div>
       <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />
+      {card.pronto && aoMarcarApresentacao && (
+        <div className="px-3 pt-2">
+          <button
+            type="button"
+            data-marcar-apresentacao
+            onClick={aoMarcarApresentacao}
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-controle bg-etapa-apresentacao px-3 text-sm font-semibold text-sobre-cor shadow-card transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5"
+          >
+            <Presentation className="size-4" aria-hidden />
+            Marcar apresentação
+          </button>
+        </div>
+      )}
       {card.previa && <p className="line-clamp-2 break-words px-3 pt-2 text-sm text-texto-suave">{card.previa}</p>}
       {temDetalhes && (
         // Cada dado com seu ícone, sem cortar (pedido do Mateus 10/11/2026): quando não cabe na linha, o dado desce e o card cresce.
@@ -226,6 +250,7 @@ export function Card({
   selecionado,
   aoSelecionar,
   critico = false,
+  celebrar = false,
 }: {
   card: CardKanban;
   /** Pendências do lead, da mais grave à menos grave (regras/acao-card.ts); a primeira vira a faixa. */
@@ -236,12 +261,18 @@ export function Card({
   aoSelecionar: (id: string) => void;
   /** O que espera há mais tempo na coluna: único que pulsa, com a faixa em vermelho cheio (tarefa 39). */
   critico?: boolean;
+  /** O card acabou de entrar na coluna Apresentação: aro e brilho curtos na cor da etapa. */
+  celebrar?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, data: { etapa: card.etapa }, disabled: selecionando });
   const nomesEtapas = useNomesEtapas();
   const { faixa } = useSituacaoEspera(card.esperandoDesde);
   const gaveta = useGaveta();
   const router = useRouter();
+  const usuario = useUsuario();
+  const semMovimento = useReducedMotion();
+  // O vendedor marca a apresentação dos leads dele (ou sem dono); o admin, de todos.
+  const podeMarcar = !!acoes.marcarApresentacao && (usuario.perfil === "admin" || !card.consultor || card.consultor.id === usuario.id);
   const abertoNaGaveta = gaveta.aberto === card.id;
   // Menu "Mover para..." flutua por cima de tudo (posição fixa), para não ser cortado pela rolagem da coluna.
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
@@ -307,6 +338,7 @@ export function Card({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      animate={celebrar && !semMovimento ? { scale: [1, 1.035, 1] } : { scale: 1 }}
       role="group"
       aria-label={card.nome}
       data-card={card.id}
@@ -324,6 +356,9 @@ export function Card({
         abertoNaGaveta && "ring-2 ring-marca shadow-card-hover",
       )}
     >
+      {celebrar && (
+        <motion.span aria-hidden data-chegada className="brilho-chegada pointer-events-none absolute inset-0 z-10 rounded-card" initial={{ opacity: 0 }} animate={{ opacity: semMovimento ? [0, 1, 1, 0] : [0, 1, 1, 0] }} transition={{ duration: semMovimento ? 1.2 : 2.4, times: [0, 0.15, 0.65, 1] }} />
+      )}
       <ConteudoCard
         card={card}
         acoes={pendencias}
@@ -348,6 +383,7 @@ export function Card({
           ) : undefined
         }
         aoDecidir={selecionando || !acoes.decidir ? undefined : () => acoes.decidir!(card.id)}
+        aoMarcarApresentacao={selecionando || !podeMarcar ? undefined : () => acoes.marcarApresentacao!(card.id)}
         aoRemoverEtiqueta={selecionando ? undefined : (e) => acoes.removerEtiqueta(card.id, e)}
         menu={
           selecionando ? undefined : (
@@ -398,6 +434,19 @@ export function Card({
                       </button>
                     ))}
                     <div className="my-1 border-t border-borda" />
+                    {acoes.pularMedicao && card.etapa === "qualificacao" && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.pularMedicao!(card.id, !card.pulouMedicao);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 py-1.5 text-left text-sm hover:bg-superficie-suave"
+                      >
+                        {card.pulouMedicao ? "Desfazer: cliente tem projeto" : "Cliente tem projeto: pular medição"}
+                        {!card.pulouMedicao && card.temPlanta && <span className="block text-xs text-texto-fraco">A ficha já tem planta gravada</span>}
+                      </button>
+                    )}
                     <button
                       role="menuitem"
                       onClick={() => {

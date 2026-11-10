@@ -16,6 +16,14 @@ export async function register() {
   } catch (erro) {
     console.error("[funil] não converti as colunas antigas:", erro instanceof Error ? erro.message : "erro");
   }
+  // Apresentações de antes do placar (card que foi de Apresentação para Negociação/Fechado) viram "realizadas", uma vez.
+  try {
+    const { converterApresentacoesAntigas } = await import("./servicos/apresentacoes");
+    const n = await converterApresentacoesAntigas();
+    if (n) console.log(`[apresentacoes] ${n} apresentação(ões) antiga(s) marcada(s) como realizada(s) pelo histórico.`);
+  } catch (erro) {
+    console.error("[apresentacoes] não converti as apresentações antigas:", erro instanceof Error ? erro.message : "erro");
+  }
   // Tarefa 11: rotinas de tempo rodam sozinhas, sem ninguém com o kanban aberto.
   const { agendadorDeveLigar, iniciarAgendador } = await import("./servicos/agendador");
   if (agendadorDeveLigar()) iniciarAgendador();

@@ -38,7 +38,7 @@ export interface LeadDoPasso {
   ultimaMsgClienteEm: string | null;
   proximoContatoEm: string | null;
   lembreteNota: string | null;
-  visitas: { id: string; tipo: string; status: string; inicio: string; consultor: string }[];
+  visitas: { id: string; tipo: string; status: string; inicio: string; consultor: string; concluidaEm?: string | null }[];
 }
 
 const ORDEM: Record<Urgencia, number> = { vermelho: 0, amarelo: 1, neutro: 2 };

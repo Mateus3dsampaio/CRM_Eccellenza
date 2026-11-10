@@ -14,6 +14,7 @@ import { chamarApi, useAviso, useDados } from "../dados";
 import { juntar } from "../estilos";
 import { Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
+import { MetasApresentacaoConfig } from "./metas-apresentacao";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
 import { ChavesApi } from "./chaves-api";
@@ -31,6 +32,7 @@ interface Dados {
   regrasAgenda: RegrasAgenda;
   regrasPresenca: RegrasPresenca;
   regrasRetorno: RegrasRetorno;
+  metasApresentacao?: Record<string, number>;
   periodoExportacao: { de: string; ate: string };
 }
 
@@ -130,7 +132,14 @@ function ConfiguracoesComBarra() {
       ) : aba === "armazenamento" ? (
         <Armazenamento />
       ) : aba === "equipe" ? (
-        dados ? <EquipeConfig equipe={dados.equipe} recarregar={recarregar} /> : <Carregando linhas={3} />
+        dados ? (
+          <>
+            <EquipeConfig equipe={dados.equipe} recarregar={recarregar} />
+            <MetasApresentacaoConfig equipe={dados.equipe} metas={dados.metasApresentacao ?? {}} recarregar={recarregar} />
+          </>
+        ) : (
+          <Carregando linhas={3} />
+        )
       ) : carregando && !dados ? (
         <Carregando linhas={4} />
       ) : erro && !dados ? (
