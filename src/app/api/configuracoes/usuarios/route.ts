@@ -10,6 +10,7 @@ const corpo = z.object({
   login: z.string().trim().min(1, "Informe o login.").max(30),
   senha: z.string().min(1, "Informe a senha.").max(200),
   perfil: z.enum(["admin", "consultor"]),
+  nomeCliente: z.string().trim().max(40).nullish(),
 });
 
 export const POST = rota(async (req: Request) => {

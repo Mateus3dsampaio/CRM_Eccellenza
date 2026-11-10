@@ -21,6 +21,8 @@ model Usuario {
   status    String   @default("online") // online | almoco | offline (tarefa 35)
   // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
   almocoSeq Int      @default(0)
+  // Nome que o cliente vê no início das mensagens deste vendedor no WhatsApp. Vazio = primeiro nome de `nome`.
+  nomeCliente String?
 
   leads           Lead[]           @relation("consultorLead")
   visitas         Visita[]
@@ -122,6 +124,8 @@ model Mensagem {
   lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   autor             String // cliente | bot | consultor | sistema
   autorNome         String?
+  // Nome que foi na frente do texto (ou da legenda) para o cliente, só em mensagem de humano. O `texto` guardado NÃO leva o nome.
+  nomeNoEnvio       String?
   texto             String?
   midiaArquivo      String? // nome do arquivo em midias/ (fora da pasta pública)
   midiaTipo         String?

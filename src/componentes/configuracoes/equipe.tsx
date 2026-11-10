@@ -12,6 +12,7 @@ import { useUsuario } from "../usuario";
 export interface Membro {
   id: string;
   nome: string;
+  nomeCliente: string | null;
   login: string;
   perfil: string;
   ativo: boolean;
@@ -197,6 +198,7 @@ function Rodape({ aoFechar, enviando, rotulo, perigo }: { aoFechar: () => void; 
 
 function JanelaNovo({ aoFechar, aoConcluir }: { aoFechar: () => void; aoConcluir: () => Promise<void> }) {
   const [nome, setNome] = useState("");
+  const [nomeCliente, setNomeCliente] = useState("");
   const [login, setLogin] = useState("");
   const [perfil, setPerfil] = useState<"consultor" | "admin">("consultor");
   const [senha, setSenha] = useState("");
@@ -208,13 +210,16 @@ function JanelaNovo({ aoFechar, aoConcluir }: { aoFechar: () => void; aoConcluir
         onSubmit={(e) => {
           e.preventDefault();
           void enviar(async () => {
-            await chamarApi("/api/configuracoes/usuarios", { method: "POST", json: { nome, login, perfil, senha } });
+            await chamarApi("/api/configuracoes/usuarios", { method: "POST", json: { nome, nomeCliente, login, perfil, senha } });
             return `${nome.trim()} cadastrado.`;
           });
         }}
       >
         <Campo rotulo="Nome">
           <input value={nome} onChange={(e) => setNome(e.target.value)} className={classeEntrada} autoComplete="off" />
+        </Campo>
+        <Campo rotulo="Nome para o cliente" dica="Aparece em negrito no início das mensagens que esta pessoa envia no WhatsApp. Vazio = primeiro nome do cadastro.">
+          <input value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} className={classeEntrada} maxLength={40} placeholder="Ex.: Ana" autoComplete="off" />
         </Campo>
         <Campo rotulo="Login" dica="Letras minúsculas, números, ponto, traço ou sublinhado. É com ele que a pessoa entra.">
           <input value={login} onChange={(e) => setLogin(e.target.value)} className={classeEntrada} autoComplete="off" autoCapitalize="none" />
@@ -237,6 +242,7 @@ function JanelaNovo({ aoFechar, aoConcluir }: { aoFechar: () => void; aoConcluir
 
 function JanelaEditar({ membro, euId, aoFechar, aoConcluir }: { membro: Membro; euId: string; aoFechar: () => void; aoConcluir: () => Promise<void> }) {
   const [nome, setNome] = useState(membro.nome);
+  const [nomeCliente, setNomeCliente] = useState(membro.nomeCliente ?? "");
   const [perfil, setPerfil] = useState(membro.perfil);
   const { enviar, enviando, erro } = useEnvio(aoFechar, aoConcluir);
   return (
@@ -246,13 +252,16 @@ function JanelaEditar({ membro, euId, aoFechar, aoConcluir }: { membro: Membro; 
         onSubmit={(e) => {
           e.preventDefault();
           void enviar(async () => {
-            await chamarApi(`/api/configuracoes/usuarios/${membro.id}`, { method: "PATCH", json: { nome, perfil } });
+            await chamarApi(`/api/configuracoes/usuarios/${membro.id}`, { method: "PATCH", json: { nome, nomeCliente, perfil } });
             return "Dados salvos.";
           });
         }}
       >
         <Campo rotulo="Nome">
           <input value={nome} onChange={(e) => setNome(e.target.value)} className={classeEntrada} />
+        </Campo>
+        <Campo rotulo="Nome para o cliente" dica="Aparece em negrito no início das mensagens que esta pessoa envia no WhatsApp. Vazio = primeiro nome do cadastro.">
+          <input value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} className={classeEntrada} maxLength={40} placeholder="Ex.: Ana" autoComplete="off" />
         </Campo>
         <Campo rotulo="Perfil" dica={membro.id === euId ? "Você não pode mudar o seu próprio perfil." : "Administrador vê tudo e mexe nas configurações. Consultor só atende."}>
           <select value={perfil} onChange={(e) => setPerfil(e.target.value)} disabled={membro.id === euId} className={classeEntrada}>

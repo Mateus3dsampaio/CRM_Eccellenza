@@ -5,6 +5,7 @@ import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { exigirModoSimulador } from "@/lib/modo-rota";
 import { TAMANHO_MAXIMO } from "@/lib/midias";
 import { tipoDoArquivo } from "@/regras/midia";
+import { textoComNome } from "@/regras/nome-cliente";
 import { normalizarTelefone } from "@/regras/telefone";
 import { nomeExibicao } from "@/servicos/consultas";
 import { ErroConversa, receberMensagemCliente } from "@/servicos/conversa";
@@ -37,7 +38,7 @@ export const GET = rota(async (req: Request) => {
       mensagens: mensagens
         // Mensagens que falharam nunca chegam ao cliente.
         .filter((m) => m.status !== "falhou")
-        .map((m) => ({ id: m.id, autor: m.autor, texto: m.texto, midia: m.midiaArquivo, midiaTipo: m.midiaTipo, midiaNome: m.midiaNome, midiaBytes: m.midiaBytes, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando), botoes: m.modelo ? (buscarModelo(m.modelo)?.botoes ?? null) : null })),
+        .map((m) => ({ id: m.id, autor: m.autor, texto: textoComNome(m.texto, m.nomeNoEnvio) || m.texto, midia: m.midiaArquivo, midiaTipo: m.midiaTipo, midiaNome: m.midiaNome, midiaBytes: m.midiaBytes, enviadaEm: m.enviadaEm.toISOString(), status: statusEfetivo(m, quando), botoes: m.modelo ? (buscarModelo(m.modelo)?.botoes ?? null) : null })),
     },
   };
 });

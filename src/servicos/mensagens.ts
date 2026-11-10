@@ -8,6 +8,7 @@ import { AVISO_ALMOCO } from "@/regras/almoco";
 import { temConsentimento } from "@/regras/consentimento";
 import { nomeSeguroDeArquivo, previaDaMidia, tipoCanonico, tipoPodeEnviar } from "@/regras/midia";
 import { apagarMidia, salvarMidia } from "@/lib/midias";
+import { limparNomeParaCliente, textoComNome } from "@/regras/nome-cliente";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { modoSimulador } from "@/lib/modo";
 import { whatsappRealAtivo } from "@/lib/whatsapp-config";
@@ -107,6 +108,8 @@ export async function enviarMensagemLoja(params: {
   leadId: string;
   autor: AutorLoja;
   autorNome?: string;
+  /** Nome que o cliente vê na frente do texto (ou da legenda). Só vale para consultor/admin, sem modelo e com texto: bot, sistema e modelo da Meta nunca levam nome. */
+  nomeParaCliente?: string;
   texto?: string; // com anexo, vira a legenda
   modelo?: string;
   /** Imagem, vídeo ou PDF para o cliente (só dentro da janela de 24h, como texto livre). */
@@ -135,6 +138,9 @@ export async function enviarMensagemLoja(params: {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
   if (!texto && !params.anexo) throw new Error("Mensagem vazia.");
+  // O banco guarda o texto SEM o nome; o nome só entra no que vai para a Meta (arquivo sem legenda continua sem legenda).
+  const nomeNoEnvio = params.autor === "consultor" && !params.modelo && texto ? limparNomeParaCliente(params.nomeParaCliente) || null : null;
+  const textoParaMeta = nomeNoEnvio ? textoComNome(texto, nomeNoEnvio) : texto;
   if (params.anexo && params.modelo) throw new Error("Modelo e arquivo não vão juntos.");
   if (params.anexo && !tipoPodeEnviar(params.anexo.tipo)) throw new Error("Para enviar, use imagem JPG ou PNG, vídeo MP4, PDF, Word, Excel, DWG ou ZIP.");
   // Guarda o arquivo antes de enviar: confere tipo, tamanho e o começo do arquivo (lança se não servir).
@@ -148,7 +154,7 @@ export async function enviarMensagemLoja(params: {
   try {
     if (whatsappRealAtivo()) {
       // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
-      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto, modelo: params.modelo, parametros, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
+      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto: textoParaMeta, modelo: params.modelo, parametros, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
       falhou = !envio.ok;
       idExterno = envio.id;
       if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });
@@ -161,6 +167,7 @@ export async function enviarMensagemLoja(params: {
         autor: params.autor,
         autorNome: params.autorNome,
         texto: texto || null,
+        nomeNoEnvio,
         modelo: params.modelo,
         midiaArquivo: arquivo,
         midiaTipo: params.anexo ? tipoCanonico(params.anexo.tipo) : null,

@@ -55,6 +55,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Login, tentativas, primeiro admin, criar usuário | `src/regras/tentativas-login.ts` + `src/app/api/login/route.ts` + `src/servicos/usuarios.ts` + `scripts/criar-usuario.ts` |
 | Tela de login e a esfera de pontos (física, cores, colisão) | `src/app/login/page.tsx` + `src/componentes/login/esfera-3d.ts` (+ `esfera-shader.ts`) |
 | Cadastro de usuários (criar, editar, nova senha, desativar, transferir leads), trocar a própria senha, regra da senha (6+, letra, número e maiúscula) | Tela: `src/componentes/configuracoes/equipe.tsx` (cartão Equipe em Configurações > Geral; `JanelaMinhaSenha` abre pelo cabeçalho). Regra: `src/regras/senha.ts`. Gravação: `src/servicos/usuarios.ts` + `transferirLeads` em `src/servicos/distribuicao.ts`. Rotas: `/api/configuracoes/usuarios`, `/api/leads/[id]/transferir`, `/api/conta/senha` |
+| Nome do vendedor na frente da mensagem no WhatsApp (`*Ana:*` + linha + texto; decisão do Mateus 10/11/2026). Só texto/legenda de consultor ou admin; nunca bot, sistema nem modelo da Meta. O banco guarda o texto SEM o nome (`Mensagem.nomeNoEnvio` guarda qual nome foi) | Regra: `src/regras/nome-cliente.ts` (formato, limpeza, fallback para o primeiro nome). Campo `Usuario.nomeCliente`: cartão Equipe (`equipe.tsx`) + `servicos/usuarios.ts` + rotas `/api/configuracoes/usuarios`. Quem envia: `responderComoConsultor` e `responderComoConsultorComArquivo` (`servicos/conversa.ts`, nome de QUEM ENVIA, não do dono do lead) → `enviarMensagemLoja` (`servicos/mensagens.ts`, aplica o nome só no que vai à Meta). Chat do cliente no simulador: `api/simulador/route.ts` + `TextoComNome` em `componentes/chat.tsx` |
 | Colocar no ar (Railway, Postgres) | `Dockerfile`, `railway.json`, `prisma/postgres/` (esquema gerado + migrações), guia em `docs/colocar-no-ar.md` |
 | Enviar/receber imagem, vídeo e PDF; galeria; apagar mídia | Tipos, limites, nome seguro, Range de vídeo: `src/regras/midia.ts` (limites de vídeo e PDF PROVISÓRIOS). Disco: `src/lib/midias.ts`. Apagar, limpeza de 180 dias, galeria, resumo antes de excluir, armazenamento: `src/servicos/midias.ts`. Envio pela Meta: `enviarPelaMeta` (`servicos/whatsapp.ts`) e `enviarMensagemLoja` (`anexo`). Tela: `src/componentes/galeria/galeria.tsx` e anexo em `src/componentes/ficha/conversa.tsx` |
 | Tabelas do banco | `prisma/schema.prisma` (depois `npm run esquema:postgres` e uma migração nova em `prisma/postgres/migrations/`; o teste `esquema.test.ts` avisa se esquecer) (depois `npx prisma db push`; ajuste `prisma/seed.ts` e `testes/unit/ajuda.ts` se a tabela precisa ser limpa) |
@@ -62,9 +63,9 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 ## Banco (`prisma/schema.prisma`)
 | Tabela | Guarda |
 |---|---|
-| `Usuario` | Admin e consultores (perfil, status online/almoço/offline; offline = não recebe lead, vira sozinho no fechamento da loja) |
+| `Usuario` | Admin e consultores (perfil, status online/almoço/offline; offline = não recebe lead, vira sozinho no fechamento da loja). `nomeCliente`: nome que o cliente vê nas mensagens dele no WhatsApp (vazio = primeiro nome de `nome`) |
 | `Lead` | Ficha do cliente (inclui, nas vendas: `retornoModeloEm` (retorno marcado pelo bot com a loja fechada; vale para o envio automático do modelo só enquanto for igual a `proximoContatoEm`), `proximoContatoEm` (lembrete/retorno em qualquer etapa aberta, com `lembreteNota`), `valorOrcamento` e `valorFechado` em centavos, `motivoPerda` e `concorrente`): etapa, etiquetas, dados do projeto, consultor, modo (bot/humano), hora em que o bot repassou o lead (`repassadoEm`), desde quando o cliente espera um humano (`esperandoDesde`) mensagens que nenhum humano abriu (`naoLidas`) e para qual espera o admin já foi avisado do prazo vermelho (`alertaPrazoPara`) e para qual data de retorno o vendedor já foi avisado (`alertaContatoPara`), último aviso de decisão vencida (`alertaDecisaoEm`, um por dia). `naoReceberEm`: o cliente pediu para parar (sem bot, retomada nem modelos). `waId`: número como a Meta o conhece (no Brasil pode ser sem o 9). `consentimentoEm`/`consentimentoOrigem`: consentimento para modelos. `ordem` não é mais usada pelo kanban (a ordem das colunas vem de `regras/espera`) |
-| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes) |
+| `Mensagem` | Conversa (cliente, bot, consultor), status de envio, mídia (imagem, vídeo ou PDF: arquivo, tipo, nome original e tamanho). `idExterno` = id da Meta (único: a mesma mensagem não entra duas vezes). `nomeNoEnvio`: nome do vendedor que foi na frente do texto/legenda para o cliente (o `texto` guardado não leva o nome) |
 | `ConversaApi` | Histórico enviado à API do Claude por lead |
 | `Medida`, `Nota`, `Alteracao` | Medidas, notas internas e histórico de quem mudou o quê |
 | `MudancaEtapa` | Cada mudança de etapa do lead (de, para, quem, quando). Gravada em `moverEtapa` e na criação do lead. Alimenta a exportação de desempenho |
@@ -120,7 +121,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/agenda/route.ts` | Agenda, visitas, bloqueios; com `livresPara` (+ `diaLivre`), horários livres em torno do dia escolhido | `agenda`, `consultas` |
 | `src/app/api/painel/route.ts` | Métricas (atalho ou datas, filtro de vendedor). Só admin (`ver_metricas`; consultor recebe 403) | `painel` |
 | `src/app/api/nova-mensagem/route.ts` | Mensagem para qualquer número (MSG). Acha o cliente com ou sem o 9; modelo exige consentimento (pede como o cliente autorizou) e não vale para quem pediu para parar | `conversa`, `leads`, `lgpd`, `consultas` |
-| `src/app/api/simulador/route.ts` | Chat do cliente fictício. 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
+| `src/app/api/simulador/route.ts` | Chat do cliente fictício (mensagem de vendedor aparece com o nome na frente, como o cliente vê). 404 fora do modo simulador | `conversa`, `mensagens`, `consultas` |
 | `src/app/api/relogio/route.ts` | Avançar o relógio (horas ou 5–59 minutos) e rodar rotinas. 404 fora do modo simulador | `rotinas` |
 | `src/app/api/teste/route.ts` | Interface de teste (`npm run simular`, cliente-simulado) | `conversa`, `rotinas`, `consultas` |
 | `src/app/api/equipe/status/route.ts` | Consultor online/almoço/offline. Só volta quando ele (ou o admin) clica; offline sozinho só no fechamento da loja (rotina de presença) | `distribuicao` |
@@ -168,8 +169,8 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | Arquivo | Faz |
 |---|---|
 | `src/servicos/leads.ts` | Criar lead (acha o mesmo cliente com e sem o 9: `acharLeadPorTelefone`), mover etapa (voltar para Em qualificação com medição/apresentação marcada pede `cancelarCompromissos` e cancela o compromisso; ir para Perdido guarda a coluna anterior; `etapaAntesDoPerdido` descobre para onde voltar; recusa se faltar próximo contato, valor fechado ou motivo da perda; `conferirMudanca` só confere, sem gravar; também troca data/valores sem mudar de etapa), etiquetas, campos, arquivar, restaurar, excluir |
-| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja (envio real pela Meta quando as chaves existem; senão simulado; em produção sem chaves a mensagem fica "falhou"), status (entregue/lido: o real vem do webhook). Cliente em Perdido que escreve volta o card para a coluna em que estava. Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
-| `src/servicos/conversa.ts` | Mensagem do cliente → bot; assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
+| `src/servicos/mensagens.ts` | Registrar mensagem do cliente e da loja (consultor/admin: o nome vai na frente do texto ou da legenda só no envio à Meta, `nomeParaCliente`; envio real pela Meta quando as chaves existem; senão simulado; em produção sem chaves a mensagem fica "falhou"), status (entregue/lido: o real vem do webhook). Cliente em Perdido que escreve volta o card para a coluna em que estava. Mantém `esperandoDesde` e `naoLidas`: mensagem do cliente com lead aguardando humano abre a espera e soma a bolinha; resposta do consultor encerra |
+| `src/servicos/conversa.ts` | Mensagem do cliente → bot (consultor/admin responde com o nome de quem envia: `nomeDoVendedor`); assumir, devolver (encerra a espera), responder como consultor, marcar conversa como vista |
 | `src/servicos/agenda.ts` | Horários livres por tipo de compromisso (`horariosLivresEmTorno`: dia escolhido no calendário, véspera e dia seguinte, sem o limite de dias à frente; hoje conta, a partir da próxima hora cheia), agendar (move o card: `etapaAoAgendar`; recusa horário antes da próxima hora cheia), cancelar (volta para Em qualificação), bloqueios |
 | `src/servicos/conversao-funil.ts` | Conversão única das colunas antigas (Visita agendada, Orçamento apresentado, Sem resposta) para as novas, rodada ao subir o servidor |
 | `src/servicos/distribuicao.ts` | Escolher consultor (rodízio ou menos leads), fila, status almoço (só muda por clique), `transferirLeads` (todos os leads em andamento de um consultor para outro) e `transferirLead` (um lead só), ambos com registro na ficha |
@@ -196,7 +197,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/servicos/transcricao.ts` | Áudio → texto com o Whisper da OpenAI (chave OpenAI da tela ou `OPENAI_API_KEY`; modelo padrão `gpt-4o-mini-transcribe`, troca por `OPENAI_TRANSCRICAO_MODELO`). Só devolve texto; o áudio não é guardado. Nunca lança |
 | `src/servicos/lgpd.ts` | Pedido de parar (etiqueta, confirmação PROVISÓRIA), liberar, registrar consentimento, exportar dados do cliente (.zip), excluir com registro |
 | `src/servicos/uso-api.ts` | Guarda e soma o uso da API do Claude |
-| `src/servicos/usuarios.ts` | Criar usuário, listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
+| `src/servicos/usuarios.ts` | Criar usuário (com "nome para o cliente", editável depois), listar equipe (com leads em andamento), editar, redefinir senha, trocar a própria senha, desativar/reativar (nunca o último admin ativo, nunca a si mesmo; consultor com leads só com destino) e criar o primeiro admin a partir de `ADMIN_*` |
 
 ## Regras puras (`src/regras`)
 | Arquivo | Regra |
@@ -232,6 +233,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/regras/modelos-ia.ts` | Modelos de IA para a escolha: filtro da lista de cada empresa (Claude: o mais novo de cada família da geração 5+; GPT: só conversa, sem versão datada, até 8), frase de cada modelo, lista de reserva do Claude, padrões (`claude-sonnet-5-5`; GPT PROVISÓRIO `gpt-5.5`) |
 | `src/regras/push.ts` | Web Push, só regra: quem recebe (admin tudo; consultor só os seus leads e nunca prazo vencido) e como o aviso é escrito (mensagem nova = nome do cliente no título + trecho de 110 letras; os outros usam `textoDoAlerta`) |
 | `src/regras/temas.ts` | Temas de cor: código, nome e as 6 cores da bolinha. As cores de verdade ficam em `tokens.css` |
+| `src/regras/nome-cliente.ts` | Nome do vendedor na frente da mensagem do WhatsApp: `limparNomeParaCliente` (tira `* _ ~`, quebras de linha; 40 letras), `nomeParaCliente` (campo ou primeiro nome do cadastro), `textoComNome` (`*Ana:*` + linha + texto; texto vazio fica vazio) |
 | `src/regras/senha.ts` | Regra da senha (decisão do Mateus 03/11/2026): mínimo 6, com letra, número e uma maiúscula |
 
 ## Bot (`src/bot`)
@@ -385,6 +387,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `testes/unit/temas.test.ts` | Temas: códigos válidos, cada tema tem seu bloco em `tokens.css`, cores das bolinhas |
 | `testes/unit/entalhe.test.ts` | Contas do entalhe flutuante (salto, abertura, forma, eixos, caminho) |
 | `testes/unit/privacidade.test.ts` | Política aponta para a página de exclusão; página de exclusão tem as seções e o contato |
+| `testes/unit/nome-cliente.test.ts` | Nome do vendedor na mensagem do WhatsApp: formato, legenda, arquivo sem legenda, bot/sistema/modelo sem nome, primeiro nome como padrão, nome certo depois de transferir |
 | `testes/unit/mapa.test.ts` | Este mapa está completo e sem arquivo fantasma |
 | `testes/unit/ajuda.ts` | Limpar banco, criar consultores de teste e um roteiro de EXEMPLO para os testes do bot (não é o que o bot usa) |
 | `testes/unit/preparar.ts` | Cria o banco só dos testes |
