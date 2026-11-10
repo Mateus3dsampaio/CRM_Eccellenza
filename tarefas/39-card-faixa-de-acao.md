@@ -21,6 +21,7 @@ Vermelho = cliente sem resposta além do prazo, ou IA travada. Âmbar = pendênc
 ## Ajustes depois da primeira conferência (Mateus, 10/11/2026)
 - [x] Anel da janela de 24h com lugar fixo: sempre no canto esquerdo do rodapé (antes ficava "solto" nos cards sem consultor).
 - [x] Ícones de volta ao lado da cidade e dos ambientes.
+- [x] O card cresce na altura para caber tudo, sem cortar nome, cidade, investimento e ambientes.
 
 ## Ficou de fora (não estava no exemplo aprovado)
 - Avisos do canto inferior direito cobrindo a coluna Negociação.

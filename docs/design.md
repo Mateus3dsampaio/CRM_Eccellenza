@@ -15,9 +15,10 @@ Objetivo: funcionar bem e já parecer um produto, sem gastar tempo em animação
 - Etiquetas em pílulas coloridas com "x" para remover.
 
 **Card do kanban (aprovado pelo Mateus em 10/11/2026, tarefa 39; vale mais que as imagens de referência)**
-- Ordem das informações: 1) quem é (avatar com selo de quem atende, nome em uma linha, não lidas ou hora); 2) **uma** faixa de ação com a pendência mais grave, sempre no mesmo lugar; 3) última mensagem em duas linhas; 4) valor, cidade e ambientes em uma linha, cada um com seu ícone; 5) etiquetas; 6) rodapé com lugares fixos: anel da janela de 24h no canto esquerdo e iniciais do consultor no canto direito.
+- Ordem das informações: 1) quem é (avatar com selo de quem atende, nome inteiro, não lidas ou hora); 2) **uma** faixa de ação com a pendência mais grave, sempre no mesmo lugar; 3) última mensagem em duas linhas; 4) valor, cidade e ambientes, cada um com seu ícone; 5) etiquetas; 6) rodapé com lugares fixos: anel da janela de 24h no canto esquerdo e iniciais do consultor no canto direito.
 - Uma cor, um significado: **vermelho** = cliente sem resposta além do prazo (ou IA travada); **âmbar** = pendência do vendedor (data vencida, falta marcar, fila sem consultor, cliente perto do prazo); **azul** = é para hoje; **verde** = combinado e em dia; **cinza** = nada a fazer agora. A cor nunca vai sozinha: sempre com texto e ícone.
 - A faixa é reta e ocupa a largura do card; pílula fica só para etiqueta.
+- O card cresce na altura para caber tudo (decisão do Mateus 10/11/2026): dado não é cortado com reticências, desce de linha. Só a última mensagem (2 linhas) e listas muito longas de ambientes (3 linhas) têm limite.
 - Movimento: só o card crítico pulsa, no máximo um por coluna (o que espera há mais tempo). Nada pisca dentro do card.
 - Coluna: em cima "Precisa de você", embaixo "Aguardando o cliente"; o cabeçalho mostra quantos esperam e, onde há orçamento, a soma.
 - Bastante espaço em branco, alinhamento rigoroso, tipografia limpa (Inter ou similar).

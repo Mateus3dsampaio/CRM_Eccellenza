@@ -148,8 +148,8 @@ function ConteudoCard({
             </span>
           )}
         </span>
-        {/* Nome em uma linha: é a informação mais importante do card (a dica mostra o nome inteiro). */}
-        <p className="min-w-0 flex-1 truncate font-semibold text-texto" title={card.nome}>
+        {/* Nome inteiro, em até 2 linhas: é a informação mais importante do card. */}
+        <p className="line-clamp-2 min-w-0 flex-1 break-words font-semibold leading-snug text-texto" title={card.nome}>
           {nome ?? card.nome}
         </p>
         {direita ?? (card.naoLidas > 0 ? <BolinhaNaoLidas total={card.naoLidas} /> : <span className="shrink-0 text-[11px] tabular-nums text-texto-fraco">{card.horario}</span>)}
@@ -157,25 +157,26 @@ function ConteudoCard({
       <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />
       {card.previa && <p className="line-clamp-2 break-words px-3 pt-2 text-sm text-texto-suave">{card.previa}</p>}
       {temDetalhes && (
-        // Uma linha só, com ícone em cada dado (pedido do Mateus 10/11/2026). Quem encolhe quando falta espaço são os ambientes.
-        <p className="flex items-center gap-x-2.5 overflow-hidden px-3 pt-1.5 text-xs text-texto-fraco" title={[valor, card.cidade, investimento, ambientes].filter(Boolean).join(" · ")}>
-          {valor && <b className="shrink-0 font-semibold tabular-nums text-texto">{valor}</b>}
+        // Cada dado com seu ícone, sem cortar (pedido do Mateus 10/11/2026): quando não cabe na linha, o dado desce e o card cresce.
+        <p className="flex flex-wrap items-start gap-x-2.5 gap-y-0.5 px-3 pt-1.5 text-xs text-texto-fraco">
+          {valor && <b className="font-semibold tabular-nums text-texto">{valor}</b>}
           {card.cidade && (
-            <span className="inline-flex shrink-0 items-center gap-1">
+            <span className="inline-flex items-center gap-1">
               <MapPin className="size-3.5 shrink-0" aria-hidden />
               {card.cidade}
             </span>
           )}
           {investimento && (
-            <span className="inline-flex min-w-0 items-center gap-1">
+            <span className="inline-flex items-center gap-1">
               <CircleDollarSign className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{investimento}</span>
+              {investimento}
             </span>
           )}
           {ambientes && (
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{ambientes}</span>
+            // Lista de ambientes muito longa para em 3 linhas; a dica mostra todos.
+            <span className="inline-flex min-w-0 items-start gap-1" title={ambientes}>
+              <LayoutGrid className="mt-px size-3.5 shrink-0" aria-hidden />
+              <span className="line-clamp-3 break-words">{ambientes}</span>
             </span>
           )}
         </p>
@@ -329,7 +330,7 @@ export function Card({
         critico={critico}
         nome={
           selecionando ? (
-            <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="max-w-full truncate rounded-controle text-left">
+            <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="rounded-controle text-left">
               <span className="sr-only">{selecionado ? "Desmarcar" : "Selecionar"} </span>
               {card.nome}
             </button>
