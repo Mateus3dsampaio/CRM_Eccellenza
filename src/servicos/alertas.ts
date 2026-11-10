@@ -140,7 +140,7 @@ export async function avisarDecisoesVencidas(): Promise<number> {
       etapa: { in: ["medicao", "apresentacao", "negociacao"] },
       OR: [{ alertaDecisaoEm: null }, { alertaDecisaoEm: { lt: hoje } }],
     },
-    select: { id: true, etapa: true, proximoContatoEm: true, alertaDecisaoEm: true, visitas: { where: { status: "agendada" }, select: { tipo: true, inicio: true } } },
+    select: { id: true, etapa: true, proximoContatoEm: true, alertaDecisaoEm: true, visitas: { where: { status: "agendada" }, select: { tipo: true, inicio: true, concluidaEm: true } } },
   });
   let avisados = 0;
   for (const lead of leads) {

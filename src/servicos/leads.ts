@@ -11,6 +11,7 @@ import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { formatarVisitaCurta } from "@/regras/tempo";
 import { motivosDePerda, regrasDeVendas } from "./vendas";
 import { ETAPAS_ANTIGAS, ETAPAS_FUNIL, etapaComAgenda, etapaValida, nomeEtiqueta, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
+import { concluirApresentacao } from "./apresentacoes";
 import { nomesDasEtapas } from "./etapas";
 import { registrarAlteracao } from "./historico";
 import { registrarUmaVez } from "./metricas";
@@ -163,6 +164,8 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
   const nomes = await nomesDasEtapas();
   await registrarAlteracao(leadId, autor, `Moveu de "${nomes[lead.etapa as CodigoEtapa] ?? lead.etapa}" para "${nomes[etapa]}"${detalheDaMudanca(etapa, atualizado, await motivosDePerda())}`);
   await db.mudancaEtapa.create({ data: { leadId, de: lead.etapa, para: etapa, autor, criadoEm: quando } });
+  // Passou pela apresentação (cliente veio ou fechou): a apresentação conta como realizada, mesmo sem passar pela janela de decisão.
+  if (lead.etapa === "apresentacao" && (etapa === "negociacao" || etapa === "fechado")) await concluirApresentacao(leadId, autor, quando);
   await marcarMudanca();
   return atualizado;
 }

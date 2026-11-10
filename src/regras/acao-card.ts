@@ -25,6 +25,7 @@ export type CodigoAcao =
   | "na_fila"
   | "decidir"
   | "marcar_data"
+  | "marcar_apresentacao"
   | "retorno_atrasado"
   | "definir_retorno"
   | "responder"
@@ -52,6 +53,7 @@ export const ORDEM_ACAO: CodigoAcao[] = [
   "na_fila",
   "decidir",
   "marcar_data",
+  "marcar_apresentacao",
   "retorno_atrasado",
   "definir_retorno",
   "responder",
@@ -80,6 +82,8 @@ export interface LeadParaAcao {
   erroBot: string | null;
   decisao: { tipo: TipoDecisao; venceuEm: Date | string } | null;
   semData: boolean;
+  /** Pronto para marcar a apresentação (regras/apresentacao.ts): vira a faixa âmbar "Marcar apresentação". */
+  pronto?: "medicao" | "projeto" | null;
   proximoContatoEm: Instante;
   lembreteNota: string | null;
   /** Próximo compromisso já escrito, ex.: "Medição qui 12/11 8h". */
@@ -126,6 +130,15 @@ export function acoesDoCard(lead: LeadParaAcao, ctx: ContextoDaAcao): AcaoCard[]
   if (lead.decisao) acoes.push({ codigo: "decidir", cor: "ambar", texto: FAIXA_DECISAO[lead.decisao.tipo], precisaDeVoce: true });
   if (lead.semData) acoes.push({ codigo: "marcar_data", cor: "ambar", texto: "Marcar data na agenda", precisaDeVoce: true, dica: "Este card está numa coluna de compromisso, mas não há data marcada na agenda." });
 
+  if (lead.pronto && !encerrada) {
+    acoes.push({
+      codigo: "marcar_apresentacao",
+      cor: "ambar",
+      texto: "Marcar apresentação",
+      precisaDeVoce: true,
+      dica: lead.pronto === "medicao" ? "Medição concluída e a apresentação ainda não foi marcada." : "Cliente já tem projeto (medição pulada) e a apresentação ainda não foi marcada.",
+    });
+  }
   if ((ETAPAS_COM_RETORNO as string[]).includes(lead.etapa)) {
     const situacao = situacaoDoRetorno(lead.proximoContatoEm, ctx.agora);
     const dica = lead.lembreteNota ?? undefined;

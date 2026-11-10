@@ -10,7 +10,7 @@ import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso } from "../dados";
 import { COR_ETAPA, juntar } from "../estilos";
 import { useNomesEtapas } from "../etapas";
-import { JanelaDecisao, type EscolhaDecisao } from "../kanban/decisao";
+import { JanelaDecisao, JanelaMedicaoConcluida, type EscolhaDecisao } from "../kanban/decisao";
 import { Botao, Modal, Popover, classeEntrada } from "../ui";
 import { usePode } from "../usuario";
 import { JanelaMudanca } from "../vendas/janela-mudanca";
@@ -50,6 +50,7 @@ export function useAcoesDoLead(ficha: FichaLead, aoMudar: () => void): { acoes: 
   const [lembrete, setLembrete] = useState(false);
   const [decidindo, setDecidindo] = useState<{ tipo: TipoDecisao; venceuEm: string } | null>(null);
   const [nota, setNota] = useState(false);
+  const [aposMedicao, setAposMedicao] = useState(false);
   const compromissosMarcados = ficha.visitas.filter((v) => v.status === "agendada" && v.tipo !== "visita");
   const lembreteObrigatorio = retornoObrigatorio(regras, ficha.etapa);
 
@@ -114,7 +115,20 @@ export function useAcoesDoLead(ficha: FichaLead, aoMudar: () => void): { acoes: 
     setDecidindo(null);
     if ("agendar" in escolha) return setAgendar(escolha.agendar);
     if ("mover" in escolha) return setPedido({ etapa: escolha.mover });
+    if ("concluirMedicao" in escolha) return void concluirMedicao();
     setPedido({ etapa: "negociacao", novoRetorno: true });
+  }
+
+  /** Medição concluída: só registra; marcar a apresentação em seguida é opcional. */
+  async function concluirMedicao() {
+    try {
+      await chamarApi(`/api/leads/${ficha.id}/apresentacao`, { method: "POST", json: { acao: "concluir_medicao" } });
+      setAposMedicao(true);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível concluir a medição.", "erro");
+    } finally {
+      aoMudar();
+    }
   }
 
   async function copiarResumo() {
@@ -179,6 +193,16 @@ export function useAcoesDoLead(ficha: FichaLead, aoMudar: () => void): { acoes: 
       )}
       {lembrete && <JanelaLembrete ficha={ficha} obrigatorio={lembreteObrigatorio} aoFechar={() => setLembrete(false)} salvar={salvar} />}
       {decidindo && <JanelaDecisao nome={ficha.nomeExibicao} tipo={decidindo.tipo} venceuEm={decidindo.venceuEm} aoFechar={() => setDecidindo(null)} aoEscolher={aoDecidir} />}
+      {aposMedicao && (
+        <JanelaMedicaoConcluida
+          nome={ficha.nomeExibicao}
+          aoFechar={() => setAposMedicao(false)}
+          aoMarcar={() => {
+            setAposMedicao(false);
+            setAgendar("apresentacao");
+          }}
+        />
+      )}
       {nota && <JanelaNota leadId={ficha.id} aoFechar={() => setNota(false)} aoMudar={aoMudar} />}
     </>
   );

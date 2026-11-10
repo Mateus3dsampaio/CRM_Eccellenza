@@ -101,6 +101,8 @@ const ORDEM_ETAPA = Object.fromEntries(ETAPAS.map((e, i) => [e.codigo, i])) as R
 export function etapaAoAgendar(etapaAtual: string, tipo: TipoCompromisso): CodigoEtapa | null {
   if (tipo === "visita") return null;
   if (etapaAtual === "perdido") return tipo;
+  // Medição marcada para quem está em Apresentação: o card volta para Medição (em Apresentação, ou tem projeto, ou já mediu).
+  if (tipo === "medicao" && etapaAtual === "apresentacao") return "medicao";
   const atual = ORDEM_ETAPA[etapaAtual as CodigoEtapa];
   return atual === undefined || atual < ORDEM_ETAPA[tipo] ? tipo : null;
 }
@@ -138,7 +140,8 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   if (!consultorId) throw new ErroAgenda(params.consultorId ? "O consultor já tem compromisso nesse horário." : "Esse horário não está mais livre.");
 
   // Um compromisso ativo de cada tipo por lead: o anterior do mesmo tipo é cancelado (remarcação).
-  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo } });
+  // Compromisso já concluído (medição feita, apresentação realizada) é história: não se cancela ao marcar outro.
+  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo, concluidaEm: null } });
 
   let visita;
   try {
@@ -154,7 +157,8 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
     throw erro;
   }
 
-  await db.lead.update({ where: { id: lead.id }, data: { consultorId } });
+  // Agendar a medição desfaz o "cliente tem projeto: pulou a medição" (o lead deixa de ser pronto para marcar).
+  await db.lead.update({ where: { id: lead.id }, data: { consultorId, ...(tipo === "medicao" ? { pulouMedicaoEm: null, estimativaAlinhadaEm: null } : {}) } });
   await registrarUmaVez(lead.id, EVENTO_DO_TIPO[tipo], consultorId);
   // Remarcar medição ou apresentação depois que a data venceu = o compromisso não aconteceu (cliente faltou). Conta no Painel.
   const faltou = tipo !== "visita" ? anteriores.find((v) => venceu(v.inicio, quando)) : undefined;
@@ -165,6 +169,14 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} ${nomeTipo}: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
   // AGENDA-04: medição e apresentação movem o card (sem voltar etapas mais avançadas).
   const destino = etapaAoAgendar(lead.etapa, tipo);
+  // Voltou de Apresentação para Medição: a apresentação marcada sai da agenda (marca-se de novo depois de concluir a medição).
+  if (destino === "medicao" && lead.etapa === "apresentacao") {
+    const saindo = await db.visita.findMany({ where: { leadId: lead.id, tipo: "apresentacao", status: "agendada", concluidaEm: null } });
+    for (const v of saindo) {
+      await db.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
+      await registrarAlteracao(lead.id, params.autor, `Cancelou apresentação de ${formatarVisitaCurta(v.inicio)} (card voltou para Medição)`);
+    }
+  }
   if (destino) await moverEtapa(lead.id, destino, params.autor);
   await atualizarResumo(lead.id);
   // Aviso só quando o bot marca: quem marca pela tela já sabe que marcou.

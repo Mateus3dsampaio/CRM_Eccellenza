@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -31,7 +31,8 @@ import { JanelaMudanca, type VendaParaApi } from "../vendas/janela-mudanca";
 import { AgendarVisita } from "../ficha/agendar";
 import { NIVEIS_ZOOM, definirZoom, useZoomKanban, zoomParaCaber } from "./zoom";
 import { Card, CardFlutuante, useContextoDaAcao, type AcoesCard } from "./card";
-import { JanelaDecisao, type EscolhaDecisao } from "./decisao";
+import { JanelaDecisao, JanelaMedicaoConcluida, type EscolhaDecisao } from "./decisao";
+import { PlacarApresentacao } from "./placar-apresentacao";
 
 // Colunas recolhidas (tarefa 24): faixa fina com nome na vertical e contador. Fechado e Perdido começam assim.
 const CHAVE_RECOLHIDAS = "colunas-recolhidas";
@@ -41,6 +42,9 @@ const LARGURA_COLUNA = 264;
 const LARGURA_RECOLHIDA = 44;
 const ESPACO_ENTRE = 16;
 const MARGEM_QUADRO = 32;
+// A coluna Apresentação agendada é mais larga (token --spacing-coluna-destaque, 296px).
+const EXTRA_COLUNA_DESTAQUE = 32;
+const CHEGADA_MS = 2600;
 
 function assinarTela(aviso: () => void) {
   const mq = window.matchMedia("(min-width: 768px)");
@@ -101,19 +105,20 @@ export function Quadro() {
 
   // Zoom automático: as colunas abertas cabem na largura do quadro (até o mínimo; abaixo disso rola).
   const totalColunas = nomesEtapas.lista.length;
+  const apresentacaoRecolhida = recolhidas.has("apresentacao");
   const totalRecolhidas = [...recolhidas].filter((c) => nomesEtapas.lista.some((e) => e.codigo === c)).length;
   useLayoutEffect(() => {
     const el = refRolagem.current;
     if (!el || zoomEscolhido !== "auto") return;
     const medir = () => {
-      const necessario = (totalColunas - totalRecolhidas) * LARGURA_COLUNA + totalRecolhidas * LARGURA_RECOLHIDA + (totalColunas - 1) * ESPACO_ENTRE + MARGEM_QUADRO;
+      const necessario = (totalColunas - totalRecolhidas) * LARGURA_COLUNA + totalRecolhidas * LARGURA_RECOLHIDA + (totalColunas - 1) * ESPACO_ENTRE + MARGEM_QUADRO + (apresentacaoRecolhida ? 0 : EXTRA_COLUNA_DESTAQUE);
       setZoomAuto(zoomParaCaber(el.clientWidth, necessario));
     };
     medir();
     const observador = new ResizeObserver(medir);
     observador.observe(el);
     return () => observador.disconnect();
-  }, [zoomEscolhido, totalColunas, totalRecolhidas, dados]);
+  }, [zoomEscolhido, totalColunas, totalRecolhidas, apresentacaoRecolhida, dados]);
 
   const [busca, setBusca] = useState("");
   const [etiqueta, setEtiqueta] = useState("");
@@ -122,6 +127,10 @@ export function Quadro() {
   // Filtros de um clique (ESP-12).
   const [soEsperando, setSoEsperando] = useState(false);
   const [soMeus, setSoMeus] = useState(false);
+  // Atalho "prontos para marcar" do placar da Apresentação: mostra só os leads prontos.
+  const [soProntos, setSoProntos] = useState(false);
+  const [aposMedicao, setAposMedicao] = useState<string | null>(null);
+  const [chegaram, setChegaram] = useState<Set<string>>(new Set());
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
@@ -149,8 +158,25 @@ export function Quadro() {
     cards.forEach((c) => c.consultor && mapa.set(c.consultor.id, c.consultor.nome));
     return [...mapa].sort((a, b) => a[1].localeCompare(b[1]));
   }, [cards]);
+  // Card que entra na coluna Apresentação com a tela aberta ganha uma comemoração curta (a primeira carga não conta).
+  const idsApresentacao = useMemo(() => cards.filter((c) => c.etapa === "apresentacao").map((c) => c.id), [cards]);
+  const idsAnteriores = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const atuais = new Set(idsApresentacao);
+    const novos = idsAnteriores.current ? idsApresentacao.filter((id) => !idsAnteriores.current!.has(id)) : [];
+    idsAnteriores.current = atuais;
+    if (!novos.length) return;
+    setChegaram(new Set(novos));
+    const t = setTimeout(() => setChegaram(new Set()), CHEGADA_MS);
+    return () => clearTimeout(t);
+  }, [idsApresentacao]);
   const cidades = useMemo(() => [...new Set(cards.map((c) => c.cidade).filter(Boolean) as string[])].sort(), [cards]);
 
+  // Prontos para marcar a apresentação: o consultor vê só os dele; o admin, todos (ou os do vendedor escolhido no quadro).
+  const prontosIds = useMemo(
+    () => new Set(cards.filter((c) => c.pronto && (ehAdmin ? !consultor || c.consultor?.id === consultor : c.consultor?.id === usuario.id)).map((c) => c.id)),
+    [cards, ehAdmin, consultor, usuario.id],
+  );
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const termoDigitos = termo.replace(/\D/g, "");
@@ -161,9 +187,10 @@ export function Quadro() {
         (!consultor || c.consultor?.id === consultor) &&
         (!cidade || c.cidade === cidade) &&
         (!soEsperando || c.esperandoDesde !== null) &&
-        (!soMeus || c.consultor?.id === usuario.id),
+        (!soMeus || c.consultor?.id === usuario.id) &&
+        (!soProntos || prontosIds.has(c.id)),
     );
-  }, [cards, busca, etiqueta, consultor, cidade, soEsperando, soMeus, usuario.id]);
+  }, [cards, busca, etiqueta, consultor, cidade, soEsperando, soMeus, soProntos, prontosIds, usuario.id]);
   const totalEsperando = useMemo(() => cards.filter((c) => c.esperandoDesde !== null).length, [cards]);
 
   const porEtapa = useMemo(() => {
@@ -211,10 +238,34 @@ export function Quadro() {
     void acao({ acao: "mover", ids: [id], etapa, ...(venda ? { dados: venda } : {}), ...(cancelarCompromissos ? { cancelarCompromissos: true } : {}) }, mesmaEtapa ? "Próximo contato atualizado." : `Movido para "${nomesEtapas.nome(etapa)}".`);
   }
 
+  /** Medição concluída: só registra. A apresentação é marcada em seguida, se o vendedor quiser. */
+  async function concluirMedicao(id: string) {
+    try {
+      await chamarApi(`/api/leads/${id}/apresentacao`, { method: "POST", json: { acao: "concluir_medicao" } });
+      setAposMedicao(id);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível concluir a medição.", "erro");
+    } finally {
+      await recarregar();
+    }
+  }
+
+  async function pularMedicao(id: string, pular: boolean) {
+    try {
+      await chamarApi(`/api/leads/${id}/apresentacao`, { method: "POST", json: { acao: "pular_medicao", pular } });
+      avisar(pular ? "Pronto para marcar a apresentação (cliente tem projeto)." : "Voltou a precisar de medição.");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível salvar.", "erro");
+    } finally {
+      await recarregar();
+    }
+  }
+
   function decidir(id: string, escolha: EscolhaDecisao) {
     setDecidindo(null);
     if ("agendar" in escolha) return setAgendando({ id, tipo: escolha.agendar });
     if ("mover" in escolha) return mover(id, escolha.mover);
+    if ("concluirMedicao" in escolha) return void concluirMedicao(id);
     setNovoRetorno(true);
     setPedido({ id, etapa: "negociacao" });
   }
@@ -239,6 +290,8 @@ export function Quadro() {
     arquivar: (id) => void acao({ acao: "arquivar", ids: [id] }, "Lead arquivado."),
     excluir: podeExcluir ? (id) => confirmarExclusao([id]) : undefined,
     decidir: setDecidindo,
+    marcarApresentacao: (id) => setAgendando({ id, tipo: "apresentacao" }),
+    pularMedicao: (id, pular) => void pularMedicao(id, pular),
   };
   const cardDecidindo = decidindo ? cards.find((c) => c.id === decidindo) : undefined;
 
@@ -337,6 +390,7 @@ export function Quadro() {
             </div>
           )}
           {/* Filtros ligados viram chips com "x" (tarefa 27): dá para ver o que está filtrando sem abrir nada. */}
+          {soProntos && <ChipFiltro rotulo="Prontos para marcar apresentação" aoRemover={() => setSoProntos(false)} />}
           {etiqueta && <ChipFiltro rotulo={`Etiqueta: ${nomeEtiqueta(etiqueta)}`} aoRemover={() => setEtiqueta("")} />}
           {cidade && <ChipFiltro rotulo={`Cidade: ${cidade}`} aoRemover={() => setCidade("")} />}
           {!ehAdmin && consultor && <ChipFiltro rotulo={`Consultor: ${consultores.find(([id]) => id === consultor)?.[1] ?? ""}`} aoRemover={() => setConsultor("")} />}
@@ -508,6 +562,12 @@ export function Quadro() {
                 aoLimpar={limparColuna}
                 recolhida={recolhidas.has(e.codigo)}
                 aoRecolher={(recolher) => alternarRecolhida(e.codigo, recolher)}
+                chegaram={chegaram}
+                destaque={
+                  e.codigo === "apresentacao" ? (
+                    <PlacarApresentacao vendedorEscolhido={ehAdmin ? consultor || null : null} prontos={prontosIds.size} soProntos={soProntos} aoAlternarProntos={() => setSoProntos((v) => !v)} />
+                  ) : undefined
+                }
               />
             ))}
             </div>
@@ -541,6 +601,16 @@ export function Quadro() {
           venceuEm={cardDecidindo.decisao.venceuEm}
           aoFechar={() => setDecidindo(null)}
           aoEscolher={(escolha) => decidir(cardDecidindo.id, escolha)}
+        />
+      )}
+      {aposMedicao && (
+        <JanelaMedicaoConcluida
+          nome={cards.find((c) => c.id === aposMedicao)?.nome ?? "o cliente"}
+          aoFechar={() => setAposMedicao(null)}
+          aoMarcar={() => {
+            setAgendando({ id: aposMedicao, tipo: "apresentacao" });
+            setAposMedicao(null);
+          }}
         />
       )}
       {pedido && (
@@ -637,8 +707,13 @@ function Coluna(props: {
   aoLimpar: (etapa: string, modo: "arquivar" | "excluir") => void;
   recolhida: boolean;
   aoRecolher: (recolher: boolean) => void;
+  /** Cards que acabaram de entrar na coluna (comemoração). */
+  chegaram: Set<string>;
+  /** Conteúdo extra do cabeçalho (placar da Apresentação). */
+  destaque?: ReactNode;
 }) {
   const { codigo, nome, cards, recolhida, aoRecolher } = props;
+  const ehDestaque = codigo === "apresentacao";
   const { prazos } = useAguardando();
   const agora = useAgoraDoServidor();
   const criticos = useMemo(() => idsCriticosDaColuna(cards, agora, prazos), [cards, agora, prazos]);
@@ -650,7 +725,7 @@ function Coluna(props: {
   const esperando = cards.filter((c) => c.esperandoDesde !== null).length;
   const somaOrcamentos = (ETAPAS_COM_SOMA as string[]).includes(codigo) ? cards.reduce((s, c) => s + (c.valorOrcamento ?? 0), 0) : 0;
   const cardDe = (c: CardKanban) => (
-    <Card key={c.id} card={c} pendencias={pendencias.get(c.id) ?? []} critico={criticos.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
+    <Card key={c.id} card={c} pendencias={pendencias.get(c.id) ?? []} critico={criticos.has(c.id)} celebrar={props.chegaram.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
   );
   const { setNodeRef, isOver } = useDroppable({ id: codigo });
   const limpavel = (ETAPAS_LIMPAVEIS as string[]).includes(codigo);
@@ -691,12 +766,13 @@ function Coluna(props: {
       ref={setNodeRef}
       aria-label={nome}
       className={juntar(
-        "w-full shrink-0 flex-col rounded-painel bg-coluna p-3 shadow-painel transition md:flex md:max-h-full md:w-coluna",
+        "w-full shrink-0 flex-col rounded-painel p-3 transition md:flex md:max-h-full",
+        ehDestaque ? "bg-etapa-apresentacao-suave shadow-coluna-destaque ring-1 ring-etapa-apresentacao/35 md:w-coluna-destaque" : "bg-coluna shadow-painel md:w-coluna",
         props.visivelCelular ? "flex" : "hidden",
         isOver && "bg-marca-suave ring-2 ring-marca/40",
       )}
     >
-      <header className="px-1 pb-3">
+      <header className={juntar("px-1 pb-3", ehDestaque && "cabecalho-destaque -mx-3 -mt-3 rounded-t-painel px-4 pt-3")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} />
@@ -724,7 +800,8 @@ function Coluna(props: {
             <ChevronsLeftRight className="size-3.5" aria-hidden />
           </button>
         </div>
-        <div className={juntar("mt-3 h-1 rounded-pilula", COR_ETAPA[codigo])} aria-hidden />
+        {props.destaque}
+        <div className={juntar("mt-3 rounded-pilula", ehDestaque ? "barra-destaque h-1.5" : "h-1", COR_ETAPA[codigo])} aria-hidden />
         {limpavel && props.totalSemFiltro > 0 && (
           <div className="mt-2 flex gap-1">
             <button onClick={() => props.aoLimpar(codigo, "arquivar")} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-xs font-medium text-texto-suave hover:bg-superficie">

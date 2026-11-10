@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarClock, CalendarPlus, CalendarSync, CircleDollarSign, Handshake, XCircle } from "lucide-react";
+import { CalendarClock, CalendarPlus, CalendarSync, CheckCircle2, CircleDollarSign, Handshake, XCircle } from "lucide-react";
 import type { TipoDecisao } from "@/regras/decisao";
 import type { EtapaComAgenda } from "@/regras/etapas";
 import { formatarVisitaCurta } from "@/regras/tempo";
@@ -9,7 +9,7 @@ import { juntar } from "../estilos";
 import { Botao, Modal } from "../ui";
 
 /** O que a decisão faz: abre a agenda, move o card (com a janela de dados quando a etapa pede) ou pede uma nova data de retorno. */
-export type EscolhaDecisao = { agendar: EtapaComAgenda } | { mover: "negociacao" | "fechado" | "perdido" } | { novoRetorno: true };
+export type EscolhaDecisao = { agendar: EtapaComAgenda } | { mover: "negociacao" | "fechado" | "perdido" } | { novoRetorno: true } | { concluirMedicao: true };
 
 interface Opcao {
   titulo: string;
@@ -26,7 +26,7 @@ const OPCOES: Record<TipoDecisao, { pergunta: string; opcoes: Opcao[] }> = {
   medicao: {
     pergunta: "A medição já passou. Como ficou?",
     opcoes: [
-      { titulo: "Medição feita", detalhe: "Marcar a apresentação (o card vai para Apresentação agendada).", icone: icone(CalendarPlus), escolha: { agendar: "apresentacao" } },
+      { titulo: "Medição concluída", detalhe: "Registra a medição como feita. Em seguida você pode marcar a apresentação, se quiser.", icone: icone(CheckCircle2), escolha: { concluirMedicao: true } },
       { titulo: "Não aconteceu: remarcar", detalhe: "Escolher outro dia para a medição.", icone: icone(CalendarSync), escolha: { agendar: "medicao" } },
       { titulo: "Cliente desistiu", detalhe: "Mover para Perdido informando o motivo.", icone: icone(XCircle), escolha: { mover: "perdido" }, perigo: true },
     ],
@@ -34,8 +34,8 @@ const OPCOES: Record<TipoDecisao, { pergunta: string; opcoes: Opcao[] }> = {
   apresentacao: {
     pergunta: "A apresentação já passou. Como ficou?",
     opcoes: [
-      { titulo: "Fechou", detalhe: "Informar o valor e mover para Fechado.", icone: icone(CircleDollarSign), escolha: { mover: "fechado" } },
-      { titulo: "Cliente veio, segue negociando", detalhe: "Mover para Negociação com a data do próximo contato.", icone: icone(Handshake), escolha: { mover: "negociacao" } },
+      { titulo: "Apresentação concluída: fechou", detalhe: "Informar o valor e mover para Fechado.", icone: icone(CircleDollarSign), escolha: { mover: "fechado" } },
+      { titulo: "Apresentação concluída: cliente veio, segue negociando", detalhe: "Mover para Negociação com a data do próximo contato.", icone: icone(Handshake), escolha: { mover: "negociacao" } },
       { titulo: "Cliente não veio: remarcar", detalhe: "Escolher outro dia para a apresentação.", icone: icone(CalendarSync), escolha: { agendar: "apresentacao" } },
       { titulo: "Cliente desistiu", detalhe: "Mover para Perdido informando o motivo.", icone: icone(XCircle), escolha: { mover: "perdido" }, perigo: true },
     ],
@@ -80,6 +80,25 @@ export function JanelaDecisao({ nome, tipo, venceuEm, aoFechar, aoEscolher }: { 
       <div className="mt-4 flex justify-end">
         <Botao variante="fantasma" onClick={aoFechar}>
           Decidir depois
+        </Botao>
+      </div>
+    </Modal>
+  );
+}
+
+/** Depois de concluir a medição: marcar a apresentação agora é opcional. Sem marcar, o lead fica pronto para marcar, com a faixa âmbar no card. */
+export function JanelaMedicaoConcluida({ nome, aoMarcar, aoFechar }: { nome: string; aoMarcar: () => void; aoFechar: () => void }) {
+  return (
+    <Modal aberto aoFechar={aoFechar} titulo="Medição concluída" largura="max-w-md">
+      <p className="text-sm text-texto-suave">
+        A medição de <span className="font-semibold text-texto">{nome}</span> foi registrada. Quer marcar a apresentação agora? Se deixar para depois, o card continua em Medição agendada com o aviso &quot;Marcar apresentação&quot;.
+      </p>
+      <div className="mt-5 flex justify-end gap-2">
+        <Botao variante="fantasma" onClick={aoFechar}>
+          Marcar depois
+        </Botao>
+        <Botao variante="primario" icone={<CalendarPlus className="size-4" aria-hidden />} onClick={aoMarcar}>
+          Marcar a apresentação
         </Botao>
       </div>
     </Modal>
