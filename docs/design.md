@@ -12,9 +12,14 @@ Objetivo: funcionar bem e já parecer um produto, sem gastar tempo em animação
 - Fundo claro levemente azulado/acinzentado; colunas em painéis claros; cards brancos com cantos arredondados (12–16px) e sombra suave.
 - Barra colorida no topo de cada coluna, com nome da etapa e contador ("2.469 conversas").
 - Verde do WhatsApp só como destaque (ícone de canal, status); a cor principal da marca fica definida em tokens.
-- Avatar redondo, nome em negrito, horário à direita, prévia da mensagem em cinza com reticências, linha de metadados (cidade, investimento, consultor) com ícones pequenos.
 - Etiquetas em pílulas coloridas com "x" para remover.
-- Sino de alerta no card quando o cliente aguarda humano.
+
+**Card do kanban (aprovado pelo Mateus em 10/11/2026, tarefa 39; vale mais que as imagens de referência)**
+- Ordem das informações: 1) quem é (avatar com selo de quem atende, nome em uma linha, não lidas ou hora); 2) **uma** faixa de ação com a pendência mais grave, sempre no mesmo lugar; 3) última mensagem em duas linhas; 4) valor, cidade e ambientes em uma linha; 5) rodapé com etiquetas, anel da janela de 24h, iniciais do consultor e menu.
+- Uma cor, um significado: **vermelho** = cliente sem resposta além do prazo (ou IA travada); **âmbar** = pendência do vendedor (data vencida, falta marcar, fila sem consultor, cliente perto do prazo); **azul** = é para hoje; **verde** = combinado e em dia; **cinza** = nada a fazer agora. A cor nunca vai sozinha: sempre com texto e ícone.
+- A faixa é reta e ocupa a largura do card; pílula fica só para etiqueta.
+- Movimento: só o card crítico pulsa, no máximo um por coluna (o que espera há mais tempo). Nada pisca dentro do card.
+- Coluna: em cima "Precisa de você", embaixo "Aguardando o cliente"; o cabeçalho mostra quantos esperam e, onde há orçamento, a soma.
 - Bastante espaço em branco, alinhamento rigoroso, tipografia limpa (Inter ou similar).
 
 **Fundamentos obrigatórios**

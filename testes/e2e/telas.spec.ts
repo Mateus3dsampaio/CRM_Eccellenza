@@ -54,7 +54,10 @@ test("menu Mover para... move o card", async ({ page }, info) => {
 test("Retornos de hoje: lista no topo e card atrasado destacado", async ({ page }, info) => {
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Negociação/ }).click();
-  await expect(page.getByRole("group", { name: "Diego Nascimento" }).getByText(/Retorno atrasado desde/)).toBeVisible();
+  // Retorno vencido na Negociação: a faixa do card vira a decisão (tarefa 39), em âmbar, e não repete "retorno atrasado".
+  const faixa = page.getByRole("group", { name: "Diego Nascimento" }).locator("[data-acao]");
+  await expect(faixa).toHaveAttribute("data-acao", /responder_atrasado|decidir/);
+  await expect(page.getByRole("group", { name: "Diego Nascimento" }).getByText(/Decidir: fechou\?|\+1/).first()).toBeVisible();
   await page.getByRole("button", { name: /retornos? de hoje/ }).click();
   const lista = page.getByRole("dialog", { name: "Retornos de hoje" });
   await expect(lista.getByText("Diego Nascimento")).toBeVisible();
@@ -174,9 +177,9 @@ test("sem login a API recusa (USR-02)", async ({ request }) => {
   expect((await request.get("/api/midias/x.png")).status()).toBe(401);
 });
 
-test("tarefa 33: coluna com vários atrasos só pinta de vermelho o card crítico", async ({ page }, info) => {
+test("tarefas 33 e 39: coluna com vários atrasos só destaca um card crítico", async ({ page }, info) => {
   // Seed: em "Em qualificação", Fernanda espera ~23 h, Roberto ~46 h e Juliana ~48 h (todos no vermelho).
-  // Regra PROVISÓRIA (regras/espera.ts): crítico = o mais antigo da coluna ou 24 h+. Fernanda fica só com borda e badge.
+  // Regra (regras/espera.ts, tarefa 39): crítico = só o mais antigo da coluna. Os outros ficam parados, com a faixa vermelha.
   await entrar(page);
   if (info.project.name === "celular") await page.getByRole("tab", { name: /Em qualificação/ }).click();
   const coluna = page.getByRole("region", { name: "Em qualificação" });
@@ -185,6 +188,10 @@ test("tarefa 33: coluna com vários atrasos só pinta de vermelho o card crític
   await expect(coluna.getByRole("group", { name: "Fernanda Lima" })).toHaveAttribute("data-espera", "vermelho");
   await expect(coluna.getByRole("group", { name: "Fernanda Lima" })).not.toHaveAttribute("data-critico", /.*/);
   await expect(coluna.getByRole("group", { name: "Arq. Juliana Moreira" })).toHaveAttribute("data-critico", "true");
+  await expect(coluna.locator("[data-critico]")).toHaveCount(1);
+  await expect(coluna.getByRole("group", { name: "Roberto Alves" }).locator("[data-acao]")).toHaveAttribute("data-cor", "vermelho");
+  // Nada no card pisca: só o crítico pulsa.
+  await expect(coluna.locator(".animate-piscar")).toHaveCount(0);
   await page.waitForTimeout(400);
   await coluna.screenshot({ path: `${PASTA}/${info.project.name}-cards-espera.png` });
 });
