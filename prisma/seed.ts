@@ -5,7 +5,7 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { gerarHashSenha } from "../src/lib/senha";
 import { gerarResumo } from "../src/servicos/resumo";
-import { DIA, HORA, dataLocal, partesLocais, somarDias } from "../src/regras/tempo";
+import { DIA, HORA, dataLocal, inicioDoMesLocal, partesLocais, somarDias } from "../src/regras/tempo";
 import { chaveVaga, duracaoVisitaMs, horasDeInicio, NOMES_COMPROMISSO, REGRAS_AGENDA_PADRAO } from "../src/regras/agenda";
 import { ETAPAS_FUNIL, POSICAO_NO_FUNIL, type CodigoEtapa } from "../src/regras/etapas";
 
@@ -43,11 +43,18 @@ async function main() {
     return dataLocal(p.ano, p.mes, p.dia, hora);
   }
 
+  // Dia do mês atual, já passado (ou o dia 1 se estivermos no começo do mês), para as apresentações realizadas do placar.
+  function noMes(diasAtras: number, hora: number) {
+    const d = somarDias(agora, -diasAtras);
+    const p = partesLocais(d < inicioDoMesLocal(agora) ? inicioDoMesLocal(agora) : d);
+    return dataLocal(p.ano, p.mes, p.dia, hora);
+  }
+
   type Msg = [autor: "cliente" | "bot" | "consultor", texto: string, minutosAtras: number];
   const exemplos: {
     tel: string; nome: string; etapa: string; cidade?: string; ambientes?: string[]; investimento?: string; situacao?: string; prazo?: string;
     exigencias?: string[]; pedidos?: string[]; etiquetas?: string[]; classificacao?: string; consultor?: string; aguardando?: boolean; modo?: string;
-    msgs: Msg[]; visita?: Date; tipoVisita?: "visita" | "medicao" | "apresentacao"; criadoDiasAtras: number;
+    msgs: Msg[]; visita?: Date; concluida?: boolean; pulouMedicao?: boolean; tipoVisita?: "visita" | "medicao" | "apresentacao"; criadoDiasAtras: number;
     // Vendas (centavos). retornoEmMin: minutos a partir de agora (negativo = já passou).
     retornoEmMin?: number; lembreteNota?: string; valorOrcamento?: number; valorFechado?: number; motivoPerda?: string; concorrente?: string;
   }[] = [
@@ -73,11 +80,11 @@ async function main() {
     { tel: "+5588900000115", nome: "Bruno Teixeira", etapa: "qualificacao", tipoVisita: "visita", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], situacao: "casa pronta", classificacao: "qualificado", consultor: rafael.id, modo: "humano",
       visita: proximoDiaUtil(1, 16), retornoEmMin: 24 * 60, lembreteNota: "Confirmar se vai trazer a planta da cozinha", criadoDiasAtras: 1,
       msgs: [["consultor", "Bruno, pode passar aqui na loja para conhecer os acabamentos e trazer a planta.", 700], ["cliente", "Passo aí amanhã à tarde.", 650]] },
-    { tel: "+5588900000108", nome: "Luciana Ribeiro", etapa: "negociacao", cidade: "Crato", ambientes: ["cozinha", "lavanderia"], investimento: "R$ 35 mil", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 8, retornoEmMin: 120, valorOrcamento: 3_500_000,
+    { tel: "+5588900000108", nome: "Luciana Ribeiro", etapa: "negociacao", cidade: "Crato", ambientes: ["cozinha", "lavanderia"], investimento: "R$ 35 mil", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 8, retornoEmMin: 120, tipoVisita: "apresentacao", visita: noMes(3, 10), concluida: true, valorOrcamento: 3_500_000,
       msgs: [["consultor", "Luciana, obrigado pela visita! Qualquer dúvida sobre o orçamento estou por aqui.", 6000], ["cliente", "Obrigada! Vou conversar com meu marido.", 5900]] },
-    { tel: "+5588900000109", nome: "Diego Nascimento", etapa: "negociacao", cidade: "Juazeiro do Norte", ambientes: ["home office", "quarto de solteiro"], consultor: rafael.id, modo: "humano", aguardando: true, criadoDiasAtras: 10, retornoEmMin: -3 * 24 * 60, valorOrcamento: 1_621_000,
+    { tel: "+5588900000109", nome: "Diego Nascimento", etapa: "negociacao", cidade: "Juazeiro do Norte", ambientes: ["home office", "quarto de solteiro"], consultor: rafael.id, modo: "humano", aguardando: true, criadoDiasAtras: 10, tipoVisita: "apresentacao", visita: noMes(4, 9), concluida: true, retornoEmMin: -3 * 24 * 60, valorOrcamento: 1_621_000,
       msgs: [["cliente", "Consegue ver uma condição melhor no cartão?", 60]] },
-    { tel: "+5588900000110", nome: "Sofia Martins", etapa: "fechado", cidade: "Barbalha", ambientes: ["cozinha"], consultor: beatriz.id, modo: "humano", criadoDiasAtras: 20, valorOrcamento: 1_800_000, valorFechado: 1_650_000,
+    { tel: "+5588900000110", nome: "Sofia Martins", etapa: "fechado", cidade: "Barbalha", ambientes: ["cozinha"], consultor: beatriz.id, modo: "humano", criadoDiasAtras: 20, tipoVisita: "apresentacao", visita: noMes(6, 15), concluida: true, valorOrcamento: 1_800_000, valorFechado: 1_650_000,
       msgs: [["cliente", "Fechado! Obrigada pelo atendimento.", 9000]] },
     { tel: "+5588900000111", nome: "Henrique Castro", etapa: "perdido", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 15, motivoPerda: "concorrente", concorrente: "Concorrente de exemplo",
       msgs: [["cliente", "Vou deixar para o ano que vem.", 12000]] },
@@ -87,6 +94,21 @@ async function main() {
       msgs: [["cliente", "Quanto custa uma cozinha?", 17000], ["bot", "O orçamento é personalizado para cada projeto. Qual ambiente você tem interesse em fazer?", 16999]] },
     { tel: "+5588900000114", nome: "Rita de Cássia", etapa: "qualificacao", cidade: "Juazeiro do Norte", etiquetas: ["pos_venda"], classificacao: "pos_venda", consultor: beatriz.id, aguardando: true, modo: "pausado", criadoDiasAtras: 0,
       msgs: [["cliente", "Comprei com vocês, quando vem a montagem?", 15], ["bot", "Certo! Vou passar seu contato para um dos nossos consultores, que vai falar com você em seguida.", 14]] },
+    // Placar da apresentação: realizadas no mês (negociação e fechado), uma do mês passado (não conta), agendada, medição concluída e cliente que já tem projeto.
+    { tel: "+5588900000116", nome: "Helena Prado", etapa: "negociacao", cidade: "Juazeiro do Norte", ambientes: ["cozinha"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 9, retornoEmMin: 24 * 60, valorOrcamento: 2_400_000, tipoVisita: "apresentacao", visita: noMes(2, 14), concluida: true,
+      msgs: [["consultor", "Helena, foi um prazer apresentar o projeto! Fico no aguardo.", 2800], ["cliente", "Gostei muito, vou avaliar.", 2700]] },
+    { tel: "+5588900000117", nome: "Otávio Brandão", etapa: "fechado", cidade: "Barbalha", ambientes: ["closet", "quarto de casal"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 18, valorOrcamento: 3_100_000, valorFechado: 2_900_000, tipoVisita: "apresentacao", visita: noMes(5, 11), concluida: true,
+      msgs: [["cliente", "Fechado, pode mandar o contrato.", 7000]] },
+    { tel: "+5588900000118", nome: "Nelson Cavalcante", etapa: "fechado", cidade: "Crato", ambientes: ["cozinha"], consultor: rafael.id, modo: "humano", criadoDiasAtras: 40, valorOrcamento: 1_500_000, valorFechado: 1_400_000, tipoVisita: "apresentacao", visita: dataLocal(partesLocais(somarDias(inicioDoMesLocal(agora), -3)).ano, partesLocais(somarDias(inicioDoMesLocal(agora), -3)).mes, partesLocais(somarDias(inicioDoMesLocal(agora), -3)).dia, 10), concluida: true,
+      msgs: [["cliente", "Obrigado, a cozinha ficou linda!", 40000]] },
+    { tel: "+5588900000119", nome: "Eduardo Pinheiro", etapa: "apresentacao", tipoVisita: "apresentacao", valorOrcamento: 2_800_000, cidade: "Juazeiro do Norte", ambientes: ["sala", "home office"], classificacao: "qualificado", consultor: rafael.id, modo: "humano",
+      visita: proximoDiaUtil(4, 14), criadoDiasAtras: 4, msgs: [["consultor", "Eduardo, apresentação marcada! Te espero na loja.", 1500], ["cliente", "Perfeito, estarei aí.", 1490]] },
+    { tel: "+5588900000120", nome: "Camila Duarte", etapa: "medicao", tipoVisita: "medicao", cidade: "Juazeiro do Norte", ambientes: ["cozinha", "lavanderia"], classificacao: "qualificado", consultor: rafael.id, modo: "humano", criadoDiasAtras: 5,
+      visita: noMes(1, 8), concluida: true, msgs: [["consultor", "Camila, medição concluída! Vou preparar o projeto para te apresentar.", 900], ["cliente", "Ótimo, aguardo!", 880]] },
+    { tel: "+5588900000121", nome: "Juliana Matos", etapa: "medicao", tipoVisita: "medicao", cidade: "Barbalha", ambientes: ["quarto de casal"], classificacao: "qualificado", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 6,
+      visita: noMes(1, 10), concluida: true, msgs: [["consultor", "Juliana, medição feita. Em breve combinamos a apresentação.", 1000], ["cliente", "Combinado.", 990]] },
+    { tel: "+5588900000122", nome: "Rodrigo Alves", etapa: "qualificacao", cidade: "Juazeiro do Norte", ambientes: ["cozinha", "sala"], classificacao: "qualificado", consultor: beatriz.id, modo: "humano", criadoDiasAtras: 2, pulouMedicao: true, investimento: "R$ 30 mil",
+      msgs: [["cliente", "Já tenho o projeto de um arquiteto, quero só orçar.", 300], ["consultor", "Perfeito, Rodrigo! Me manda o projeto que eu analiso.", 280]] },
   ];
 
   let i = 0;
@@ -115,6 +137,7 @@ async function main() {
         alertaContatoPara: e.retornoEmMin !== undefined && e.retornoEmMin < 0 ? new Date(agora.getTime() + e.retornoEmMin * 60_000) : null,
         lembreteNota: e.lembreteNota, valorOrcamento: e.valorOrcamento, valorFechado: e.valorFechado, motivoPerda: e.motivoPerda, concorrente: e.concorrente,
         repassadoEm: e.consultor && e.etapa !== "novo" ? new Date(Math.min(agora.getTime(), criadoEm.getTime() + 30 * 60_000)) : null,
+        pulouMedicaoEm: e.pulouMedicao ? new Date(agora.getTime() - 200 * 60_000) : null,
         retomadaEnviadaEm: e.etiquetas?.includes("retomada") ? new Date(agora.getTime() - 8640 * 60_000) : null,
         ultimaMensagemEm: ultimaEm, ultimaMensagemPrevia: ultima[1].slice(0, 140),
         ultimaMsgClienteEm: ultimaCliente ? new Date(agora.getTime() - ultimaCliente[2] * 60_000) : null,
@@ -137,6 +160,7 @@ async function main() {
         data: {
           leadId: lead.id, consultorId: e.consultor, tipo: tipoVisita, inicio: e.visita, fim: new Date(e.visita.getTime() + duracaoVisitaMs(REGRAS_AGENDA_PADRAO, tipoVisita)),
           vagaChave: chaveVaga(e.consultor, e.visita, REGRAS_AGENDA_PADRAO, tipoVisita), criadoPor: consultorNome, criadoEm: criadoEm,
+          concluidaEm: e.concluida ? new Date(e.visita.getTime() + 2 * HORA) : null,
         },
       });
     }

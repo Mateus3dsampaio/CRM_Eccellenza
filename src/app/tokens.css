@@ -54,6 +54,9 @@
   --color-etapa-qualificacao: #f2b84b;
   --color-etapa-medicao: #5fd3c4;
   --color-etapa-apresentacao: #c49bff;
+  /* Coluna Apresentação agendada: etapa principal do funil (teste "coluna Apresentação"). Tudo sai da cor da etapa, então vale nos seis temas. */
+  --color-etapa-apresentacao-suave: color-mix(in srgb, var(--color-etapa-apresentacao) 11%, var(--color-coluna));
+  --color-etapa-apresentacao-brilho: color-mix(in srgb, var(--color-etapa-apresentacao) 55%, transparent);
   --color-etapa-negociacao: #ff9f6e;
   --color-etapa-fechado: #3ccf8e;
   --color-etapa-perdido: #8a94a6;
@@ -96,6 +99,7 @@
   --shadow-flutuante: 0 18px 40px rgb(0 0 0 / 0.55), 0 4px 10px rgb(0 0 0 / 0.35);
   /* Card vermelho não crítico (tarefa 33): sombra levemente avermelhada */
   --shadow-espera-vermelha: 0 4px 14px color-mix(in srgb, var(--color-alerta) 28%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-coluna-destaque: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px color-mix(in srgb, var(--color-etapa-apresentacao) 20%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-etapa-apresentacao) 40%, transparent);
   --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
   /* Tecla: lateral sólida + sombra ambiente + brilho no topo */
   --shadow-tecla: 0 4px 0 var(--color-tecla-lado), 0 7px 8px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.07);
@@ -109,6 +113,7 @@
   --spacing-toque: 44px;
   --spacing-coluna: 264px;
   --spacing-coluna-recolhida: 44px;
+  --spacing-coluna-destaque: 296px;
   --spacing-topo: 64px;
 
   /* Animações */
@@ -183,3 +188,17 @@
 :root[data-tema="marinho"] { --t0: #0b132b; --t1: #1c2541; --t2: #3a506b; --t3: #5bc0de; --t4: #f4d6b0; --m: #b85c08; --mf: #d97706; --mt: #f4b46a; --ml: #7a3c05; }
 :root[data-tema="petroleo"] { --t0: #0a0f14; --t1: #0f3d3e; --t2: #2e6f73; --t3: #7fb3b8; --t4: #eadcc8; --m: #b5541a; --mf: #c6601f; --mt: #f0a06a; --ml: #78360e; }
 :root[data-tema="rosa"] { --t0: #121212; --t1: #1f2937; --t2: #334155; --t3: #64748b; --t4: #f1f5f9; --m: #d6317f; --mf: #ec4899; --mt: #f58dbb; --ml: #8f1f52; }
+
+/* Cabeçalho da coluna Apresentação agendada: brilho na cor da etapa vindo de cima (profundidade). */
+.cabecalho-destaque {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-etapa-apresentacao) 24%, transparent), transparent 85%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-etapa-apresentacao) 50%, transparent);
+}
+/* Barra da etapa com halo (só nesta coluna). */
+.barra-destaque {
+  box-shadow: 0 0 14px 1px var(--color-etapa-apresentacao-brilho);
+}
+/* Card que acabou de entrar na coluna: aro e brilho na cor da etapa. O movimento é só opacidade (reduzir movimento continua valendo). */
+.brilho-chegada {
+  box-shadow: inset 0 0 0 2px var(--color-etapa-apresentacao), inset 0 0 26px var(--color-etapa-apresentacao-brilho);
+}

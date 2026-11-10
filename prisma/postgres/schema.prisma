@@ -10,17 +10,17 @@ datasource db {
 }
 
 model Usuario {
-  id        String   @id @default(cuid())
-  nome      String
-  login     String   @unique
-  senhaHash String
-  perfil    String // "admin" | "consultor"
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  id          String   @id @default(cuid())
+  nome        String
+  login       String   @unique
+  senhaHash   String
+  perfil      String // "admin" | "consultor"
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
   // Disponibilidade para receber leads novos: online | almoco. Quem está em almoço não recebe lead novo.
-  status    String   @default("online") // online | almoco | offline (tarefa 35)
+  status      String   @default("online") // online | almoco | offline (tarefa 35)
   // Conta os almoços; o aviso ao cliente sai uma vez por almoço.
-  almocoSeq Int      @default(0)
+  almocoSeq   Int      @default(0)
   // Nome que o cliente vê no início das mensagens deste vendedor no WhatsApp. Vazio = primeiro nome de `nome`.
   nomeCliente String?
 
@@ -55,15 +55,17 @@ model Lead {
   etiquetas     String  @default("[]") // JSON string[] de códigos
 
   // Acompanhamento de vendas. Dinheiro em centavos.
-  proximoContatoEm  DateTime? // lembrete/retorno em qualquer etapa aberta; obrigatório em Negociação (interruptor)
-  lembreteNota      String? // nota do lembrete (tarefa 22); some junto com proximoContatoEm
-  valorOrcamento    Int?
-  valorFechado      Int?
-  motivoPerda       String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
-  concorrente       String? // nome, quando o motivo é "concorrente"
-  retornoModeloEm   DateTime? // retorno marcado pelo bot com a loja fechada (tarefa 36): vale para o envio automático do modelo só enquanto for igual a proximoContatoEm
-  alertaContatoPara DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
-  alertaDecisaoEm   DateTime? // último aviso de decisão vencida (data vencida sem decisão do vendedor): um aviso por dia enquanto não decidir
+  proximoContatoEm     DateTime? // lembrete/retorno em qualquer etapa aberta; obrigatório em Negociação (interruptor)
+  lembreteNota         String? // nota do lembrete (tarefa 22); some junto com proximoContatoEm
+  valorOrcamento       Int?
+  valorFechado         Int?
+  motivoPerda          String? // preco | prazo | concorrente | desistiu | outro (obrigatório em Perdido)
+  concorrente          String? // nome, quando o motivo é "concorrente"
+  retornoModeloEm      DateTime? // retorno marcado pelo bot com a loja fechada (tarefa 36): vale para o envio automático do modelo só enquanto for igual a proximoContatoEm
+  alertaContatoPara    DateTime? // valor de proximoContatoEm para o qual o vendedor já foi avisado do retorno (uma vez por data)
+  alertaDecisaoEm      DateTime? // último aviso de decisão vencida (data vencida sem decisão do vendedor): um aviso por dia enquanto não decidir
+  pulouMedicaoEm       DateTime? // o vendedor marcou "cliente tem projeto: pular medição": o lead fica PRONTO PARA MARCAR a apresentação (regras/apresentacao.ts). Agendar a medição desfaz
+  estimativaAlinhadaEm DateTime? // o vendedor confirmou que a estimativa de valores foi alinhada com o cliente (exigida para marcar apresentação de quem pulou a medição)
 
   consultorId String?
   consultor   Usuario? @relation("consultorLead", fields: [consultorId], references: [id])
@@ -210,17 +212,19 @@ model Alteracao {
 }
 
 model Visita {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   leadId      String
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   consultorId String
-  consultor   Usuario  @relation(fields: [consultorId], references: [id])
+  consultor   Usuario   @relation(fields: [consultorId], references: [id])
   inicio      DateTime
   fim         DateTime
-  status      String   @default("agendada") // agendada | cancelada
-  tipo        String   @default("visita") // visita | apresentacao (apresentação na loja, geralmente tentativa de venda)
+  status      String    @default("agendada") // agendada | cancelada
+  tipo        String    @default("visita") // visita | apresentacao (apresentação na loja, geralmente tentativa de venda)
+  // Quando o vendedor concluiu o compromisso (medição concluída, apresentação realizada). Apresentação concluída = "realizada" do placar, contada no mês de `inicio`.
+  concluidaEm DateTime?
   // Preenchida só enquanto a visita está ativa: impede duas visitas no mesmo horário da loja (regras/agenda.ts).
-  vagaChave   String?  @unique
+  vagaChave   String?   @unique
   criadoPor   String
   criadoEm    DateTime
 }

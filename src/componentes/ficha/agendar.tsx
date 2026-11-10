@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Coins } from "lucide-react";
+import { TEXTO_ESTIMATIVA } from "@/regras/apresentacao";
 import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda, type TipoCompromisso } from "@/regras/agenda";
 import { chaveDia, formatarDiaLongo, formatarDiaSemana, formatarHora, formatarVisitaCurta, lerChaveDia, partesLocais } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -21,6 +22,8 @@ interface DadosLivres {
   primeiroDia: string;
   /** Livres na véspera, no dia do centro e no dia seguinte. */
   livres: { inicio: string; consultorId: string }[];
+  /** Apresentação de quem pulou a medição e ainda não confirmou a estimativa de valores: a tela pergunta antes de abrir a agenda. */
+  estimativaPendente?: boolean;
 }
 
 type Vaga = { inicio: string; consultorId: string };
@@ -47,6 +50,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
   const { dados, carregando } = useDados<DadosLivres>(url);
   const [escolhido, setEscolhido] = useState<Vaga | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [estimativaOk, setEstimativaOk] = useState(false);
 
   const centro = dia ?? dados?.centroLivres ?? null;
   // Enquanto chegam os horários do dia novo, os antigos ficam apagados (não somem de uma vez).
@@ -70,6 +74,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
   const nomeConsultor = (id: string) => dados?.consultores.find((c) => c.id === id)?.nome ?? "";
 
   function fechar() {
+    setEstimativaOk(false);
     setDia(null);
     setMes(null);
     setEscolhido(null);
@@ -98,6 +103,43 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function confirmarEstimativa() {
+    setSalvando(true);
+    try {
+      await chamarApi(`/api/leads/${leadId}/apresentacao`, { method: "POST", json: { acao: "estimativa_alinhada" } });
+      setEstimativaOk(true);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível registrar.", "erro");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // Quem pulou a medição só marca a apresentação depois de confirmar a estimativa de valores (regra da loja).
+  if (aberto && tipo === "apresentacao" && dados?.estimativaPendente && !estimativaOk) {
+    return (
+      <Modal aberto aoFechar={fechar} titulo={TEXTO_ESTIMATIVA.titulo} largura="max-w-md">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-aviso-suave text-aviso">
+            <Coins className="size-5" aria-hidden />
+          </span>
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold">{TEXTO_ESTIMATIVA.pergunta}</p>
+            <p className="text-texto-suave">{TEXTO_ESTIMATIVA.regra}</p>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao variante="fantasma" onClick={fechar}>
+            {TEXTO_ESTIMATIVA.nao}
+          </Botao>
+          <Botao variante="primario" carregando={salvando} onClick={confirmarEstimativa}>
+            {TEXTO_ESTIMATIVA.sim}
+          </Botao>
+        </div>
+      </Modal>
+    );
   }
 
   return (

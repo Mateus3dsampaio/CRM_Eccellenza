@@ -6,6 +6,7 @@ import { janelaAberta, janelaFechaEm, JANELA_MS } from "@/regras/janela24h";
 import { DIA, formatarHorarioCard, formatarVisitaCurta, inicioDoDiaLocal } from "@/regras/tempo";
 import { NOMES_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
 import { etapaComAgenda } from "@/regras/etapas";
+import { prontoParaMarcar } from "@/regras/apresentacao";
 import { decisaoPendente, ETIQUETA_DECISAO } from "@/regras/decisao";
 import { ETAPAS_COM_RETORNO, exigeRetorno, situacaoDoRetorno } from "@/regras/vendas";
 import { exigirContatoNegociacao } from "./vendas";
@@ -80,7 +81,7 @@ export async function retornosDeHoje(usuario: { id: string; perfil: string }) {
       etapa: { in: ETAPAS_COM_RETORNO },
       ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }),
     },
-    include: { consultor: { select: { id: true, nome: true } }, visitas: { where: { status: "agendada" }, select: { tipo: true, inicio: true } } },
+    include: { consultor: { select: { id: true, nome: true } }, visitas: { where: { status: "agendada" }, select: { tipo: true, inicio: true, concluidaEm: true } } },
   });
   const regras = { exigirContatoNegociacao: await exigirContatoNegociacao() };
   return leads
@@ -108,8 +109,9 @@ export async function cardsDoKanban() {
     where: { arquivadoEm: null },
     include: {
       consultor: { select: { id: true, nome: true } },
-      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, select: { inicio: true, tipo: true } },
+      visitas: { where: { status: "agendada" }, orderBy: { inicio: "asc" }, select: { inicio: true, tipo: true, concluidaEm: true } },
       notas: { select: { texto: true } },
+      medidas: { select: { fonte: true } },
     },
   });
   const cards = leads.map((l) => {
@@ -149,6 +151,11 @@ export async function cardsDoKanban() {
       semData: etapaComAgenda(l.etapa) && !l.visitas.some((v) => v.tipo === l.etapa),
       // Data vencida sem decisão do vendedor (regras/decisao.ts): etiqueta piscante que abre a janela de decisão.
       decisao: decisaoPendente(l, l.visitas, quando),
+      // Pronto para marcar a apresentação (regras/apresentacao.ts): medição concluída, ou cliente que já tem projeto e pulou a medição.
+      pronto: prontoParaMarcar({ etapa: l.etapa, pulouMedicaoEm: l.pulouMedicaoEm, compromissos: l.visitas }),
+      pulouMedicao: !!l.pulouMedicaoEm,
+      // A ficha tem planta/projeto gravado pelo bot: sugestão na tela para o vendedor marcar "cliente tem projeto" (a marcação é dele).
+      temPlanta: l.medidas.some((m) => m.fonte === "planta"),
       // Medição e apresentação marcadas: ao voltar o card para Em qualificação, a tela avisa que serão canceladas.
       agendados: l.visitas.filter((v) => v.tipo !== "visita").map((v) => ({ tipo: v.tipo, rotulo: `${NOMES_COMPROMISSO[v.tipo as TipoCompromisso] ?? "Compromisso"} ${formatarVisitaCurta(v.inicio)}` })),
       visita: visita ? `${NOMES_COMPROMISSO[visita.tipo as TipoCompromisso] ?? "Visita"} ${formatarVisitaCurta(visita.inicio)}` : null,
@@ -234,7 +241,7 @@ export async function fichaDoLead(id: string) {
     medidas: lead.medidas.map((m) => ({ id: m.id, ambiente: m.ambiente, descricao: m.descricao, fonte: m.fonte, origem: m.origem, confirmada: m.confirmada })),
     notas: lead.notas.map((n) => ({ id: n.id, autorNome: n.autorNome, texto: n.texto, criadoEm: n.criadoEm.toISOString() })),
     historico: lead.historico.map((h) => ({ id: h.id, autor: h.autor, descricao: h.descricao, criadoEm: h.criadoEm.toISOString() })),
-    visitas: lead.visitas.map((v) => ({ id: v.id, inicio: v.inicio.toISOString(), rotulo: formatarVisitaCurta(v.inicio), status: v.status, tipo: v.tipo, consultor: v.consultor.nome })),
+    visitas: lead.visitas.map((v) => ({ id: v.id, inicio: v.inicio.toISOString(), rotulo: formatarVisitaCurta(v.inicio), status: v.status, tipo: v.tipo, concluidaEm: v.concluidaEm?.toISOString() ?? null, consultor: v.consultor.nome })),
   };
 }
 

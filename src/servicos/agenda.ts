@@ -138,7 +138,8 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   if (!consultorId) throw new ErroAgenda(params.consultorId ? "O consultor já tem compromisso nesse horário." : "Esse horário não está mais livre.");
 
   // Um compromisso ativo de cada tipo por lead: o anterior do mesmo tipo é cancelado (remarcação).
-  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo } });
+  // Compromisso já concluído (medição feita, apresentação realizada) é história: não se cancela ao marcar outro.
+  const anteriores = await db.visita.findMany({ where: { leadId: lead.id, status: "agendada", tipo, concluidaEm: null } });
 
   let visita;
   try {
@@ -154,7 +155,8 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
     throw erro;
   }
 
-  await db.lead.update({ where: { id: lead.id }, data: { consultorId } });
+  // Agendar a medição desfaz o "cliente tem projeto: pulou a medição" (o lead deixa de ser pronto para marcar).
+  await db.lead.update({ where: { id: lead.id }, data: { consultorId, ...(tipo === "medicao" ? { pulouMedicaoEm: null, estimativaAlinhadaEm: null } : {}) } });
   await registrarUmaVez(lead.id, EVENTO_DO_TIPO[tipo], consultorId);
   // Remarcar medição ou apresentação depois que a data venceu = o compromisso não aconteceu (cliente faltou). Conta no Painel.
   const faltou = tipo !== "visita" ? anteriores.find((v) => venceu(v.inicio, quando)) : undefined;
