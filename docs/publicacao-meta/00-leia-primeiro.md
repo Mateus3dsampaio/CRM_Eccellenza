@@ -8,13 +8,13 @@ Auditoria feita em 04/11/2026. Objetivo: colocar o app em produção (modo Live)
 
 | # | Etapa | Arquivo | Quem | Estado |
 |---|---|---|---|---|
-| 1 | Confirmar que app e conta do WhatsApp estão na mesma empresa | `01-confirmar-portfolio.md` | Mateus | [ ] |
+| 1 | Confirmar que app e conta do WhatsApp estão na mesma empresa | `01-confirmar-portfolio.md` | Mateus | [x] 10/11/2026 |
 | 2 | Aprovar os textos (exclusão de dados, privacidade) | `02-textos-para-aprovar.md` | Mateus | [x] 05/11/2026 |
 | 3 | Aprovar os modelos de mensagem | `03-modelos-de-mensagem.md` | Mateus | [x] 05 e 06/11/2026 (textos em `src/regras/modelos.ts`) |
 | 4 | Subir o código das páginas e dos modelos | `04-codigo.md` | Claude (com autorização do Mateus para o push) | [x] páginas no ar (conferido 08/11/2026) |
 | 5 | Criar os modelos na Meta (**antes de publicar**) | `03-modelos-de-mensagem.md` | Mateus | [x] 4 aprovados em 08/11/2026; falta `retorno_atendimento` |
 | 6 | Nome de exibição e pagamento | `05-nome-de-exibicao-e-pagamento.md` | Mateus | [ ] |
-| 7 | Configurar o app na Meta e publicar | `06-configurar-e-publicar-app.md` | Mateus | [ ] configuração feita 08/11/2026; falta publicar |
+| 7 | Configurar o app na Meta e publicar | `06-configurar-e-publicar-app.md` | Mateus | [x] publicado (Live) em 10/11/2026 |
 | 8 | Conferir depois de publicar | `06-configurar-e-publicar-app.md` (final) | Mateus + Claude | [ ] |
 | 9 | Migrar o Railway para o Pro e ligar backup; Instagram | `07-depois.md` | Mateus | [ ] |
 
