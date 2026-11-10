@@ -142,3 +142,8 @@ html:has([data-config-raiz]) {
   color: color-mix(in srgb, var(--color-marca-texto) 60%, #fff);
   text-shadow: 0 0 28px color-mix(in srgb, var(--color-marca) 70%, transparent), 0 0 4px color-mix(in srgb, var(--color-marca-texto) 50%, transparent);
 }
+
+/* Gaveta do lead aberta: os avisos saem de cima do botão Enviar e ficam à esquerda da gaveta (640px). */
+@media (min-width: 1100px) {
+  body:has([data-gaveta]) [data-avisos] { right: calc(640px + 1rem); }
+}

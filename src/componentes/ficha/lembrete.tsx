@@ -1,68 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { BellRing, Check, Pencil, Plus } from "lucide-react";
-import { formatarVisitaCurta } from "@/regras/tempo";
-import { ETAPAS_COM_RETORNO, lerDataHoraLocal, NOTA_LEMBRETE_MAX, partirDataHoraLocal, situacaoDoRetorno } from "@/regras/vendas";
+import { lerDataHoraLocal, NOTA_LEMBRETE_MAX, partirDataHoraLocal } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
 import { juntar } from "../estilos";
-import { useAgoraDoServidor } from "../espera";
-import { CLASSE_TEXTO_RETORNO } from "../retornos";
 import { Botao, Campo, classeEntrada, Modal } from "../ui";
-import { usePode } from "../usuario";
-import { retornoObrigatorio, useRegrasVendas } from "../vendas/regras";
 
 /**
- * Lembrete do lead (tarefa 22): data e hora para voltar a falar com o cliente (ex.: "pediu para chamar daqui a 30 dias"),
- * com nota opcional. Vale em qualquer etapa aberta e aparece em "Retornos de hoje" no dia. Em Negociação é o próximo contato.
+ * Janela do lembrete (tarefa 22): data e hora para voltar a falar com o cliente, com nota opcional. Vale em qualquer etapa
+ * aberta e aparece em "Retornos de hoje" no dia. Em Negociação é o próximo contato. Quem mostra o lembrete é o bloco
+ * "Próximo passo" (`proximo-passo.tsx`); quem abre esta janela é `useAcoesDoLead`.
  */
-export function Lembrete({ ficha, salvar }: { ficha: FichaLead; salvar: (corpo: object, sucesso?: string) => Promise<boolean> }) {
-  const podeEditar = usePode("editar_lead");
-  const regras = useRegrasVendas();
-  const agora = useAgoraDoServidor();
-  const [editando, setEditando] = useState(false);
-  if (!(ETAPAS_COM_RETORNO as string[]).includes(ficha.etapa)) return null;
-  const obrigatorio = retornoObrigatorio(regras, ficha.etapa);
-  const situacao = situacaoDoRetorno(ficha.proximoContatoEm, agora);
-
-  return (
-    <div className="sm:col-span-2 rounded-controle bg-superficie-suave p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 text-sm font-medium">
-          <BellRing className="size-4 text-texto-suave" aria-hidden />
-          {ficha.etapa === "negociacao" ? "Próximo contato" : "Lembrete"}
-        </p>
-        {podeEditar && (
-          <div className="flex gap-1">
-            {ficha.proximoContatoEm && !obrigatorio && (
-              <Botao variante="fantasma" icone={<Check className="size-4" aria-hidden />} onClick={() => void salvar({ venda: { proximoContatoEm: null } }, "Lembrete concluído.")}>
-                Concluir
-              </Botao>
-            )}
-            <Botao variante="fantasma" icone={ficha.proximoContatoEm ? <Pencil className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />} onClick={() => setEditando(true)}>
-              {ficha.proximoContatoEm ? "Editar" : "Adicionar lembrete"}
-            </Botao>
-          </div>
-        )}
-      </div>
-      {ficha.proximoContatoEm ? (
-        <div className="mt-1">
-          <p className={juntar("text-sm font-medium", CLASSE_TEXTO_RETORNO[situacao])}>
-            {formatarVisitaCurta(new Date(ficha.proximoContatoEm))}
-            {situacao === "atrasado" && " · atrasado"}
-            {situacao === "hoje" && " · hoje"}
-          </p>
-          {ficha.lembreteNota && <p className="mt-0.5 whitespace-pre-line text-sm text-texto-suave">{ficha.lembreteNota}</p>}
-        </div>
-      ) : (
-        <p className="mt-1 text-sm text-texto-suave">{obrigatorio ? "Defina o próximo contato." : "Nenhum lembrete. Use para o cliente que pediu contato mais para frente: ele aparece em Retornos de hoje no dia."}</p>
-      )}
-      {editando && <JanelaLembrete ficha={ficha} obrigatorio={obrigatorio} aoFechar={() => setEditando(false)} salvar={salvar} />}
-    </div>
-  );
-}
-
-function JanelaLembrete({ ficha, obrigatorio, aoFechar, salvar }: { ficha: FichaLead; obrigatorio: boolean; aoFechar: () => void; salvar: (corpo: object, sucesso?: string) => Promise<boolean> }) {
+export function JanelaLembrete({ ficha, obrigatorio, aoFechar, salvar }: { ficha: FichaLead; obrigatorio: boolean; aoFechar: () => void; salvar: (corpo: object, sucesso?: string) => Promise<boolean> }) {
   const inicio = partirDataHoraLocal(ficha.proximoContatoEm);
   const [data, setData] = useState(inicio.data);
   const [hora, setHora] = useState(inicio.hora || "09:00");

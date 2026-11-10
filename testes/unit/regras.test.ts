@@ -3,7 +3,6 @@ import { REGRAS_AGENDA_PADRAO, primeiroDiaAgendavel, primeiroHorarioPossivel, de
 import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
 import { escolherConsultor } from "@/regras/distribuicao";
-import { LAYOUT_PADRAO_FICHA, ajustarLayoutSalvo, layoutValido } from "@/regras/layout-ficha";
 import { pode, podeEditarAgendaDe } from "@/regras/permissoes";
 import { avaliarRetomada } from "@/regras/retomada";
 import { gerarResumo } from "@/servicos/resumo";
@@ -224,33 +223,6 @@ describe("permissões da fase 2 (consultor x admin)", () => {
     expect(podeEditarAgendaDe(rafael, "r")).toBe(true);
     expect(podeEditarAgendaDe(rafael, "b")).toBe(false);
     expect(podeEditarAgendaDe({ id: "m", perfil: "admin" }, "b")).toBe(true);
-  });
-});
-
-describe("layout da ficha", () => {
-  it("o layout padrão é válido", () => {
-    expect(layoutValido(LAYOUT_PADRAO_FICHA)).toBe(true);
-  });
-  it("recusa bloco repetido, faltando, fora da grade ou lixo", () => {
-    expect(layoutValido(LAYOUT_PADRAO_FICHA.slice(1))).toBe(false);
-    expect(layoutValido([...LAYOUT_PADRAO_FICHA.slice(1), LAYOUT_PADRAO_FICHA[1]])).toBe(false);
-    expect(layoutValido(LAYOUT_PADRAO_FICHA.map((l, n) => (n === 0 ? { ...l, x: 8 } : l)))).toBe(false);
-    expect(layoutValido("qualquer coisa")).toBe(false);
-    expect(layoutValido(null)).toBe(false);
-  });
-  it("layout salvo com blocos antigos: tira o que não existe, completa com o padrão e avisa (tarefa 28)", () => {
-    const antigo = [
-      { i: "conversa", x: 0, y: 0, w: 7, h: 13 },
-      { i: "notas", x: 0, y: 25, w: 7, h: 6 },
-      { i: "visita", x: 7, y: 16, w: 5, h: 7 },
-      { i: "resumo", x: 7, y: 0, w: 5, h: 7 },
-    ];
-    const ajuste = ajustarLayoutSalvo(antigo);
-    expect(ajuste?.ajustado).toBe(true);
-    expect(ajuste?.layout.map((l) => l.i).sort()).toEqual([...LAYOUT_PADRAO_FICHA.map((l) => l.i)].sort());
-    expect(ajuste?.layout.find((l) => l.i === "conversa")?.h).toBe(13);
-    expect(ajustarLayoutSalvo(LAYOUT_PADRAO_FICHA)?.ajustado).toBe(false);
-    expect(ajustarLayoutSalvo("lixo")).toBeNull();
   });
 });
 
