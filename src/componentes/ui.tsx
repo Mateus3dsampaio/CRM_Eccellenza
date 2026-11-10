@@ -207,6 +207,7 @@ export function Popover({
   children,
   largura = "sm:w-80",
   alinhar = "direita",
+  abrir = "baixo",
 }: {
   aberto: boolean;
   aoFechar: () => void;
@@ -215,6 +216,8 @@ export function Popover({
   children: ReactNode;
   largura?: string;
   alinhar?: "esquerda" | "direita";
+  /** "cima": abre acima do gatilho (para botões no pé da tela). */
+  abrir?: "baixo" | "cima";
 }) {
   const raiz = useRef<HTMLDivElement>(null);
   const refFechar = useRef(aoFechar);
@@ -245,7 +248,8 @@ export function Popover({
             role="dialog"
             aria-label={titulo}
             className={juntar(
-              "fixed inset-x-0 bottom-0 z-50 animate-surgir rounded-t-painel border border-borda bg-superficie p-4 shadow-flutuante sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:mt-2 sm:rounded-painel",
+              "fixed inset-x-0 bottom-0 z-50 animate-surgir rounded-t-painel border border-borda bg-superficie p-4 shadow-flutuante sm:absolute sm:inset-x-auto sm:rounded-painel",
+              abrir === "cima" ? "sm:bottom-full sm:mb-2" : "sm:bottom-auto sm:top-full sm:mt-2",
               alinhar === "direita" ? "sm:right-0" : "sm:left-0",
               largura,
             )}

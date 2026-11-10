@@ -67,7 +67,7 @@ Cada etapa é feita e testada antes de começar a próxima. Ordem: primeiro o qu
 | Extra: Apresentação na loja | Feita (agendar na ficha/agenda, faixa vermelha). Regras provisórias: 1 h, ocupa o horário da loja, não move o card nem conta no painel |
 | E. Kanban | Feita (zoom 60–125% e filtro do admin); testar arrastar card com zoom diferente de 100% |
 | F. Configurações | Feita (só admin; equipe + cartões "Em breve") |
-| G. Layout da ficha | Feita (grade arrastável/redimensionável, salvar padrão para todos); sem teste de tela |
+| G. Layout da ficha | Retirada em 09/11/2026 (decisão do Mateus): a ficha passou a ter duas colunas fixas em ordem de prioridade; a grade arrastável e o "Personalizar layout" saíram |
 | H. Rodízio de leads | Feita no código e testada (testes automáticos); sem teste de tela |
 | I. Horário de almoço | Feita no código e testada (testes automáticos); sem teste de tela |
 

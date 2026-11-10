@@ -7,6 +7,7 @@ import { chamarApi, useAviso, useVersao } from "../dados";
 import { useAguardando } from "../espera";
 import { JanelaPassarHoje } from "../equipe/passar-hoje";
 import { useUsuario } from "../usuario";
+import { pushLigadoNesteNavegador } from "./push";
 import { liberarSom, tocarSom } from "./som";
 
 export type PermissaoNotificacao = NotificationPermission | "indisponivel";
@@ -80,6 +81,30 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
     vivo.current = { preferencias, caminho, permissao };
   });
 
+  // Este navegador recebe os avisos do servidor (Web Push)? Então a notificação do sistema fica só com o push:
+  // a tela não cria a dela, senão o mesmo aviso aparece duas vezes (iPhone e Windows mostram as duas).
+  // Confere ao abrir e sempre que o CRM volta para a frente (onde a pessoa liga ou desliga o push).
+  const pushAtivo = useRef(false);
+  useEffect(() => {
+    let ativo = true;
+    const conferir = () => {
+      void pushLigadoNesteNavegador(usuario.id).then((ligado) => {
+        if (ativo) pushAtivo.current = ligado;
+      });
+    };
+    conferir();
+    const aoMudar = () => {
+      if (document.visibilityState === "visible") conferir();
+    };
+    document.addEventListener("visibilitychange", aoMudar);
+    window.addEventListener("focus", conferir);
+    return () => {
+      ativo = false;
+      document.removeEventListener("visibilitychange", aoMudar);
+      window.removeEventListener("focus", conferir);
+    };
+  }, [usuario.id]);
+
   // O navegador só deixa tocar som depois de uma interação: prepara na primeira.
   useEffect(() => {
     const liberar = () => liberarSom();
@@ -102,6 +127,7 @@ export function ProvedorAlertas({ children }: { children: ReactNode }) {
         return;
       }
       const atual = vivo.current;
+      if (pushAtivo.current) return;
       if (!atual.preferencias.notificacoes || lerPermissao() !== "granted") return;
       try {
         const n = new Notification(titulo, { body: corpo, tag: `alerta-${a.id}`, silent: true });

@@ -9,7 +9,6 @@ import { useVersao } from "./dados";
 import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
 import { BotaoJanelas } from "./janelas";
-import { BotaoAvisos } from "./alertas/botao-avisos";
 import { BotoesDePresenca } from "./presenca";
 import { MenuUsuario } from "./menu-usuario";
 import { NovaMensagem } from "./nova-mensagem";
@@ -71,7 +70,6 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
               <span className="hidden whitespace-nowrap sm:inline">Nova mensagem</span>
               <span className="sr-only sm:hidden">Nova mensagem</span>
             </button>
-            <BotaoAvisos />
             <MenuUsuario />
           </div>
         </div>

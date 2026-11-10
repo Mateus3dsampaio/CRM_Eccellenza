@@ -4,15 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, ClipboardList, Maximize2, SlidersHorizontal, X } from "lucide-react";
-import { CLASSIFICACOES, type Classificacao } from "@/regras/etapas";
+import { BellPlus, ClipboardCopy, Maximize2, StickyNote, X } from "lucide-react";
+import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
 import type { FichaLead } from "@/servicos/consultas";
-import { useNomesEtapas } from "../etapas";
 import { chamarApi, useDados } from "../dados";
-import { COR_ETAPA, juntar } from "../estilos";
-import { Avatar, Carregando, EstadoErro, Sino } from "../ui";
+import { Avatar, Botao, Carregando, EstadoErro, Sino } from "../ui";
+import { MenuAgendar, SeletorEtapa, useAcoesDoLead } from "./acoes-lead";
 import { ConversaConsultor } from "./conversa";
-import { useBlocosDadosLead } from "./dados-lead";
+import { CamposDoCliente, linhaDoCliente } from "./dados-lead";
+import { PilulasAgora, useItensDoPasso } from "./proximo-passo";
 
 // Gaveta do lead (tarefa 23): abre por cima de qualquer tela com `?lead=ID` na URL. Assim F5 reabre,
 // "voltar" fecha e o link pode ser mandado a outro consultor. Na própria tela /lead/[id] ela não aparece.
@@ -59,7 +59,7 @@ export function ProvedorGaveta({ children }: { children: ReactNode }) {
   );
 }
 
-/** Painel deslizante com resumo, conversa e etapa do lead. */
+/** Painel deslizante de acesso rápido: o que pede ação agora, uma linha do cliente e a conversa. O resto fica na ficha completa. */
 function GavetaLead({ id, aoFechar }: { id: string | null; aoFechar: () => void }) {
   const semMovimento = useReducedMotion();
   useEffect(() => {
@@ -75,7 +75,7 @@ function GavetaLead({ id, aoFechar }: { id: string | null; aoFechar: () => void 
   return (
     <AnimatePresence>
       {id && (
-        <motion.div key="fundo" className="fixed inset-0 z-[55] bg-texto/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={aoFechar} aria-hidden />
+        <motion.div key="fundo" className="fixed inset-0 z-[55] bg-fundo/70" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={aoFechar} aria-hidden />
       )}
       {id && (
         <motion.aside
@@ -129,18 +129,18 @@ function useMarcarComoVista(id: string, naoLidas: number) {
 }
 
 function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; recarregar: () => void | Promise<void>; aoFechar: () => void }) {
-  const nomesEtapas = useNomesEtapas();
-  const { partes, janelas } = useBlocosDadosLead(ficha, recarregar);
-  // Seções recolhidas ao abrir: a conversa ganha a altura toda e a gaveta abre no topo.
-  const [aberta, setAberta] = useState<"resumo" | "etapa" | null>(null);
-  const alternar = (secao: "resumo" | "etapa") => setAberta((a) => (a === secao ? null : secao));
-  const primeiraLinhaResumo = ficha.resumo?.split("\n").find((l) => l.trim()) ?? "Ainda sem resumo";
-  const classificacao = ficha.classificacao ? CLASSIFICACOES[ficha.classificacao as Classificacao] : "Sem classificação";
-  const resumoEtapa = `${nomesEtapas.nome(ficha.etapa)} · ${ficha.consultor?.nome ?? "Sem consultor"} · ${classificacao}`;
+  const { acoes, janelas } = useAcoesDoLead(ficha, recarregar);
+  const itens = useItensDoPasso(ficha);
+  // Resumo recolhido ao abrir: a conversa ganha a altura toda.
+  const [resumoAberto, setResumoAberto] = useState(false);
+  const idResumo = useId();
+  const podeLembrar = acoes.podeEditar && !ficha.arquivado && (ETAPAS_COM_RETORNO as string[]).includes(ficha.etapa);
+  const ultimaNota = ficha.notas[0];
   useMarcarComoVista(ficha.id, ficha.naoLidas);
   return (
     <>
-      <header className="flex shrink-0 items-center gap-3 border-b border-borda bg-superficie px-4 py-3">
+      {/* Cabeçalho: quem é, com a etapa como botão (troca ali mesmo). */}
+      <header className="flex shrink-0 items-center gap-3 border-b border-borda bg-superficie px-4 pb-3.5 pt-3">
         <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} />
         <div className="min-w-0 flex-1">
           <h2 className="flex items-center gap-2 text-base font-semibold leading-tight">
@@ -149,91 +149,73 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
           </h2>
           <p className="flex flex-wrap items-center gap-x-3 text-xs text-texto-suave">
             <span>{ficha.telefone}</span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
-              {nomesEtapas.nome(ficha.etapa)}
-            </span>
             {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
           </p>
         </div>
-        <Link href={`/lead/${ficha.id}`} className="tecla inline-flex min-h-toque items-center gap-2 rounded-controle px-3 text-sm font-medium" title="Dados completos, medidas, notas e histórico">
+        <SeletorEtapa etapa={ficha.etapa} aoEscolher={acoes.pedirEtapa} />
+        <Link href={`/lead/${ficha.id}`} aria-label="Abrir ficha completa" className="tecla inline-flex min-h-10 items-center gap-2 rounded-controle px-3 text-sm font-medium" title="Dados completos, medidas, notas e histórico">
           <Maximize2 className="size-4" aria-hidden />
-          <span className="hidden sm:inline">Abrir ficha completa</span>
-          <span className="sr-only sm:hidden">Abrir ficha completa</span>
+          <span className="hidden sm:inline">Ficha completa</span>
         </Link>
         <button onClick={aoFechar} className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Fechar gaveta">
           <X className="size-5" aria-hidden />
         </button>
       </header>
-      {/* Corpo sem rolagem própria: duas seções recolhíveis em cima e a conversa ocupando o resto,
-          com o campo de envio sempre à vista embaixo. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
-        <SecaoRecolhivel
-          titulo="Resumo para o consultor"
-          icone={<ClipboardList className="size-4" aria-hidden />}
-          linha={primeiraLinhaResumo}
-          aberta={aberta === "resumo"}
-          aoAlternar={() => alternar("resumo")}
-          acao={partes.copiarResumo}
-        >
-          {partes.textoResumo}
-        </SecaoRecolhivel>
-        <SecaoRecolhivel
-          titulo="Etapa e responsável"
-          icone={<SlidersHorizontal className="size-4" aria-hidden />}
-          linha={resumoEtapa}
-          aberta={aberta === "etapa"}
-          aoAlternar={() => alternar("etapa")}
-        >
-          {partes.conteudoEtapa}
-        </SecaoRecolhivel>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <ConversaConsultor ficha={ficha} aoMudar={recarregar} />
+
+      {/* Agora: só o que pede ação, com cor de urgência. */}
+      <PilulasAgora itens={itens} acoes={acoes} />
+
+      {/* Quem é: uma linha; o resumo inteiro abre só se pedir. */}
+      <div className="flex shrink-0 items-center gap-2 py-1 pl-4 pr-2">
+        <p className="min-w-0 flex-1 truncate text-[13px] text-texto-suave">{linhaDoCliente(ficha)}</p>
+        <Botao variante="fantasma" className="min-h-9 shrink-0 px-2.5 text-[13px]" onClick={() => setResumoAberto((a) => !a)} aria-expanded={resumoAberto} aria-controls={idResumo}>
+          {resumoAberto ? "Fechar resumo" : "Ver resumo"}
+        </Botao>
+      </div>
+      {resumoAberto && (
+        <div id={idResumo} className="rolagem-fina mx-3 mb-2 max-h-[40vh] shrink-0 animate-surgir overflow-y-auto rounded-painel border border-borda bg-superficie p-3.5">
+          <CamposDoCliente ficha={ficha} />
+          {ficha.medidas.length > 0 && (
+            <p className="mt-2 text-sm">
+              <span className="text-texto-fraco">Medidas: </span>
+              {ficha.medidas.map((m) => `${m.ambiente} ${m.descricao}`).join("; ")}
+            </p>
+          )}
+          {ultimaNota && (
+            <p className="mt-2 rounded-controle bg-superficie-suave px-3 py-2 text-sm">
+              <span className="text-texto-fraco">Última nota · {ultimaNota.autorNome}: </span>
+              <span className="whitespace-pre-wrap break-words">{ultimaNota.texto}</span>
+            </p>
+          )}
+          <div className="mt-1 flex justify-end">
+            <Botao variante="fantasma" className="min-h-9 px-2.5" icone={<ClipboardCopy className="size-4" aria-hidden />} onClick={acoes.copiarResumo}>
+              Copiar resumo
+            </Botao>
+          </div>
         </div>
+      )}
+
+      {/* Conversa: ocupa todo o resto, com o campo de envio sempre à vista embaixo. */}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
+        <ConversaConsultor
+          ficha={ficha}
+          aoMudar={recarregar}
+          atalhos={
+            <>
+              {!ficha.arquivado && <MenuAgendar aoEscolher={acoes.agendar} abrir="cima" alinhar="esquerda" />}
+              {podeLembrar && (
+                <Botao variante="fantasma" className="min-h-10 px-3" icone={<BellPlus className="size-4" aria-hidden />} onClick={acoes.editarLembrete}>
+                  Lembrete
+                </Botao>
+              )}
+              <Botao variante="fantasma" className="min-h-10 px-3" icone={<StickyNote className="size-4" aria-hidden />} onClick={acoes.novaNota}>
+                Nota
+              </Botao>
+            </>
+          }
+        />
       </div>
       {janelas}
     </>
-  );
-}
-
-/** Seção que abre e fecha com um clique no cabeçalho. Fechada, mostra só uma linha de resumo; aberta, rola por dentro. */
-function SecaoRecolhivel({ titulo, icone, linha, aberta, aoAlternar, acao, children }: { titulo: string; icone: ReactNode; linha: string; aberta: boolean; aoAlternar: () => void; acao?: ReactNode; children: ReactNode }) {
-  const semMovimento = useReducedMotion();
-  const idConteudo = useId();
-  return (
-    <section className={juntar("shrink-0 overflow-hidden rounded-painel border bg-superficie shadow-painel transition-colors", aberta ? "border-marca/40" : "border-borda")}>
-      <div className="flex items-center gap-2 pr-2">
-        <button
-          type="button"
-          onClick={aoAlternar}
-          aria-expanded={aberta}
-          aria-controls={idConteudo}
-          className="flex min-h-toque min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left hover:bg-superficie-suave/60"
-        >
-          <span className={juntar("inline-flex size-8 shrink-0 items-center justify-center rounded-controle", aberta ? "bg-marca-suave text-marca-texto" : "bg-superficie-suave text-texto-suave")}>{icone}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold leading-tight">{titulo}</span>
-            {!aberta && <span className="block truncate text-xs text-texto-suave">{linha}</span>}
-          </span>
-          <ChevronDown className={juntar("size-4 shrink-0 text-texto-suave transition-transform duration-200", aberta && "rotate-180")} aria-hidden />
-        </button>
-        {aberta && acao}
-      </div>
-      <AnimatePresence initial={false}>
-        {aberta && (
-          <motion.div
-            id={idConteudo}
-            key="conteudo"
-            initial={semMovimento ? { opacity: 0 } : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="rolagem-fina max-h-[45vh] overflow-y-auto border-t border-borda p-3"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
   );
 }

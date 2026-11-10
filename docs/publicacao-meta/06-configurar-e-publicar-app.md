@@ -17,6 +17,9 @@ developers.facebook.com → app **CRM Eccellenza** → **Configurações do app 
 - [ ] Etapa 1 concluída (app e conta do WhatsApp no mesmo portfólio)
 - [x] Páginas no ar, sem aviso de rascunho (08/11/2026)
 - [ ] Anotados (sem alterar): URL do webhook, campos assinados, e o GET de `subscribed_apps` mostrando o app
+  - [x] GET `subscribed_apps` (09/11/2026, Explorador, token temporário): a conta do WhatsApp lista o app **CRM Eccellenza** (id 2306580053410065). WABA: 1369991565075615.
+  - [x] GET `phone_numbers` (09/11/2026): "Italínea Eccellenza", +55 88 8170-8827, verificado, qualidade GREEN, Cloud API. URL do webhook: `https://crmeccellenza-production.up.railway.app/api/whatsapp/webhook`. Falta anotar os campos assinados.
+- [ ] Tela "Teste" do app: `whatsapp_business_management` com 1 chamada feita em 09/11/2026 (o GET acima). A Meta leva até 24 h para marcar "Concluída"; conferir em 10/11/2026. `whatsapp_business_messaging` já concluída; `public_profile` não é obrigatória.
 - [ ] Mensagem de teste do celular → o bot responde
 - [ ] Leu o checklist de publicação do próprio painel (o nome exato do botão de Live não está confirmado; o painel mostra)
 - [ ] Horário calmo (fora do pico de atendimento)
