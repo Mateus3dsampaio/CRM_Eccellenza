@@ -18,6 +18,10 @@ Vermelho = cliente sem resposta além do prazo, ou IA travada. Âmbar = pendênc
 - [x] 4. Coluna (`quadro.tsx`): divisor "Precisa de você" / "Aguardando o cliente", "N esperando" e soma dos orçamentos no cabeçalho.
 - [x] 5. Documentação: mapa do código, `docs/design.md` e pendências.
 
+## Ajustes depois da primeira conferência (Mateus, 10/11/2026)
+- [x] Anel da janela de 24h com lugar fixo: sempre no canto esquerdo do rodapé (antes ficava "solto" nos cards sem consultor).
+- [x] Ícones de volta ao lado da cidade e dos ambientes.
+
 ## Ficou de fora (não estava no exemplo aprovado)
 - Avisos do canto inferior direito cobrindo a coluna Negociação.
 - "Esperando" repetido no topo e na linha de filtros.

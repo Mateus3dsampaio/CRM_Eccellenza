@@ -15,7 +15,7 @@ Objetivo: funcionar bem e já parecer um produto, sem gastar tempo em animação
 - Etiquetas em pílulas coloridas com "x" para remover.
 
 **Card do kanban (aprovado pelo Mateus em 10/11/2026, tarefa 39; vale mais que as imagens de referência)**
-- Ordem das informações: 1) quem é (avatar com selo de quem atende, nome em uma linha, não lidas ou hora); 2) **uma** faixa de ação com a pendência mais grave, sempre no mesmo lugar; 3) última mensagem em duas linhas; 4) valor, cidade e ambientes em uma linha; 5) rodapé com etiquetas, anel da janela de 24h, iniciais do consultor e menu.
+- Ordem das informações: 1) quem é (avatar com selo de quem atende, nome em uma linha, não lidas ou hora); 2) **uma** faixa de ação com a pendência mais grave, sempre no mesmo lugar; 3) última mensagem em duas linhas; 4) valor, cidade e ambientes em uma linha, cada um com seu ícone; 5) etiquetas; 6) rodapé com lugares fixos: anel da janela de 24h no canto esquerdo e iniciais do consultor no canto direito.
 - Uma cor, um significado: **vermelho** = cliente sem resposta além do prazo (ou IA travada); **âmbar** = pendência do vendedor (data vencida, falta marcar, fila sem consultor, cliente perto do prazo); **azul** = é para hoje; **verde** = combinado e em dia; **cinza** = nada a fazer agora. A cor nunca vai sozinha: sempre com texto e ícone.
 - A faixa é reta e ocupa a largura do card; pílula fica só para etiqueta.
 - Movimento: só o card crítico pulsa, no máximo um por coluna (o que espera há mais tempo). Nada pisca dentro do card.

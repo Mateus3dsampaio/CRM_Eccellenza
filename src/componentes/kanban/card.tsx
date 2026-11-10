@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as CliqueReact, t
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, Clock, Gavel, Headset, MessageCircle, MoreVertical, UserRound, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, UserRound, type LucideIcon } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { formatarReaisCurto } from "@/regras/vendas";
 import { formatarVisitaCurta } from "@/regras/tempo";
@@ -132,7 +132,9 @@ function ConteudoCard({
 }) {
   const valor = valorDoCard(card);
   // Com orçamento no card, a faixa de investimento declarada pelo cliente já não acrescenta.
-  const detalhes = [card.cidade, card.ambientes.join(", "), valor ? "" : card.investimento].filter(Boolean).join(" · ");
+  const investimento = valor ? "" : (card.investimento ?? "");
+  const ambientes = card.ambientes.join(", ");
+  const temDetalhes = !!(valor || card.cidade || ambientes || investimento);
   const quemAtende = card.modo === "bot" ? { Icone: Bot, titulo: "IA atendendo" } : card.modo === "humano" ? { Icone: Headset, titulo: "Consultor na conversa" } : null;
   return (
     <>
@@ -154,19 +156,44 @@ function ConteudoCard({
       </div>
       <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />
       {card.previa && <p className="line-clamp-2 break-words px-3 pt-2 text-sm text-texto-suave">{card.previa}</p>}
-      {(valor || detalhes) && (
-        <p className="truncate px-3 pt-1.5 text-xs text-texto-fraco" title={[valor, detalhes].filter(Boolean).join(" · ")}>
-          {valor && <b className="font-semibold tabular-nums text-texto">{valor}</b>}
-          {valor && detalhes && " · "}
-          {detalhes}
+      {temDetalhes && (
+        // Uma linha só, com ícone em cada dado (pedido do Mateus 10/11/2026). Quem encolhe quando falta espaço são os ambientes.
+        <p className="flex items-center gap-x-2.5 overflow-hidden px-3 pt-1.5 text-xs text-texto-fraco" title={[valor, card.cidade, investimento, ambientes].filter(Boolean).join(" · ")}>
+          {valor && <b className="shrink-0 font-semibold tabular-nums text-texto">{valor}</b>}
+          {card.cidade && (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              {card.cidade}
+            </span>
+          )}
+          {investimento && (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <CircleDollarSign className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{investimento}</span>
+            </span>
+          )}
+          {ambientes && (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{ambientes}</span>
+            </span>
+          )}
         </p>
       )}
-      <div className="flex min-h-10 flex-wrap items-center gap-1.5 px-3 pb-2 pt-1.5">
-        {card.etiquetas.map((e) => (
-          <Etiqueta key={e} codigo={e} aoRemover={aoRemoverEtiqueta ? () => aoRemoverEtiqueta(e) : undefined} />
-        ))}
-        <span className="ml-auto inline-flex items-center gap-1.5">
+      {/* Etiquetas numa linha própria (quando existem), para o rodapé nunca mudar de formato. */}
+      {card.etiquetas.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
+          {card.etiquetas.map((e) => (
+            <Etiqueta key={e} codigo={e} aoRemover={aoRemoverEtiqueta ? () => aoRemoverEtiqueta(e) : undefined} />
+          ))}
+        </div>
+      )}
+      {/* Rodapé com lugares fixos: anel da janela sempre no canto esquerdo, iniciais do consultor sempre no canto direito. */}
+      <div className="flex min-h-10 items-center justify-between gap-1.5 px-3 pb-2 pt-1.5">
+        <span className="shrink-0">
           <RelogioJanela etapa={card.etapa} ultimaMsgClienteEm={card.ultimaMsgClienteEm} />
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1.5">
           {card.consultor && (
             <span title={`Consultor: ${card.consultor.nome}`} className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-superficie-suave text-[10px] font-bold text-texto-suave">
               <span aria-hidden>{iniciais(card.consultor.nome)}</span>
@@ -323,8 +350,8 @@ export function Card({
         aoRemoverEtiqueta={selecionando ? undefined : (e) => acoes.removerEtiqueta(card.id, e)}
         menu={
           selecionando ? undefined : (
-            <span className="-my-2 -mr-2 inline-flex md:m-0" onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-              {/* No computador o menu só aparece com o mouse no card (ou com o foco do teclado); no celular fica sempre à vista. */}
+            <span className="-my-2 -mr-2 inline-flex md:absolute md:right-1.5 md:top-2 md:m-0" onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              {/* No computador o menu só aparece com o mouse no card (ou com o foco do teclado), por cima da hora, sem ocupar lugar no rodapé; no celular fica sempre à vista, no rodapé. */}
               <button
                 ref={refBotao}
                 type="button"
@@ -333,7 +360,7 @@ export function Card({
                 aria-expanded={!!menu}
                 aria-label={`Ações para ${card.nome}`}
                 className={juntar(
-                  "inline-flex size-toque items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie-suave hover:text-texto focus-visible:opacity-100 md:size-7 md:group-hover:opacity-100",
+                  "inline-flex size-toque items-center justify-center rounded-controle text-texto-fraco transition hover:bg-superficie-suave hover:text-texto focus-visible:opacity-100 md:size-7 md:bg-superficie-suave md:text-texto md:shadow-card md:group-hover:opacity-100",
                   menu ? "bg-superficie-suave text-texto" : "md:opacity-0",
                 )}
               >
