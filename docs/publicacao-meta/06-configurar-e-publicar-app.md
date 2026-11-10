@@ -14,7 +14,7 @@ developers.facebook.com → app **CRM Eccellenza** → **Configurações do app 
 ## Antes de publicar
 - [x] **Modelos de mensagem aprovados** na Meta (08/11/2026): `retomada`, `primeiro_contato`, `lembrete_medicao`, `lembrete_apresentacao`. CRM igualado no mesmo dia.
 - [ ] Criar o `retorno_atendimento` (`03-modelos-de-mensagem.md`)
-- [ ] Etapa 1 concluída (app e conta do WhatsApp no mesmo portfólio)
+- [x] Etapa 1 concluída (app e conta do WhatsApp no mesmo portfólio) — 10/11/2026
 - [x] Páginas no ar, sem aviso de rascunho (08/11/2026)
 - [ ] Anotados (sem alterar): URL do webhook, campos assinados, e o GET de `subscribed_apps` mostrando o app
   - [x] GET `subscribed_apps` (09/11/2026, Explorador, token temporário): a conta do WhatsApp lista o app **CRM Eccellenza** (id 2306580053410065). WABA: 1369991565075615.
@@ -27,7 +27,8 @@ developers.facebook.com → app **CRM Eccellenza** → **Configurações do app 
 Se o painel pedir **App Review** de alguma permissão, **pare** e fale com o Claude. Para uso interno isso não deveria ser necessário.
 
 ## Publicar e conferir
-1. Publicar / mudar para Live.
+**Publicado pelo Mateus em 10/11/2026**, com anúncio de WhatsApp rodando (2 leads do anúncio chegaram antes). Segundo ele, deu tudo certo. Conferências abaixo ainda a marcar.
+1. [x] Publicar / mudar para Live.
 2. Logo depois: mandar mensagem de teste do celular e conferir que o bot responde.
 3. CRM → Configurações → WhatsApp: ver os últimos avisos da Meta, sem erros.
 4. Conferir que `subscribed_apps` continua com o app (GET no Explorador da Graph API, token temporário do Explorer, nunca o do CRM).
