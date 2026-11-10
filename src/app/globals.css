@@ -78,6 +78,28 @@ body {
     box-shadow: var(--shadow-afundado);
     color: var(--color-sobre-marca);
   }
+  /* Menu lateral: luz da marca no topo, atrás do logo, que some perto da metade da barra (mesmo espírito do .login-fundo). */
+  .menu-fundo {
+    background-image: radial-gradient(ellipse 150% 48% at 50% -6%, color-mix(in srgb, var(--color-marca) 30%, transparent), transparent 100%);
+  }
+  /* Menu lateral: item ativo = afundado + luz da marca por trás. Anda junto com o indicador (só transform). */
+  .menu-ativo {
+    box-shadow:
+      var(--shadow-afundado),
+      0 0 16px -2px color-mix(in srgb, var(--color-marca) 60%, transparent),
+      0 0 34px -6px color-mix(in srgb, var(--color-marca) 50%, transparent);
+  }
+  /* Filete luminoso na borda esquerda do item ativo. */
+  .menu-ativo-filete {
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: color-mix(in srgb, var(--color-marca-texto) 30%, #fff);
+    box-shadow: 0 0 8px 1px color-mix(in srgb, var(--color-marca-texto) 75%, transparent);
+  }
 }
 
 /* iPhone dá zoom sozinho ao tocar em campo com letra menor que 16px; no celular os campos usam 16px. */
