@@ -8,7 +8,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 ### Meta / WhatsApp (começar primeiro: leva dias)
 - [x] Verificar a empresa na Meta Business (CNPJ e documentos). Concluída (04/11/2026, "Italínea Eccellenza").
 - [x] Criar o app da Meta com o produto WhatsApp. App "CRM Eccellenza" criado em 04/11/2026 (caso de uso só WhatsApp; Instagram e Messenger ficaram de fora de propósito).
-- [x] Inscrever a conta do WhatsApp no app (`subscribed_apps`, passo 6b do guia). Feito em 04/11/2026; era o que impedia as mensagens de chegar. Conferido de novo em 09/11/2026 (GET no Explorador mostra o app); essa chamada também conta para o teste de `whatsapp_business_management` da tela "Teste" (conferir "Concluída" em 10/11/2026).
+- [x] Inscrever a conta do WhatsApp no app (`subscribed_apps`, passo 6b do guia). Feito em 04/11/2026; era o que impedia as mensagens de chegar. Conferido de novo em 09/11/2026 (GET no Explorador mostra o app); com isso a tela "Teste" do app ficou "Teste concluído" no mesmo dia (vale 30 dias, até 09/12/2026).
 - [ ] Decidir se o app precisa ir para modo "Live": em 04/11/2026, com o app ainda "Não publicado", mensagens do celular do Mateus e de um número sem relação com o app chegaram e o bot respondeu. A Meta avisa que, não publicado, só entrega dados de teste; se um dia as mensagens pararem de chegar sem explicação, revisitar. Para publicar a Meta pede o endereço `/privacidade` e a política aprovada.
 - [ ] Liberar o número da loja para a API oficial (ele sai do app comum; confirmar como migrar com a Meta).
 - [ ] Registrar o número com o PIN de 6 dígitos (`npx tsx scripts/registrar-numero.ts <PIN>`) e **guardar o PIN**.
