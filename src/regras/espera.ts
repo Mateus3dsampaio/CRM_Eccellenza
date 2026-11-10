@@ -21,8 +21,12 @@ function emMs(valor: Instante): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
-/** Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente). */
-export function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null }): Date | null {
+/**
+ * Desde quando o cliente espera um humano. Lead antigo, de antes do campo existir: conta do repasse (ou da última mensagem do cliente).
+ * Card em Perdido nunca espera resposta: se foi para lá, a loja decidiu não atender (vale também para cards antigos que ainda têm a marca).
+ */
+export function esperaDoLead(l: { aguardandoHumano: boolean; esperandoDesde: Date | null; repassadoEm: Date | null; ultimaMsgClienteEm: Date | null; etapa?: string }): Date | null {
+  if (l.etapa === "perdido") return null;
   return l.esperandoDesde ?? (l.aguardandoHumano ? (l.repassadoEm ?? l.ultimaMsgClienteEm) : null);
 }
 

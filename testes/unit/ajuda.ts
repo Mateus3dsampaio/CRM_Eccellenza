@@ -4,6 +4,7 @@ import { REGRAS_PRESENCA_DESLIGADA } from "@/regras/presenca";
 
 export async function limparBanco() {
   await db.eventoMetrica.deleteMany();
+  await db.leadExcluidoMetrica.deleteMany();
   await db.assinaturaPush.deleteMany();
   await db.alerta.deleteMany();
   await db.lead.deleteMany();

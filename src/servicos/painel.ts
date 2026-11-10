@@ -1,29 +1,20 @@
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { ErroHttp } from "@/lib/sessao";
-import { resolverPeriodoPainel, datasDosAtalhos } from "@/regras/painel";
+import { resolverPeriodoPainel, datasDosAtalhos, INDICADORES_DO_PAINEL } from "@/regras/painel";
 import { resumoDasJanelas } from "@/regras/janela24h";
 import { ETAPAS_FUNIL, POSICAO_NO_FUNIL, type CodigoEtapa } from "@/regras/etapas";
 import { nomesDasEtapas } from "./etapas";
 import { motivosDePerda } from "./vendas";
+import { compromissosDoPainel, encerradosDoPainel, painelZeradoEm, type CompromissoDoLead, type Encerrado } from "./painel-dados";
 import { estatisticaDeTempos, primeiraRespostaDoConsultor, temposDoConsultor, turnosDoCliente } from "@/regras/tempo-resposta";
 
 // Painel (MET-01/02). Sem vendedor escolhido: contadores anônimos (valem mesmo para leads excluídos).
 // Com vendedor escolhido: dados dos leads que são dele hoje, porque os contadores não guardam de quem é cada lead (MET-03).
+// Vendido, perdidos, descartados e conversões da agenda vêm de `painel-dados.ts`: contam também os leads já excluídos.
+// "Zerar painel" grava uma data: nada anterior a ela aparece (os períodos são cortados nela).
 
-// Tarefa 21: a métrica principal é trazer o cliente à loja (apresentações agendadas). "Sem resposta" virou motivo de perda.
-const TIPOS_PAINEL = [
-  ["apresentacao_agendada", "Apresentações agendadas"],
-  ["medicao_agendada", "Medições agendadas"],
-  ["lead_novo", "Leads novos"],
-  ["qualificado", "Qualificados"],
-  ["curioso", "Curiosos"],
-  ["outra_cidade", "Outras cidades"],
-  ["parceiro", "Arquitetos/parceiros"],
-  ["retomada_voltou", "Retomadas que voltaram"],
-  // Medição ou apresentação remarcada depois que a data passou (o cliente faltou).
-  ["nao_compareceu", "Clientes que faltaram"],
-] as const;
+
 
 export interface PedidoPainel {
   atalho?: string | null;
@@ -41,11 +32,20 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
   } catch (e) {
     throw new ErroHttp(400, e instanceof Error ? e.message : "Período inválido.");
   }
-  const { inicio, fim, anteriorInicio } = periodo;
+  const { fim } = periodo;
+  const zeradoEm = await painelZeradoEm();
+  // Corta o período na data do reset (e nunca depois do fim, para período inteiro antes do reset dar zero).
+  const limitar = (d: Date) => {
+    const x = zeradoEm && d < zeradoEm ? zeradoEm : d;
+    return x > fim ? fim : x;
+  };
+  const inicio = limitar(periodo.inicio);
+  const anteriorInicio = limitar(periodo.anteriorInicio);
   const consultores = await db.usuario.findMany({ where: { perfil: "consultor" }, select: { id: true, nome: true }, orderBy: { nome: "asc" } });
   const vendedor = pedido.vendedorId ? consultores.find((c) => c.id === pedido.vendedorId) : undefined;
   if (pedido.vendedorId && !vendedor) throw new ErroHttp(404, "Vendedor não encontrado.");
 
+  const encerrados = await encerradosDoPainel();
   const eventos = await db.eventoMetrica.findMany({
     where: { ocorridoEm: { gte: anteriorInicio, lt: fim }, ...(vendedor ? { consultorId: vendedor.id } : {}) },
   });
@@ -64,7 +64,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
   });
   // Leads que o bot passou e o consultor ainda não respondeu (situação de agora, não do período).
   const repassados = await db.lead.findMany({
-    where: { ...(vendedor ? { consultorId: vendedor.id } : {}), arquivadoEm: null, aguardandoHumano: true, repassadoEm: { not: null } },
+    where: { ...(vendedor ? { consultorId: vendedor.id } : {}), arquivadoEm: null, etapa: { not: "perdido" }, aguardandoHumano: true, repassadoEm: { not: null } },
     select: { repassadoEm: true, mensagens: { where: { autor: "consultor" }, orderBy: { enviadaEm: "desc" }, take: 1, select: { enviadaEm: true } } },
   });
   const aguardando = repassados.filter((l) => !l.mensagens[0] || l.mensagens[0].enviadaEm < (l.repassadoEm as Date)).length;
@@ -84,16 +84,22 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
   const indicador = (tipo: string, nome: string) => ({ tipo, nome, atual: contar(tipo, inicio, fim), anterior: contar(tipo, anteriorInicio, inicio) });
 
   if (!vendedor) {
-    indicadores = TIPOS_PAINEL.map(([tipo, nome]) => indicador(tipo, nome));
+    // Contato que a loja descartou ("Não é lead") sai de "Leads novos": nunca foi lead de verdade.
+    const descartadosNo = (de: Date, ate: Date) => encerrados.filter((e) => e.naoELead && e.quando >= de && e.quando < ate).length;
+    indicadores = INDICADORES_DO_PAINEL.map(([tipo, nome]) => {
+      const i = indicador(tipo, nome);
+      return tipo === "lead_novo" ? { ...i, atual: Math.max(0, i.atual - descartadosNo(inicio, fim)), anterior: Math.max(0, i.anterior - descartadosNo(anteriorInicio, inicio)) } : i;
+    });
     funil = FUNIL.map(([tipo, nome]) => ({ tipo, nome, total: contar(tipo, inicio, fim) }));
   } else {
     const leads = await db.lead.findMany({
       where: { consultorId: vendedor.id },
-      select: { criadoEm: true, mensagens: { where: { autor: "consultor" }, select: { enviadaEm: true } }, mudancasEtapa: { select: { para: true, criadoEm: true } } },
+      select: { criadoEm: true, etapa: true, motivoPerda: true, mensagens: { where: { autor: "consultor" }, select: { enviadaEm: true } }, mudancasEtapa: { select: { para: true, criadoEm: true } } },
     });
     const dentro = (d: Date, de: Date, ate: Date) => d >= de && d < ate;
+    const naoELead = new Set((await motivosDePerda()).filter((m) => m.naoELead).map((m) => m.codigo));
     const nos = (de: Date, ate: Date) => ({
-      recebidos: leads.filter((l) => dentro(l.criadoEm, de, ate)).length,
+      recebidos: leads.filter((l) => dentro(l.criadoEm, de, ate) && !(l.etapa === "perdido" && naoELead.has(l.motivoPerda ?? ""))).length,
       atendidos: leads.filter((l) => l.mensagens.some((m) => dentro(m.enviadaEm, de, ate))).length,
     });
     const atual = nos(inicio, fim);
@@ -110,8 +116,9 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     funil = FUNIL.map(([tipo, nome], i) => ({ tipo, nome, total: alcance.filter((a) => a >= i).length }));
   }
 
-  const vendas = await vendasDoPeriodo(inicio, fim, vendedor?.id);
-  const conversoes = await conversoesDoPeriodo(inicio, fim, vendedor?.id);
+  const dono = (c: { consultorId: string | null }) => !vendedor || c.consultorId === vendedor.id;
+  const vendas = await vendasDoPeriodo(inicio, fim, encerrados.filter(dono), vendedor?.id);
+  const conversoes = conversoesDoPeriodo(inicio, fim, (await compromissosDoPainel()).filter(dono));
   // Situação de agora (não do período): leads ativos (etapa aberta, não arquivados) com a janela de 24h aberta.
   const ativos = await db.lead.findMany({ where: { arquivadoEm: null, etapa: { notIn: ["fechado", "perdido"] }, ...(vendedor ? { consultorId: vendedor.id } : {}) }, select: { ultimaMsgClienteEm: true } });
   const janelas = resumoDasJanelas(ativos, quando);
@@ -120,6 +127,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     de: periodo.de,
     ate: periodo.ate,
     dias: periodo.dias,
+    zeradoEm: zeradoEm?.toISOString() ?? null,
     atalhos: datasDosAtalhos(quando),
     vendedores: consultores,
     vendedorId: vendedor?.id ?? null,
@@ -140,24 +148,17 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
 /**
  * Conversões (tarefa 21), por lead, a partir da agenda: das medições marcadas no período, quantas viraram apresentação;
  * das apresentações marcadas no período, quantas viraram venda. Compromisso cancelado sem remarcar não conta.
- * Leads excluídos somem (a agenda some com eles).
+ * Lead excluído continua contando (cópia em `painel-dados.ts`): marcou apresentação, sumiu e foi excluído = apresentação que não converteu.
  */
-async function conversoesDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
-  const compromissos = await db.visita.findMany({
-    where: { status: "agendada", tipo: { in: ["medicao", "apresentacao"] }, ...(vendedorId ? { consultorId: vendedorId } : {}) },
-    select: { leadId: true, tipo: true, criadoEm: true, lead: { select: { etapa: true } } },
-  });
-  const noPeriodo = (c: (typeof compromissos)[number]) => c.criadoEm >= inicio && c.criadoEm < fim;
-  const medicoes = new Map<string, Date>();
-  for (const c of compromissos) if (c.tipo === "medicao" && noPeriodo(c)) medicoes.set(c.leadId, c.criadoEm);
-  const viraramApresentacao = [...medicoes].filter(([leadId, marcada]) => compromissos.some((c) => c.tipo === "apresentacao" && c.leadId === leadId && c.criadoEm >= marcada)).length;
-  const apresentacoes = new Map(compromissos.filter((c) => c.tipo === "apresentacao" && noPeriodo(c)).map((c) => [c.leadId, c.lead.etapa]));
-  const fechadas = [...apresentacoes.values()].filter((etapa) => etapa === "fechado").length;
+function conversoesDoPeriodo(inicio: Date, fim: Date, compromissos: CompromissoDoLead[]) {
+  const noPeriodo = (d: Date | null) => !!d && d >= inicio && d < fim;
+  const medicoes = compromissos.filter((c) => noPeriodo(c.medicao));
+  const apresentacoes = compromissos.filter((c) => noPeriodo(c.apresentacao));
   return {
-    medicoes: medicoes.size,
-    medicoesComApresentacao: viraramApresentacao,
-    apresentacoes: apresentacoes.size,
-    apresentacoesFechadas: fechadas,
+    medicoes: medicoes.length,
+    medicoesComApresentacao: medicoes.filter((c) => c.apresentacao && c.medicao && c.apresentacao >= c.medicao).length,
+    apresentacoes: apresentacoes.length,
+    apresentacoesFechadas: apresentacoes.filter((c) => c.fechou).length,
   };
 }
 
@@ -166,37 +167,30 @@ const ETAPAS_EM_NEGOCIACAO: CodigoEtapa[] = ["apresentacao", "negociacao"];
 
 /**
  * Vendas (Bloco 2). "Em negociação" é a situação de agora: valor do orçamento dos leads em Apresentação agendada e Negociação.
- * "Vendido" e "perdidos" são do período: leads cuja última entrada em Fechado/Perdido caiu dentro das datas.
- * Dinheiro em centavos. Leads excluídos somem (o valor vem do lead); arquivados continuam contando.
+ * "Vendido", "perdidos" e "descartados" são do período: leads cuja última entrada em Fechado/Perdido caiu dentro das datas,
+ * inclusive os já excluídos. Descartado = perdido por um motivo "Não é lead" (não entra em perdidos). Dinheiro em centavos.
  */
-async function vendasDoPeriodo(inicio: Date, fim: Date, vendedorId?: string) {
+async function vendasDoPeriodo(inicio: Date, fim: Date, encerrados: Encerrado[], vendedorId?: string) {
   const dono = vendedorId ? { consultorId: vendedorId } : {};
   const abertos = await db.lead.findMany({ where: { ...dono, arquivadoEm: null, etapa: { in: ETAPAS_EM_NEGOCIACAO } }, select: { valorOrcamento: true } });
-  const encerrados = await db.lead.findMany({
-    where: { ...dono, etapa: { in: ["fechado", "perdido"] } },
-    select: { etapa: true, valorFechado: true, motivoPerda: true, concorrente: true, mudancasEtapa: { where: { para: { in: ["fechado", "perdido"] } }, select: { para: true, criadoEm: true } } },
-  });
-  const noPeriodo = (l: (typeof encerrados)[number]) => {
-    const quando = Math.max(0, ...l.mudancasEtapa.filter((m) => m.para === l.etapa).map((m) => m.criadoEm.getTime()));
-    return quando >= inicio.getTime() && quando < fim.getTime();
-  };
-  const fechados = encerrados.filter((l) => l.etapa === "fechado" && noPeriodo(l));
-  const perdidos = encerrados.filter((l) => l.etapa === "perdido" && noPeriodo(l));
+  const noPeriodo = (e: Encerrado) => e.quando >= inicio && e.quando < fim;
+  const fechados = encerrados.filter((e) => e.etapa === "fechado" && noPeriodo(e));
+  const perdidos = encerrados.filter((e) => e.etapa === "perdido" && !e.naoELead && noPeriodo(e));
+  const descartados = encerrados.filter((e) => e.etapa === "perdido" && e.naoELead && noPeriodo(e));
   // Motivos na ordem do admin (inclusive os desativados, que ainda têm lead). Código que não existe mais cai em "Sem motivo registrado".
   const cadastrados = await motivosDePerda();
   const conhecidos = new Set(cadastrados.map((m) => m.codigo));
-  const motivos = [...cadastrados.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta })), { codigo: "sem_motivo", nome: "Sem motivo registrado", pergunta: null }].map((m) => {
-    const lista = perdidos.filter((l) => (conhecidos.has(l.motivoPerda ?? "") ? l.motivoPerda === m.codigo : m.codigo === "sem_motivo"));
-    return {
-      codigo: m.codigo,
-      nome: m.nome,
-      total: lista.length,
-      detalhes: m.pergunta ? [...new Set(lista.map((l) => l.concorrente?.trim()).filter((c): c is string => !!c))] : [],
-    };
-  });
+  const porMotivo = (lista: Encerrado[]) =>
+    [...cadastrados.map((m) => ({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta })), { codigo: "sem_motivo", nome: "Sem motivo registrado", pergunta: null }]
+      .map((m) => {
+        const doMotivo = lista.filter((l) => (conhecidos.has(l.motivo ?? "") ? l.motivo === m.codigo : m.codigo === "sem_motivo"));
+        return { codigo: m.codigo, nome: m.nome, total: doMotivo.length, detalhes: m.pergunta ? [...new Set(doMotivo.map((l) => l.concorrente?.trim()).filter((c): c is string => !!c))] : [] };
+      })
+      .filter((m) => m.total > 0);
   return {
     emNegociacao: { quantidade: abertos.length, total: abertos.reduce((s, l) => s + (l.valorOrcamento ?? 0), 0), semValor: abertos.filter((l) => !l.valorOrcamento).length },
-    vendido: { quantidade: fechados.length, total: fechados.reduce((s, l) => s + (l.valorFechado ?? 0), 0) },
-    perdidos: { quantidade: perdidos.length, motivos: motivos.filter((m) => m.total > 0) },
+    vendido: { quantidade: fechados.length, total: fechados.reduce((s, l) => s + (l.valor ?? 0), 0) },
+    perdidos: { quantidade: perdidos.length, motivos: porMotivo(perdidos) },
+    descartados: { quantidade: descartados.length, motivos: porMotivo(descartados) },
   };
 }

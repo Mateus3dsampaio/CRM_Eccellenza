@@ -21,6 +21,8 @@ export interface MotivoDePerda {
   nome: string;
   pergunta: string | null;
   ativo: boolean;
+  /** Contato que não era lead (pós-venda, parceiro, emprego, canal errado...): não conta como perdido no painel. */
+  naoELead: boolean;
 }
 
 /** Regras que o admin configura e que o servidor confere ao mover o card. */

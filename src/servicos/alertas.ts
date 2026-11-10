@@ -80,7 +80,7 @@ export async function alertasDesde(usuario: { id: string; perfil: string }, depo
 export async function avisarPrazosVermelhos(): Promise<number> {
   const quando = await agora();
   const prazos = await prazosDeEspera();
-  const leads = await db.lead.findMany({ where: { arquivadoEm: null, aguardandoHumano: true }, select: { id: true, aguardandoHumano: true, esperandoDesde: true, repassadoEm: true, ultimaMsgClienteEm: true, alertaPrazoPara: true } });
+  const leads = await db.lead.findMany({ where: { arquivadoEm: null, aguardandoHumano: true, etapa: { not: "perdido" } }, select: { id: true, etapa: true, aguardandoHumano: true, esperandoDesde: true, repassadoEm: true, ultimaMsgClienteEm: true, alertaPrazoPara: true } });
   let avisados = 0;
   for (const lead of leads) {
     const desde = esperaDoLead(lead);

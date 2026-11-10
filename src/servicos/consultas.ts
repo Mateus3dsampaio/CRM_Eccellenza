@@ -23,7 +23,7 @@ export { nomeExibicao };
  */
 export async function leadsAguardando(usuario: { id: string; perfil: string }) {
   const leads = await db.lead.findMany({
-    where: { arquivadoEm: null, aguardandoHumano: true, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }) },
+    where: { arquivadoEm: null, aguardandoHumano: true, etapa: { not: "perdido" }, ...(usuario.perfil === "admin" ? {} : { consultorId: usuario.id }) },
     include: { consultor: { select: { id: true, nome: true } } },
   });
   const lista = leads.map((l) => ({

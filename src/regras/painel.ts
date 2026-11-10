@@ -54,3 +54,17 @@ export function resolverPeriodoPainel(entrada: { atalho?: string | null; de?: st
   if (dias > LIMITE_DIAS_PAINEL) throw new Error(`O período pode ter no máximo ${LIMITE_DIAS_PAINEL} dias.`);
   return { de: base.de, ate: base.ate, inicio: de, fim: new Date(ate.getTime() + DIA), anteriorInicio: new Date(de.getTime() - dias * DIA), dias };
 }
+
+// Tarefa 21: a métrica principal é trazer o cliente à loja (apresentações agendadas). "Sem resposta" virou motivo de perda.
+export const INDICADORES_DO_PAINEL = [
+  ["apresentacao_agendada", "Apresentações agendadas"],
+  ["medicao_agendada", "Medições agendadas"],
+  ["lead_novo", "Leads novos"],
+  ["qualificado", "Qualificados"],
+  ["curioso", "Curiosos"],
+  ["outra_cidade", "Outras cidades"],
+  ["parceiro", "Arquitetos/parceiros"],
+  ["retomada_voltou", "Retomadas que voltaram"],
+  // Medição ou apresentação remarcada depois que a data passou (o cliente faltou).
+  ["nao_compareceu", "Clientes que faltaram"],
+] as const;
