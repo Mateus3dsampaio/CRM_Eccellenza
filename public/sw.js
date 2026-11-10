@@ -14,8 +14,11 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
       // Com o CRM na frente (visível e com o foco), o próprio CRM mostra o aviso dentro da tela.
+      // Exceto no iPhone/iPad: a Apple exige um cartão a cada aviso recebido; aviso "engolido" conta como silencioso
+      // e, depois de alguns, o iPhone corta os avisos deste CRM sem dizer nada.
+      const apple = /iPhone|iPad|iPod|Macintosh/.test((self.navigator && self.navigator.userAgent) || "");
       const janelas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      if (janelas.some((j) => j.visibilityState === "visible" && j.focused)) return;
+      if (!apple && janelas.some((j) => j.visibilityState === "visible" && j.focused)) return;
       await self.registration.showNotification(aviso.titulo || "Eccellenza", {
         body: aviso.corpo || "",
         // Mesma marca do aviso que o CRM aberto mostra: um substitui o outro, nunca aparecem dois.
