@@ -101,6 +101,8 @@ const ORDEM_ETAPA = Object.fromEntries(ETAPAS.map((e, i) => [e.codigo, i])) as R
 export function etapaAoAgendar(etapaAtual: string, tipo: TipoCompromisso): CodigoEtapa | null {
   if (tipo === "visita") return null;
   if (etapaAtual === "perdido") return tipo;
+  // Medição marcada para quem está em Apresentação: o card volta para Medição (em Apresentação, ou tem projeto, ou já mediu).
+  if (tipo === "medicao" && etapaAtual === "apresentacao") return "medicao";
   const atual = ORDEM_ETAPA[etapaAtual as CodigoEtapa];
   return atual === undefined || atual < ORDEM_ETAPA[tipo] ? tipo : null;
 }
@@ -167,6 +169,14 @@ export async function agendarVisita(params: { leadId: string; inicio: Date; cons
   await registrarAlteracao(lead.id, params.autor, `${anteriores.length ? "Remarcou" : "Agendou"} ${nomeTipo}: ${formatarVisitaCurta(inicio)} com ${visita.consultor.nome}`);
   // AGENDA-04: medição e apresentação movem o card (sem voltar etapas mais avançadas).
   const destino = etapaAoAgendar(lead.etapa, tipo);
+  // Voltou de Apresentação para Medição: a apresentação marcada sai da agenda (marca-se de novo depois de concluir a medição).
+  if (destino === "medicao" && lead.etapa === "apresentacao") {
+    const saindo = await db.visita.findMany({ where: { leadId: lead.id, tipo: "apresentacao", status: "agendada", concluidaEm: null } });
+    for (const v of saindo) {
+      await db.visita.update({ where: { id: v.id }, data: { status: "cancelada", vagaChave: null } });
+      await registrarAlteracao(lead.id, params.autor, `Cancelou apresentação de ${formatarVisitaCurta(v.inicio)} (card voltou para Medição)`);
+    }
+  }
   if (destino) await moverEtapa(lead.id, destino, params.autor);
   await atualizarResumo(lead.id);
   // Aviso só quando o bot marca: quem marca pela tela já sabe que marcou.

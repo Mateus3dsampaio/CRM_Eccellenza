@@ -7,7 +7,7 @@ import { decisaoPendente } from "@/regras/decisao";
 import { PRAZOS_ESPERA_PADRAO } from "@/regras/espera";
 import { dataLocal, inicioDoMesLocal, partesLocais, somarDias } from "@/regras/tempo";
 import { agendarVisita, horariosLivresParaLead } from "@/servicos/agenda";
-import { concluirMedicao, confirmarEstimativa, converterApresentacoesAntigas, definirMetasDeApresentacao, exigirEstimativa, placarDoMes, pularMedicao } from "@/servicos/apresentacoes";
+import { concluirMedicao, confirmarEstimativa, converterApresentacoesAntigas, definirMetasDeApresentacao, exigirPreparoDaApresentacao, placarDoMes, pularMedicao } from "@/servicos/apresentacoes";
 import { cardsDoKanban } from "@/servicos/consultas";
 import { moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { transferirLead } from "@/servicos/distribuicao";
@@ -41,10 +41,12 @@ describe("pronto para marcar a apresentação (regra)", () => {
 });
 
 describe("aviso da estimativa de valores (regra)", () => {
-  it("só pergunta a quem pulou a medição e ainda não confirmou", () => {
-    expect(precisaConfirmarEstimativa({ pulouMedicaoEm: new Date(), estimativaAlinhadaEm: null })).toBe(true);
-    expect(precisaConfirmarEstimativa({ pulouMedicaoEm: new Date(), estimativaAlinhadaEm: new Date() })).toBe(false);
-    expect(precisaConfirmarEstimativa({ pulouMedicaoEm: null })).toBe(false);
+  it("pergunta a quem não concluiu a medição nem apresentou e ainda não confirmou", () => {
+    expect(precisaConfirmarEstimativa({ estimativaAlinhadaEm: null })).toBe(true);
+    expect(precisaConfirmarEstimativa({ estimativaAlinhadaEm: new Date() })).toBe(false);
+    // Medição concluída ou apresentação já feita: não pergunta.
+    expect(precisaConfirmarEstimativa({ medicaoConcluida: true })).toBe(false);
+    expect(precisaConfirmarEstimativa({ jaApresentou: true })).toBe(false);
   });
   it("o texto não traz valor nem faixa de preço (política da loja)", () => {
     const tudo = Object.values(TEXTO_ESTIMATIVA).join(" ");
@@ -288,18 +290,46 @@ describe("caminho até a apresentação (banco)", () => {
     expect((await card(lead.id)).pronto).toBeNull();
   });
 
-  it("estimativa de valores: quem pulou a medição só marca depois do 'sim', gravado no histórico com quem fez", async () => {
+  it("estimativa de valores: lead sem medição concluída (inclusive vindo de IA atendendo) só marca depois do 'sim', gravado com quem fez", async () => {
     await criarConsultores();
     const lead = await obterOuCriarLead("+5588900009105");
-    await db.lead.update({ where: { id: lead.id }, data: { etapa: "qualificacao" } });
-    // Quem não pulou a medição não é perguntado.
-    await expect(exigirEstimativa(lead.id)).resolves.toBeUndefined();
-    await pularMedicao(lead.id, true, "Rafael");
-    await expect(exigirEstimativa(lead.id)).rejects.toThrow(/estimativa/);
+    await expect(exigirPreparoDaApresentacao(lead.id)).rejects.toThrow(/estimativa/);
+    await pularMedicao(lead.id, true, "Rafael").catch(() => undefined);
     await confirmarEstimativa(lead.id, "Rafael Lima");
-    await expect(exigirEstimativa(lead.id)).resolves.toBeUndefined();
+    await expect(exigirPreparoDaApresentacao(lead.id)).resolves.toBeUndefined();
     const registro = await db.alteracao.findFirstOrThrow({ where: { leadId: lead.id, descricao: TEXTO_ESTIMATIVA.historico } });
     expect(registro.autor).toBe("Rafael Lima");
+    // Sem medição, o "sim" deixa o cliente como "tem projeto": é isso ou a medição que permite estar em Apresentação.
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).pulouMedicaoEm).not.toBeNull();
+  });
+
+  it("medição concluída não precisa da pergunta da estimativa", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900009107");
+    const [m] = await horariosLivresParaLead(lead.id, 1, undefined, "medicao");
+    await agendarVisita({ leadId: lead.id, inicio: m.inicio, autor: "teste", tipo: "medicao" });
+    await concluirMedicao(lead.id, "Rafael");
+    await expect(exigirPreparoDaApresentacao(lead.id)).resolves.toBeUndefined();
+  });
+
+  it("medição marcada e não concluída bloqueia marcar a apresentação", async () => {
+    await criarConsultores();
+    const lead = await obterOuCriarLead("+5588900009108");
+    const [m] = await horariosLivresParaLead(lead.id, 1, undefined, "medicao");
+    await agendarVisita({ leadId: lead.id, inicio: m.inicio, autor: "teste", tipo: "medicao" });
+    await expect(exigirPreparoDaApresentacao(lead.id)).rejects.toThrow(/medição/);
+  });
+
+  it("marcar medição para quem está em Apresentação volta o card para Medição e tira a apresentação da agenda", async () => {
+    const [a] = await criarConsultores();
+    const lead = await leadNaEtapa("+5588900009109", "apresentacao", a.id);
+    const ap = await apresentacaoEm(lead.id, a.id, new Date((await agora()).getTime() + 5 * 86_400_000));
+    const [m] = await horariosLivresParaLead(lead.id, 1, undefined, "medicao");
+    await agendarVisita({ leadId: lead.id, inicio: m.inicio, autor: "teste", tipo: "medicao", consultorId: a.id });
+    const c = await card(lead.id);
+    expect(c.etapa).toBe("medicao");
+    expect(c.pronto).toBeNull();
+    expect((await db.visita.findUniqueOrThrow({ where: { id: ap.id } })).status).toBe("cancelada");
   });
 
   it("apresentação já realizada não é cancelada ao marcar outra para o mesmo lead", async () => {

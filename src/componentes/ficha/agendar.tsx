@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Coins } from "lucide-react";
-import { TEXTO_ESTIMATIVA } from "@/regras/apresentacao";
+import { TEXTO_ESTIMATIVA, TEXTO_MEDICAO_PENDENTE } from "@/regras/apresentacao";
 import { REGRAS_AGENDA_PADRAO, descreverRegrasAgenda, horasDeInicio, type RegrasAgenda, type TipoCompromisso } from "@/regras/agenda";
 import { chaveDia, formatarDiaLongo, formatarDiaSemana, formatarHora, formatarVisitaCurta, lerChaveDia, partesLocais } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -24,6 +24,8 @@ interface DadosLivres {
   livres: { inicio: string; consultorId: string }[];
   /** Apresentação de quem pulou a medição e ainda não confirmou a estimativa de valores: a tela pergunta antes de abrir a agenda. */
   estimativaPendente?: boolean;
+  /** Medição marcada e ainda não concluída: a apresentação não pode ser marcada. */
+  medicaoPendente?: boolean;
 }
 
 type Vaga = { inicio: string; consultorId: string };
@@ -117,7 +119,20 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
     }
   }
 
-  // Quem pulou a medição só marca a apresentação depois de confirmar a estimativa de valores (regra da loja).
+  if (aberto && tipo === "apresentacao" && dados?.medicaoPendente) {
+    return (
+      <Modal aberto aoFechar={fechar} titulo="Medição ainda não concluída" largura="max-w-md">
+        <p className="text-sm text-texto-suave">{TEXTO_MEDICAO_PENDENTE}</p>
+        <div className="mt-5 flex justify-end">
+          <Botao variante="primario" onClick={fechar}>
+            Entendi
+          </Botao>
+        </div>
+      </Modal>
+    );
+  }
+
+  // Sem medição concluída, a estimativa de valores precisa estar alinhada a apresentação depois de confirmar a estimativa de valores (regra da loja).
   if (aberto && tipo === "apresentacao" && dados?.estimativaPendente && !estimativaOk) {
     return (
       <Modal aberto aoFechar={fechar} titulo={TEXTO_ESTIMATIVA.titulo} largura="max-w-md">

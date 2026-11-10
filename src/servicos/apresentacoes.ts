@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { ErroHttp } from "@/lib/sessao";
-import { lerMetas, periodoDoPlacar, precisaConfirmarEstimativa, TEXTO_ESTIMATIVA, validarMeta, type ContagemDoVendedor, type MetasApresentacao } from "@/regras/apresentacao";
+import { lerMetas, periodoDoPlacar, precisaConfirmarEstimativa, TEXTO_ESTIMATIVA, TEXTO_MEDICAO_PENDENTE, validarMeta, type ContagemDoVendedor, type MetasApresentacao } from "@/regras/apresentacao";
 import { inicioDoDiaLocal, formatarVisitaCurta } from "@/regras/tempo";
 import { gravarConfig, lerConfig } from "./configuracoes";
 import { registrarAlteracao } from "./historico";
@@ -109,17 +109,36 @@ export async function pularMedicao(leadId: string, pular: boolean, autor: string
   await marcarMudanca();
 }
 
-/** O vendedor respondeu "sim, já alinhei" à estimativa de valores: grava no histórico (quem e quando) e libera a agenda. */
+/** O que falta para marcar a apresentação deste lead (a tela pergunta, o servidor confere). */
+export async function preparoDaApresentacao(leadId: string): Promise<{ medicaoPendente: boolean; estimativaPendente: boolean; semMedicao: boolean }> {
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { estimativaAlinhadaEm: true, visitas: { where: { status: "agendada", tipo: { in: ["medicao", "apresentacao"] } }, select: { tipo: true, concluidaEm: true } } } });
+  if (!lead) return { medicaoPendente: false, estimativaPendente: false, semMedicao: false };
+  const medicoes = lead.visitas.filter((v) => v.tipo === "medicao");
+  const medicaoConcluida = medicoes.some((v) => v.concluidaEm);
+  const jaApresentou = lead.visitas.some((v) => v.tipo === "apresentacao" && v.concluidaEm);
+  return { medicaoPendente: medicoes.some((v) => !v.concluidaEm), estimativaPendente: precisaConfirmarEstimativa({ estimativaAlinhadaEm: lead.estimativaAlinhadaEm, medicaoConcluida, jaApresentou }), semMedicao: !medicaoConcluida };
+}
+
+/**
+ * O vendedor respondeu "sim, já alinhei" à estimativa de valores: grava no histórico (quem e quando) e libera a agenda.
+ * Sem medição concluída, o cliente passa a constar como "tem projeto" (é isso ou a medição que permite entrar em Apresentação).
+ */
 export async function confirmarEstimativa(leadId: string, autor: string): Promise<void> {
-  await db.lead.update({ where: { id: leadId }, data: { estimativaAlinhadaEm: await agora() } });
+  const quando = await agora();
+  const { semMedicao } = await preparoDaApresentacao(leadId);
+  const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, select: { pulouMedicaoEm: true } });
+  const marcarProjeto = semMedicao && !lead.pulouMedicaoEm;
+  await db.lead.update({ where: { id: leadId }, data: { estimativaAlinhadaEm: quando, ...(marcarProjeto ? { pulouMedicaoEm: quando } : {}) } });
   await registrarAlteracao(leadId, autor, TEXTO_ESTIMATIVA.historico);
+  if (marcarProjeto) await registrarAlteracao(leadId, autor, "Cliente tem projeto: segue sem medição");
   await marcarMudanca();
 }
 
-/** A agenda não marca a apresentação de quem pulou a medição sem a estimativa confirmada. */
-export async function exigirEstimativa(leadId: string): Promise<void> {
-  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { pulouMedicaoEm: true, estimativaAlinhadaEm: true } });
-  if (lead && precisaConfirmarEstimativa(lead)) throw new ErroHttp(409, "Confirme que a estimativa de valores foi alinhada com o cliente antes de marcar a apresentação.");
+/** A agenda não marca a apresentação com medição pendente nem sem a estimativa de valores confirmada. */
+export async function exigirPreparoDaApresentacao(leadId: string): Promise<void> {
+  const p = await preparoDaApresentacao(leadId);
+  if (p.medicaoPendente) throw new ErroHttp(409, TEXTO_MEDICAO_PENDENTE);
+  if (p.estimativaPendente) throw new ErroHttp(409, "Confirme que a estimativa de valores foi alinhada com o cliente antes de marcar a apresentação.");
 }
 
 /** Lead que passa pela apresentação (Apresentação → Negociação/Fechado) tem a apresentação ativa concluída. */

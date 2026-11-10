@@ -48,10 +48,17 @@ export const TEXTO_ESTIMATIVA = {
   historico: "Confirmou que a estimativa de valores foi alinhada com o cliente (antes de marcar a apresentação)",
 } as const;
 
-/** Antes de marcar a apresentação, pergunta da estimativa: só para quem pulou a medição e ainda não confirmou. */
-export function precisaConfirmarEstimativa(lead: { pulouMedicaoEm?: Date | string | null; estimativaAlinhadaEm?: Date | string | null }): boolean {
-  return !!lead.pulouMedicaoEm && !lead.estimativaAlinhadaEm;
+/**
+ * Card em Apresentação: ou o cliente já tem projeto (sem medição) ou a medição foi concluída.
+ * Antes de marcar a apresentação, a estimativa de valores precisa estar alinhada, salvo se a medição já foi concluída
+ * (o vendedor já esteve na casa do cliente) ou se o lead já apresentou antes.
+ */
+export function precisaConfirmarEstimativa(lead: { estimativaAlinhadaEm?: Date | string | null; medicaoConcluida?: boolean; jaApresentou?: boolean }): boolean {
+  return !lead.estimativaAlinhadaEm && !lead.medicaoConcluida && !lead.jaApresentou;
 }
+
+/** Medição marcada e ainda não concluída: a apresentação não pode ser marcada (conclua ou cancele a medição antes). */
+export const TEXTO_MEDICAO_PENDENTE = "Este cliente tem medição marcada e ainda não concluída. Conclua a medição (ou cancele) antes de marcar a apresentação: card em Apresentação ou tem projeto, ou já concluiu a medição.";
 
 // ---------- Placar do mês ----------
 

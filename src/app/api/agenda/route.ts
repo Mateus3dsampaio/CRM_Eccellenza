@@ -4,12 +4,11 @@ import { agora } from "@/lib/relogio";
 import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { TIPOS_COMPROMISSO, type TipoCompromisso } from "@/regras/agenda";
-import { precisaConfirmarEstimativa } from "@/regras/apresentacao";
 import { podeEditarAgendaDe } from "@/regras/permissoes";
 import { HORA, chaveDia, dataLocal, inicioDaSemanaLocal, inicioDoDiaLocal, lerChaveDia, somarDias } from "@/regras/tempo";
 import { agendarVisita, cancelarVisita, criarBloqueio, ErroAgenda, horariosLivresEmTorno, removerBloqueio } from "@/servicos/agenda";
 import { regrasDaAgenda } from "@/servicos/configuracoes";
-import { exigirEstimativa } from "@/servicos/apresentacoes";
+import { exigirPreparoDaApresentacao, preparoDaApresentacao } from "@/servicos/apresentacoes";
 import { dadosDaAgenda } from "@/servicos/consultas";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +41,8 @@ async function livresDoCalendario(leadId: string, tipo: TipoCompromisso, dia: Da
     centroLivres: chaveDia(r.centro),
     primeiroDia: chaveDia(r.primeiroDia),
     livres: r.livres.map((v) => ({ inicio: v.inicio.toISOString(), consultorId: v.consultorId })),
-    // Só vale para a apresentação: a tela pergunta da estimativa antes de mostrar o calendário.
-    estimativaPendente: tipo === "apresentacao" && precisaConfirmarEstimativa((await db.lead.findUnique({ where: { id: leadId }, select: { pulouMedicaoEm: true, estimativaAlinhadaEm: true } })) ?? {}),
+    // Só vale para a apresentação: a tela avisa da medição pendente ou pergunta da estimativa antes de mostrar o calendário.
+    ...(tipo === "apresentacao" ? await preparoDaApresentacao(leadId) : { medicaoPendente: false, estimativaPendente: false }),
   };
 }
 
@@ -75,7 +74,7 @@ export const POST = rota(async (req: Request) => {
         const lead = await db.lead.findUnique({ where: { id: corpo.leadId }, select: { consultorId: true } });
         if (usuario.perfil !== "admin" && lead?.consultorId && lead.consultorId !== usuario.id) throw new ErroHttp(403, "Esse lead é de outro consultor. Só o dono do lead ou o admin marca compromissos para ele.");
         // Apresentação de quem pulou a medição: a estimativa de valores precisa estar confirmada (regra da loja).
-        if (corpo.tipo === "apresentacao") await exigirEstimativa(corpo.leadId);
+        if (corpo.tipo === "apresentacao") await exigirPreparoDaApresentacao(corpo.leadId);
         await agendarVisita({ leadId: corpo.leadId, inicio: paraData(corpo.quando), consultorId: corpo.consultorId ?? (usuario.perfil === "admin" ? undefined : usuario.id), autor: usuario.nome, tipo: corpo.tipo });
         break;
       }

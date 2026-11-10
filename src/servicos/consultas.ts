@@ -268,6 +268,7 @@ export async function dadosDaAgenda(de: Date, ate: Date) {
       leadNome: nomeExibicao(v.lead),
       cidade: v.lead.cidade,
       tipo: v.tipo,
+      marcadoPor: v.criadoPor,
     })),
     bloqueios: bloqueios.map((b) => ({ id: b.id, consultorId: b.consultorId, inicio: b.inicio.toISOString(), fim: b.fim.toISOString(), motivo: b.motivo })),
   };

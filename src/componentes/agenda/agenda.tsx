@@ -14,7 +14,7 @@ import { AgendarVisita } from "../ficha/agendar";
 import { useUsuario } from "../usuario";
 import { useGaveta } from "../ficha/gaveta";
 
-interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: TipoCompromisso }
+interface Visita { id: string; consultorId: string; inicio: string; fim: string; leadId: string; leadNome: string; cidade: string | null; tipo: TipoCompromisso; marcadoPor?: string }
 
 // Cor de cada compromisso na grade: apresentação em destaque (é o que mais importa), medição na cor da coluna dela.
 const ESTILO_COMPROMISSO: Record<TipoCompromisso, string> = {
@@ -204,7 +204,7 @@ export function Agenda() {
                                   className={juntar("flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-controle px-2 text-left text-xs hover:brightness-95", ESTILO_COMPROMISSO[v.tipo] ?? ESTILO_COMPROMISSO.visita, continua && "opacity-60")}
                                 >
                                   {v.tipo === "apresentacao" ? <Presentation className="size-3.5 shrink-0" aria-hidden /> : v.tipo === "medicao" ? <Ruler className="size-3.5 shrink-0" aria-hidden /> : <span className={juntar("size-2 shrink-0 rounded-full", corConsultor(v.consultorId))} aria-hidden />}
-                                  <span className="truncate">{continua ? `↳ ${v.leadNome}` : v.leadNome}</span>
+                                  <span className="truncate">{continua ? "↳ " : ""}{nomeConsultor(v.consultorId).split(" ")[0]} <span className="opacity-75">· {v.leadNome}</span></span>
                                 </button>
                               );
                             })}
@@ -240,6 +240,7 @@ export function Agenda() {
           <div className="space-y-4">
             <div className="text-sm">
               <p className="font-semibold">{visitaAberta.leadNome}</p>
+              <p className="text-texto-suave">Quem realiza: <span className="font-medium text-texto">{nomeConsultor(visitaAberta.consultorId)}</span>{visitaAberta.marcadoPor && <> · Marcado por {visitaAberta.marcadoPor}</>}</p>
               <p className="text-texto-suave">
                 {primeiraMaiuscula(formatarDiaLongo(new Date(visitaAberta.inicio)))}, {formatarHora(new Date(visitaAberta.inicio))} às {formatarHora(new Date(visitaAberta.fim))} · {nomeConsultor(visitaAberta.consultorId)}
                 {visitaAberta.cidade && ` · ${visitaAberta.cidade}`}
