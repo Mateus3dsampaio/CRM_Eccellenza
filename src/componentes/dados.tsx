@@ -121,6 +121,7 @@ export function ProvedorAvisos({ children }: { children: ReactNode }) {
     <ContextoAviso.Provider value={avisar}>
       {children}
       <div
+        data-avisos
         className="pointer-events-none fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-end gap-2 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[380px] md:bottom-4"
         aria-live="polite"
         onMouseEnter={() => (pausado.current = true)}
