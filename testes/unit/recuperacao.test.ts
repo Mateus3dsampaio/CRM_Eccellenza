@@ -161,6 +161,15 @@ describe("recuperação de leads: regras puras", () => {
       expect(avaliarRecuperacao({ ...e, recuperacaoSegundaEm: seg(17, 0) }, R, seg(22, 30))).toBe("mover_perdido"); // 22h30 está fora do horário
     });
 
+    it("2ª desligada: não envia a 2ª e o prazo até Perdido conta da 1ª", () => {
+      const sem = { ...R, segundaLigada: false };
+      const e = { ...base, recuperacaoPrimeiraEm: seg(9, 31) };
+      expect(avaliarRecuperacao(e, sem, seg(13, 31))).toBeNull();
+      expect(avaliarRecuperacao(e, sem, seg(14, 30))).toBeNull();
+      expect(avaliarRecuperacao(e, sem, seg(14, 31))).toBe("mover_perdido");
+      expect(avaliarRecuperacao({ ...e, ultimaMsgClienteEm: seg(10, 0) }, sem, seg(23, 0))).toBeNull();
+    });
+
     it("se o cliente respondeu depois da 2ª, não vai para Perdido", () => {
       const e = { ...base, recuperacaoPrimeiraEm: seg(9, 31), recuperacaoSegundaEm: seg(13, 31), ultimaMsgClienteEm: seg(14, 0) };
       expect(avaliarRecuperacao(e, R, seg(23, 0))).toBeNull();
@@ -233,6 +242,22 @@ describe("recuperação de leads: rotina com o banco", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
   });
   afterEach(() => vi.useRealTimers());
+
+  it("2ª mensagem desligada na tela: só a 1ª sai e o lead vai para Perdido X horas depois dela", async () => {
+    await ligar({ segundaLigada: false });
+    const id = await montarLead();
+    await em(seg(9, 31));
+    await em(seg(13, 31));
+    expect(await recuperacoes(id)).toHaveLength(1);
+    await em(seg(14, 30));
+    expect((await ler(id)).etapa).toBe("novo");
+    await em(seg(14, 31));
+    const l = await ler(id);
+    expect(l.etapa).toBe("perdido");
+    expect(l.motivoPerda).toBe(MOTIVO_SEM_RESPOSTA_AUTOMATICO);
+    expect(await recuperacoes(id)).toHaveLength(1);
+    expect(await eventos("recuperacao_segunda")).toBe(0);
+  });
 
   it("desligada (padrão de fábrica): nada é enviado nem movido", async () => {
     const id = await montarLead();

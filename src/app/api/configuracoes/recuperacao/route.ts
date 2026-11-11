@@ -11,6 +11,7 @@ export const PUT = rota(async (req: Request) => {
       ligado: z.boolean(),
       primeiraMin: z.number(),
       primeiraTexto: z.string(),
+      segundaLigada: z.boolean(),
       segundaModo: z.enum(["horas", "dia_seguinte"]),
       segundaHoras: z.number(),
       segundaHora: z.string(),

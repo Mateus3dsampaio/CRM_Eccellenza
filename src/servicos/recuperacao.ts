@@ -37,7 +37,7 @@ export async function rodarRecuperacao(): Promise<ResultadoRecuperacao> {
     if (!acao) continue;
 
     if (acao === "mover_perdido") {
-      // Só chega aqui se a 2ª mensagem foi enviada (recuperacaoSegundaEm só fica gravada com recuperacaoFalhou = false).
+      // Só chega aqui se a última mensagem do ciclo (2ª, ou 1ª com a 2ª desligada) foi enviada (recuperacaoFalhou = false).
       await garantirMotivoSemRespostaAutomatico();
       await moverEtapa(lead.id, "perdido", "sistema", { guardarAnterior: true, semExigencias: true, dados: { motivoPerda: MOTIVO_SEM_RESPOSTA_AUTOMATICO } });
       await registrarUmaVez(lead.id, "recuperacao_perdido", lead.consultorId);

@@ -27,8 +27,8 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
   useBlocoSalvavel("recuperacao", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   const desligado = !rascunho.ligado;
-  const numero = (campo: "primeiraMin" | "segundaHoras" | "horarioInicio" | "horarioFim" | "perdidoHoras", rotulo: string, min: number, max: number) => (
-    <input type="number" inputMode="numeric" min={min} max={max} disabled={desligado} aria-label={rotulo} value={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: Number(e.target.value) }))} className={juntar(classeEntrada, "w-24!")} />
+  const numero = (campo: "primeiraMin" | "segundaHoras" | "horarioInicio" | "horarioFim" | "perdidoHoras", rotulo: string, min: number, max: number, extra = false) => (
+    <input type="number" inputMode="numeric" min={min} max={max} disabled={desligado || extra} aria-label={rotulo} value={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: Number(e.target.value) }))} className={juntar(classeEntrada, "w-24!")} />
   );
 
   return (
@@ -59,27 +59,33 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
           Voltar ao texto original
         </button>
 
-        <h3 className="mb-2 mt-5 text-sm font-semibold">2ª mensagem</h3>
+        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" disabled={desligado} checked={rascunho.segundaLigada} onChange={(e) => setRascunho((r) => ({ ...r, segundaLigada: e.target.checked }))} />
+          Enviar a 2ª mensagem
+        </label>
+        {!rascunho.segundaLigada && !desligado && <p className="mb-3 text-xs text-texto-suave">Desligada: só a 1ª mensagem sai e o prazo até Perdido conta a partir dela.</p>}
+        <div className={juntar("space-y-3", !rascunho.segundaLigada && "opacity-50")}>
         <div className="mb-3 space-y-2" role="radiogroup" aria-label="Quando enviar a 2ª mensagem">
           <label className="flex flex-wrap items-center gap-2 text-sm">
-            <input type="radio" name="segundaModo" disabled={desligado} checked={rascunho.segundaModo === "horas"} onChange={() => setRascunho((r) => ({ ...r, segundaModo: "horas" }))} />
+            <input type="radio" name="segundaModo" disabled={desligado || !rascunho.segundaLigada} checked={rascunho.segundaModo === "horas"} onChange={() => setRascunho((r) => ({ ...r, segundaModo: "horas" }))} />
             <span>Após</span>
-            {numero("segundaHoras", "Horas até a 2ª mensagem", 1, 23)}
+            {numero("segundaHoras", "Horas até a 2ª mensagem", 1, 23, !rascunho.segundaLigada)}
             <span>horas da 1ª mensagem</span>
           </label>
           <label className="flex flex-wrap items-center gap-2 text-sm">
-            <input type="radio" name="segundaModo" disabled={desligado} checked={rascunho.segundaModo === "dia_seguinte"} onChange={() => setRascunho((r) => ({ ...r, segundaModo: "dia_seguinte" }))} />
+            <input type="radio" name="segundaModo" disabled={desligado || !rascunho.segundaLigada} checked={rascunho.segundaModo === "dia_seguinte"} onChange={() => setRascunho((r) => ({ ...r, segundaModo: "dia_seguinte" }))} />
             <span>No dia seguinte às</span>
-            <input type="time" disabled={desligado} aria-label="Horário da 2ª mensagem no dia seguinte" value={rascunho.segundaHora} onChange={(e) => setRascunho((r) => ({ ...r, segundaHora: e.target.value }))} className={juntar(classeEntrada, "w-32!")} />
+            <input type="time" disabled={desligado || !rascunho.segundaLigada} aria-label="Horário da 2ª mensagem no dia seguinte" value={rascunho.segundaHora} onChange={(e) => setRascunho((r) => ({ ...r, segundaHora: e.target.value }))} className={juntar(classeEntrada, "w-32!")} />
           </label>
         </div>
-        <textarea aria-label="Texto da 2ª mensagem" disabled={desligado} rows={3} maxLength={1000} value={rascunho.segundaTexto} onChange={(e) => setRascunho((r) => ({ ...r, segundaTexto: e.target.value }))} className={juntar(classeEntrada, "w-full")} />
-        <button type="button" disabled={desligado} onClick={() => setRascunho((r) => ({ ...r, segundaTexto: TEXTO_SEGUNDA_PADRAO }))} className="mt-1 text-xs text-texto-suave underline disabled:opacity-50">
+        <textarea aria-label="Texto da 2ª mensagem" disabled={desligado || !rascunho.segundaLigada} rows={3} maxLength={1000} value={rascunho.segundaTexto} onChange={(e) => setRascunho((r) => ({ ...r, segundaTexto: e.target.value }))} className={juntar(classeEntrada, "w-full")} />
+        <button type="button" disabled={desligado || !rascunho.segundaLigada} onClick={() => setRascunho((r) => ({ ...r, segundaTexto: TEXTO_SEGUNDA_PADRAO }))} className="mt-1 text-xs text-texto-suave underline disabled:opacity-50">
           Voltar ao texto original
         </button>
         <p className="mt-2 text-xs text-texto-fraco">
           Use <code>{"{nome}"}</code> onde entra o primeiro nome do cliente. Sem nome na ficha, &quot;Oi, {"{nome}"}!&quot; vira &quot;Oi!&quot;. Se o horário da 2ª mensagem cair depois do fim da janela de 24h, ela é antecipada para o fim do mesmo dia; se nem assim couber, não é enviada.
         </p>
+        </div>
 
         <h3 className="mb-2 mt-5 text-sm font-semibold">Horário permitido de envio</h3>
         <label className="flex flex-wrap items-center gap-2 text-sm">
@@ -95,9 +101,9 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
         <label className="flex flex-wrap items-center gap-2 text-sm">
           <span>Mover para Perdido após</span>
           {numero("perdidoHoras", "Horas da 2ª mensagem até Perdido", 1, 72)}
-          <span>horas da 2ª mensagem, sem resposta (motivo &quot;Sem resposta (automático)&quot;)</span>
+          <span>horas da {rascunho.segundaLigada ? "2ª" : "1ª"} mensagem, sem resposta (motivo &quot;Sem resposta (automático)&quot;)</span>
         </label>
-        <p className="mt-1 text-xs text-texto-fraco">Conta em relógio corrido, sem respeitar o horário permitido. Só move se a 2ª mensagem foi realmente enviada. Se o cliente escrever depois, o card volta para a coluna em que estava.</p>
+        <p className="mt-1 text-xs text-texto-fraco">Conta em relógio corrido, sem respeitar o horário permitido. Só move se a última mensagem do ciclo foi realmente enviada. Se o cliente escrever depois, o card volta para a coluna em que estava.</p>
         {salvando && <p className="mt-3 text-xs text-texto-fraco">Salvando...</p>}
       </section>
     </div>

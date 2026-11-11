@@ -22,6 +22,8 @@ export interface RegrasRecuperacao {
   /** 1ª mensagem: minutos depois da nossa última mensagem sem resposta. */
   primeiraMin: number;
   primeiraTexto: string;
+  /** Envia a 2ª mensagem? Desligada: só a 1ª sai e o prazo até Perdido conta a partir dela. */
+  segundaLigada: boolean;
   /** 2ª mensagem: "horas" = X horas depois da 1ª; "dia_seguinte" = no dia seguinte (da 1ª) às `segundaHora`. */
   segundaModo: ModoSegunda;
   segundaHoras: number;
@@ -31,7 +33,7 @@ export interface RegrasRecuperacao {
   /** Horário permitido de envio (hora cheia, Fortaleza): de `horarioInicio` até `horarioFim` (exclusive). */
   horarioInicio: number;
   horarioFim: number;
-  /** Horas, em relógio corrido, entre a 2ª mensagem e a ida para Perdido. */
+  /** Horas, em relógio corrido, entre a última mensagem enviada (a 2ª, ou a 1ª se a 2ª está desligada) e a ida para Perdido. */
   perdidoHoras: number;
 }
 
@@ -46,6 +48,7 @@ export const REGRAS_RECUPERACAO_PADRAO: RegrasRecuperacao = {
   ligado: false,
   primeiraMin: 30, // PROVISÓRIO
   primeiraTexto: TEXTO_PRIMEIRA_PADRAO,
+  segundaLigada: true,
   segundaModo: "dia_seguinte", // PROVISÓRIO
   segundaHoras: 4, // PROVISÓRIO
   segundaHora: "10:00", // PROVISÓRIO
@@ -73,6 +76,7 @@ export function minutosDoHorario(hhmm: string): number | null {
 export function validarRegrasRecuperacao(r: RegrasRecuperacao): string | null {
   if (typeof r.ligado !== "boolean") return "Opção inválida.";
   if (!Number.isInteger(r.primeiraMin) || r.primeiraMin < 1 || r.primeiraMin > 1380) return "1ª mensagem: de 1 a 1380 minutos.";
+  if (typeof r.segundaLigada !== "boolean") return "Opção inválida.";
   if (r.segundaModo !== "horas" && r.segundaModo !== "dia_seguinte") return "Escolha como a 2ª mensagem é marcada.";
   if (!Number.isInteger(r.segundaHoras) || r.segundaHoras < 1 || r.segundaHoras > 23) return "2ª mensagem: de 1 a 23 horas.";
   if (minutosDoHorario(r.segundaHora) === null) return "Horário da 2ª mensagem inválido (use HH:MM).";
@@ -186,7 +190,7 @@ export function avaliarRecuperacao(lead: EstadoRecuperacao, r: RegrasRecuperacao
     return agora.getTime() >= alvo && janelaAberta(cliente, agora) && horarioPermitido(agora, r) ? "enviar_primeira" : null;
   }
 
-  if (!lead.recuperacaoSegundaEm) {
+  if (!lead.recuperacaoSegundaEm && r.segundaLigada) {
     if (cliente.getTime() > lead.recuperacaoPrimeiraEm.getTime()) return null; // respondeu: cancela
     const quando = horarioDaSegunda(lead.recuperacaoPrimeiraEm, cliente, r);
     if (!quando || agora.getTime() < quando.getTime()) return null;
@@ -194,6 +198,7 @@ export function avaliarRecuperacao(lead: EstadoRecuperacao, r: RegrasRecuperacao
   }
 
   // As horas até Perdido contam em relógio corrido: mover não é mensagem, não respeita o horário permitido.
-  if (cliente.getTime() > lead.recuperacaoSegundaEm.getTime()) return null;
-  return agora.getTime() - lead.recuperacaoSegundaEm.getTime() >= r.perdidoHoras * HORA ? "mover_perdido" : null;
+  const ultimaEnviada = lead.recuperacaoSegundaEm ?? lead.recuperacaoPrimeiraEm;
+  if (cliente.getTime() > ultimaEnviada.getTime()) return null;
+  return agora.getTime() - ultimaEnviada.getTime() >= r.perdidoHoras * HORA ? "mover_perdido" : null;
 }
