@@ -3,6 +3,7 @@ import { marcarMudanca } from "@/lib/versao";
 import type { ModoDistribuicao } from "@/regras/distribuicao";
 import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { REGRAS_RETORNO_PADRAO, completarRegrasRetorno, validarRegrasRetorno, type RegrasRetorno } from "@/regras/retorno-fechada";
+import { REGRAS_RECUPERACAO_PADRAO, completarRegrasRecuperacao, validarRegrasRecuperacao, type RegrasRecuperacao } from "@/regras/recuperacao";
 import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
@@ -106,5 +107,26 @@ export async function definirRegrasDeRetorno(regras: RegrasRetorno): Promise<voi
   const erro = validarRegrasRetorno(regras);
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_RETORNO, JSON.stringify(regras));
+  await marcarMudanca();
+}
+
+const CHAVE_RECUPERACAO = "recuperacao_de_leads";
+
+/** Regras da recuperação de leads. Sem valor (ou inválido) vale o padrão (desligado, valores PROVISÓRIOS). */
+export async function regrasDeRecuperacao(): Promise<RegrasRecuperacao> {
+  const bruto = await lerConfig(CHAVE_RECUPERACAO);
+  if (!bruto) return REGRAS_RECUPERACAO_PADRAO;
+  try {
+    const r = completarRegrasRecuperacao(JSON.parse(bruto) as Partial<RegrasRecuperacao>);
+    return validarRegrasRecuperacao(r) === null ? r : REGRAS_RECUPERACAO_PADRAO;
+  } catch {
+    return REGRAS_RECUPERACAO_PADRAO;
+  }
+}
+
+export async function definirRegrasDeRecuperacao(regras: RegrasRecuperacao): Promise<void> {
+  const erro = validarRegrasRecuperacao(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_RECUPERACAO, JSON.stringify(regras));
   await marcarMudanca();
 }

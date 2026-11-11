@@ -13,6 +13,7 @@ import { enviarMensagemLoja } from "./mensagens";
 import { registrarUmaVez } from "./metricas";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
 import { rodarPresenca } from "./presenca";
+import { rodarRecuperacao } from "./recuperacao";
 import { enviarRetornosAutomaticos } from "./retorno-fechada";
 import { garantirMotivoParouDeResponder } from "./vendas";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
@@ -117,6 +118,13 @@ async function executar(): Promise<ResultadoRotinas> {
     await enviarRetornosAutomaticos();
   } catch (erro) {
     console.error("[rotinas] retorno automático falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
+
+  // Recuperação de leads: 1ª e 2ª mensagem para quem sumiu e, depois, Perdido. Erro aqui não para o resto.
+  try {
+    await rodarRecuperacao();
+  } catch (erro) {
+    console.error("[rotinas] recuperação de leads falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
   // O relógio simulado pode ter andado: confere os prazos de espera.

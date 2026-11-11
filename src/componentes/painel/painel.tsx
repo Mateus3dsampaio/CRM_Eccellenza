@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Minus, RotateCcw } from "lucide-react";
+import { MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
 import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta";
@@ -27,6 +28,8 @@ interface DadosPainel {
   apresentacoesPorConsultor: { nome: string; total: number }[];
   conversoes: { medicoes: number; medicoesComApresentacao: number; apresentacoes: number; apresentacoesFechadas: number };
   janelas: { total: number; abertas: number; fechando: number; atencao: number };
+  /** Recuperação de leads no período: mensagens enviadas, quem respondeu depois de cada uma e quem foi para Perdido sozinho. */
+  recuperacao: { primeira: number; segunda: number; respondeuPrimeira: number; respondeuSegunda: number; perdidos: number };
   vendas: {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
@@ -224,7 +227,7 @@ export function Painel() {
                 <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
               ) : (
                 <ul className="mt-2 space-y-1.5">
-                  {dados.vendas.perdidos.motivos.map((m) => (
+                  {dados.vendas.perdidos.motivos.filter((m) => m.codigo !== MOTIVO_SEM_RESPOSTA_AUTOMATICO).map((m) => (
                     <li key={m.codigo} className="text-sm">
                       <div className="flex justify-between gap-2">
                         <span>{m.nome}</span>
@@ -235,6 +238,15 @@ export function Painel() {
                   ))}
                 </ul>
               )}
+              {dados.vendas.perdidos.motivos.filter((m) => m.codigo === MOTIVO_SEM_RESPOSTA_AUTOMATICO).map((m) => (
+                <div key={m.codigo} className="mt-3 border-t border-borda pt-2">
+                  <p className="flex justify-between gap-2 text-xs font-medium text-texto-suave">
+                    <span>{m.nome}</span>
+                    <span className="tabular-nums">{m.total}</span>
+                  </p>
+                  <p className="text-xs text-texto-fraco">Recuperação de leads (já contado nos perdidos)</p>
+                </div>
+              ))}
               {dados.vendas.descartados.quantidade > 0 && (
                 <div className="mt-3 border-t border-borda pt-2">
                   <p className="text-xs font-medium text-texto-suave">
@@ -251,6 +263,25 @@ export function Painel() {
                 </div>
               )}
             </section>
+          </div>
+
+          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Recuperação de leads</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {(
+              [
+                ["Receberam a 1ª mensagem", dados.recuperacao.primeira, null],
+                ["Receberam a 2ª mensagem", dados.recuperacao.segunda, null],
+                ["Responderam depois da 1ª", dados.recuperacao.respondeuPrimeira, dados.recuperacao.primeira],
+                ["Responderam depois da 2ª", dados.recuperacao.respondeuSegunda, dados.recuperacao.segunda],
+                ["Foram para Perdido (automático)", dados.recuperacao.perdidos, null],
+              ] as const
+            ).map(([nome, valor, de]) => (
+              <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <p className="text-sm text-texto-suave">{nome}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{valor.toLocaleString("pt-BR")}</p>
+                {de !== null && <p className="mt-1 text-xs text-texto-fraco">de {de.toLocaleString("pt-BR")} {de === 1 ? "mensagem enviada" : "mensagens enviadas"}</p>}
+              </div>
+            ))}
           </div>
 
           <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Conversão da agenda</h2>
