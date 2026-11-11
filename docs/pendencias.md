@@ -1,7 +1,7 @@
 # Pendências (para a próxima sessão)
 
 Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e anote a data. Guia de como fazer cada passo: `docs/colocar-no-ar.md`.
-Última atualização: 05/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais; avisos com o CRM minimizado funcionando no Windows).
+Última atualização: 10/11/2026 (recuperação de leads); antes, 05/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais; avisos com o CRM minimizado funcionando no Windows).
 
 ## A. Do Mateus (conta, chave, decisão)
 
@@ -48,6 +48,8 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] **Tarefa 36 (retorno com a loja fechada)**: (1) **cadastrar o modelo `retorno_atendimento` na Meta** (pt_BR, sem variáveis, texto de `src/regras/modelos.ts`, com os botões de resposta rápida "Quero continuar" e "Não tenho interesse"; a Meta pode classificar como utilidade ou marketing, só muda o preço); (2) **aprovar o parágrafo do Manual do CRM** sobre `registrar_retorno` (proposta no chat; aplicar pela tela só depois); (3) colocar nas instruções numeradas (repositório de instruções): "com a loja fechada, avise quando reabre e pergunte o melhor horário para o consultor chamar"; (4) conferir no simulador: sábado 15h → segunda (relógio), clicar nos botões na tela do cliente; (5) conversa de teste com o bot real (precisa da chave). Migração `0009` no Railway.
 - [ ] **Tarefa 22** (sem "Aguardando consultor", lembrete na ficha): conferir no simulador. Se o Manual do CRM já estiver no banco, trocar na tela "move o card para Aguardando consultor" (ou "Pronto para o consultor") por "move o card para Em qualificação".
 - [ ] Aprovar o texto do **Manual do CRM** (PROVISÓRIO; aparece em Configurações > Instruções, abaixo das numeradas).
+
+- [ ] **Recuperação de leads (10/11/2026, branch `feat/recuperacao-de-leads`)**: (1) ligar em Configurações > Recuperação de leads (vem desligada) depois de conferir os valores PROVISÓRIOS: 1ª após 30 min, 2ª no dia seguinte às 10h (modo escolhido por mim; o Mateus escolhe), horário permitido 8h–20h, Perdido 5 h após a 2ª; (2) conferir no simulador (relógio) o fluxo completo; (3) **nunca testado com a Meta**: envio real das duas mensagens (texto livre dentro da janela de 24h) e o status "entregue"/"lido"; (4) conferir no Railway que a migração `0012_recuperacao_de_leads` subiu; (5) `npm run test:postgres` não foi rodado (precisa de Postgres de teste); (6) a exportação do painel em HTML (`painel-html.ts`) ainda não leva o bloco novo.
 
 ## B. Do Claude (código)
 - [ ] **Card novo do kanban (tarefa 39, 10/11/2026)**: o Mateus confere no simulador com o dia a dia (faixa de ação, cores, divisor da coluna). Ficou de fora, para decidir depois: avisos do canto cobrindo a coluna Negociação, "Esperando" repetido no topo e na linha de filtros, e o tema claro não foi conferido com o card novo.

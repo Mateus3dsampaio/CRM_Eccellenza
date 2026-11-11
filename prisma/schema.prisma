@@ -89,6 +89,11 @@ model Lead {
   avisoAlmocoSeq       Int? // almoço do consultor em que o aviso ao cliente já foi enviado
   semRespostaEm        DateTime?
 
+  // Recuperação de leads (regras/recuperacao.ts): hora de cada mensagem automática (gravada ao tentar enviar). Com a 1ª gravada, o lead nunca recomeça o ciclo.
+  recuperacaoPrimeiraEm DateTime?
+  recuperacaoSegundaEm  DateTime?
+  recuperacaoFalhou     Boolean   @default(false) // um envio falhou: sem 2ª mensagem nem Perdido automático
+
   // Marcas para contar cada evento de métrica só uma vez por lead.
   marcasMetricas String @default("[]")
 

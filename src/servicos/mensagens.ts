@@ -77,6 +77,11 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
   if (lead.arquivadoEm) await registrarAlteracao(leadId, "sistema", "Cliente escreveu: lead saiu do arquivo");
   await registrarAlerta({ tipo: "mensagem", leadId, texto: previa(texto, !!midia, midia?.tipo) });
 
+  // Recuperação de leads: o cliente respondeu depois da 1ª ou da 2ª mensagem automática (conta uma vez; a rotina cancela o resto sozinha).
+  const ultimoDoCliente = lead.ultimaMsgClienteEm?.getTime() ?? 0;
+  if (lead.recuperacaoSegundaEm && !lead.recuperacaoFalhou && ultimoDoCliente < lead.recuperacaoSegundaEm.getTime()) await registrarUmaVez(leadId, "recuperacao_respondeu_segunda", lead.consultorId);
+  else if (lead.recuperacaoPrimeiraEm && !lead.recuperacaoFalhou && !lead.recuperacaoSegundaEm && ultimoDoCliente < lead.recuperacaoPrimeiraEm.getTime()) await registrarUmaVez(leadId, "recuperacao_respondeu_primeira", lead.consultorId);
+
   // RET-02: o cliente respondeu depois da retomada.
   if (lerLista(lead.etiquetas).includes("retomada")) {
     await alterarEtiqueta(leadId, "retomada", false, "sistema");

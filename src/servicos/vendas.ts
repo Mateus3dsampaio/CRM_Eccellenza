@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { ErroHttp } from "@/lib/sessao";
 import { marcarMudanca } from "@/lib/versao";
+import { MOTIVO_SEM_RESPOSTA_AUTOMATICO, NOME_MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
 import { MOTIVO_PAROU_DE_RESPONDER, MOTIVOS_PADRAO, type MotivoDePerda, type RegrasDeVendas } from "@/regras/vendas";
 import { gravarConfig, lerConfig } from "./configuracoes";
 
@@ -39,6 +40,14 @@ export async function garantirMotivoParouDeResponder(): Promise<void> {
   const padrao = MOTIVOS_PADRAO.find((m) => m.codigo === MOTIVO_PAROU_DE_RESPONDER)!;
   const ultimo = await db.motivoPerda.aggregate({ _max: { ordem: true } });
   await db.motivoPerda.create({ data: { ...padrao, ordem: (ultimo._max.ordem ?? -1) + 1 } }).catch(() => undefined);
+}
+
+/** O motivo "Sem resposta (automático)" é o da recuperação de leads: cria no fim da lista se faltar (banco antigo ou apagado). */
+export async function garantirMotivoSemRespostaAutomatico(): Promise<void> {
+  await motivosDePerda();
+  if (await db.motivoPerda.findUnique({ where: { codigo: MOTIVO_SEM_RESPOSTA_AUTOMATICO } })) return;
+  const ultimo = await db.motivoPerda.aggregate({ _max: { ordem: true } });
+  await db.motivoPerda.create({ data: { codigo: MOTIVO_SEM_RESPOSTA_AUTOMATICO, nome: NOME_MOTIVO_SEM_RESPOSTA_AUTOMATICO, pergunta: null, ordem: (ultimo._max.ordem ?? -1) + 1 } }).catch(() => undefined);
 }
 
 /**

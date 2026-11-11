@@ -137,6 +137,13 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
     vendas,
     conversoes,
     janelas,
+    recuperacao: {
+      primeira: contar("recuperacao_primeira", inicio, fim),
+      segunda: contar("recuperacao_segunda", inicio, fim),
+      respondeuPrimeira: contar("recuperacao_respondeu_primeira", inicio, fim),
+      respondeuSegunda: contar("recuperacao_respondeu_segunda", inicio, fim),
+      perdidos: contar("recuperacao_perdido", inicio, fim),
+    },
     tempos,
     apresentacoesPorConsultor: consultores.map((c) => ({
       nome: c.nome,

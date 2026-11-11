@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, HardDrive, MessageSquareReply, UserCheck, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
+import { CalendarClock, HardDrive, MessageCircleReply, MessageSquareReply, UserCheck, KeyRound, LayoutDashboard, MessageSquareText, Palette, Shuffle, SlidersHorizontal, Tag, Timer, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { Pilula } from "../entalhe/pilula";
@@ -8,6 +8,7 @@ import { MODOS_DISTRIBUICAO, type ModoDistribuicao } from "@/regras/distribuicao
 import { NOMES_DIAS, type RegrasAgenda } from "@/regras/agenda";
 import { MODELOS_SEM_COMPROMISSO } from "@/regras/modelos";
 import type { RegrasPresenca } from "@/regras/presenca";
+import type { RegrasRecuperacao } from "@/regras/recuperacao";
 import type { RegrasRetorno } from "@/regras/retorno-fechada";
 import type { PrazosEspera } from "@/regras/espera";
 import { chamarApi, useAviso, useDados } from "../dados";
@@ -15,6 +16,7 @@ import { juntar } from "../estilos";
 import { Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
 import { MetasApresentacaoConfig } from "./metas-apresentacao";
+import { RecuperacaoDeLeads } from "./recuperacao";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
 import { ChavesApi } from "./chaves-api";
@@ -32,17 +34,19 @@ interface Dados {
   regrasAgenda: RegrasAgenda;
   regrasPresenca: RegrasPresenca;
   regrasRetorno: RegrasRetorno;
+  regrasRecuperacao: RegrasRecuperacao;
   metasApresentacao?: Record<string, number>;
   periodoExportacao: { de: string; ate: string };
 }
 
-type Secao = "geral" | "equipe" | "vendas" | "instrucoes" | "api" | "armazenamento" | "temas";
+type Secao = "geral" | "equipe" | "vendas" | "recuperacao" | "instrucoes" | "api" | "armazenamento" | "temas";
 
 // Seções (tarefa 31): submenu vertical à esquerda; a URL guarda a seção (?secao=) para F5 voltar no lugar.
 const SECOES: { codigo: Secao; rotulo: string; icone: typeof Shuffle }[] = [
   { codigo: "geral", rotulo: "Geral", icone: SlidersHorizontal },
   { codigo: "equipe", rotulo: "Equipe", icone: Users },
   { codigo: "vendas", rotulo: "Vendas", icone: Tag },
+  { codigo: "recuperacao", rotulo: "Recuperação de leads", icone: MessageCircleReply },
   { codigo: "instrucoes", rotulo: "Instruções de atendimento", icone: MessageSquareText },
   { codigo: "api", rotulo: "Chaves de API", icone: KeyRound },
   { codigo: "armazenamento", rotulo: "Armazenamento", icone: HardDrive },
@@ -119,6 +123,12 @@ function ConfiguracoesComBarra() {
       <div className="min-w-0 flex-1 space-y-4" role="tabpanel">
       {aba === "vendas" ? (
         <VendasConfig />
+      ) : aba === "recuperacao" ? (
+        dados ? (
+          <RecuperacaoDeLeads regras={dados.regrasRecuperacao} aoSalvar={(r) => chamar("/api/configuracoes/recuperacao", "PUT", r, "Recuperação de leads salva.")} />
+        ) : (
+          <Carregando linhas={3} />
+        )
       ) : aba === "instrucoes" ? (
         <InstrucoesAtendimento />
       ) : aba === "api" ? (
