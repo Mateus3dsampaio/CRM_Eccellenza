@@ -6,6 +6,7 @@ const PONTOS = 84;
 const OURO = Math.PI * (3 - Math.sqrt(5));
 const VELOCIDADE = 0.28; // radianos por segundo (uma volta a cada ~22 s)
 const INCLINACAO = 0.32; // radianos
+const IMPULSO = 5; // radianos por segundo a mais na troca de tela; some em ~0,5 s
 const COR_PADRAO = "#8aaaf0";
 
 // Pontos espalhados em espiral de Fibonacci sobre uma esfera de raio 1.
@@ -19,9 +20,18 @@ const BASE = Array.from({ length: PONTOS }, (_, i) => {
 /**
  * Mini esfera de pontos do topo do menu lateral: irmã leve da esfera do login, em canvas 2D (sem Three.js, que só baixa no login).
  * Gira devagar; com "reduzir movimento" fica parada. A cor vem do tema (`--color-marca-texto`) e acompanha a troca de tema.
+ * `impulso`: quando este valor muda (ex.: o caminho da tela), a esfera dá um giro rápido que se desfaz em meio segundo.
  */
-export function MenuEsfera({ tamanho = 36, className }: { tamanho?: number; className?: string }) {
+export function MenuEsfera({ tamanho = 36, className, impulso }: { tamanho?: number; className?: string; impulso?: string | number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const extra = useRef(0);
+  const impulsoAnterior = useRef(impulso);
+
+  useEffect(() => {
+    if (impulsoAnterior.current === impulso) return;
+    impulsoAnterior.current = impulso;
+    extra.current = IMPULSO;
+  }, [impulso]);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -73,7 +83,8 @@ export function MenuEsfera({ tamanho = 36, className }: { tamanho?: number; clas
       if (agora - ultimo < 33) return; // ~30 quadros por segundo bastam
       const dt = ultimo ? (agora - ultimo) / 1000 : 0;
       ultimo = agora;
-      angulo += dt * VELOCIDADE;
+      angulo += dt * (VELOCIDADE + extra.current);
+      extra.current = extra.current < 0.01 ? 0 : extra.current * Math.exp(-dt * 6);
       desenhar();
     };
 

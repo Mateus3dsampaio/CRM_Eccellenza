@@ -10,6 +10,7 @@ import { BotaoAguardando } from "./aguardando";
 import { BotaoRetornos } from "./retornos";
 import { BotaoJanelas } from "./janelas";
 import { BotoesDePresenca } from "./presenca";
+import { MenuEsfera } from "./menu-esfera";
 import { MenuUsuario } from "./menu-usuario";
 import { NovaMensagem } from "./nova-mensagem";
 import { useUsuario } from "./usuario";
@@ -38,9 +39,10 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
     <>
       <header className="sticky top-0 z-30 border-b border-borda bg-fundo/90 backdrop-blur">
         <div className="flex h-topo items-center gap-2 px-3 sm:gap-3 sm:px-4">
-          {/* No celular não há menu lateral: o logo leva ao kanban. */}
-          <Link href="/" className="tecla-pri inline-flex size-9 shrink-0 items-center justify-center rounded-controle text-sm font-bold text-sobre-marca md:hidden" aria-label="Eccellenza – início">
-            E
+          {/* No celular não há menu lateral: a mini esfera (a mesma do menu) leva ao kanban. */}
+          <Link href="/" className="relative inline-flex size-9 shrink-0 items-center justify-center md:hidden" aria-label="Eccellenza – início">
+            <span aria-hidden className="absolute inset-0 rounded-full bg-marca/30 blur-md" />
+            <MenuEsfera tamanho={34} className="relative" impulso={caminho} />
           </Link>
           {tituloDaTela ? (
             <div className="flex min-w-0 items-center gap-3" data-titulo-tela>

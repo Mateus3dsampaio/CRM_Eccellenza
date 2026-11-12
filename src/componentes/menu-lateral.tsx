@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Archive, BarChart3, CalendarDays, Images, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Smartphone } from "lucide-react";
 import { juntar } from "./estilos";
 import { Entalhe } from "./entalhe/entalhe";
@@ -27,7 +28,7 @@ export const LINK_CONFIG = {
 const CHAVE_MINI = "menu-mini";
 const ALTURA_ITEM = 42; // px
 
-/** Menu lateral (computador) com indicador que desliza e opção de encolher; no celular vira a barra de baixo. */
+/** Menu lateral (computador) com indicador que desliza (aberto e encolhido) e opção de encolher; no celular vira a barra de baixo. */
 export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   const caminho = usePathname();
   const podeConfigurar = usePode("configurar");
@@ -51,6 +52,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
   function alternar() {
     const novo = !mini;
     setMini(novo);
+    setDica(null);
     try {
       localStorage.setItem(CHAVE_MINI, novo ? "1" : "0");
     } catch {
@@ -60,7 +62,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
 
   const ativo = (href: string) => (href === "/" ? caminho === "/" || caminho.startsWith("/lead") : caminho.startsWith(href));
   const todos = podeConfigurar ? [...links, LINK_CONFIG] : links;
-  // Itens do computador na ordem em que aparecem (a engrenagem fica embaixo); o entalhe flutuante anda entre eles.
+  // Itens do computador na ordem em que aparecem (a engrenagem fica embaixo); o indicador anda entre eles.
   const itensDesktop = podeConfigurar ? [...links, LINK_CONFIG] : links;
   const indice = itensDesktop.findIndex((l) => ativo(l.href));
   const asideRef = useRef<HTMLElement>(null);
@@ -90,13 +92,33 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
     return () => obs.disconnect();
   }, []);
 
+  // Anel de onda no ícone quando o indicador chega a outro item (não ao abrir a página).
+  const [onda, setOnda] = useState(0);
+  const indiceAnterior = useRef(indice);
+  useEffect(() => {
+    if (indiceAnterior.current === indice) return;
+    const veioDeOutro = indiceAnterior.current >= 0;
+    indiceAnterior.current = indice;
+    if (veioDeOutro && indice >= 0) setOnda((n) => n + 1);
+  }, [indice]);
+
+  // Menu encolhido: dica em vidro ao lado do ícone (fora da barra, que corta o que passa da borda).
+  const [dica, setDica] = useState<{ rotulo: string; topo: number } | null>(null);
+  const mostrarDica = (rotulo: string) => (e: { currentTarget: HTMLElement }) => {
+    if (!mini) return;
+    const caixa = e.currentTarget.getBoundingClientRect();
+    setDica({ rotulo, topo: caixa.top + caixa.height / 2 });
+  };
+  const esconderDica = () => setDica(null);
+  const eventosDica = (rotulo: string) => ({ onMouseEnter: mostrarDica(rotulo), onMouseLeave: esconderDica, onFocus: mostrarDica(rotulo), onBlur: esconderDica });
+
   return (
     <>
       <aside
         ref={asideRef}
         aria-label="Módulos"
         className={juntar(
-          "menu-fundo sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-300 ease-mola md:flex",
+          "luz-marca-forte sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-(--tempo-painel) ease-mola md:flex",
           mini ? "w-16" : "w-54",
         )}
       >
@@ -104,24 +126,24 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           <span className="relative inline-flex size-9 shrink-0 items-center justify-center">
             {/* Brilho suave atrás da esfera, como o halo do login. */}
             <span aria-hidden className="absolute inset-0 rounded-full bg-marca/30 blur-md" />
-            <MenuEsfera tamanho={36} className="relative" />
+            <MenuEsfera tamanho={36} className="relative" impulso={caminho} />
           </span>
           <span className={juntar("text-[13px] font-extrabold tracking-[0.16em] text-texto", rotuloClasse)}>ECCELLENZA</span>
         </Link>
 
-        {/* Menu aberto: o indicador afundado (com luz e filete da marca) desliza entre os links e Configurações. */}
-        {!mini && indice >= 0 && topoAtivo !== null && (
+        {/* O indicador afundado (com luz e filete da marca) desliza entre os links e Configurações. Encolhido é o mesmo, só mais estreito. */}
+        {indice >= 0 && topoAtivo !== null && (
           <div
             aria-hidden
-            className="afundado menu-ativo pointer-events-none absolute inset-x-2.5 top-0 z-0 rounded-controle transition-transform duration-300 ease-mola"
+            className="afundado menu-ativo pointer-events-none absolute inset-x-2.5 top-0 z-0 rounded-controle transition-transform duration-(--tempo-painel) ease-mola"
             style={{ height: ALTURA_ITEM, transform: `translateY(${topoAtivo}px)` }}
           >
             <span className="menu-ativo-filete" />
+            {onda > 0 && <span key={onda} className="menu-onda" />}
           </div>
         )}
 
         <nav className="relative grid grid-cols-[minmax(0,1fr)] gap-0.5" aria-label="Principal">
-          {/* Menu encolhido: entra o entalhe flutuante (mais abaixo). */}
           {links.map(({ href, rotulo, icone: Icone, grupo }, i) => (
             <Link
               key={href}
@@ -132,7 +154,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
                 itensRef.current[i] = el;
               }}
               href={href}
-              title={rotulo}
+              {...eventosDica(rotulo)}
               aria-current={ativo(href) ? "page" : undefined}
               className={juntar(
                 "relative z-10 flex items-center gap-3 rounded-controle px-[11px] text-sm font-medium transition-colors duration-150",
@@ -150,7 +172,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           <button
             type="button"
             onClick={alternar}
-            title={mini ? "Abrir o menu" : "Encolher o menu"}
+            {...eventosDica("Abrir o menu")}
             aria-label={mini ? "Abrir o menu" : "Encolher o menu"}
             aria-expanded={!mini}
             className="flex h-10 items-center gap-3 rounded-controle px-[11px] text-sm text-texto-suave transition hover:bg-superficie hover:text-texto"
@@ -164,7 +186,7 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
               ref={(el) => {
                 itensRef.current[links.length] = el;
               }}
-              title={LINK_CONFIG.rotulo}
+              {...eventosDica(LINK_CONFIG.rotulo)}
               aria-current={ativo(LINK_CONFIG.href) ? "page" : undefined}
               className={juntar(
                 "relative z-10 flex items-center gap-3 rounded-controle px-[11px] text-sm transition",
@@ -178,28 +200,17 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
           )}
         </div>
 
-        {mini && (
-          <Entalhe
-            raiz={asideRef}
-            itens={itensRef}
-            indice={indice}
-            orientacao="vertical"
-            fundo="var(--color-fundo)"
-            classePilula="flex items-center gap-3 px-[11px] text-sm font-medium"
-            conteudo={(i) => {
-              const item = itensDesktop[i];
-              if (!item) return null;
-              const Icone = item.icone;
-              return (
-                <>
-                  <Icone className="size-5 shrink-0" aria-hidden />
-                  <span className={rotuloClasse}>{item.rotulo}</span>
-                </>
-              );
-            }}
-          />
-        )}
       </aside>
+
+      {mini &&
+        dica &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div role="presentation" className="pointer-events-none fixed left-[72px] z-[80] hidden -translate-y-1/2 md:block" style={{ top: dica.topo }}>
+            <div className="vidro animate-surgir whitespace-nowrap rounded-controle px-3 py-1.5 text-sm font-medium text-texto">{dica.rotulo}</div>
+          </div>,
+          document.body,
+        )}
 
       {/* Navegação inferior no celular: a bolinha sai do entalhe e pousa no item ativo. O espaço de cima é transparente e não pega clique. */}
       <div ref={movelRef} className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pt-8 md:hidden">

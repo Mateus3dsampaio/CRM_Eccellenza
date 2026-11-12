@@ -422,7 +422,7 @@ export function Card({
                     }}
                     className="fixed z-50 w-60 animate-surgir rounded-controle border border-borda bg-superficie p-1 shadow-flutuante"
                   >
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Mover para...</p>
+                    <p className="px-3 py-2 rotulo-secao">Mover para...</p>
                     {nomesEtapas.lista.filter((e) => e.codigo !== card.etapa).map((e) => (
                       <button
                         key={e.codigo}

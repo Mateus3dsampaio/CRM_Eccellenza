@@ -55,7 +55,7 @@ body {
   .tecla-pri,
   .tecla-perigo {
     border: 1px solid var(--color-borda-forte);
-    transition: transform 90ms ease-out, box-shadow 90ms ease-out, filter 150ms ease-out;
+    transition: transform var(--tempo-clique) ease-out, box-shadow var(--tempo-clique) ease-out, filter var(--tempo-surgir) ease-out;
   }
   .tecla {
     background: linear-gradient(to bottom, color-mix(in srgb, var(--color-superficie-suave) 96%, #fff), var(--color-superficie-suave));
@@ -90,9 +90,36 @@ body {
     box-shadow: var(--shadow-afundado);
     color: var(--color-sobre-marca);
   }
-  /* Menu lateral: luz da marca no topo, atrás do logo, que some perto da metade da barra (mesmo espírito do .login-fundo). */
-  .menu-fundo {
+  /*
+   * Luz da marca: o brilho do login (.login-fundo), em três intensidades. É o que dá a mesma cara a todas as telas.
+   * forte = topo do menu lateral; media = canto de uma área grande; fio = linha de luz no topo de um cartão.
+   */
+  .luz-marca-forte {
     background-image: radial-gradient(ellipse 150% 48% at 50% -6%, color-mix(in srgb, var(--color-marca) 30%, transparent), transparent 100%);
+  }
+  .luz-marca-media {
+    background-image: radial-gradient(ellipse 60% 55% at 0% 0%, color-mix(in srgb, var(--color-marca) 13%, transparent), transparent 100%);
+  }
+  .luz-marca-fio {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 9%, transparent), transparent 56px);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 32%, transparent), var(--shadow-painel);
+  }
+  /* Vidro: a superfície do cartão do login. Só para o que flutua (janela, menu, aviso, dica); card de trabalho continua sólido. */
+  .vidro {
+    border: 1px solid color-mix(in srgb, var(--color-borda-forte) 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-superficie) 90%, transparent);
+    box-shadow: var(--shadow-flutuante), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  /* Rótulo de seção: caixa alta pequena e espaçada, como o "ECCELLENZA" do login. */
+  .rotulo-secao {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-texto-fraco);
   }
   /* Menu lateral: item ativo = afundado + luz da marca por trás. Anda junto com o indicador (só transform). */
   .menu-ativo {
@@ -112,6 +139,24 @@ body {
     background: color-mix(in srgb, var(--color-marca-texto) 30%, #fff);
     box-shadow: 0 0 8px 1px color-mix(in srgb, var(--color-marca-texto) 75%, transparent);
   }
+  /* Anel de onda (o do clique na esfera do login, pequeno): abre uma vez no ícone quando o indicador chega. */
+  .menu-onda {
+    position: absolute;
+    left: 21px;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--color-marca-texto) 55%, #fff);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-marca-texto) 70%, transparent);
+    opacity: 0;
+    animation: menu-onda 400ms var(--ease-mola) 170ms both;
+  }
+}
+@keyframes menu-onda {
+  from { transform: scale(0.35); opacity: 0.95; }
+  to { transform: scale(2.3); opacity: 0; }
 }
 
 /* iPhone dá zoom sozinho ao tocar em campo com letra menor que 16px; no celular os campos usam 16px. */

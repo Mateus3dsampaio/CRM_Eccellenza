@@ -96,7 +96,7 @@ export function MenuUsuario() {
             <KeyRound className="size-4 text-texto-suave" aria-hidden /> Trocar minha senha
           </button>
           <div className="my-1 border-t border-borda" />
-          <p className="flex items-center gap-2 px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">
+          <p className="flex items-center gap-2 px-3 pb-1 pt-2 rotulo-secao">
             <Palette className="size-3.5" aria-hidden /> Tema
           </p>
           <div className="flex flex-wrap gap-2 px-3 pb-2" role="radiogroup" aria-label="Tema de cores">

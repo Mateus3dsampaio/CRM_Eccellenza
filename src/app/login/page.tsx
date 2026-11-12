@@ -68,7 +68,7 @@ export default function PaginaLogin() {
           <form
             ref={cartao}
             onSubmit={entrar}
-            className="login-cartao pointer-events-auto space-y-4 rounded-painel border border-borda-forte/70 bg-superficie/90 p-6 shadow-flutuante backdrop-blur-md"
+            className="login-cartao vidro pointer-events-auto space-y-4 rounded-painel p-6"
           >
             <div className="mb-5 text-center">
               <h1 className="pl-[0.16em] text-2xl font-extrabold tracking-[0.16em]">ECCELLENZA</h1>

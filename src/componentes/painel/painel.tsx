@@ -186,7 +186,7 @@ export function Painel() {
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : dados ? (
         <>
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Resultado</h2>
+          <h2 className="-mb-1 rotulo-secao">Resultado</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
               <p className="text-sm text-texto-suave">Total em negociação</p>
@@ -205,7 +205,7 @@ export function Painel() {
             </div>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Leads no período</h2>
+          <h2 className="-mb-1 rotulo-secao">Leads no período</h2>
           {/* 8 contadores + motivos de perda = 9 cards: grade de 3 fecha sem card órfão (tarefa 30). */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {indicadoresDoPeriodo.map((i) => {
@@ -265,7 +265,7 @@ export function Painel() {
             </section>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Recuperação de leads</h2>
+          <h2 className="-mb-1 rotulo-secao">Recuperação de leads</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {(
               [
@@ -284,7 +284,7 @@ export function Painel() {
             ))}
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Conversão da agenda</h2>
+          <h2 className="-mb-1 rotulo-secao">Conversão da agenda</h2>
           <div className="grid gap-3 sm:grid-cols-3">
             {(
               [
@@ -319,7 +319,7 @@ export function Painel() {
             })()}
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Janela de 24h da Meta (agora)</h2>
+          <h2 className="-mb-1 rotulo-secao">Janela de 24h da Meta (agora)</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
               <p className="text-sm text-texto-suave">Leads com a janela aberta</p>
@@ -340,7 +340,7 @@ export function Painel() {
             </div>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>
+          <h2 className="-mb-1 rotulo-secao">Tempo de resposta</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [

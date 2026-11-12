@@ -164,9 +164,12 @@ export function Pilula({ raiz, itens, indice, variante = "vidro", eixo = "x" }: 
     <div
       ref={pilulaRef}
       aria-hidden
-      className={juntarClasses("pointer-events-none absolute", vertical ? "inset-x-0 top-0" : "left-0", variante !== "anel" && "rounded-controle")}
-      style={vertical ? { ...ESTILO_MARCA, willChange: "transform, height" } : variante === "anel" ? ESTILO_ANEL : variante === "marca" ? ESTILO_MARCA : ESTILO_VIDRO}
-    />
+      className={juntarClasses("pointer-events-none absolute", vertical ? "menu-ativo inset-x-0 top-0" : "left-0", variante !== "anel" && "rounded-controle")}
+      style={vertical ? { ...ESTILO_MARCA, boxShadow: undefined, willChange: "transform, height" } : variante === "anel" ? ESTILO_ANEL : variante === "marca" ? ESTILO_MARCA : ESTILO_VIDRO}
+    >
+      {/* Navegação na vertical: mesmo filete luminoso do menu lateral. */}
+      {vertical && <span className="menu-ativo-filete" />}
+    </div>
   );
 }
 
