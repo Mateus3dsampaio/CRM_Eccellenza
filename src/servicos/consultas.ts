@@ -131,6 +131,8 @@ export async function cardsDoKanban() {
       ultimaMsgClienteEm: l.ultimaMsgClienteEm?.toISOString() ?? null,
       esperandoDesde: esperandoDesde?.toISOString() ?? null,
       naoLidas: l.naoLidas,
+      // O cliente escreveu mas não espera resposta (a IA ou o vendedor dispensou): faixa cinza "Cliente respondeu", sem prazo.
+      respondeuSemEsperaEm: l.respondeuSemEsperaEm?.toISOString() ?? null,
       previa: l.ultimaMensagemPrevia ?? "",
       cidade: l.cidade,
       ambientes,
@@ -220,6 +222,9 @@ export async function fichaDoLead(id: string) {
     aguardandoHumano: lead.aguardandoHumano,
     esperandoDesde: esperaDoLead(lead)?.toISOString() ?? null,
     naoLidas: lead.naoLidas,
+    respondeuSemEsperaEm: lead.respondeuSemEsperaEm?.toISOString() ?? null,
+    // Quem dispensou a espera da última mensagem dispensada: "ia" ou o nome da pessoa.
+    respondeuSemEsperaPor: [...lead.mensagens].reverse().find((m) => m.dispensadaEm)?.dispensadaPor ?? null,
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,
     janelaAberta: janelaAberta(lead.ultimaMsgClienteEm, quando),

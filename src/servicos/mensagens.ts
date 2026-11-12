@@ -15,6 +15,7 @@ import { whatsappRealAtivo } from "@/lib/whatsapp-config";
 import { enviarPelaMeta } from "./whatsapp";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
+import { agendarChecagemDaEspera } from "./espera-cliente";
 import { alterarEtiqueta, etapaAntesDoPerdido, moverEtapa } from "./leads";
 import { registrarUmaVez } from "./metricas";
 
@@ -62,6 +63,9 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
   const aguardando = lead.modoAtendimento !== "bot" ? true : lead.aguardandoHumano;
+  // A IA só pode dispensar a espera que começa com ESTA mensagem: quem já esperava (por uma mensagem anterior) continua esperando.
+  // Só com o consultor no comando, em lead ativo, e só mensagem de texto (imagem ou arquivo ficam esperando).
+  const abreEspera = lead.modoAtendimento !== "bot" && !!lead.consultorId && !lead.aguardandoHumano && !lead.esperandoDesde && !lead.arquivadoEm && lead.etapa !== "perdido" && !midia && !!texto?.trim();
   await db.lead.update({
     where: { id: leadId },
     data: {
@@ -74,6 +78,8 @@ export async function registrarMensagemCliente(leadId: string, texto: string | n
       ...(aguardando ? { esperandoDesde: lead.esperandoDesde ?? quando, naoLidas: { increment: 1 } } : {}),
     },
   });
+  // Solta, sem esperar: a chegada da mensagem nunca depende da IA. Se ela falhar ou demorar, o lead já está marcado como esperando.
+  if (abreEspera) agendarChecagemDaEspera({ leadId, mensagemId: mensagem.id, chegouEm: quando });
   if (lead.arquivadoEm) await registrarAlteracao(leadId, "sistema", "Cliente escreveu: lead saiu do arquivo");
   await registrarAlerta({ tipo: "mensagem", leadId, texto: previa(texto, !!midia, midia?.tipo) });
 
@@ -196,7 +202,7 @@ export async function enviarMensagemLoja(params: {
       ultimaMsgLojaEm: falhou ? lead.ultimaMsgLojaEm : quando,
       aguardandoHumano: params.autor === "consultor" ? false : lead.aguardandoHumano,
       // Consultor respondeu: o cliente não espera mais e a conversa conta como vista.
-      ...(params.autor === "consultor" ? { esperandoDesde: null, naoLidas: 0 } : {}),
+      ...(params.autor === "consultor" ? { esperandoDesde: null, naoLidas: 0, respondeuSemEsperaEm: null } : {}),
     },
   });
   await marcarMudanca();

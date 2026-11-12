@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Bot, FileCheck2, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { Bot, Check, FileCheck2, Headset, Hourglass, Info, Paperclip, Reply, RotateCcw, Send, SpellCheck, X } from "lucide-react";
+import { destacarMudancas } from "@/regras/revisao-texto";
+import type { ResultadoDaRevisao } from "@/servicos/revisao-texto";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
 import { situacaoDaJanela } from "@/regras/janela24h";
 import { MODELOS, faltaParaLembrete, preencherModelo, proximoCompromisso, variaveisDoHorario } from "@/regras/modelos";
@@ -22,6 +24,9 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
   const [enviando, setEnviando] = useState(false);
   const [anexo, setAnexo] = useState<File | null>(null);
   const [apagar, setApagar] = useState<string | null>(null);
+  // Sugestão do botão "Revisar texto": guarda o texto que foi revisado; se o vendedor mexer no campo, a sugestão some.
+  const [revisando, setRevisando] = useState(false);
+  const [revisao, setRevisao] = useState<{ original: string; resultado: ResultadoDaRevisao } | null>(null);
   const refArquivo = useRef<HTMLInputElement>(null);
   const refTexto = useRef<HTMLTextAreaElement>(null);
   const podeApagarMidia = usePode("apagar_midia");
@@ -57,6 +62,19 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
     } finally {
       setApagar(null);
       aoMudar();
+    }
+  }
+
+  async function revisarTexto() {
+    const original = texto;
+    setRevisando(true);
+    try {
+      const resultado = await chamarApi<ResultadoDaRevisao>("/api/revisao-texto", { method: "POST", json: { texto: original } });
+      setRevisao({ original, resultado });
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível revisar.", "erro");
+    } finally {
+      setRevisando(false);
     }
   }
 
@@ -100,8 +118,12 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
     if (ok) {
       setTexto("");
       setModelo("");
+      setRevisao(null);
     }
   }
+
+  // A sugestão só vale para o texto que foi revisado.
+  const sugestao = revisao && revisao.original === texto && !previa ? revisao.resultado : null;
 
   const modoTexto =
     ficha.modo === "humano" ? "Consultor na conversa: o bot não responde." : ficha.modo === "pausado" ? "Bot pausado: o lead foi passado ao consultor." : "Bot atendendo esta conversa.";
@@ -126,6 +148,29 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
           )}
         </div>
       </div>
+      {/* Espera do cliente: o vendedor para o cronômetro ("Não precisa responder") ou corrige a IA ("Precisa de resposta"). */}
+      {ficha.etapa !== "perdido" && ficha.esperandoDesde && (
+        <div data-espera-conversa="esperando" className="flex items-center gap-2 border-b border-borda bg-superficie-suave/40 px-4 py-1.5 text-xs text-texto-suave">
+          <Hourglass className="size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">O cliente está esperando resposta.</span>
+          <button type="button" data-nao-precisa-responder onClick={() => conversa({ acao: "nao_precisa_responder" }, "Pronto: o cronômetro parou.")} disabled={enviando} className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-controle border border-borda px-2.5 font-semibold text-texto transition hover:bg-superficie-suave disabled:opacity-50">
+            <Check className="size-3.5" aria-hidden />
+            Não precisa responder
+          </button>
+        </div>
+      )}
+      {ficha.etapa !== "perdido" && ficha.etapa !== "fechado" && !ficha.esperandoDesde && ficha.respondeuSemEsperaEm && (
+        <div data-espera-conversa="dispensada" className="flex items-center gap-2 border-b border-borda bg-superficie-suave/40 px-4 py-1.5 text-xs text-texto-suave">
+          <Reply className="size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">
+            Cliente respondeu, sem prazo de resposta ({ficha.respondeuSemEsperaPor === "ia" ? "marcado pela IA" : ficha.respondeuSemEsperaPor ? `marcado por ${ficha.respondeuSemEsperaPor}` : "marcado"}).
+          </span>
+          <button type="button" data-precisa-de-resposta onClick={() => conversa({ acao: "precisa_de_resposta" }, "Pronto: o cliente voltou para \"Precisa de você\".")} disabled={enviando} className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-controle border border-borda px-2.5 font-semibold text-texto transition hover:bg-superficie-suave disabled:opacity-50">
+            <Hourglass className="size-3.5" aria-hidden />
+            Precisa de resposta
+          </button>
+        </div>
+      )}
       {ficha.erroBot && (
         <p role="alert" className="border-b border-alerta/30 bg-alerta-suave px-4 py-2 text-sm text-alerta">
           O bot não conseguiu responder: {ficha.erroBot} A conversa está aguardando um consultor.
@@ -198,10 +243,13 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
             )}
           </div>
         )}
+        {sugestao && <SugestaoDeRevisao original={texto} resultado={sugestao} aoUsar={(novo) => { setTexto(novo); setRevisao(null); refTexto.current?.focus(); }} aoManter={() => setRevisao(null)} />}
         {!previa && (
           <textarea
             ref={refTexto}
             rows={1}
+            spellCheck
+            lang="pt-BR"
             className={juntar(classeEntrada, "rolagem-fina block max-h-40 resize-none overflow-y-auto leading-relaxed")}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -238,6 +286,16 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
           >
             <Paperclip className="size-4" aria-hidden />
           </button>
+          <Botao
+            type="button"
+            onClick={revisarTexto}
+            carregando={revisando}
+            disabled={!texto.trim() || !!previa || !ficha.janelaAberta || enviando}
+            title="Corrige ortografia, concordância e pontuação. Você vê a mudança antes de aceitar."
+            icone={<SpellCheck className="size-4" aria-hidden />}
+          >
+            Revisar texto
+          </Botao>
           <Botao type="submit" variante="primario" carregando={enviando} disabled={!podeEnviar} className="ml-auto shrink-0" icone={<Send className="size-4" aria-hidden />}>
             Enviar
           </Botao>
@@ -251,6 +309,48 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
           <Botao variante="perigo" onClick={apagarArquivo}>Apagar</Botao>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+/** Resultado do "Revisar texto": o texto corrigido com o que mudou destacado. O vendedor escolhe; nada é enviado nem trocado sozinho. */
+function SugestaoDeRevisao({ original, resultado, aoUsar, aoManter }: { original: string; resultado: ResultadoDaRevisao; aoUsar: (texto: string) => void; aoManter: () => void }) {
+  if (resultado.estado === "indisponivel") {
+    return (
+      <p role="alert" className="flex items-start gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-sm text-aviso">
+        <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">{resultado.motivo}</span>
+        <button type="button" onClick={aoManter} className="inline-flex size-8 shrink-0 items-center justify-center rounded-controle hover:bg-aviso/10" aria-label="Fechar aviso">
+          <X className="size-4" aria-hidden />
+        </button>
+      </p>
+    );
+  }
+  if (resultado.estado === "igual") {
+    return (
+      <p role="status" className="flex items-center gap-2 rounded-controle bg-sucesso-suave px-3 py-2 text-sm text-sucesso">
+        <Check className="size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">Nada a corrigir neste texto.</span>
+        <button type="button" onClick={aoManter} className="inline-flex size-8 shrink-0 items-center justify-center rounded-controle hover:bg-sucesso/10" aria-label="Fechar aviso">
+          <X className="size-4" aria-hidden />
+        </button>
+      </p>
+    );
+  }
+  const pedacos = destacarMudancas(original, resultado.texto);
+  return (
+    <div className="rounded-controle border border-marca/40 bg-superficie-suave px-3 py-2.5">
+      <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-texto-suave">
+        <SpellCheck className="size-4 shrink-0 text-marca-texto" aria-hidden />
+        Texto corrigido (o que mudou está destacado)
+      </div>
+      <p className="rolagem-fina max-h-[min(12rem,24vh)] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-texto" aria-label="Texto corrigido">
+        {pedacos.map((p, i) => (p.mudou ? <mark key={i} className="rounded-sm bg-marca/25 px-0.5 text-texto">{p.texto}</mark> : <span key={i}>{p.texto}</span>))}
+      </p>
+      <div className="mt-2 flex justify-end gap-2">
+        <Botao type="button" variante="fantasma" onClick={aoManter}>Manter o meu</Botao>
+        <Botao type="button" variante="primario" onClick={() => aoUsar(resultado.texto)} icone={<Check className="size-4" aria-hidden />}>Usar correção</Botao>
+      </div>
     </div>
   );
 }

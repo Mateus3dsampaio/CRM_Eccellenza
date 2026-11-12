@@ -2,6 +2,7 @@ import { z } from "zod";
 import { naoEncontrado, rota } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
+import { dispensarEspera, restaurarEspera } from "@/servicos/espera-cliente";
 import { assumirConversa, devolverAoBot, marcarConversaVista, responderComoConsultor } from "@/servicos/conversa";
 
 type Contexto = { params: Promise<{ id: string }> };
@@ -10,6 +11,8 @@ const esquema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("assumir") }),
   z.object({ acao: z.literal("devolver") }),
   z.object({ acao: z.literal("vista") }),
+  z.object({ acao: z.literal("nao_precisa_responder") }),
+  z.object({ acao: z.literal("precisa_de_resposta") }),
   z.object({ acao: z.literal("responder"), texto: z.string().max(4000).optional(), modelo: z.string().max(50).optional() }),
 ]);
 
@@ -22,6 +25,8 @@ export const POST = rota(async (req: Request, { params }: Contexto) => {
   if (corpo.acao === "assumir") await assumirConversa(id, usuario);
   else if (corpo.acao === "devolver") await devolverAoBot(id, usuario);
   else if (corpo.acao === "vista") await marcarConversaVista(id);
+  else if (corpo.acao === "nao_precisa_responder") await dispensarEspera(id, usuario.nome);
+  else if (corpo.acao === "precisa_de_resposta") await restaurarEspera(id, usuario.nome);
   else {
     if (!corpo.texto?.trim() && !corpo.modelo) throw new ErroHttp(400, "Escreva a mensagem ou escolha um modelo.");
     try {

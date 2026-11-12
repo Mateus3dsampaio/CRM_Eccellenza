@@ -54,7 +54,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
   // Mensagens do período, para o tempo de resposta (todos os leads, ou só os do vendedor).
   const leadsComMensagem = await db.lead.findMany({
     where: { ...(vendedor ? { consultorId: vendedor.id } : {}), mensagens: { some: { enviadaEm: { gte: inicio, lt: fim } } } },
-    select: { repassadoEm: true, mensagens: { orderBy: { enviadaEm: "asc" }, select: { autor: true, enviadaEm: true } } },
+    select: { repassadoEm: true, mensagens: { orderBy: { enviadaEm: "asc" }, select: { autor: true, enviadaEm: true, dispensadaEm: true } } },
   });
   const turnos = leadsComMensagem.flatMap((l) => turnosDoCliente(l.mensagens, inicio, fim));
   const respostasDoConsultor = leadsComMensagem.flatMap((l) => temposDoConsultor(l.mensagens, inicio, fim));

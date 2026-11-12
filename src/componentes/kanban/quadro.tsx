@@ -67,6 +67,7 @@ export function Quadro() {
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
   const podeRenomear = usePode("configurar");
+  const podeResponder = usePode("enviar_mensagem");
   const nomesEtapas = useNomesEtapas();
   const usuario = useUsuario();
   const ehAdmin = usuario.perfil === "admin";
@@ -250,6 +251,17 @@ export function Quadro() {
     }
   }
 
+  async function dispensarEspera(id: string, dispensar: boolean) {
+    try {
+      await chamarApi(`/api/leads/${id}/conversa`, { method: "POST", json: { acao: dispensar ? "nao_precisa_responder" : "precisa_de_resposta" } });
+      avisar(dispensar ? "Pronto: o cronômetro parou." : "Pronto: o cliente voltou para \"Precisa de você\".");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível salvar.", "erro");
+    } finally {
+      await recarregar();
+    }
+  }
+
   async function pularMedicao(id: string, pular: boolean) {
     try {
       await chamarApi(`/api/leads/${id}/apresentacao`, { method: "POST", json: { acao: "pular_medicao", pular } });
@@ -292,6 +304,7 @@ export function Quadro() {
     decidir: setDecidindo,
     marcarApresentacao: (id) => setAgendando({ id, tipo: "apresentacao" }),
     pularMedicao: (id, pular) => void pularMedicao(id, pular),
+    dispensarEspera: podeResponder ? (id, dispensar) => void dispensarEspera(id, dispensar) : undefined,
   };
   const cardDecidindo = decidindo ? cards.find((c) => c.id === decidindo) : undefined;
 

@@ -141,7 +141,7 @@ export async function moverEtapa(leadId: string, etapa: CodigoEtapa, autor: stri
       etapaAnterior: opcoes.guardarAnterior || etapa === "perdido" ? lead.etapa : lead.etapaAnterior,
       semRespostaEm: parouDeResponder ? quando : lead.semRespostaEm,
       // Perdido não espera resposta: some o "Responder · há X", o aviso de prazo e a contagem de não lidas.
-      ...(etapa === "perdido" ? { aguardandoHumano: false, esperandoDesde: null, naoLidas: 0, erroBot: null } : {}),
+      ...(etapa === "perdido" ? { aguardandoHumano: false, esperandoDesde: null, respondeuSemEsperaEm: null, naoLidas: 0, erroBot: null } : {}),
       // O lembrete/retorno acompanha o lead nas etapas abertas; Fechado e Perdido apagam a data e a nota.
       proximoContatoEm: vaiTerRetorno ? final.proximoContatoEm : null,
       lembreteNota: vaiTerRetorno && final.proximoContatoEm ? (dados.lembreteNota === undefined ? lead.lembreteNota : dados.lembreteNota?.trim() || null) : null,

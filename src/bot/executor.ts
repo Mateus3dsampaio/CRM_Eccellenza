@@ -114,6 +114,7 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
             repassadoEm: lead.aguardandoHumano && lead.repassadoEm ? lead.repassadoEm : quando,
             // O consultor ainda não viu nada: a espera começa agora e a mensagem que motivou o repasse conta como não lida.
             esperandoDesde: lead.esperandoDesde ?? quando,
+            respondeuSemEsperaEm: null,
             naoLidas: Math.max(lead.naoLidas, 1),
           },
         });

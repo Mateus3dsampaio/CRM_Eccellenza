@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as CliqueReact, t
 import { createPortal } from "react-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, Presentation, UserRound, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bot, CalendarCheck, CalendarClock, CalendarX, Check, CircleDollarSign, Clock, Gavel, Headset, LayoutGrid, MapPin, MessageCircle, MoreVertical, Presentation, Reply, UserRound, type LucideIcon } from "lucide-react";
 import { useNomesEtapas } from "../etapas";
 import { formatarReaisCurto } from "@/regras/vendas";
 import { formatarVisitaCurta } from "@/regras/tempo";
@@ -32,6 +32,8 @@ export interface AcoesCard {
   marcarApresentacao?: (id: string) => void;
   /** "Cliente tem projeto: pular medição" (ou desfazer), só em Em qualificação. */
   pularMedicao?: (id: string, pular: boolean) => void;
+  /** "Não precisa responder" (dispensar = true) ou "Precisa de resposta" (false): só quem pode enviar mensagem. */
+  dispensarEspera?: (id: string, dispensar: boolean) => void;
 }
 
 /** Hora do servidor, prazos de espera e regra do retorno: o que a faixa de ação precisa para ser calculada. */
@@ -67,6 +69,7 @@ const ICONE_ACAO: Record<CodigoAcao, LucideIcon> = {
   retorno_hoje: CalendarClock,
   compromisso: CalendarCheck,
   retorno_futuro: CalendarClock,
+  cliente_respondeu: Reply,
   ia_atendendo: Bot,
   aguardando_cliente: MessageCircle,
 };
@@ -282,7 +285,7 @@ export function Card({
   function posicaoDoMenu() {
     const r = refBotao.current!.getBoundingClientRect();
     const largura = 240;
-    const altura = 470;
+    const altura = 540;
     const left = Math.max(8, Math.min(r.right - largura, window.innerWidth - largura - 8));
     const top = r.bottom + altura > window.innerHeight ? Math.max(8, r.top - altura) : r.bottom + 4;
     return { top, left };
@@ -445,6 +448,34 @@ export function Card({
                       >
                         {card.pulouMedicao ? "Desfazer: cliente tem projeto" : "Cliente tem projeto: pular medição"}
                         {!card.pulouMedicao && card.temPlanta && <span className="block text-xs text-texto-fraco">A ficha já tem planta gravada</span>}
+                      </button>
+                    )}
+                    {acoes.dispensarEspera && card.etapa !== "perdido" && card.esperandoDesde && (
+                      <button
+                        role="menuitem"
+                        data-nao-precisa-responder
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.dispensarEspera!(card.id, true);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 py-1.5 text-left text-sm hover:bg-superficie-suave"
+                      >
+                        Não precisa responder
+                        <span className="block text-xs text-texto-fraco">Para o cronômetro; o card não some</span>
+                      </button>
+                    )}
+                    {acoes.dispensarEspera && !card.esperandoDesde && card.respondeuSemEsperaEm && card.etapa !== "perdido" && card.etapa !== "fechado" && (
+                      <button
+                        role="menuitem"
+                        data-precisa-de-resposta
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.dispensarEspera!(card.id, false);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 py-1.5 text-left text-sm hover:bg-superficie-suave"
+                      >
+                        Precisa de resposta
+                        <span className="block text-xs text-texto-fraco">O cliente está esperando você</span>
                       </button>
                     )}
                     <button
