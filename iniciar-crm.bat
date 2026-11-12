@@ -4,6 +4,14 @@ title CRM Eccellenza - simulador
 cd /d "%~dp0"
 
 echo Preparando a versao final do CRM (leva uns 20 segundos)...
+rem Apaga os arquivos do preparo anterior: o OneDrive marca essa pasta e o build nao consegue apagar sozinho (erro EPERM).
+if exist ".next\static" rmdir /s /q ".next\static"
+if exist ".next\static" (
+  echo.
+  echo Nao foi possivel limpar o preparo anterior. Feche outro CRM aberto e tente de novo.
+  pause
+  exit /b 1
+)
 call npm run build
 if errorlevel 1 (
   echo.
