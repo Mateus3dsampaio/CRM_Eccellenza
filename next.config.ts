@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+
+// Versão do sistema (package.json), mostrada no pé da tela de login.
+const versao: string = JSON.parse(readFileSync("package.json", "utf8")).version;
 
 const nextConfig: NextConfig = {
   // O SDK da Anthropic e o Prisma rodam só no servidor.
   serverExternalPackages: ["@prisma/client", "@anthropic-ai/sdk"],
   // Esconde o botão de desenvolvedor do Next, que cobre a navegação do celular.
   devIndicators: false,
+  env: { NEXT_PUBLIC_VERSAO: versao },
   // Cabeçalhos de segurança básicos. (CSP completa fica de fora: o Next usa scripts internos e exigiria ajuste fino.)
   async headers() {
     return [
