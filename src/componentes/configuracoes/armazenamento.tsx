@@ -16,7 +16,7 @@ export function Armazenamento() {
   const { dados } = useDados<Uso>("/api/configuracoes/armazenamento");
   const pct = dados?.limiteBytes ? Math.min(100, Math.round((dados.bytes / dados.limiteBytes) * 100)) : null;
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <HardDrive className="size-4 text-texto-suave" aria-hidden /> Armazenamento de arquivos
       </h2>

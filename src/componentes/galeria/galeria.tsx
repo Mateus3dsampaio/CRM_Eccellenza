@@ -100,7 +100,7 @@ export function Galeria() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <div className="mx-auto w-full max-w-7xl space-y-4 p-4 md:pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <Abas
           itens={FILTROS.map((f) => ({ codigo: f.codigo || "tudo", rotulo: f.nome }))}
@@ -170,7 +170,7 @@ export function Galeria() {
                       {i.nome}
                     </p>
                     {podeApagar && (
-                      <button type="button" onClick={() => setApagar(i)} className="inline-flex size-7 shrink-0 items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave" title="Apagar arquivo" aria-label={`Apagar ${i.nome}`}>
+                      <button type="button" onClick={() => setApagar(i)} className="botao-icone botao-icone-compacto botao-icone-perigo" title="Apagar arquivo" aria-label={`Apagar ${i.nome}`}>
                         <Trash2 className="size-3.5" aria-hidden />
                       </button>
                     )}

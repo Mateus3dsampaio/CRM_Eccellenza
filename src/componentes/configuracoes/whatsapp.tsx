@@ -17,7 +17,7 @@ export function WhatsappConfig() {
   const { dados } = useDados<Situacao>("/api/configuracoes/whatsapp");
   const endereco = typeof window !== "undefined" ? `${window.location.origin}/api/whatsapp/webhook` : "/api/whatsapp/webhook";
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <MessageCircle className="size-4 text-texto-suave" aria-hidden /> WhatsApp
       </h2>

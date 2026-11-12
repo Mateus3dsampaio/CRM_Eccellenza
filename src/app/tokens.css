@@ -100,11 +100,14 @@
   /* Card vermelho não crítico (tarefa 33): sombra levemente avermelhada */
   --shadow-espera-vermelha: 0 4px 14px color-mix(in srgb, var(--color-alerta) 28%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-coluna-destaque: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px color-mix(in srgb, var(--color-etapa-apresentacao) 20%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-etapa-apresentacao) 40%, transparent);
+  /* Card crítico (tarefa 39): halo vermelho parado por fora; o que pulsa é o brilho de dentro (pulso-critico, só opacidade). */
+  --shadow-critico: 0 0 16px 3px color-mix(in srgb, var(--color-alerta-vivo) 45%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
   /* Tecla: lateral sólida + sombra ambiente + brilho no topo */
-  --shadow-tecla: 0 4px 0 var(--color-tecla-lado), 0 7px 8px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.07);
+  /* Só o primário tem a lateral alta (4 px); secundário e perigo são teclas finas (2 px), para o primário mandar na tela. */
+  --shadow-tecla: 0 2px 0 var(--color-tecla-lado), 0 4px 6px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.07);
   --shadow-tecla-pri: 0 4px 0 var(--color-marca-lado), 0 7px 10px color-mix(in srgb, var(--color-marca) 35%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3);
-  --shadow-tecla-perigo: 0 4px 0 var(--color-perigo-lado), 0 7px 10px rgb(204 59 55 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  --shadow-tecla-perigo: 0 2px 0 var(--color-perigo-lado), 0 4px 7px rgb(204 59 55 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.25);
   --shadow-tecla-afundada: 0 1px 0 var(--color-tecla-lado), 0 2px 3px rgb(0 0 0 / 0.4);
   /* Indicador "afundado" (aba/menu selecionado) */
   --shadow-afundado: inset 0 2px 1.5px rgb(0 0 0 / 0.5), inset 1px 0 1px rgb(0 0 0 / 0.3), inset -1px 0 1px rgb(0 0 0 / 0.3), inset 0 -1px 0 rgb(255 255 255 / 0.22);
@@ -118,12 +121,10 @@
 
   /* Animações */
   --ease-mola: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-salto: cubic-bezier(0.34, 1.56, 0.64, 1); /* mola que passa um pouco do ponto e volta (bolinha do interruptor) */
 
-  --animate-surgir: surgir 160ms ease-out;
+  --animate-surgir: surgir 160ms cubic-bezier(0.22, 1, 0.36, 1);
   --animate-brilho: brilho 1.4s ease-in-out infinite;
-  --animate-respirar: respirar 1s ease-in-out infinite;
-  --animate-chamar: chamar 1s ease-in-out infinite;
-  --animate-piscar: piscar 1s ease-in-out infinite;
 
   /* Kanban no celular: a coluna entra do lado para onde o dedo deslizou. */
   @keyframes entrar-da-direita {
@@ -138,32 +139,22 @@
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  /* Card vermelho (cliente esperando além do prazo): halo que "respira". Só sombra e brilho, sem mexer na posição (o arrastar usa transform). */
-  @keyframes respirar {
-    /* Mesmo ritmo do botão "Retornos de hoje" (1s), com halo vermelho vivo. Só sombra e brilho: o arrastar usa transform. */
-    0%, 100% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-alerta-vivo) 0%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
-      filter: brightness(1);
-    }
-    50% {
-      box-shadow: 0 0 24px 6px color-mix(in srgb, var(--color-alerta-vivo) 80%, transparent), 0 1px 2px rgb(0 0 0 / 0.4);
-      filter: brightness(1.25);
-    }
-  }
-  /* Botão "Retornos de hoje" com retorno vencendo: pisca em âmbar (contraste com o topo azul) para chamar atenção (tarefa 22; mais rápido e forte a pedido do Mateus 04/11/2026). */
-  @keyframes chamar {
-    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-aviso) 0%, transparent); filter: brightness(1); }
-    50% { box-shadow: 0 0 22px 6px color-mix(in srgb, var(--color-aviso) 85%, transparent); filter: brightness(1.3); }
-  }
-  /* Etiqueta "Sem data" no card de Medição/Apresentação sem compromisso marcado: pisca para chamar atenção. */
-  @keyframes piscar {
-    0%, 100% { opacity: 1; box-shadow: 0 0 10px 1px color-mix(in srgb, var(--color-alerta) 70%, transparent); }
-    50% { opacity: 0.45; box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-alerta) 0%, transparent); }
-  }
   @keyframes brilho {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
   }
+}
+
+/*
+ * Três tempos de movimento, todos na curva do login (--ease-mola): clique (tecla afunda), surgir (menu, dica, aviso)
+ * e painel (gaveta, menu lateral, indicador). Movimento novo usa um destes, nunca um número solto.
+ * A janela (Modal) tem o seu, entre o surgir e o painel: sobe como o cartão do login.
+ */
+:root {
+  --tempo-clique: 90ms;
+  --tempo-surgir: 160ms;
+  --tempo-janela: 220ms;
+  --tempo-painel: 280ms;
 }
 
 /*
@@ -210,4 +201,11 @@
 /* Card que acabou de entrar na coluna: aro e brilho na cor da etapa. O movimento é só opacidade (reduzir movimento continua valendo). */
 .brilho-chegada {
   box-shadow: inset 0 0 0 2px var(--color-etapa-apresentacao), inset 0 0 26px var(--color-etapa-apresentacao-brilho);
+}
+
+/* Barra de cima no computador: 60 px, para o centro dos botões do topo bater com o centro da esfera do menu lateral. */
+@media (min-width: 768px) {
+  :root {
+    --spacing-topo: 60px;
+  }
 }

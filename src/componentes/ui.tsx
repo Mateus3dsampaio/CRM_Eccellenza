@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, Check, CheckCheck, Inbox, Info, Loader2, X, AlertTriangle } from "lucide-react";
+import { Bell, Check, CheckCheck, Info, Loader2, X, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { nomeEtiqueta } from "@/regras/etapas";
 import { COR_AVATAR, COR_ETIQUETA, juntar } from "./estilos";
+import { MenuEsfera } from "./menu-esfera";
 
 type Variante = "primario" | "secundario" | "fantasma" | "perigo";
 
@@ -124,10 +125,21 @@ export function Carregando({ linhas = 3 }: { linhas?: number }) {
   );
 }
 
+/** Carregamento de tela inteira: a mini esfera girando no meio. Só aparece se a carga demorar (classe carregando-tela). */
+export function CarregandoTela() {
+  return (
+    <div className="carregando-tela flex min-h-[50dvh] flex-1 flex-col items-center justify-center gap-3" aria-busy="true" aria-label="Carregando">
+      <MenuEsfera tamanho={56} />
+      <p className="rotulo-secao">Carregando</p>
+    </div>
+  );
+}
+
 export function EstadoVazio({ titulo, texto, icone }: { titulo: string; texto?: string; icone?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-borda-forte px-4 py-8 text-center">
-      {icone ?? <Inbox className="size-6 text-texto-fraco" aria-hidden />}
+      {/* Sem ícone próprio: a esfera de pontos da marca, esmaecida e parada. */}
+      {icone ?? <MenuEsfera tamanho={36} parada className="opacity-45" />}
       <p className="text-sm font-medium text-texto-suave">{titulo}</p>
       {texto && <p className="text-xs text-texto-fraco">{texto}</p>}
     </div>
@@ -161,18 +173,18 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg"
   }, [aberto]);
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-texto/40 p-0 sm:items-center sm:p-4" onMouseDown={aoFechar}>
+    <div className="veu veu-desfoque fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" onMouseDown={aoFechar}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
         onMouseDown={(e) => e.stopPropagation()}
-        className={juntar("max-h-[92dvh] w-full animate-surgir overflow-y-auto rounded-t-painel bg-superficie p-5 shadow-flutuante max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-painel", largura)}
+        className={juntar("vidro janela-entrar max-h-[92dvh] w-full overflow-y-auto rounded-t-painel p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-painel", largura)}
       >
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">{titulo}</h2>
-          <button onClick={aoFechar} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Fechar">
+          <button onClick={aoFechar} className="botao-icone" aria-label="Fechar">
             <X className="size-5" aria-hidden />
           </button>
         </div>
@@ -243,7 +255,7 @@ export function Popover({
       {aberto && (
         <>
           {/* Celular: fundo escurecido atrás da folha. */}
-          {typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[49] bg-texto/40 sm:hidden" aria-hidden onMouseDown={aoFechar} />, document.body)}
+          {typeof document !== "undefined" && createPortal(<div className="veu fixed inset-0 z-[49] sm:hidden" aria-hidden onMouseDown={aoFechar} />, document.body)}
           <div
             role="dialog"
             aria-label={titulo}

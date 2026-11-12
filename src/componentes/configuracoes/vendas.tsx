@@ -64,7 +64,7 @@ export function VendasConfig() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Próximo contato ao mover o card
         </h2>
@@ -74,7 +74,7 @@ export function VendasConfig() {
         <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm">
           <input
             type="checkbox"
-            className="size-5 accent-[var(--color-marca)]"
+            className="interruptor"
             checked={exigir}
             disabled={ocupado}
             onChange={(e) => {
@@ -87,7 +87,7 @@ export function VendasConfig() {
         {!exigir && <p className="mt-2 text-xs text-texto-fraco">Desligado: a janela deixa a data em branco, e os leads em Negociação sem data não aparecem em &quot;Retornos de hoje&quot;.</p>}
       </section>
 
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <div className="mb-1 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold">
             <XCircle className="size-4 text-texto-suave" aria-hidden /> Motivos de perda
@@ -107,13 +107,13 @@ export function VendasConfig() {
                 {!m.ativo && <p className="text-xs text-texto-fraco">Desativado</p>}
               </div>
               <div className="flex items-center">
-                <button title="Subir" aria-label={`Subir ${m.nome}`} disabled={ocupado || i === 0} onClick={() => mover(i, -1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
+                <button title="Subir" aria-label={`Subir ${m.nome}`} disabled={ocupado || i === 0} onClick={() => mover(i, -1)} className="botao-icone">
                   <ArrowUp className="size-4" aria-hidden />
                 </button>
-                <button title="Descer" aria-label={`Descer ${m.nome}`} disabled={ocupado || i === motivos.length - 1} onClick={() => mover(i, 1)} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40">
+                <button title="Descer" aria-label={`Descer ${m.nome}`} disabled={ocupado || i === motivos.length - 1} onClick={() => mover(i, 1)} className="botao-icone">
                   <ArrowDown className="size-4" aria-hidden />
                 </button>
-                <button title="Editar" aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "", naoELead: m.naoELead })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave">
+                <button title="Editar" aria-label={`Editar ${m.nome}`} onClick={() => setEdicao({ codigo: m.codigo, nome: m.nome, pergunta: m.pergunta ?? "", naoELead: m.naoELead })} className="botao-icone">
                   <Pencil className="size-4" aria-hidden />
                 </button>
                 <button
@@ -121,11 +121,11 @@ export function VendasConfig() {
                   title={m.ativo ? "Desativar" : "Ativar"}
                   disabled={ocupado}
                   onClick={() => void agir({ acao: "editar_motivo", codigo: m.codigo, ativo: !m.ativo }, m.ativo ? "Motivo desativado." : "Motivo ativado.")}
-                  className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave"
+                  className="botao-icone"
                 >
                   {m.ativo ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </button>
-                <button title="Excluir" aria-label={`Excluir ${m.nome}`} onClick={() => setExcluindo(m)} className="ml-3 inline-flex size-toque items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave">
+                <button title="Excluir" aria-label={`Excluir ${m.nome}`} onClick={() => setExcluindo(m)} className="botao-icone botao-icone-perigo ml-3">
                   <Trash2 className="size-4" aria-hidden />
                 </button>
               </div>
@@ -150,7 +150,7 @@ export function VendasConfig() {
               <input className={classeEntrada} value={edicao.pergunta} maxLength={100} onChange={(e) => setEdicao({ ...edicao, pergunta: e.target.value })} />
             </Campo>
             <label className="flex min-h-toque cursor-pointer items-start gap-3 text-sm">
-              <input type="checkbox" className="mt-0.5 size-5 accent-[var(--color-marca)]" checked={edicao.naoELead} onChange={(e) => setEdicao({ ...edicao, naoELead: e.target.checked })} />
+              <input type="checkbox" className="interruptor" checked={edicao.naoELead} onChange={(e) => setEdicao({ ...edicao, naoELead: e.target.checked })} />
               <span>
                 Não é lead
                 <span className="block text-xs text-texto-fraco">Para quem entrou pelo canal errado (pós-venda, parceiro, emprego, conversa fora do assunto). Não conta como perdido nem como lead novo no painel.</span>

@@ -55,7 +55,7 @@ body {
   .tecla-pri,
   .tecla-perigo {
     border: 1px solid var(--color-borda-forte);
-    transition: transform 90ms ease-out, box-shadow 90ms ease-out, filter 150ms ease-out;
+    transition: transform var(--tempo-clique) ease-out, box-shadow var(--tempo-clique) ease-out, filter var(--tempo-surgir) ease-out;
   }
   .tecla {
     background: linear-gradient(to bottom, color-mix(in srgb, var(--color-superficie-suave) 96%, #fff), var(--color-superficie-suave));
@@ -81,8 +81,87 @@ body {
   .tecla:active:not(:disabled),
   .tecla-pri:active:not(:disabled),
   .tecla-perigo:active:not(:disabled) {
-    transform: translateY(3px);
+    transform: translateY(1px);
     box-shadow: var(--shadow-tecla-afundada);
+  }
+  /* O primário é a tecla alta (4 px): afunda mais. */
+  .tecla-pri:active:not(:disabled) {
+    transform: translateY(3px);
+  }
+  /*
+   * Botão só de ícone (fechar, lixeira, lápis, setas): um tamanho, um raio e um realce.
+   * Padrão 44 px (área de toque); compacto 32 px para lugar apertado; perigo fica vermelho só com o mouse em cima.
+   */
+  .botao-icone {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--spacing-toque);
+    height: var(--spacing-toque);
+    border-radius: var(--radius-controle);
+    color: var(--color-texto-suave);
+    transition: background-color var(--tempo-clique) ease-out, color var(--tempo-clique) ease-out, transform var(--tempo-clique) ease-out;
+  }
+  .botao-icone-compacto {
+    width: 2rem;
+    height: 2rem;
+  }
+  .botao-icone:hover:not(:disabled) {
+    background-color: var(--color-superficie-suave);
+    color: var(--color-texto);
+  }
+  .botao-icone-perigo:hover:not(:disabled) {
+    background-color: var(--color-alerta-suave);
+    color: var(--color-alerta);
+  }
+  .botao-icone:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+  .botao-icone:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  /*
+   * Interruptor (liga/desliga de Configurações): continua sendo uma caixa de marcar de verdade, só muda a aparência.
+   * Trilho em baixo relevo; ligado acende na cor da marca e a bolinha corre com mola.
+   */
+  .interruptor {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 40px;
+    height: 24px;
+    border-radius: var(--radius-pilula);
+    border: 1px solid var(--color-borda-forte);
+    background-color: var(--color-fundo);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.5);
+    cursor: pointer;
+    transition: background-color var(--tempo-surgir) ease-out, border-color var(--tempo-surgir) ease-out, box-shadow var(--tempo-surgir) ease-out;
+  }
+  .interruptor::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, #fff, #c9d2dc);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.3);
+    transition: transform var(--tempo-janela) var(--ease-salto);
+  }
+  .interruptor:checked {
+    border-color: color-mix(in srgb, var(--color-marca) 70%, #000);
+    background-color: var(--color-marca);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.35), 0 0 12px -2px color-mix(in srgb, var(--color-marca) 70%, transparent);
+  }
+  .interruptor:checked::before {
+    transform: translateX(16px);
+  }
+  .interruptor:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   /* Selecionado/"ligado": baixo relevo na cor da marca (menu, abas e filtros). */
   .afundado {
@@ -90,9 +169,148 @@ body {
     box-shadow: var(--shadow-afundado);
     color: var(--color-sobre-marca);
   }
-  /* Menu lateral: luz da marca no topo, atrás do logo, que some perto da metade da barra (mesmo espírito do .login-fundo). */
-  .menu-fundo {
+  /*
+   * Luz da marca: o brilho do login (.login-fundo), em três intensidades. É o que dá a mesma cara a todas as telas.
+   * forte = topo do menu lateral; media = canto de uma área grande; fio = linha de luz no topo de um cartão.
+   */
+  .luz-marca-forte {
     background-image: radial-gradient(ellipse 150% 48% at 50% -6%, color-mix(in srgb, var(--color-marca) 30%, transparent), transparent 100%);
+  }
+  /* Medida pela janela (vw/vh), não pela área: numa tela comprida a luz não estica junto. Parada, sobe com a rolagem. */
+  .luz-marca-media {
+    background-image: radial-gradient(ellipse 60vw 55vh at 0% 0%, color-mix(in srgb, var(--color-marca) 13%, transparent), transparent 100%);
+    background-repeat: no-repeat;
+  }
+  .luz-marca-fio {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 9%, transparent), transparent 56px);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 32%, transparent), var(--shadow-painel);
+  }
+  /* "Hoje" na Agenda: a coluna do dia acende com a luz da marca (brilho de cima e filete no topo). Parado. */
+  .luz-marca-hoje {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 38%, transparent), transparent 110%);
+    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-marca-texto) 80%, transparent), inset 0 12px 16px -12px color-mix(in srgb, var(--color-marca-texto) 55%, transparent);
+  }
+  /*
+   * Pulsos de atenção: só a opacidade de uma camada por cima se mexe (leve para o navegador); a sombra em si fica parada.
+   * pulso-critico = card vermelho mais antigo da coluna (brilho por dentro; o card corta o que sai dele, então o halo de fora é fixo, em shadow-critico).
+   * pulso-chamar = botão Retornos com retorno de hoje ou atrasado (halo âmbar por fora).
+   */
+  .pulso-critico::after,
+  .pulso-chamar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    animation: pulsar 1s ease-in-out infinite;
+  }
+  .pulso-critico::after {
+    z-index: 5;
+    background-color: color-mix(in srgb, var(--color-alerta-vivo) 12%, transparent);
+    box-shadow: inset 0 0 22px 4px color-mix(in srgb, var(--color-alerta-vivo) 80%, transparent);
+  }
+  .pulso-chamar {
+    position: relative;
+  }
+  .pulso-chamar::after {
+    box-shadow: 0 0 22px 6px color-mix(in srgb, var(--color-aviso) 85%, transparent), inset 0 0 10px 0 color-mix(in srgb, var(--color-aviso) 35%, transparent);
+  }
+  /* Carregamento de tela inteira: a mini esfera girando no meio; só aparece se demorar (não pisca em carga rápida). */
+  .carregando-tela {
+    animation: veu-entrar var(--tempo-janela) ease-out 250ms both;
+  }
+  /*
+   * Barra de cima: continua a luz do menu lateral. Brilho fraco que entra pela esquerda (na camada de trás, junto do desfoque)
+   * e a linha de baixo em degradê, da cor da marca até sumir, por cima da borda.
+   */
+  .topo-luz::before {
+    background-image: radial-gradient(ellipse 42% 220% at 0% 0%, color-mix(in srgb, var(--color-marca) 20%, transparent), transparent 100%);
+  }
+  .topo-luz::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--color-marca-texto) 70%, transparent), color-mix(in srgb, var(--color-marca) 35%, transparent) 30%, transparent 72%);
+  }
+  /*
+   * Contador do topo (Janelas, Retornos, Esperando): um formato só, em vidro. A cor fica só no ícone e no número (no TSX).
+   * Sem desfoque próprio: o topo já desfoca a tela de trás.
+   */
+  .contador-topo {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-toque);
+    border-radius: var(--radius-controle);
+    border: 1px solid color-mix(in srgb, var(--color-borda-forte) 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-superficie) 72%, transparent);
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    color: var(--color-texto-suave);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    transition: background-color var(--tempo-clique) ease-out, color var(--tempo-clique) ease-out, transform var(--tempo-clique) ease-out;
+  }
+  .contador-topo:hover {
+    background-color: color-mix(in srgb, var(--color-superficie-suave) 85%, transparent);
+    color: var(--color-texto);
+  }
+  .contador-topo:active {
+    transform: scale(0.97);
+  }
+  /* Vidro: a superfície do cartão do login. Só para o que flutua (janela, menu, aviso, dica); card de trabalho continua sólido. */
+  .vidro {
+    border: 1px solid color-mix(in srgb, var(--color-borda-forte) 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-superficie) 90%, transparent);
+    box-shadow: var(--shadow-flutuante), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  /* Vidro escuro: o aviso do canto (toast), que precisa se destacar do que está atrás. */
+  .vidro-escuro {
+    background-color: color-mix(in srgb, var(--color-fundo) 86%, transparent);
+  }
+  /* Véu: o escuro atrás da gaveta e das janelas. Na janela soma o desfoque (veu-desfoque); na gaveta não, para não pesar no uso do dia a dia. */
+  .veu {
+    background-color: color-mix(in srgb, var(--color-fundo) 70%, transparent);
+  }
+  .veu-desfoque {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    animation: veu-entrar var(--tempo-surgir) ease-out both;
+  }
+  /* Janela entra como o cartão do login: sobe 12 px na curva de mola. */
+  .janela-entrar {
+    animation: janela-entrar var(--tempo-janela) var(--ease-mola) both;
+  }
+  /* Menu do topo nasce do canto do botão que o abriu (canto de cima, à direita). */
+  .menu-nascer {
+    transform-origin: top right;
+    animation: menu-nascer var(--tempo-surgir) var(--ease-mola) both;
+  }
+  /* Filete colorido na borda esquerda do aviso; a cor vem do texto (text-sucesso, text-alerta, text-aviso). */
+  .filete-aviso {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: currentColor;
+    box-shadow: 0 0 8px 0 currentColor;
+  }
+  /* Rótulo de seção: caixa alta pequena e espaçada, como o "ECCELLENZA" do login. */
+  .rotulo-secao {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-texto-fraco);
   }
   /* Menu lateral: item ativo = afundado + luz da marca por trás. Anda junto com o indicador (só transform). */
   .menu-ativo {
@@ -112,6 +330,48 @@ body {
     background: color-mix(in srgb, var(--color-marca-texto) 30%, #fff);
     box-shadow: 0 0 8px 1px color-mix(in srgb, var(--color-marca-texto) 75%, transparent);
   }
+  /* Anel de onda (o do clique na esfera do login, pequeno): abre uma vez no ícone quando o indicador chega. */
+  .menu-onda {
+    position: absolute;
+    left: 21px;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--color-marca-texto) 55%, #fff);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-marca-texto) 70%, transparent);
+    opacity: 0;
+    animation: menu-onda 400ms var(--ease-mola) 170ms both;
+  }
+}
+@keyframes pulsar {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+/* Com "reduzir movimento" o pulso vira um brilho parado (a regra geral deixaria a animação piscando rápido). */
+@media (prefers-reduced-motion: reduce) {
+  .pulso-critico::after,
+  .pulso-chamar::after {
+    animation: none !important;
+    opacity: 0.6;
+  }
+}
+@keyframes veu-entrar {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes janela-entrar {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-nascer {
+  from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-onda {
+  from { transform: scale(0.35); opacity: 0.95; }
+  to { transform: scale(2.3); opacity: 0; }
 }
 
 /* iPhone dá zoom sozinho ao tocar em campo com letra menor que 16px; no celular os campos usam 16px. */
@@ -121,6 +381,25 @@ body {
   textarea {
     font-size: 16px;
   }
+}
+
+/*
+ * Lista de escolha: seta própria no lugar da do navegador, com a aparência dos outros campos.
+ * Fora de camada de propósito, para valer mais que o espaçamento do campo (a seta precisa do espaço à direita).
+ * A cor da seta é fixa (cinza claro neutro): imagem em CSS não lê a cor do tema.
+ */
+select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b4bdc8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Menu lateral (tarefa 32): traço fino acima do primeiro item de cada grupo. */

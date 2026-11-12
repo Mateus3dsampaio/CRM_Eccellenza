@@ -388,7 +388,7 @@ export function Quadro() {
     // No computador o quadro ocupa a altura da tela; só a lista de cada coluna rola.
     <div className="flex min-h-0 flex-1 flex-col md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none">
       {/* Barra de busca e filtros */}
-      <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
+      <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4 md:pt-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="sr-only">Atendimentos</h1>
           <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-[15rem] sm:flex-1 sm:basis-auto">
@@ -493,7 +493,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
               disabled={indiceZoom <= 0}
-              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              className="botao-icone"
               aria-label="Diminuir zoom (mostrar mais cards)"
               title="Mostrar mais cards"
             >
@@ -505,7 +505,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.min(NIVEIS_ZOOM.length - 1, indiceZoom + 1)])}
               disabled={indiceZoom >= NIVEIS_ZOOM.length - 1}
-              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              className="botao-icone"
               aria-label="Aumentar zoom (mostrar menos cards)"
               title="Mostrar menos cards"
             >
@@ -514,7 +514,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom("auto")}
               aria-pressed={zoomEscolhido === "auto"}
-              className={juntar("inline-flex size-toque items-center justify-center rounded-controle transition", zoomEscolhido === "auto" ? "text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}
+              className={juntar("botao-icone", zoomEscolhido === "auto" && "text-marca-texto")}
               aria-label="Ajustar o zoom para as colunas caberem na tela"
               title="Ajustar à tela"
             >

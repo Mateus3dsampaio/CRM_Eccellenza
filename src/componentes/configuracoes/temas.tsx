@@ -29,7 +29,7 @@ export function Temas() {
   const tema = TEMAS[Math.max(indice, 0)];
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <Palette className="size-4 text-texto-suave" aria-hidden /> Tema de cores
       </h2>

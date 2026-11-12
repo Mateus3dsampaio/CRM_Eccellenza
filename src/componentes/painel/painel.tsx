@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Minus, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Loader2, Minus, MoreHorizontal, RotateCcw } from "lucide-react";
 import { MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
@@ -9,9 +9,10 @@ import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta"
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
-import { Botao, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, Modal, Popover, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "../configuracoes/exportar-desempenho";
 import { useUsuario } from "../usuario";
+import { NumeroContando } from "./numero-contando";
 
 interface DadosPainel {
   de: string;
@@ -77,9 +78,18 @@ export function Painel() {
   const de = filtro.atalho ? (dados?.de ?? "") : filtro.de;
   const ate = filtro.atalho ? (dados?.ate ?? "") : filtro.ate;
   const mudarData = (campo: "de" | "ate", valor: string) => setFiltro({ ...filtro, atalho: null, de, ate, [campo]: valor });
+  // Os números contam de zero só na abertura da tela; em troca de filtro e atualização automática mudam direto.
+  const [contarNumeros, setContarNumeros] = useState(true);
+  const chegou = dados !== null;
+  useEffect(() => {
+    if (!chegou) return;
+    const t = setTimeout(() => setContarNumeros(false), 700);
+    return () => clearTimeout(t);
+  }, [chegou]);
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
   // Exportar desempenho (tarefa 30): saiu de Configurações; é uma ação do painel, só do admin. Dados só ao abrir a janela.
   const [exportar, setExportar] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
   const avisar = useAviso();
   const [zerando, setZerando] = useState(false);
   const [entendi, setEntendi] = useState(false);
@@ -127,8 +137,9 @@ export function Painel() {
   const maiorConsultor = Math.max(1, ...(dados?.apresentacoesPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4 md:pt-3">
+      {/* No PC é uma linha só, na mesma faixa do primeiro item do menu lateral: os rótulos ficam ao lado dos campos e as ações vão para o menu "…". */}
+      <div className="flex flex-wrap items-end gap-3 md:items-center md:gap-2">
         <h1 className="sr-only">Painel</h1>
         <Abas
           itens={ATALHOS_PAINEL.map((a) => ({ codigo: a.codigo, rotulo: a.nome }))}
@@ -136,19 +147,19 @@ export function Painel() {
           aoMudar={(codigo) => setFiltro({ ...filtro, atalho: codigo })}
           rotuloAria="Atalhos de período"
         />
-        <label className="space-y-1 text-xs text-texto-suave">
-          De
-          <input type="date" className={juntar(classeEntrada, "w-auto")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />
+        <label className="space-y-1 text-xs text-texto-suave md:space-y-0">
+          <span className="md:sr-only">De</span>
+          <input type="date" className={juntar(classeEntrada, "w-auto md:w-[8.5rem]")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />
         </label>
-        <label className="space-y-1 text-xs text-texto-suave">
+        <label className="space-y-1 text-xs text-texto-suave md:flex md:items-center md:gap-2 md:space-y-0">
           Até
-          <input type="date" className={juntar(classeEntrada, "w-auto")} value={ate} min={de || undefined} onChange={(e) => mudarData("ate", e.target.value)} />
+          <input type="date" className={juntar(classeEntrada, "w-auto md:w-[8.5rem]")} value={ate} min={de || undefined} onChange={(e) => mudarData("ate", e.target.value)} />
         </label>
         {admin && dados && (
-          <label className="space-y-1 text-xs text-texto-suave">
-            Vendedor
+          <label className="space-y-1 text-xs text-texto-suave md:space-y-0">
+            <span className="md:sr-only">Vendedor</span>
             <select className={juntar(classeEntrada, "w-auto")} value={filtro.vendedorId} onChange={(e) => setFiltro({ ...filtro, vendedorId: e.target.value })}>
-              <option value="">Todos</option>
+              <option value="">Todos os vendedores</option>
               {dados.vendedores.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.nome}
@@ -158,16 +169,55 @@ export function Painel() {
           </label>
         )}
         {admin && (
-          <div className="ml-auto flex flex-wrap gap-2">
-            <Botao onClick={() => setExportar(true)} icone={<FileArchive className="size-4" aria-hidden />} title="Exportar desempenho do vendedor (.zip)">
-              Desempenho (.zip)
-            </Botao>
-            <Botao onClick={() => void baixarHtml()} carregando={ocupado === "html"} icone={<Download className="size-4" aria-hidden />} title="Baixar o painel inteiro num arquivo HTML, com filtro de período">
-              Exportar painel
-            </Botao>
-            <Botao variante="perigo" onClick={() => setZerando(true)} icone={<RotateCcw className="size-4" aria-hidden />} title="Apagar o histórico do painel e recomeçar a contar">
-              Zerar painel
-            </Botao>
+          <div className="ml-auto">
+            <Popover
+              aberto={menuAberto}
+              aoFechar={() => setMenuAberto(false)}
+              titulo="Ações do painel"
+              largura="sm:w-72"
+              gatilho={
+                <button type="button" onClick={() => setMenuAberto((m) => !m)} aria-expanded={menuAberto} aria-haspopup="dialog" aria-label="Ações do painel" title="Ações do painel" className="tecla inline-flex size-toque items-center justify-center rounded-controle">
+                  {ocupado === "html" ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <MoreHorizontal className="size-5" aria-hidden />}
+                </button>
+              }
+            >
+              <div className="-mt-2 grid gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setExportar(true);
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+                  title="Exportar desempenho do vendedor (.zip)"
+                >
+                  <FileArchive className="size-4 text-texto-suave" aria-hidden /> Desempenho do vendedor (.zip)
+                </button>
+                <button
+                  type="button"
+                  disabled={ocupado === "html"}
+                  onClick={() => {
+                    setMenuAberto(false);
+                    void baixarHtml();
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave disabled:opacity-55"
+                  title="Baixar o painel inteiro num arquivo HTML, com filtro de período"
+                >
+                  <Download className="size-4 text-texto-suave" aria-hidden /> Exportar painel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setZerando(true);
+                  }}
+                  className="mt-1 flex min-h-toque items-center gap-3 rounded-controle border-t border-borda px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
+                  title="Apagar o histórico do painel e recomeçar a contar"
+                >
+                  <RotateCcw className="size-4" aria-hidden /> Zerar painel
+                </button>
+              </div>
+            </Popover>
           </div>
         )}
       </div>
@@ -186,34 +236,34 @@ export function Painel() {
         <EstadoErro texto={erro} aoTentar={recarregar} />
       ) : dados ? (
         <>
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Resultado</h2>
+          <h2 className="-mb-1 rotulo-secao">Resultado</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <p className="text-sm text-texto-suave">Total em negociação</p>
-              <p className="mt-1 text-4xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
+              <p className="mt-1 text-4xl font-semibold tabular-nums"><NumeroContando valor={dados.vendas.emNegociacao.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Apresentação agendada ou Negociação, agora
                 {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
               </p>
             </div>
-            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <p className="text-sm text-texto-suave">Total vendido</p>
-              <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}>{formatarReais(dados.vendas.vendido.total)}</p>
+              <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}><NumeroContando valor={dados.vendas.vendido.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
               </p>
             </div>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Leads no período</h2>
+          <h2 className="-mb-1 rotulo-secao">Leads no período</h2>
           {/* 8 contadores + motivos de perda = 9 cards: grade de 3 fecha sem card órfão (tarefa 30). */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {indicadoresDoPeriodo.map((i) => {
               const v = variacao(i.tipo, i.atual, i.anterior);
               return (
-                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                   <p className="text-sm text-texto-suave">{i.nome}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{i.atual.toLocaleString("pt-BR")}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={i.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
                     {v.texto}
@@ -221,7 +271,7 @@ export function Painel() {
                 </div>
               );
             })}
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Motivos de perda</p>
               {dados.vendas.perdidos.quantidade === 0 ? (
                 <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
@@ -265,7 +315,7 @@ export function Painel() {
             </section>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Recuperação de leads</h2>
+          <h2 className="-mb-1 rotulo-secao">Recuperação de leads</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {(
               [
@@ -276,15 +326,15 @@ export function Painel() {
                 ["Foram para Perdido (automático)", dados.recuperacao.perdidos, null],
               ] as const
             ).map(([nome, valor, de]) => (
-              <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{nome}</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{valor.toLocaleString("pt-BR")}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={valor} animar={contarNumeros} /></p>
                 {de !== null && <p className="mt-1 text-xs text-texto-fraco">de {de.toLocaleString("pt-BR")} {de === 1 ? "mensagem enviada" : "mensagens enviadas"}</p>}
               </div>
             ))}
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Conversão da agenda</h2>
+          <h2 className="-mb-1 rotulo-secao">Conversão da agenda</h2>
           <div className="grid gap-3 sm:grid-cols-3">
             {(
               [
@@ -292,9 +342,9 @@ export function Painel() {
                 ["Apresentações que viraram venda", dados.conversoes.apresentacoesFechadas, dados.conversoes.apresentacoes, "apresentação marcada no período"],
               ] as const
             ).map(([titulo, parte, todo, base]) => (
-              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{titulo}</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(parte, todo)}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{todo ? <NumeroContando valor={Math.round((parte / todo) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
                   {todo ? `${parte.toLocaleString("pt-BR")} de ${todo.toLocaleString("pt-BR")} ${todo === 1 ? "lead" : "leads"} com ${base}` : `nenhum lead com ${base}`}
                 </p>
@@ -306,9 +356,9 @@ export function Painel() {
             {faltaram && (() => {
               const v = variacao(faltaram.tipo, faltaram.atual, faltaram.anterior);
               return (
-                <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                   <p className="text-sm text-texto-suave">{faltaram.nome}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{faltaram.atual.toLocaleString("pt-BR")}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={faltaram.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
                     {v.texto}
@@ -319,11 +369,11 @@ export function Painel() {
             })()}
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Janela de 24h da Meta (agora)</h2>
+          <h2 className="-mb-1 rotulo-secao">Janela de 24h da Meta (agora)</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Leads com a janela aberta</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(dados.janelas.abertas, dados.janelas.total)}</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{dados.janelas.total ? <NumeroContando valor={Math.round((dados.janelas.abertas / dados.janelas.total) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.total ? `${dados.janelas.abertas.toLocaleString("pt-BR")} de ${dados.janelas.total.toLocaleString("pt-BR")} ${dados.janelas.total === 1 ? "lead ativo" : "leads ativos"} (só o cliente reabre a janela)` : "nenhum lead ativo"}
               </p>
@@ -331,16 +381,16 @@ export function Painel() {
                 <div className="h-2 rounded-pilula bg-sucesso transition-[width] duration-300" style={{ width: `${dados.janelas.total ? (dados.janelas.abertas / dados.janelas.total) * 100 : 0}%` }} />
               </div>
             </div>
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Janelas fechando em menos de 2 h</p>
-              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}>{dados.janelas.fechando.toLocaleString("pt-BR")}</p>
+              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}><NumeroContando valor={dados.janelas.fechando} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.atencao.toLocaleString("pt-BR")} {dados.janelas.atencao === 1 ? "lead" : "leads"} com 2 a 6 h sobrando
               </p>
             </div>
           </div>
 
-          <h2 className="-mb-1 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Tempo de resposta</h2>
+          <h2 className="-mb-1 rotulo-secao">Tempo de resposta</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
@@ -350,7 +400,7 @@ export function Painel() {
                 ["Resposta do bot", dados.tempos.bot, "só quando o bot respondeu primeiro"],
               ] as const
             ).map(([titulo, t, dica]) => (
-              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{titulo}</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarDuracao(t.mediaSegundos)}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
@@ -368,7 +418,7 @@ export function Painel() {
 
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <h2 className="font-semibold">Funil</h2>
               <p className="mb-4 text-xs text-texto-fraco">Leads que chegaram a cada etapa no período e a conversão entre etapas.</p>
               <ol className="space-y-3">
@@ -388,7 +438,7 @@ export function Painel() {
                 ))}
               </ol>
             </section>
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <h2 className="mb-4 font-semibold">Apresentações agendadas por consultor</h2>
               <ul className="space-y-3">
                 {dados.apresentacoesPorConsultor.map((c) => (

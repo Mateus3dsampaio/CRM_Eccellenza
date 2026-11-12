@@ -75,7 +75,7 @@ function GavetaLead({ id, aoFechar }: { id: string | null; aoFechar: () => void 
   return (
     <AnimatePresence>
       {id && (
-        <motion.div key="fundo" className="fixed inset-0 z-[55] bg-fundo/70" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={aoFechar} aria-hidden />
+        <motion.div key="fundo" className="veu fixed inset-0 z-[55]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={aoFechar} aria-hidden />
       )}
       {id && (
         <motion.aside
@@ -140,7 +140,7 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
   return (
     <>
       {/* Cabeçalho: quem é, com a etapa como botão (troca ali mesmo). */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-borda bg-superficie px-4 pb-3.5 pt-3 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-2 max-sm:pb-2.5">
+      <header className="flex shrink-0 items-center gap-3 luz-marca-fio border-b border-borda bg-superficie px-4 pb-3.5 pt-3 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-2 max-sm:pb-2.5">
         <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} />
         <div className="min-w-0 flex-1">
           <h2 className="flex items-center gap-2 text-base font-semibold leading-tight">
@@ -160,7 +160,7 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
           <Maximize2 className="size-4" aria-hidden />
           <span className="hidden sm:inline">Ficha completa</span>
         </Link>
-        <button onClick={aoFechar} className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Fechar gaveta">
+        <button onClick={aoFechar} className="botao-icone" aria-label="Fechar gaveta">
           <X className="size-5" aria-hidden />
         </button>
       </header>

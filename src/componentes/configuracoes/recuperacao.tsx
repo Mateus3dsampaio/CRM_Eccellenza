@@ -33,21 +33,21 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
 
   return (
     <div className="space-y-4">
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <MessageCircleReply className="size-4 text-texto-suave" aria-hidden /> Recuperação de leads
         </h2>
         <p className="mb-3 text-sm text-texto-suave">
           Quando o cliente abre a conversa e para de responder, o sistema manda até 2 mensagens automáticas, só dentro da janela de 24h do WhatsApp, e depois move o lead para Perdido. Se o cliente responder, tudo que estava pendente é cancelado. Cada lead recebe isso uma vez só. Não vale para quem pediu PARAR, para lead já passado ao consultor, em Perdido ou Fechado.
         </p>
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={rascunho.ligado} onChange={(e) => setRascunho((r) => ({ ...r, ligado: e.target.checked }))} />
+        <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+          <input type="checkbox" className="interruptor" checked={rascunho.ligado} onChange={(e) => setRascunho((r) => ({ ...r, ligado: e.target.checked }))} />
           Recuperação de leads ligada
         </label>
         {desligado && <p className="mt-2 text-xs text-texto-suave">Desligada: nenhuma mensagem sai e nenhum lead é movido por esta regra.</p>}
       </section>
 
-      <section className={juntar("rounded-painel border border-borda bg-superficie p-5 shadow-painel", desligado && "opacity-60")}>
+      <section className={juntar("rounded-painel border border-borda bg-superficie p-5 luz-marca-fio", desligado && "opacity-60")}>
         <h3 className="mb-2 text-sm font-semibold">1ª mensagem</h3>
         <label className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <span>Enviar após</span>
@@ -59,8 +59,8 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
           Voltar ao texto original
         </button>
 
-        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" disabled={desligado} checked={rascunho.segundaLigada} onChange={(e) => setRascunho((r) => ({ ...r, segundaLigada: e.target.checked }))} />
+        <label className="mb-2 mt-5 flex cursor-pointer items-center gap-3 text-sm font-semibold">
+          <input type="checkbox" className="interruptor" disabled={desligado} checked={rascunho.segundaLigada} onChange={(e) => setRascunho((r) => ({ ...r, segundaLigada: e.target.checked }))} />
           Enviar a 2ª mensagem
         </label>
         {!rascunho.segundaLigada && !desligado && <p className="mb-3 text-xs text-texto-suave">Desligada: só a 1ª mensagem sai e o prazo até Perdido conta a partir dela.</p>}

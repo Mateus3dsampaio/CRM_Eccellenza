@@ -45,7 +45,7 @@ export function ExportarDesempenho({ equipe, periodoPadrao }: Props) {
   }
 
   return (
-    <section className="space-y-4 rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="space-y-4 rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <div>
         <h2 className="flex items-center gap-2 font-semibold">
           <FileArchive className="size-4 text-texto-suave" aria-hidden /> Exportar desempenho do vendedor
@@ -78,8 +78,8 @@ export function ExportarDesempenho({ equipe, periodoPadrao }: Props) {
             </Campo>
           </div>
 
-          <label className="flex min-h-toque cursor-pointer items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-0.5 size-4 accent-[var(--marca)]" checked={incluirMidia} onChange={(e) => setIncluirMidia(e.target.checked)} />
+          <label className="flex min-h-toque cursor-pointer items-start gap-3 text-sm">
+            <input type="checkbox" className="interruptor" checked={incluirMidia} onChange={(e) => setIncluirMidia(e.target.checked)} />
             <span>
               Incluir fotos e plantas
               <span className="block text-xs text-texto-fraco">Deixa o arquivo maior. Sem isso, a conversa só indica que o cliente enviou uma imagem.</span>

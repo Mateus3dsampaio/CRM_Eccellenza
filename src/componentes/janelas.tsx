@@ -61,21 +61,19 @@ export function BotaoJanelas() {
         aria-haspopup="dialog"
         aria-label={rotulo}
         title={rotulo}
-        className={juntar(
-          "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium shadow-card transition active:scale-[0.97] sm:gap-2 sm:px-3",
-          total > 0 ? "bg-alerta-suave text-alerta ring-1 ring-alerta/60 hover:brightness-110" : "bg-superficie-suave text-texto-suave hover:text-texto",
-        )}
+        className="contador-topo gap-1.5 px-2.5 sm:gap-2 sm:px-3"
       >
-        <Hourglass className="size-4" aria-hidden />
+        {/* Formato igual nos três contadores do topo; a cor fica só no ícone e no número. */}
+        <Hourglass className={juntar("size-4", total > 0 && "text-alerta")} aria-hidden />
         <span className="hidden whitespace-nowrap xl:inline">Janelas</span>
-        <span className="tabular-nums">{total}</span>
+        <span className={juntar("tabular-nums", total > 0 && "font-bold text-alerta")}>{total}</span>
       </button>
 
       {aberto && (
         <div
           role="dialog"
           aria-label="Janelas fechando"
-          className="fixed inset-x-3 top-[calc(var(--spacing-topo)+0.5rem)] z-50 animate-surgir rounded-card border border-borda bg-superficie shadow-flutuante sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96"
+          className="vidro menu-nascer fixed inset-x-3 top-[calc(var(--spacing-topo)+0.5rem)] z-50 rounded-card sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96"
         >
           <p className="border-b border-borda px-4 py-3 text-sm font-semibold">{total === 0 ? "Nenhuma janela fechando" : `Janelas fechando (${total})`}</p>
           <p className="border-b border-borda px-4 py-2 text-xs text-texto-fraco">Falta menos de 2 h para o texto livre fechar. Só a resposta do cliente renova a janela: chame agora.</p>

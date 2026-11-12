@@ -19,7 +19,7 @@ const numero = (n: number) => n.toLocaleString("pt-BR");
 export function UsoDoBot() {
   const { dados } = useDados<Uso>("/api/configuracoes/uso-bot");
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <Gauge className="size-4 text-texto-suave" aria-hidden /> Uso do bot (últimos 30 dias)
       </h2>

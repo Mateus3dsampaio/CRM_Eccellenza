@@ -326,11 +326,11 @@ export function BlocoMedidas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: ()
                   </p>
                 </div>
                 <div className="flex shrink-0">
-                  <button onClick={() => setEditando({ id: m.id, descricao: m.descricao, confirmada: m.confirmada })} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Corrigir medida">
+                  <button onClick={() => setEditando({ id: m.id, descricao: m.descricao, confirmada: m.confirmada })} className="botao-icone" aria-label="Corrigir medida">
                     <Pencil className="size-4" aria-hidden />
                   </button>
                   {podeRemover && (
-                    <button onClick={() => enviar({ acao: "remover", medidaId: m.id }, "Medida removida.")} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-alerta-suave hover:text-alerta" aria-label="Remover medida">
+                    <button onClick={() => enviar({ acao: "remover", medidaId: m.id }, "Medida removida.")} className="botao-icone botao-icone-perigo" aria-label="Remover medida">
                       <Trash2 className="size-4" aria-hidden />
                     </button>
                   )}

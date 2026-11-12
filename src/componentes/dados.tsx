@@ -90,6 +90,7 @@ export type Avisar = (texto: string, tipo?: TipoAviso, opcoes?: OpcoesAviso) => 
 const ContextoAviso = createContext<Avisar>(() => {});
 const MAXIMO_VISIVEIS = 3;
 const DURACAO: Record<TipoAviso, number> = { ok: 6000, erro: 6000, alerta: 15000 };
+const COR_AVISO: Record<TipoAviso, string> = { ok: "text-sucesso", erro: "text-alerta", alerta: "text-aviso" };
 
 export function ProvedorAvisos({ children }: { children: ReactNode }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
@@ -131,12 +132,11 @@ export function ProvedorAvisos({ children }: { children: ReactNode }) {
           <div
             key={a.id}
             role={a.tipo === "erro" ? "alert" : "status"}
-            className={juntar(
-              "pointer-events-auto flex w-full animate-surgir items-start gap-2 rounded-controle px-3 py-2.5 text-sm font-medium shadow-flutuante",
-              a.tipo === "erro" ? "bg-alerta text-sobre-cor" : a.tipo === "alerta" ? "bg-superficie text-texto ring-1 ring-alerta/40" : "bg-texto text-sobre-cor",
-            )}
+            className="vidro vidro-escuro pointer-events-auto relative flex w-full animate-surgir items-start gap-2 rounded-controle py-2.5 pl-4 pr-3 text-sm font-medium text-texto"
           >
-            {a.tipo === "erro" ? <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> : a.tipo === "alerta" ? <Bell className="mt-0.5 size-4 shrink-0 text-alerta" aria-hidden /> : <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />}
+            {/* Vidro escuro igual nos três; a cor (verde, vermelho, âmbar) fica só no filete e no ícone. */}
+            <span className={juntar("filete-aviso", COR_AVISO[a.tipo])} aria-hidden />
+            {a.tipo === "erro" ? <AlertTriangle className={juntar("mt-0.5 size-4 shrink-0", COR_AVISO.erro)} aria-hidden /> : a.tipo === "alerta" ? <Bell className={juntar("mt-0.5 size-4 shrink-0", COR_AVISO.alerta)} aria-hidden /> : <CheckCircle2 className={juntar("mt-0.5 size-4 shrink-0", COR_AVISO.ok)} aria-hidden />}
             <span className="min-w-0 flex-1">{a.texto}</span>
             {a.acao && (
               <button
@@ -145,7 +145,7 @@ export function ProvedorAvisos({ children }: { children: ReactNode }) {
                   a.acao?.aoClicar();
                   fechar(a.id);
                 }}
-                className={juntar("shrink-0 rounded-controle px-2 py-0.5 text-xs font-semibold", a.tipo === "alerta" ? "bg-marca text-sobre-marca" : "bg-sobre-cor/15 hover:bg-sobre-cor/25")}
+                className="shrink-0 rounded-controle bg-marca px-2 py-0.5 text-xs font-semibold text-sobre-marca hover:bg-marca-forte"
               >
                 {a.acao.rotulo}
               </button>

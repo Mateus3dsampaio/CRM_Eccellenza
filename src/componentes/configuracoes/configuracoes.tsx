@@ -86,9 +86,9 @@ function ConfiguracoesComBarra() {
   }
 
   return (
-    <div data-config-raiz className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:min-h-[calc(100dvh-var(--spacing-topo))] md:flex-row md:items-start">
+    <div data-config-raiz className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:pt-3 md:min-h-[calc(100dvh-var(--spacing-topo))] md:flex-row md:items-start">
       <h1 className="sr-only">Configurações</h1>
-      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+1rem)] md:w-60 md:shrink-0">
+      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+0.75rem)] md:w-60 md:shrink-0">
         <div ref={raizMenu} role="tablist" aria-orientation="vertical" className="rolagem-fina relative flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
           {/* No computador a pílula de mola anda de uma opção à outra; no celular (menu na horizontal) fica o fundo fixo. */}
           <div className="hidden md:contents">
@@ -120,7 +120,8 @@ function ConfiguracoesComBarra() {
         <p className="mt-3 hidden px-3 text-xs text-texto-fraco md:block">Só o administrador vê esta tela.</p>
       </nav>
 
-      <div className="min-w-0 flex-1 space-y-4" role="tabpanel">
+      {/* A chave refaz o painel a cada seção: o conteúdo entra com um deslize curto (160 ms). */}
+      <div key={aba} className="min-w-0 flex-1 animate-surgir space-y-4" role="tabpanel">
       {aba === "vendas" ? (
         <VendasConfig />
       ) : aba === "recuperacao" ? (
@@ -157,7 +158,7 @@ function ConfiguracoesComBarra() {
       ) : (
         dados && (
           <>
-            <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <h2 className="mb-1 flex items-center gap-2 font-semibold">
                 <Shuffle className="size-4 text-texto-suave" aria-hidden /> Distribuição de leads
               </h2>
@@ -232,7 +233,7 @@ function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: 
   });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <Timer className="size-4 text-texto-suave" aria-hidden /> Prazos de espera do cliente
       </h2>
@@ -278,7 +279,7 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
   useBlocoSalvavel("agenda", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Regras da agenda
       </h2>
@@ -291,8 +292,8 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
           const faixa = rascunho.horario[dia];
           return (
             <li key={dia} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-              <label className="flex w-36 items-center gap-2 font-medium">
-                <input type="checkbox" checked={faixa !== null} onChange={(e) => mudarDia(dia, e.target.checked ? { abre: 8, fecha: 12 } : null)} />
+              <label className="flex w-44 cursor-pointer items-center gap-3 font-medium">
+                <input type="checkbox" className="interruptor" checked={faixa !== null} onChange={(e) => mudarDia(dia, e.target.checked ? { abre: 8, fecha: 12 } : null)} />
                 {NOMES_DIAS[dia]}
               </label>
               {faixa ? (
@@ -353,14 +354,14 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
     </label>
   );
   const interruptor = (campo: "desligarNoFechamento" | "repartirFila" | "verificarPresenca", rotulo: string) => (
-    <label className="flex items-center gap-2 text-sm font-medium">
-      <input type="checkbox" checked={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: e.target.checked }))} />
+    <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+      <input type="checkbox" className="interruptor" checked={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: e.target.checked }))} />
       {rotulo}
     </label>
   );
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <UserCheck className="size-4 text-texto-suave" aria-hidden /> Presença e fila
       </h2>
@@ -371,11 +372,11 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
         {interruptor("desligarNoFechamento", "Desligar vendedores no fechamento da loja")}
         <div className="space-y-2">
           {interruptor("repartirFila", "Repartir a fila acumulada com a loja fechada")}
-          <div className="pl-6">{minutos("repartirMin", "Quando repartir", !rascunho.repartirFila, "min depois da abertura")}</div>
+          <div className="pl-13">{minutos("repartirMin", "Quando repartir", !rascunho.repartirFila, "min depois da abertura")}</div>
         </div>
         <div className="space-y-2">
           {interruptor("verificarPresenca", "Verificar presença de quem tem compromisso")}
-          <div className="space-y-2 pl-6">
+          <div className="space-y-2 pl-13">
             {minutos("verificarMin", "Quando verificar", !rascunho.verificarPresenca, "min depois da abertura")}
             {minutos("avisoCedoMin", "Aviso de compromisso cedo", !rascunho.verificarPresenca, "min antes do compromisso")}
             <label className={juntar("flex items-center gap-2 text-sm", !rascunho.verificarPresenca && "opacity-50")}>
@@ -410,7 +411,7 @@ function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; ao
   useBlocoSalvavel("retorno-fechada", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <MessageSquareReply className="size-4 text-texto-suave" aria-hidden /> Retorno com a loja fechada
       </h2>
@@ -418,12 +419,12 @@ function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; ao
         Cliente que chega com a loja fechada tem a janela de 24h da Meta fechada antes de a loja abrir. No horário do retorno marcado pelo bot, sai um modelo aprovado, só se o lead tiver dono online (senão passa para quem está online; se ninguém estiver, o modelo espera e todos recebem aviso).
       </p>
       <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={rascunho.automatico} onChange={(e) => setRascunho((r) => ({ ...r, automatico: e.target.checked }))} />
+        <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+          <input type="checkbox" className="interruptor" checked={rascunho.automatico} onChange={(e) => setRascunho((r) => ({ ...r, automatico: e.target.checked }))} />
           Enviar o modelo de retorno automaticamente
         </label>
-        {!rascunho.automatico && <p className="pl-6 text-xs text-texto-suave">Desligado: o vendedor recebe o aviso do retorno e envia o modelo pela conversa.</p>}
-        <div className={juntar("space-y-2 pl-6", !rascunho.automatico && "opacity-50")}>
+        {!rascunho.automatico && <p className="pl-13 text-xs text-texto-suave">Desligado: o vendedor recebe o aviso do retorno e envia o modelo pela conversa.</p>}
+        <div className={juntar("space-y-2 pl-13", !rascunho.automatico && "opacity-50")}>
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-56">Qual modelo usar</span>
             <select disabled={!rascunho.automatico} aria-label="Qual modelo usar" value={rascunho.modelo} onChange={(e) => setRascunho((r) => ({ ...r, modelo: e.target.value }))} className={juntar(classeEntrada, "w-72")}>

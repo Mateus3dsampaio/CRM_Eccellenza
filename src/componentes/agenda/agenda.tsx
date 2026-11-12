@@ -108,7 +108,7 @@ export function Agenda() {
 
   return (
     // No computador a agenda ocupa exatamente a altura da tela (a rolagem, se precisar, é só dentro da grade).
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:pt-3 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="sr-only">Agenda</h1>
         <Abas
@@ -121,11 +121,11 @@ export function Agenda() {
           rotuloAria="Visão"
         />
         <div className="flex items-center gap-1">
-          <button onClick={() => navegar(-1)} className="inline-flex size-toque items-center justify-center rounded-controle hover:bg-superficie" aria-label="Anterior">
+          <button onClick={() => navegar(-1)} className="botao-icone" aria-label="Anterior">
             <ChevronLeft className="size-5" aria-hidden />
           </button>
           <button onClick={() => setData(null)} className="min-h-toque rounded-controle px-3 text-sm font-medium hover:bg-superficie">Hoje</button>
-          <button onClick={() => navegar(1)} className="inline-flex size-toque items-center justify-center rounded-controle hover:bg-superficie" aria-label="Próximo">
+          <button onClick={() => navegar(1)} className="botao-icone" aria-label="Próximo">
             <ChevronRight className="size-5" aria-hidden />
           </button>
         </div>
@@ -144,7 +144,7 @@ export function Agenda() {
                 key={c.id ?? "todos"}
                 onClick={() => setFiltro(c.id)}
                 aria-pressed={filtro === c.id}
-                className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium", filtro === c.id ? "bg-marca text-sobre-marca" : "text-texto-suave hover:bg-superficie-suave")}
+                className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 md:min-h-9 text-sm font-medium", filtro === c.id ? "bg-marca text-sobre-marca" : "text-texto-suave hover:bg-superficie-suave")}
               >
                 {c.id && <span className={juntar("size-2.5 rounded-full", corConsultor(c.id))} aria-hidden />}
                 {c.nome}
@@ -175,7 +175,7 @@ export function Agenda() {
                 {dias.map((d) => {
                   const ehHoje = chaveDia(d) === hojeChave;
                   return (
-                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "bg-marca-suave text-marca-texto" : "bg-superficie")}>
+                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "luz-marca-hoje bg-marca-suave text-marca-texto" : "bg-superficie")}>
                       <span className="capitalize">{formatarDiaSemana(d)}</span> <span className={ehHoje ? "font-semibold" : "font-normal text-texto-suave"}>{formatarData(d).slice(0, 5)}</span>
                       {ehHoje && <span className="ml-1.5 rounded-pilula bg-marca px-2 py-0.5 text-[11px] font-medium text-sobre-marca">Hoje</span>}
                     </th>

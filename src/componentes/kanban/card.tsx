@@ -350,9 +350,9 @@ export function Card({
       aria-roledescription="card arrastável"
       onClick={aoClicarNoCard}
       className={juntar(
-        "group relative shrink-0 cursor-pointer select-none overflow-hidden rounded-card border bg-superficie shadow-card transition-[box-shadow,transform,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
-        // Só o card crítico pulsa (halo vermelho); nada mais no card pisca (tarefa 39).
-        critico ? "border-alerta-vivo animate-respirar" : "border-borda hover:border-borda-forte",
+        "group relative shrink-0 cursor-pointer select-none overflow-hidden rounded-card border bg-superficie transition-[box-shadow,transform,border-color] duration-150 hover:-translate-y-0.5",
+        // Só o card crítico pulsa; nada mais no card pisca (tarefa 39). Halo vermelho parado por fora e brilho de dentro pulsando só com opacidade (pulso-critico, globals.css).
+        critico ? "border-alerta-vivo shadow-critico pulso-critico" : "border-borda shadow-card hover:border-borda-forte hover:shadow-card-hover",
         isDragging && "opacity-40",
         selecionado && "ring-2 ring-marca ring-offset-2 ring-offset-coluna",
         // Card aberto na gaveta: nível "selecionado" (docs/design.md).
@@ -422,7 +422,7 @@ export function Card({
                     }}
                     className="fixed z-50 w-60 animate-surgir rounded-controle border border-borda bg-superficie p-1 shadow-flutuante"
                   >
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-texto-fraco">Mover para...</p>
+                    <p className="px-3 py-2 rotulo-secao">Mover para...</p>
                     {nomesEtapas.lista.filter((e) => e.codigo !== card.etapa).map((e) => (
                       <button
                         key={e.codigo}
