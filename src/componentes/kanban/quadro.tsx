@@ -388,7 +388,7 @@ export function Quadro() {
     // No computador o quadro ocupa a altura da tela; só a lista de cada coluna rola.
     <div className="flex min-h-0 flex-1 flex-col md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none">
       {/* Barra de busca e filtros */}
-      <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4">
+      <div className="mx-auto w-full max-w-[1800px] space-y-3 px-4 pt-4 md:pt-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="sr-only">Atendimentos</h1>
           <div className="relative order-last min-w-0 basis-full sm:order-none sm:max-w-[15rem] sm:flex-1 sm:basis-auto">

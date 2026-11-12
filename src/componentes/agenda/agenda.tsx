@@ -108,7 +108,7 @@ export function Agenda() {
 
   return (
     // No computador a agenda ocupa exatamente a altura da tela (a rolagem, se precisar, é só dentro da grade).
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-4 md:pt-3 md:h-[calc(100dvh-var(--spacing-topo))] md:flex-none md:overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="sr-only">Agenda</h1>
         <Abas
@@ -144,7 +144,7 @@ export function Agenda() {
                 key={c.id ?? "todos"}
                 onClick={() => setFiltro(c.id)}
                 aria-pressed={filtro === c.id}
-                className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 text-sm font-medium", filtro === c.id ? "bg-marca text-sobre-marca" : "text-texto-suave hover:bg-superficie-suave")}
+                className={juntar("inline-flex min-h-toque items-center gap-1.5 rounded-controle px-3 md:min-h-9 text-sm font-medium", filtro === c.id ? "bg-marca text-sobre-marca" : "text-texto-suave hover:bg-superficie-suave")}
               >
                 {c.id && <span className={juntar("size-2.5 rounded-full", corConsultor(c.id))} aria-hidden />}
                 {c.nome}

@@ -100,7 +100,7 @@ export function Galeria() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <div className="mx-auto w-full max-w-7xl space-y-4 p-4 md:pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <Abas
           itens={FILTROS.map((f) => ({ codigo: f.codigo || "tudo", rotulo: f.nome }))}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Minus, RotateCcw } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Loader2, Minus, MoreHorizontal, RotateCcw } from "lucide-react";
 import { MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
 import { formatarReais } from "@/regras/vendas";
@@ -9,7 +9,7 @@ import { formatarDuracao, type EstatisticaTempo } from "@/regras/tempo-resposta"
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { juntar } from "../estilos";
-import { Botao, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
+import { Botao, Carregando, EstadoErro, Modal, Popover, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "../configuracoes/exportar-desempenho";
 import { useUsuario } from "../usuario";
 import { NumeroContando } from "./numero-contando";
@@ -89,6 +89,7 @@ export function Painel() {
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
   // Exportar desempenho (tarefa 30): saiu de Configurações; é uma ação do painel, só do admin. Dados só ao abrir a janela.
   const [exportar, setExportar] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
   const avisar = useAviso();
   const [zerando, setZerando] = useState(false);
   const [entendi, setEntendi] = useState(false);
@@ -136,8 +137,9 @@ export function Painel() {
   const maiorConsultor = Math.max(1, ...(dados?.apresentacoesPorConsultor.map((c) => c.total) ?? [1]));
 
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 p-4 md:pt-3">
+      {/* No PC é uma linha só, na mesma faixa do primeiro item do menu lateral: os rótulos ficam ao lado dos campos e as ações vão para o menu "…". */}
+      <div className="flex flex-wrap items-end gap-3 md:items-center md:gap-2">
         <h1 className="sr-only">Painel</h1>
         <Abas
           itens={ATALHOS_PAINEL.map((a) => ({ codigo: a.codigo, rotulo: a.nome }))}
@@ -145,19 +147,19 @@ export function Painel() {
           aoMudar={(codigo) => setFiltro({ ...filtro, atalho: codigo })}
           rotuloAria="Atalhos de período"
         />
-        <label className="space-y-1 text-xs text-texto-suave">
-          De
-          <input type="date" className={juntar(classeEntrada, "w-auto")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />
+        <label className="space-y-1 text-xs text-texto-suave md:space-y-0">
+          <span className="md:sr-only">De</span>
+          <input type="date" className={juntar(classeEntrada, "w-auto md:w-[8.5rem]")} value={de} max={ate || undefined} onChange={(e) => mudarData("de", e.target.value)} />
         </label>
-        <label className="space-y-1 text-xs text-texto-suave">
+        <label className="space-y-1 text-xs text-texto-suave md:flex md:items-center md:gap-2 md:space-y-0">
           Até
-          <input type="date" className={juntar(classeEntrada, "w-auto")} value={ate} min={de || undefined} onChange={(e) => mudarData("ate", e.target.value)} />
+          <input type="date" className={juntar(classeEntrada, "w-auto md:w-[8.5rem]")} value={ate} min={de || undefined} onChange={(e) => mudarData("ate", e.target.value)} />
         </label>
         {admin && dados && (
-          <label className="space-y-1 text-xs text-texto-suave">
-            Vendedor
+          <label className="space-y-1 text-xs text-texto-suave md:space-y-0">
+            <span className="md:sr-only">Vendedor</span>
             <select className={juntar(classeEntrada, "w-auto")} value={filtro.vendedorId} onChange={(e) => setFiltro({ ...filtro, vendedorId: e.target.value })}>
-              <option value="">Todos</option>
+              <option value="">Todos os vendedores</option>
               {dados.vendedores.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.nome}
@@ -167,16 +169,55 @@ export function Painel() {
           </label>
         )}
         {admin && (
-          <div className="ml-auto flex flex-wrap gap-2">
-            <Botao onClick={() => setExportar(true)} icone={<FileArchive className="size-4" aria-hidden />} title="Exportar desempenho do vendedor (.zip)">
-              Desempenho (.zip)
-            </Botao>
-            <Botao onClick={() => void baixarHtml()} carregando={ocupado === "html"} icone={<Download className="size-4" aria-hidden />} title="Baixar o painel inteiro num arquivo HTML, com filtro de período">
-              Exportar painel
-            </Botao>
-            <Botao variante="perigo" onClick={() => setZerando(true)} icone={<RotateCcw className="size-4" aria-hidden />} title="Apagar o histórico do painel e recomeçar a contar">
-              Zerar painel
-            </Botao>
+          <div className="ml-auto">
+            <Popover
+              aberto={menuAberto}
+              aoFechar={() => setMenuAberto(false)}
+              titulo="Ações do painel"
+              largura="sm:w-72"
+              gatilho={
+                <button type="button" onClick={() => setMenuAberto((m) => !m)} aria-expanded={menuAberto} aria-haspopup="dialog" aria-label="Ações do painel" title="Ações do painel" className="tecla inline-flex size-toque items-center justify-center rounded-controle">
+                  {ocupado === "html" ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <MoreHorizontal className="size-5" aria-hidden />}
+                </button>
+              }
+            >
+              <div className="-mt-2 grid gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setExportar(true);
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave"
+                  title="Exportar desempenho do vendedor (.zip)"
+                >
+                  <FileArchive className="size-4 text-texto-suave" aria-hidden /> Desempenho do vendedor (.zip)
+                </button>
+                <button
+                  type="button"
+                  disabled={ocupado === "html"}
+                  onClick={() => {
+                    setMenuAberto(false);
+                    void baixarHtml();
+                  }}
+                  className="flex min-h-toque items-center gap-3 rounded-controle px-3 text-left text-sm hover:bg-superficie-suave disabled:opacity-55"
+                  title="Baixar o painel inteiro num arquivo HTML, com filtro de período"
+                >
+                  <Download className="size-4 text-texto-suave" aria-hidden /> Exportar painel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setZerando(true);
+                  }}
+                  className="mt-1 flex min-h-toque items-center gap-3 rounded-controle border-t border-borda px-3 text-left text-sm text-alerta hover:bg-alerta-suave"
+                  title="Apagar o histórico do painel e recomeçar a contar"
+                >
+                  <RotateCcw className="size-4" aria-hidden /> Zerar painel
+                </button>
+              </div>
+            </Popover>
           </div>
         )}
       </div>

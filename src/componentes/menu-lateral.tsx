@@ -26,7 +26,8 @@ export const LINK_CONFIG = {
 };
 
 const CHAVE_MINI = "menu-mini";
-const ALTURA_ITEM = 42; // px
+// Mesma altura dos controles das telas (--spacing-toque): o primeiro item fica na mesma faixa da primeira linha de filtros.
+const ALTURA_ITEM = 44; // px
 
 /** Menu lateral (computador) com indicador que desliza (aberto e encolhido) e opção de encolher; no celular vira a barra de baixo. */
 export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
@@ -118,11 +119,13 @@ export function MenuLateral({ simulador = true }: { simulador?: boolean }) {
         ref={asideRef}
         aria-label="Módulos"
         className={juntar(
-          "luz-marca-forte sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 py-3 transition-[width] duration-(--tempo-painel) ease-mola md:flex",
+          "luz-marca-forte sticky top-0 z-40 hidden h-dvh shrink-0 flex-col gap-1.5 overflow-hidden border-r border-borda bg-lateral px-2.5 pb-3 transition-[width] duration-(--tempo-painel) ease-mola md:flex",
           mini ? "w-16" : "w-54",
         )}
       >
-        <Link href="/" className="flex items-center gap-2.5 px-1 pb-3" aria-label="Eccellenza – início">
+        {/* Alinhamento com as telas (PC): a esfera ocupa a altura da barra de cima (mesmo centro dos botões do topo) e o
+            primeiro item começa onde começa a primeira linha de controles de cada tela (md:pt-3 depois da linha de 1 px do topo). */}
+        <Link href="/" className="mb-[7px] flex h-topo shrink-0 items-center gap-2.5 px-1" aria-label="Eccellenza – início">
           <span className="relative inline-flex size-9 shrink-0 items-center justify-center">
             {/* Brilho suave atrás da esfera, como o halo do login. */}
             <span aria-hidden className="absolute inset-0 rounded-full bg-marca/30 blur-md" />

@@ -202,3 +202,10 @@
 .brilho-chegada {
   box-shadow: inset 0 0 0 2px var(--color-etapa-apresentacao), inset 0 0 26px var(--color-etapa-apresentacao-brilho);
 }
+
+/* Barra de cima no computador: 60 px, para o centro dos botões do topo bater com o centro da esfera do menu lateral. */
+@media (min-width: 768px) {
+  :root {
+    --spacing-topo: 60px;
+  }
+}

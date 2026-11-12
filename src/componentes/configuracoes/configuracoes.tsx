@@ -86,9 +86,9 @@ function ConfiguracoesComBarra() {
   }
 
   return (
-    <div data-config-raiz className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:min-h-[calc(100dvh-var(--spacing-topo))] md:flex-row md:items-start">
+    <div data-config-raiz className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 pb-24 md:pt-3 md:min-h-[calc(100dvh-var(--spacing-topo))] md:flex-row md:items-start">
       <h1 className="sr-only">Configurações</h1>
-      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+1rem)] md:w-60 md:shrink-0">
+      <nav aria-label="Seções das configurações" className="md:sticky md:top-[calc(var(--spacing-topo)+0.75rem)] md:w-60 md:shrink-0">
         <div ref={raizMenu} role="tablist" aria-orientation="vertical" className="rolagem-fina relative flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
           {/* No computador a pílula de mola anda de uma opção à outra; no celular (menu na horizontal) fica o fundo fixo. */}
           <div className="hidden md:contents">
