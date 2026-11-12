@@ -113,7 +113,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
   // A barra de cima mostra o cliente (tarefa 28), com a etapa como botão que troca ali mesmo.
   useDefinirTituloTela(
     <>
-      <Link href="/" className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle text-texto-suave hover:bg-superficie" aria-label="Voltar ao kanban">
+      <Link href="/" className="botao-icone" aria-label="Voltar ao kanban">
         <ArrowLeft className="size-5" aria-hidden />
       </Link>
       <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} tamanho="sm" />
@@ -363,7 +363,7 @@ function Notas({ ficha, aoMudar }: { ficha: FichaLead; aoMudar: () => void }) {
                     aoMudar();
                   }
                 }}
-                className="inline-flex size-9 items-center justify-center rounded-controle text-texto-fraco hover:bg-alerta-suave hover:text-alerta"
+                className="botao-icone botao-icone-compacto botao-icone-perigo"
                 aria-label="Excluir nota"
               >
                 <Trash2 className="size-4" aria-hidden />

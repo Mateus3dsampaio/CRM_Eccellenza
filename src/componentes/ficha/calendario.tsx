@@ -59,13 +59,13 @@ export function Calendario({
   return (
     <div className="select-none">
       <div className="mb-2 flex items-center justify-between">
-        <button onClick={() => aoMudarMes(anterior)} disabled={!podeVoltar} aria-label="Mês anterior" className="inline-flex size-9 items-center justify-center rounded-controle text-texto-suave transition hover:bg-superficie-suave disabled:opacity-30 disabled:hover:bg-transparent">
+        <button onClick={() => aoMudarMes(anterior)} disabled={!podeVoltar} aria-label="Mês anterior" className="botao-icone botao-icone-compacto">
           <ChevronLeft className="size-5" aria-hidden />
         </button>
         <p className="text-sm font-semibold" aria-live="polite">
           {NOMES_MESES[m - 1][0].toUpperCase() + NOMES_MESES[m - 1].slice(1)} de {ano}
         </p>
-        <button onClick={() => aoMudarMes(seguinte)} disabled={!podeAvancar} aria-label="Próximo mês" className="inline-flex size-9 items-center justify-center rounded-controle text-texto-suave transition hover:bg-superficie-suave disabled:opacity-30 disabled:hover:bg-transparent">
+        <button onClick={() => aoMudarMes(seguinte)} disabled={!podeAvancar} aria-label="Próximo mês" className="botao-icone botao-icone-compacto">
           <ChevronRight className="size-5" aria-hidden />
         </button>
       </div>

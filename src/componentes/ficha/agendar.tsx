@@ -186,7 +186,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
                     onClick={() => irPara(somarDiasChave(centro, -1))}
                     disabled={somarDiasChave(centro, -1) < dados.primeiroDia}
                     aria-label="Dia anterior"
-                    className="inline-flex size-9 items-center justify-center rounded-controle text-texto-suave transition hover:bg-superficie-suave disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="botao-icone botao-icone-compacto"
                   >
                     <ChevronLeft className="size-5" aria-hidden />
                   </button>
@@ -194,7 +194,7 @@ export function AgendarVisita({ leadId, aberto, aoFechar, aoAgendar, tipo = "vis
                     onClick={() => irPara(somarDiasChave(centro, 1))}
                     disabled={somarDiasChave(centro, 1) > maximo}
                     aria-label="Próximo dia"
-                    className="inline-flex size-9 items-center justify-center rounded-controle text-texto-suave transition hover:bg-superficie-suave disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="botao-icone botao-icone-compacto"
                   >
                     <ChevronRight className="size-5" aria-hidden />
                   </button>

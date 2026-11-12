@@ -231,7 +231,7 @@ export function InstrucoesAtendimento() {
                 <label className="mr-auto inline-flex min-h-toque cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--marca)]"
+                    className="interruptor"
                     checked={i.ativa}
                     onChange={(e) =>
                       e.target.checked
@@ -254,7 +254,7 @@ export function InstrucoesAtendimento() {
                     aria-label={`Subir ${i.titulo}`}
                     disabled={n === 0}
                     onClick={() => mover(n, -1)}
-                    className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-30"
+                    className="botao-icone"
                   >
                     <ArrowUp className="size-4" aria-hidden />
                   </button>
@@ -262,7 +262,7 @@ export function InstrucoesAtendimento() {
                     aria-label={`Descer ${i.titulo}`}
                     disabled={n === instrucoes.length - 1}
                     onClick={() => mover(n, 1)}
-                    className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-30"
+                    className="botao-icone"
                   >
                     <ArrowDown className="size-4" aria-hidden />
                   </button>
@@ -444,7 +444,7 @@ function ExportarInstrucoes({ aberto, aoFechar, instrucoes }: { aberto: boolean;
       <div className="space-y-4">
         <div>
           <label className="mb-2 inline-flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="size-4 accent-[var(--marca)]" checked={todas} onChange={() => setMarcadas(todas ? new Set() : new Set(instrucoes.map((i) => i.id)))} />
+            <input type="checkbox" className="size-4 accent-[var(--color-marca)]" checked={todas} onChange={() => setMarcadas(todas ? new Set() : new Set(instrucoes.map((i) => i.id)))} />
             Selecionar todas
           </label>
           <ul className="max-h-64 divide-y divide-borda overflow-y-auto rounded-controle border border-borda">
@@ -453,7 +453,7 @@ function ExportarInstrucoes({ aberto, aoFechar, instrucoes }: { aberto: boolean;
                 <label className="flex min-h-toque cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-superficie-suave">
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--marca)]"
+                    className="size-4 accent-[var(--color-marca)]"
                     checked={marcadas.has(i.id)}
                     onChange={() =>
                       setMarcadas((m) => {
@@ -479,7 +479,7 @@ function ExportarInstrucoes({ aberto, aoFechar, instrucoes }: { aberto: boolean;
             ] as const
           ).map(([codigo, rotulo]) => (
             <label key={codigo} className="flex min-h-toque cursor-pointer items-center gap-2 text-sm">
-              <input type="radio" name="formato-exportar" className="size-4 accent-[var(--marca)]" checked={formato === codigo} onChange={() => setFormato(codigo)} />
+              <input type="radio" name="formato-exportar" className="size-4 accent-[var(--color-marca)]" checked={formato === codigo} onChange={() => setFormato(codigo)} />
               {rotulo}
             </label>
           ))}

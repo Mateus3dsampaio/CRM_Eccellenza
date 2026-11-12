@@ -493,7 +493,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.max(0, indiceZoom - 1)])}
               disabled={indiceZoom <= 0}
-              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              className="botao-icone"
               aria-label="Diminuir zoom (mostrar mais cards)"
               title="Mostrar mais cards"
             >
@@ -505,7 +505,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom(NIVEIS_ZOOM[Math.min(NIVEIS_ZOOM.length - 1, indiceZoom + 1)])}
               disabled={indiceZoom >= NIVEIS_ZOOM.length - 1}
-              className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave disabled:opacity-40"
+              className="botao-icone"
               aria-label="Aumentar zoom (mostrar menos cards)"
               title="Mostrar menos cards"
             >
@@ -514,7 +514,7 @@ export function Quadro() {
             <button
               onClick={() => definirZoom("auto")}
               aria-pressed={zoomEscolhido === "auto"}
-              className={juntar("inline-flex size-toque items-center justify-center rounded-controle transition", zoomEscolhido === "auto" ? "text-marca-texto" : "text-texto-suave hover:bg-superficie-suave")}
+              className={juntar("botao-icone", zoomEscolhido === "auto" && "text-marca-texto")}
               aria-label="Ajustar o zoom para as colunas caberem na tela"
               title="Ajustar à tela"
             >

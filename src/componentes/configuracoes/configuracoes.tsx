@@ -291,8 +291,8 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
           const faixa = rascunho.horario[dia];
           return (
             <li key={dia} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-              <label className="flex w-36 items-center gap-2 font-medium">
-                <input type="checkbox" checked={faixa !== null} onChange={(e) => mudarDia(dia, e.target.checked ? { abre: 8, fecha: 12 } : null)} />
+              <label className="flex w-44 cursor-pointer items-center gap-3 font-medium">
+                <input type="checkbox" className="interruptor" checked={faixa !== null} onChange={(e) => mudarDia(dia, e.target.checked ? { abre: 8, fecha: 12 } : null)} />
                 {NOMES_DIAS[dia]}
               </label>
               {faixa ? (
@@ -353,8 +353,8 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
     </label>
   );
   const interruptor = (campo: "desligarNoFechamento" | "repartirFila" | "verificarPresenca", rotulo: string) => (
-    <label className="flex items-center gap-2 text-sm font-medium">
-      <input type="checkbox" checked={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: e.target.checked }))} />
+    <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+      <input type="checkbox" className="interruptor" checked={rascunho[campo]} onChange={(e) => setRascunho((r) => ({ ...r, [campo]: e.target.checked }))} />
       {rotulo}
     </label>
   );
@@ -371,11 +371,11 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
         {interruptor("desligarNoFechamento", "Desligar vendedores no fechamento da loja")}
         <div className="space-y-2">
           {interruptor("repartirFila", "Repartir a fila acumulada com a loja fechada")}
-          <div className="pl-6">{minutos("repartirMin", "Quando repartir", !rascunho.repartirFila, "min depois da abertura")}</div>
+          <div className="pl-13">{minutos("repartirMin", "Quando repartir", !rascunho.repartirFila, "min depois da abertura")}</div>
         </div>
         <div className="space-y-2">
           {interruptor("verificarPresenca", "Verificar presença de quem tem compromisso")}
-          <div className="space-y-2 pl-6">
+          <div className="space-y-2 pl-13">
             {minutos("verificarMin", "Quando verificar", !rascunho.verificarPresenca, "min depois da abertura")}
             {minutos("avisoCedoMin", "Aviso de compromisso cedo", !rascunho.verificarPresenca, "min antes do compromisso")}
             <label className={juntar("flex items-center gap-2 text-sm", !rascunho.verificarPresenca && "opacity-50")}>
@@ -418,12 +418,12 @@ function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; ao
         Cliente que chega com a loja fechada tem a janela de 24h da Meta fechada antes de a loja abrir. No horário do retorno marcado pelo bot, sai um modelo aprovado, só se o lead tiver dono online (senão passa para quem está online; se ninguém estiver, o modelo espera e todos recebem aviso).
       </p>
       <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={rascunho.automatico} onChange={(e) => setRascunho((r) => ({ ...r, automatico: e.target.checked }))} />
+        <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+          <input type="checkbox" className="interruptor" checked={rascunho.automatico} onChange={(e) => setRascunho((r) => ({ ...r, automatico: e.target.checked }))} />
           Enviar o modelo de retorno automaticamente
         </label>
-        {!rascunho.automatico && <p className="pl-6 text-xs text-texto-suave">Desligado: o vendedor recebe o aviso do retorno e envia o modelo pela conversa.</p>}
-        <div className={juntar("space-y-2 pl-6", !rascunho.automatico && "opacity-50")}>
+        {!rascunho.automatico && <p className="pl-13 text-xs text-texto-suave">Desligado: o vendedor recebe o aviso do retorno e envia o modelo pela conversa.</p>}
+        <div className={juntar("space-y-2 pl-13", !rascunho.automatico && "opacity-50")}>
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-56">Qual modelo usar</span>
             <select disabled={!rascunho.automatico} aria-label="Qual modelo usar" value={rascunho.modelo} onChange={(e) => setRascunho((r) => ({ ...r, modelo: e.target.value }))} className={juntar(classeEntrada, "w-72")}>

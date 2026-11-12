@@ -78,8 +78,8 @@ export function ExportarDesempenho({ equipe, periodoPadrao }: Props) {
             </Campo>
           </div>
 
-          <label className="flex min-h-toque cursor-pointer items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-0.5 size-4 accent-[var(--marca)]" checked={incluirMidia} onChange={(e) => setIncluirMidia(e.target.checked)} />
+          <label className="flex min-h-toque cursor-pointer items-start gap-3 text-sm">
+            <input type="checkbox" className="interruptor" checked={incluirMidia} onChange={(e) => setIncluirMidia(e.target.checked)} />
             <span>
               Incluir fotos e plantas
               <span className="block text-xs text-texto-fraco">Deixa o arquivo maior. Sem isso, a conversa só indica que o cliente enviou uma imagem.</span>

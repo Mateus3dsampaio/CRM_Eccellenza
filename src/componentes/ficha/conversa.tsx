@@ -231,7 +231,7 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
               <span className="min-w-0 flex-1 text-xs font-semibold text-texto-suave">
                 Modelo aprovado: <span className="text-texto">{previa.nome}</span>
               </span>
-              <button type="button" onClick={() => setModelo("")} className="inline-flex size-8 items-center justify-center rounded-controle text-texto-fraco hover:bg-superficie hover:text-texto" aria-label="Tirar o modelo">
+              <button type="button" onClick={() => setModelo("")} className="botao-icone botao-icone-compacto" aria-label="Tirar o modelo">
                 <X className="size-4" aria-hidden />
               </button>
             </div>

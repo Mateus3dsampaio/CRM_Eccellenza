@@ -5,9 +5,9 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 
 ## Onde paramos (12/11/2026)
 - Branch: `feat/visual-identidade` (no GitHub, **sem PR aberto**).
-- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026) e **E**.
-- **Aguardando o teste do Mateus** do bloco E antes de seguir.
-- Próximo bloco, na ordem recomendada: **D**, depois C e F (G junto de F).
+- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026), **E** e **D**.
+- **Aguardando o teste do Mateus** dos blocos E e D.
+- Próximo bloco, na ordem recomendada: **C**, depois F (G junto de F).
 
 ## Como retomar
 1. Ler este arquivo e a linha "Identidade visual" em `docs/mapa-do-codigo.md` (seção "Onde mexer para…").
@@ -19,6 +19,7 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 - `src/app/globals.css`: `luz-marca-forte`, `luz-marca-media`, `luz-marca-fio` (luz da marca); `vidro` (só no que flutua); `rotulo-secao`; `menu-ativo`, `menu-ativo-filete`, `menu-onda`.
 - `src/app/globals.css` (bloco E): `veu` e `veu-desfoque` (escuro atrás de gaveta e janela), `janela-entrar`, `menu-nascer`, `vidro-escuro` e `filete-aviso` (aviso do canto).
 - `src/app/tokens.css`: `--tempo-clique` (90 ms), `--tempo-surgir` (160 ms), `--tempo-janela` (220 ms), `--tempo-painel` (280 ms), curva `--ease-mola`.
+- `src/app/globals.css` (bloco D): `botao-icone` (+ `botao-icone-compacto`, `botao-icone-perigo`), `interruptor` (classe numa caixa de marcar de verdade) e a seta das listas (`select`, vale sozinha em toda lista). `src/app/tokens.css`: curva `--ease-salto`.
 - "Selecionado": navegação = `afundado` + `menu-ativo`; abas e filtros = vidro (`Abas`); temas = anel.
 
 ## A. Base (feito)
@@ -45,11 +46,15 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 Falta conferir em E: a sensação ao vivo da janela subindo e do menu nascendo; o aviso de alerta (cliente esperando) agora é âmbar, antes era vermelho; tudo no celular (janela vira folha de baixo).
 Ficaram de fora do E (decidir com o Mateus): `Popover` no PC, dica ⓘ (`Dica`), menu do card do Kanban e a barra "alterações não salvas" de Configurações continuam sólidos, sem vidro.
 
-## D. Botões e campos
-- [ ] 14. "Tecla" mais fina nos secundários (2 px); 4 px só no primário.
-- [ ] 15. Interruptor com mola no lugar das caixas de marcar de Configurações (cerca de 10).
-- [ ] 16. Listas de escolha com seta própria, com a aparência dos campos.
-- [ ] 17. Botões só de ícone iguais (fechar, lixeira, lápis): mesmo tamanho, raio e realce.
+## D. Botões e campos (feito, falta o teste do Mateus)
+- [x] 14. "Tecla" mais fina nos secundários (2 px); 4 px só no primário. O botão vermelho (perigo) também ficou fino.
+- [x] 15. Interruptor com mola no lugar das caixas de marcar de Configurações (11 na tela: dias da agenda, presença e fila, retorno com a loja fechada, recuperação, vendas, "Não é lead", instrução ativa, "Incluir fotos e plantas"). Continua sendo caixa de marcar por baixo (teclado e testes iguais).
+- [x] 16. Listas de escolha com seta própria, com a aparência dos campos (todas as listas do sistema, de uma vez).
+- [x] 17. Botões só de ícone iguais (fechar, lixeira, lápis, setas): 44 px, ou 32 px em lugar apertado; mesmo raio e realce; lixeira fica vermelha só com o mouse em cima.
+
+Falta conferir em D: a sensação ao vivo da bolinha do interruptor e da tecla fina; os temas de cor (a seta das listas é cinza fixo em todos); o celular.
+Ficaram de fora do D (decidir com o Mateus): caixas de **seleção** (escolher instruções para exportar, "confirmada" da medida, "entendi" do Zerar painel) continuam caixas, porque não são liga/desliga; a lista aberta continua a do navegador (só o campo fechado mudou); botões de ícone do card do Kanban, do Simulador, do visualizador de imagem, o clipe da conversa (tem borda) e o lápis do título da coluna não foram trocados.
+Visto de passagem, sem mexer: em Configurações > Geral, campos com largura própria (ex.: "Quem recebe o aviso", `w-48`) aparecem na largura toda. Conferir se é de antes.
 
 ## C. Cabeçalho e fundo
 - [ ] 11. Cabeçalho continua a luz do menu: brilho fraco à esquerda e linha de baixo em degradê (marca → transparente).

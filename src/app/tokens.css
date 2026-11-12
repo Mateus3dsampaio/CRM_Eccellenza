@@ -102,9 +102,10 @@
   --shadow-coluna-destaque: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px color-mix(in srgb, var(--color-etapa-apresentacao) 20%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-etapa-apresentacao) 40%, transparent);
   --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
   /* Tecla: lateral sólida + sombra ambiente + brilho no topo */
-  --shadow-tecla: 0 4px 0 var(--color-tecla-lado), 0 7px 8px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.07);
+  /* Só o primário tem a lateral alta (4 px); secundário e perigo são teclas finas (2 px), para o primário mandar na tela. */
+  --shadow-tecla: 0 2px 0 var(--color-tecla-lado), 0 4px 6px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.07);
   --shadow-tecla-pri: 0 4px 0 var(--color-marca-lado), 0 7px 10px color-mix(in srgb, var(--color-marca) 35%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3);
-  --shadow-tecla-perigo: 0 4px 0 var(--color-perigo-lado), 0 7px 10px rgb(204 59 55 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  --shadow-tecla-perigo: 0 2px 0 var(--color-perigo-lado), 0 4px 7px rgb(204 59 55 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.25);
   --shadow-tecla-afundada: 0 1px 0 var(--color-tecla-lado), 0 2px 3px rgb(0 0 0 / 0.4);
   /* Indicador "afundado" (aba/menu selecionado) */
   --shadow-afundado: inset 0 2px 1.5px rgb(0 0 0 / 0.5), inset 1px 0 1px rgb(0 0 0 / 0.3), inset -1px 0 1px rgb(0 0 0 / 0.3), inset 0 -1px 0 rgb(255 255 255 / 0.22);
@@ -118,6 +119,7 @@
 
   /* Animações */
   --ease-mola: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-salto: cubic-bezier(0.34, 1.56, 0.64, 1); /* mola que passa um pouco do ponto e volta (bolinha do interruptor) */
 
   --animate-surgir: surgir 160ms cubic-bezier(0.22, 1, 0.36, 1);
   --animate-brilho: brilho 1.4s ease-in-out infinite;

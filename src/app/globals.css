@@ -81,8 +81,87 @@ body {
   .tecla:active:not(:disabled),
   .tecla-pri:active:not(:disabled),
   .tecla-perigo:active:not(:disabled) {
-    transform: translateY(3px);
+    transform: translateY(1px);
     box-shadow: var(--shadow-tecla-afundada);
+  }
+  /* O primário é a tecla alta (4 px): afunda mais. */
+  .tecla-pri:active:not(:disabled) {
+    transform: translateY(3px);
+  }
+  /*
+   * Botão só de ícone (fechar, lixeira, lápis, setas): um tamanho, um raio e um realce.
+   * Padrão 44 px (área de toque); compacto 32 px para lugar apertado; perigo fica vermelho só com o mouse em cima.
+   */
+  .botao-icone {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--spacing-toque);
+    height: var(--spacing-toque);
+    border-radius: var(--radius-controle);
+    color: var(--color-texto-suave);
+    transition: background-color var(--tempo-clique) ease-out, color var(--tempo-clique) ease-out, transform var(--tempo-clique) ease-out;
+  }
+  .botao-icone-compacto {
+    width: 2rem;
+    height: 2rem;
+  }
+  .botao-icone:hover:not(:disabled) {
+    background-color: var(--color-superficie-suave);
+    color: var(--color-texto);
+  }
+  .botao-icone-perigo:hover:not(:disabled) {
+    background-color: var(--color-alerta-suave);
+    color: var(--color-alerta);
+  }
+  .botao-icone:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+  .botao-icone:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  /*
+   * Interruptor (liga/desliga de Configurações): continua sendo uma caixa de marcar de verdade, só muda a aparência.
+   * Trilho em baixo relevo; ligado acende na cor da marca e a bolinha corre com mola.
+   */
+  .interruptor {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 40px;
+    height: 24px;
+    border-radius: var(--radius-pilula);
+    border: 1px solid var(--color-borda-forte);
+    background-color: var(--color-fundo);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.5);
+    cursor: pointer;
+    transition: background-color var(--tempo-surgir) ease-out, border-color var(--tempo-surgir) ease-out, box-shadow var(--tempo-surgir) ease-out;
+  }
+  .interruptor::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, #fff, #c9d2dc);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.3);
+    transition: transform var(--tempo-janela) var(--ease-salto);
+  }
+  .interruptor:checked {
+    border-color: color-mix(in srgb, var(--color-marca) 70%, #000);
+    background-color: var(--color-marca);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.35), 0 0 12px -2px color-mix(in srgb, var(--color-marca) 70%, transparent);
+  }
+  .interruptor:checked::before {
+    transform: translateX(16px);
+  }
+  .interruptor:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   /* Selecionado/"ligado": baixo relevo na cor da marca (menu, abas e filtros). */
   .afundado {
@@ -211,6 +290,25 @@ body {
   textarea {
     font-size: 16px;
   }
+}
+
+/*
+ * Lista de escolha: seta própria no lugar da do navegador, com a aparência dos outros campos.
+ * Fora de camada de propósito, para valer mais que o espaçamento do campo (a seta precisa do espaço à direita).
+ * A cor da seta é fixa (cinza claro neutro): imagem em CSS não lê a cor do tema.
+ */
+select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b4bdc8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Menu lateral (tarefa 32): traço fino acima do primeiro item de cada grupo. */

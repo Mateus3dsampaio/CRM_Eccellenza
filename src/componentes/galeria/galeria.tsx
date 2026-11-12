@@ -170,7 +170,7 @@ export function Galeria() {
                       {i.nome}
                     </p>
                     {podeApagar && (
-                      <button type="button" onClick={() => setApagar(i)} className="inline-flex size-7 shrink-0 items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave" title="Apagar arquivo" aria-label={`Apagar ${i.nome}`}>
+                      <button type="button" onClick={() => setApagar(i)} className="botao-icone botao-icone-compacto botao-icone-perigo" title="Apagar arquivo" aria-label={`Apagar ${i.nome}`}>
                         <Trash2 className="size-3.5" aria-hidden />
                       </button>
                     )}

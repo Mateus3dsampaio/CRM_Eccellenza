@@ -172,7 +172,7 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg"
       >
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">{titulo}</h2>
-          <button onClick={aoFechar} className="inline-flex size-toque items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Fechar">
+          <button onClick={aoFechar} className="botao-icone" aria-label="Fechar">
             <X className="size-5" aria-hidden />
           </button>
         </div>

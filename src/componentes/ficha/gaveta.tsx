@@ -160,7 +160,7 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
           <Maximize2 className="size-4" aria-hidden />
           <span className="hidden sm:inline">Ficha completa</span>
         </Link>
-        <button onClick={aoFechar} className="inline-flex size-toque shrink-0 items-center justify-center rounded-controle text-texto-suave hover:bg-superficie-suave" aria-label="Fechar gaveta">
+        <button onClick={aoFechar} className="botao-icone" aria-label="Fechar gaveta">
           <X className="size-5" aria-hidden />
         </button>
       </header>

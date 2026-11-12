@@ -121,11 +121,11 @@ export function Agenda() {
           rotuloAria="Visão"
         />
         <div className="flex items-center gap-1">
-          <button onClick={() => navegar(-1)} className="inline-flex size-toque items-center justify-center rounded-controle hover:bg-superficie" aria-label="Anterior">
+          <button onClick={() => navegar(-1)} className="botao-icone" aria-label="Anterior">
             <ChevronLeft className="size-5" aria-hidden />
           </button>
           <button onClick={() => setData(null)} className="min-h-toque rounded-controle px-3 text-sm font-medium hover:bg-superficie">Hoje</button>
-          <button onClick={() => navegar(1)} className="inline-flex size-toque items-center justify-center rounded-controle hover:bg-superficie" aria-label="Próximo">
+          <button onClick={() => navegar(1)} className="botao-icone" aria-label="Próximo">
             <ChevronRight className="size-5" aria-hidden />
           </button>
         </div>
