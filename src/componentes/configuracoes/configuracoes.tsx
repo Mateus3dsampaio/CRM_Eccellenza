@@ -120,7 +120,8 @@ function ConfiguracoesComBarra() {
         <p className="mt-3 hidden px-3 text-xs text-texto-fraco md:block">Só o administrador vê esta tela.</p>
       </nav>
 
-      <div className="min-w-0 flex-1 space-y-4" role="tabpanel">
+      {/* A chave refaz o painel a cada seção: o conteúdo entra com um deslize curto (160 ms). */}
+      <div key={aba} className="min-w-0 flex-1 animate-surgir space-y-4" role="tabpanel">
       {aba === "vendas" ? (
         <VendasConfig />
       ) : aba === "recuperacao" ? (
@@ -157,7 +158,7 @@ function ConfiguracoesComBarra() {
       ) : (
         dados && (
           <>
-            <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <h2 className="mb-1 flex items-center gap-2 font-semibold">
                 <Shuffle className="size-4 text-texto-suave" aria-hidden /> Distribuição de leads
               </h2>
@@ -232,7 +233,7 @@ function PrazosDeEspera({ prazos, aoSalvar }: { prazos: PrazosEspera; aoSalvar: 
   });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <Timer className="size-4 text-texto-suave" aria-hidden /> Prazos de espera do cliente
       </h2>
@@ -278,7 +279,7 @@ function RegrasDaAgenda({ regras, aoSalvar }: { regras: RegrasAgenda; aoSalvar: 
   useBlocoSalvavel("agenda", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Regras da agenda
       </h2>
@@ -360,7 +361,7 @@ function PresencaEFila({ regras, aoSalvar }: { regras: RegrasPresenca; aoSalvar:
   );
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <UserCheck className="size-4 text-texto-suave" aria-hidden /> Presença e fila
       </h2>
@@ -410,7 +411,7 @@ function RetornoComLojaFechada({ regras, aoSalvar }: { regras: RegrasRetorno; ao
   useBlocoSalvavel("retorno-fechada", { mudou, salvar, descartar: () => setRascunho(regras) });
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <MessageSquareReply className="size-4 text-texto-suave" aria-hidden /> Retorno com a loja fechada
       </h2>

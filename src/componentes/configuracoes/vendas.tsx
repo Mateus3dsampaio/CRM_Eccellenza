@@ -64,7 +64,7 @@ export function VendasConfig() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <CalendarClock className="size-4 text-texto-suave" aria-hidden /> Próximo contato ao mover o card
         </h2>
@@ -87,7 +87,7 @@ export function VendasConfig() {
         {!exigir && <p className="mt-2 text-xs text-texto-fraco">Desligado: a janela deixa a data em branco, e os leads em Negociação sem data não aparecem em &quot;Retornos de hoje&quot;.</p>}
       </section>
 
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <div className="mb-1 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold">
             <XCircle className="size-4 text-texto-suave" aria-hidden /> Motivos de perda

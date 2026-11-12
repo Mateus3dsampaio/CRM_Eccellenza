@@ -32,7 +32,7 @@ export function MetasApresentacaoConfig({ equipe, metas, recarregar }: { equipe:
   }
 
   return (
-    <section className="mt-6 rounded-painel border border-borda bg-superficie p-5 shadow-painel" aria-label="Meta de apresentações">
+    <section className="mt-6 rounded-painel border border-borda bg-superficie p-5 luz-marca-fio" aria-label="Meta de apresentações">
       <h2 className="mb-1 flex items-center gap-2 font-semibold">
         <Presentation className="size-4 text-texto-suave" aria-hidden /> Meta de apresentações por mês
       </h2>

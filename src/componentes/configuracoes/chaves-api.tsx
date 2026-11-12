@@ -33,7 +33,7 @@ export function ChavesApi() {
         </p>
       )}
 
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <MessageSquareText className="size-4 text-texto-suave" aria-hidden /> Atendimento por texto
         </h2>
@@ -41,7 +41,7 @@ export function ChavesApi() {
         {bot ? <EscolhaDaIa bot={bot} chaves={chaves} aoMudar={recarregarBot} aoMudarChave={recarregarChaves} /> : <p className="text-sm text-texto-suave">Carregando…</p>}
       </section>
 
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <AudioLines className="size-4 text-texto-suave" aria-hidden /> Transcrição de áudio
         </h2>

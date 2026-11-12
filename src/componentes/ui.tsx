@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, Check, CheckCheck, Inbox, Info, Loader2, X, AlertTriangle } from "lucide-react";
+import { Bell, Check, CheckCheck, Info, Loader2, X, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { nomeEtiqueta } from "@/regras/etapas";
 import { COR_AVATAR, COR_ETIQUETA, juntar } from "./estilos";
+import { MenuEsfera } from "./menu-esfera";
 
 type Variante = "primario" | "secundario" | "fantasma" | "perigo";
 
@@ -124,10 +125,21 @@ export function Carregando({ linhas = 3 }: { linhas?: number }) {
   );
 }
 
+/** Carregamento de tela inteira: a mini esfera girando no meio. Só aparece se a carga demorar (classe carregando-tela). */
+export function CarregandoTela() {
+  return (
+    <div className="carregando-tela flex min-h-[50dvh] flex-1 flex-col items-center justify-center gap-3" aria-busy="true" aria-label="Carregando">
+      <MenuEsfera tamanho={56} />
+      <p className="rotulo-secao">Carregando</p>
+    </div>
+  );
+}
+
 export function EstadoVazio({ titulo, texto, icone }: { titulo: string; texto?: string; icone?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-borda-forte px-4 py-8 text-center">
-      {icone ?? <Inbox className="size-6 text-texto-fraco" aria-hidden />}
+      {/* Sem ícone próprio: a esfera de pontos da marca, esmaecida e parada. */}
+      {icone ?? <MenuEsfera tamanho={36} parada className="opacity-45" />}
       <p className="text-sm font-medium text-texto-suave">{titulo}</p>
       {texto && <p className="text-xs text-texto-fraco">{texto}</p>}
     </div>

@@ -45,7 +45,7 @@ export function ExportarDesempenho({ equipe, periodoPadrao }: Props) {
   }
 
   return (
-    <section className="space-y-4 rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="space-y-4 rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <div>
         <h2 className="flex items-center gap-2 font-semibold">
           <FileArchive className="size-4 text-texto-suave" aria-hidden /> Exportar desempenho do vendedor

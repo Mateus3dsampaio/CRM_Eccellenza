@@ -191,7 +191,7 @@ test("tarefas 33 e 39: coluna com vários atrasos só destaca um card crítico",
   await expect(coluna.locator("[data-critico]")).toHaveCount(1);
   await expect(coluna.getByRole("group", { name: "Roberto Alves" }).locator("[data-acao]")).toHaveAttribute("data-cor", "vermelho");
   // Nada no card pisca: só o crítico pulsa.
-  await expect(coluna.locator(".animate-piscar")).toHaveCount(0);
+  await expect(coluna.locator(".pulso-critico")).toHaveCount(1);
   await page.waitForTimeout(400);
   await coluna.screenshot({ path: `${PASTA}/${info.project.name}-cards-espera.png` });
 });

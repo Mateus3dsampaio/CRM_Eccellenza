@@ -20,9 +20,10 @@ const BASE = Array.from({ length: PONTOS }, (_, i) => {
 /**
  * Mini esfera de pontos do topo do menu lateral: irmã leve da esfera do login, em canvas 2D (sem Three.js, que só baixa no login).
  * Gira devagar; com "reduzir movimento" fica parada. A cor vem do tema (`--color-marca-texto`) e acompanha a troca de tema.
+ * `parada`: desenha uma vez e não gira (estado vazio).
  * `impulso`: quando este valor muda (ex.: o caminho da tela), a esfera dá um giro rápido que se desfaz em meio segundo.
  */
-export function MenuEsfera({ tamanho = 36, className, impulso }: { tamanho?: number; className?: string; impulso?: string | number }) {
+export function MenuEsfera({ tamanho = 36, className, impulso, parada = false }: { tamanho?: number; className?: string; impulso?: string | number; parada?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const extra = useRef(0);
   const impulsoAnterior = useRef(impulso);
@@ -91,7 +92,7 @@ export function MenuEsfera({ tamanho = 36, className, impulso }: { tamanho?: num
     const iniciar = () => {
       cancelAnimationFrame(quadro);
       ultimo = 0;
-      if (parado.matches) desenhar();
+      if (parada || parado.matches) desenhar();
       else quadro = requestAnimationFrame(passo);
     };
 
@@ -101,7 +102,7 @@ export function MenuEsfera({ tamanho = 36, className, impulso }: { tamanho?: num
     // Troca de tema: o atributo `data-tema` muda no <html>.
     const obs = new MutationObserver(() => {
       lerCor();
-      if (parado.matches) desenhar();
+      if (parada || parado.matches) desenhar();
     });
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-tema"] });
     return () => {
@@ -109,7 +110,7 @@ export function MenuEsfera({ tamanho = 36, className, impulso }: { tamanho?: num
       parado.removeEventListener("change", iniciar);
       obs.disconnect();
     };
-  }, [tamanho]);
+  }, [tamanho, parada]);
 
   return <canvas ref={ref} aria-hidden className={className} style={{ width: tamanho, height: tamanho }} />;
 }

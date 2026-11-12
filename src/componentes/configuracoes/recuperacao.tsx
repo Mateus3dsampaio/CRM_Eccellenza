@@ -33,7 +33,7 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
 
   return (
     <div className="space-y-4">
-      <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <MessageCircleReply className="size-4 text-texto-suave" aria-hidden /> Recuperação de leads
         </h2>
@@ -47,7 +47,7 @@ export function RecuperacaoDeLeads({ regras, aoSalvar }: { regras: RegrasRecuper
         {desligado && <p className="mt-2 text-xs text-texto-suave">Desligada: nenhuma mensagem sai e nenhum lead é movido por esta regra.</p>}
       </section>
 
-      <section className={juntar("rounded-painel border border-borda bg-superficie p-5 shadow-painel", desligado && "opacity-60")}>
+      <section className={juntar("rounded-painel border border-borda bg-superficie p-5 luz-marca-fio", desligado && "opacity-60")}>
         <h3 className="mb-2 text-sm font-semibold">1ª mensagem</h3>
         <label className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <span>Enviar após</span>

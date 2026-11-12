@@ -185,6 +185,41 @@ body {
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 9%, transparent), transparent 56px);
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 32%, transparent), var(--shadow-painel);
   }
+  /* "Hoje" na Agenda: a coluna do dia acende com a luz da marca (brilho de cima e filete no topo). Parado. */
+  .luz-marca-hoje {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 38%, transparent), transparent 110%);
+    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-marca-texto) 80%, transparent), inset 0 12px 16px -12px color-mix(in srgb, var(--color-marca-texto) 55%, transparent);
+  }
+  /*
+   * Pulsos de atenção: só a opacidade de uma camada por cima se mexe (leve para o navegador); a sombra em si fica parada.
+   * pulso-critico = card vermelho mais antigo da coluna (brilho por dentro; o card corta o que sai dele, então o halo de fora é fixo, em shadow-critico).
+   * pulso-chamar = botão Retornos com retorno de hoje ou atrasado (halo âmbar por fora).
+   */
+  .pulso-critico::after,
+  .pulso-chamar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    animation: pulsar 1s ease-in-out infinite;
+  }
+  .pulso-critico::after {
+    z-index: 5;
+    background-color: color-mix(in srgb, var(--color-alerta-vivo) 12%, transparent);
+    box-shadow: inset 0 0 22px 4px color-mix(in srgb, var(--color-alerta-vivo) 80%, transparent);
+  }
+  .pulso-chamar {
+    position: relative;
+  }
+  .pulso-chamar::after {
+    box-shadow: 0 0 22px 6px color-mix(in srgb, var(--color-aviso) 85%, transparent), inset 0 0 10px 0 color-mix(in srgb, var(--color-aviso) 35%, transparent);
+  }
+  /* Carregamento de tela inteira: a mini esfera girando no meio; só aparece se demorar (não pisca em carga rápida). */
+  .carregando-tela {
+    animation: veu-entrar var(--tempo-janela) ease-out 250ms both;
+  }
   /*
    * Barra de cima: continua a luz do menu lateral. Brilho fraco que entra pela esquerda (na camada de trás, junto do desfoque)
    * e a linha de baixo em degradê, da cor da marca até sumir, por cima da borda.
@@ -308,6 +343,18 @@ body {
     box-shadow: 0 0 12px color-mix(in srgb, var(--color-marca-texto) 70%, transparent);
     opacity: 0;
     animation: menu-onda 400ms var(--ease-mola) 170ms both;
+  }
+}
+@keyframes pulsar {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+/* Com "reduzir movimento" o pulso vira um brilho parado (a regra geral deixaria a animação piscando rápido). */
+@media (prefers-reduced-motion: reduce) {
+  .pulso-critico::after,
+  .pulso-chamar::after {
+    animation: none !important;
+    opacity: 0.6;
   }
 }
 @keyframes veu-entrar {

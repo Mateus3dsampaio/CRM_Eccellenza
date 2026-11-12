@@ -5,9 +5,9 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 
 ## Onde paramos (12/11/2026)
 - Branch: `feat/visual-identidade` (no GitHub, **sem PR aberto**).
-- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026), **E**, **D** e **C**.
-- **Aguardando o teste do Mateus** dos blocos E, D e C.
-- Próximo bloco: **F** (G junto de F).
+- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026), **E**, **D**, **C**, **F** e **G**.
+- **Aguardando o teste do Mateus** dos blocos E, D, C, F e G.
+- Blocos todos feitos. Falta: ajustes do teste, as "pequenas sobras" e abrir o PR (com autorização).
 
 ## Como retomar
 1. Ler este arquivo e a linha "Identidade visual" em `docs/mapa-do-codigo.md` (seção "Onde mexer para…").
@@ -64,17 +64,20 @@ Visto de passagem, sem mexer: em Configurações > Geral, campos com largura pr�
 
 Falta conferir em C: se a luz do fundo está leve demais ou de menos; se o "Esperando" e o "Retornos" continuam chamando atenção sem o fundo cheio (antes eram vermelho e âmbar sólidos); os temas de cor; o celular.
 
-## F. Tela por tela
-- [ ] 23. Painel: fio de luz no topo dos cartões e números contando (600 ms, só ao abrir).
-- [ ] 24. Configurações: fio de luz nos cartões e troca de seção com deslize curto (160 ms).
-- [ ] 25. Kanban: nenhuma animação nova; só fundo e cabeçalho herdam a luz (card da tarefa 39 fica como está).
-- [ ] 26. Conversa, Agenda e Galeria: sem animação nova; só o "hoje" da Agenda ganha a luz da marca.
-- [ ] 27. Estado vazio e carregamento com os pontos (esfera esmaecida parada; mini esfera girando no carregamento de tela inteira).
-- [ ] 28. Páginas públicas (Privacidade, Exclusão de dados) com a cara do login: fundo parado e nome em caixa alta. Não mexer no texto.
+## F. Tela por tela (feito, falta o teste do Mateus)
+- [x] 23. Painel: fio de luz no topo dos cartões e números contando (600 ms, só ao abrir). Contam os valores em reais, as quantidades e as porcentagens; os tempos de resposta ficam parados (contando, a unidade ficaria trocando de "s" para "min").
+- [x] 24. Configurações: fio de luz nos cartões e troca de seção com deslize curto (160 ms).
+- [x] 25. Kanban: nenhuma animação nova; fundo e cabeçalho já herdam a luz (blocos C). Card da tarefa 39 como está.
+- [x] 26. Conversa, Agenda e Galeria: sem animação nova; o "hoje" da Agenda ganhou a luz da marca (`luz-marca-hoje` no cabeçalho do dia).
+- [x] 27. Estado vazio com a esfera de pontos esmaecida e parada (onde não há ícone próprio: coluna vazia do Kanban e Galeria). Carregamento de tela inteira (`CarregandoTela`): mini esfera girando, só aparece se demorar; usado na ficha completa do lead.
+- [x] 28. Páginas públicas (Privacidade, Exclusão de dados) com a cara do login: fundo parado, nome em caixa alta com a esfera e texto num cartão de vidro (`PaginaPublica`). Texto intocado.
 
-## G. Retirar ou aliviar (junto de F)
-- [ ] 29. Refazer o pulso do card vermelho e do botão Retornos (`respirar`/`chamar`) só com opacidade.
-- [ ] 30. Apagar a animação `piscar` dos tokens (nenhuma tela usa).
+Falta conferir em F: a sensação ao vivo dos números contando e do deslize das seções; os temas de cor; o celular.
+Ficaram de fora do F (decidir com o Mateus): Arquivados e Simulador mantêm o ícone próprio no estado vazio (caixa e celular), sem a esfera; os esqueletos de carregamento das telas (`Carregando`) continuam; não foi criado carregamento na troca de tela (`loading.tsx`), porque a tela ficaria em branco a cada clique no menu.
+
+## G. Retirar ou aliviar (feito, falta o teste do Mateus)
+- [x] 29. Pulso do card vermelho e do botão Retornos refeito só com opacidade (`pulso-critico` e `pulso-chamar`). **Mudou a aparência do card crítico:** o halo vermelho de fora agora fica parado (mais fraco) e o que pulsa é um brilho por dentro do card; antes o halo de fora é que crescia. O botão Retornos continua com o halo âmbar de fora pulsando, sem o clarão do botão. Com "reduzir movimento" os dois ficam com brilho parado.
+- [x] 30. Animação `piscar` apagada dos tokens (junto de `respirar` e `chamar`, que deram lugar aos pulsos novos).
 
 ## Pequenas sobras
 - [ ] Orientação `vertical` do `Entalhe` (`src/componentes/entalhe/`) ficou sem uso depois do bloco B: decidir com o Mateus se remove.

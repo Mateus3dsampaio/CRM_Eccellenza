@@ -162,7 +162,7 @@ export function InstrucoesAtendimento() {
           </Botao>
         </div>
       </Modal>
-      <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+      <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
         <h2 className="font-semibold">Instruções de atendimento do bot</h2>
         <p className="mt-1 text-sm text-texto-suave">
           O bot segue as instruções numeradas, na ordem da lista, e depois o Manual do CRM (como preencher a ficha e usar as ferramentas). Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.

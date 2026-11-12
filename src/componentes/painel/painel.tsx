@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Download, FileArchive, Minus, RotateCcw } from "lucide-react";
 import { MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
 import { ATALHOS_PAINEL, type AtalhoPainel } from "@/regras/painel";
@@ -12,6 +12,7 @@ import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, Modal, classeEntrada } from "../ui";
 import { ExportarDesempenho } from "../configuracoes/exportar-desempenho";
 import { useUsuario } from "../usuario";
+import { NumeroContando } from "./numero-contando";
 
 interface DadosPainel {
   de: string;
@@ -77,6 +78,14 @@ export function Painel() {
   const de = filtro.atalho ? (dados?.de ?? "") : filtro.de;
   const ate = filtro.atalho ? (dados?.ate ?? "") : filtro.ate;
   const mudarData = (campo: "de" | "ate", valor: string) => setFiltro({ ...filtro, atalho: null, de, ate, [campo]: valor });
+  // Os números contam de zero só na abertura da tela; em troca de filtro e atualização automática mudam direto.
+  const [contarNumeros, setContarNumeros] = useState(true);
+  const chegou = dados !== null;
+  useEffect(() => {
+    if (!chegou) return;
+    const t = setTimeout(() => setContarNumeros(false), 700);
+    return () => clearTimeout(t);
+  }, [chegou]);
   const maiorFunil = Math.max(1, ...(dados?.funil.map((f) => f.total) ?? [1]));
   // Exportar desempenho (tarefa 30): saiu de Configurações; é uma ação do painel, só do admin. Dados só ao abrir a janela.
   const [exportar, setExportar] = useState(false);
@@ -188,17 +197,17 @@ export function Painel() {
         <>
           <h2 className="-mb-1 rotulo-secao">Resultado</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <p className="text-sm text-texto-suave">Total em negociação</p>
-              <p className="mt-1 text-4xl font-semibold tabular-nums">{formatarReais(dados.vendas.emNegociacao.total)}</p>
+              <p className="mt-1 text-4xl font-semibold tabular-nums"><NumeroContando valor={dados.vendas.emNegociacao.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Apresentação agendada ou Negociação, agora
                 {dados.vendas.emNegociacao.semValor > 0 && ` · ${dados.vendas.emNegociacao.semValor} sem valor informado`}
               </p>
             </div>
-            <div className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
               <p className="text-sm text-texto-suave">Total vendido</p>
-              <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}>{formatarReais(dados.vendas.vendido.total)}</p>
+              <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}><NumeroContando valor={dados.vendas.vendido.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
               </p>
@@ -211,9 +220,9 @@ export function Painel() {
             {indicadoresDoPeriodo.map((i) => {
               const v = variacao(i.tipo, i.atual, i.anterior);
               return (
-                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                   <p className="text-sm text-texto-suave">{i.nome}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{i.atual.toLocaleString("pt-BR")}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={i.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
                     {v.texto}
@@ -221,7 +230,7 @@ export function Painel() {
                 </div>
               );
             })}
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Motivos de perda</p>
               {dados.vendas.perdidos.quantidade === 0 ? (
                 <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
@@ -276,9 +285,9 @@ export function Painel() {
                 ["Foram para Perdido (automático)", dados.recuperacao.perdidos, null],
               ] as const
             ).map(([nome, valor, de]) => (
-              <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{nome}</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{valor.toLocaleString("pt-BR")}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={valor} animar={contarNumeros} /></p>
                 {de !== null && <p className="mt-1 text-xs text-texto-fraco">de {de.toLocaleString("pt-BR")} {de === 1 ? "mensagem enviada" : "mensagens enviadas"}</p>}
               </div>
             ))}
@@ -292,9 +301,9 @@ export function Painel() {
                 ["Apresentações que viraram venda", dados.conversoes.apresentacoesFechadas, dados.conversoes.apresentacoes, "apresentação marcada no período"],
               ] as const
             ).map(([titulo, parte, todo, base]) => (
-              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{titulo}</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(parte, todo)}</p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{todo ? <NumeroContando valor={Math.round((parte / todo) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
                   {todo ? `${parte.toLocaleString("pt-BR")} de ${todo.toLocaleString("pt-BR")} ${todo === 1 ? "lead" : "leads"} com ${base}` : `nenhum lead com ${base}`}
                 </p>
@@ -306,9 +315,9 @@ export function Painel() {
             {faltaram && (() => {
               const v = variacao(faltaram.tipo, faltaram.atual, faltaram.anterior);
               return (
-                <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+                <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                   <p className="text-sm text-texto-suave">{faltaram.nome}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{faltaram.atual.toLocaleString("pt-BR")}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={faltaram.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
                     {v.texto}
@@ -321,9 +330,9 @@ export function Painel() {
 
           <h2 className="-mb-1 rotulo-secao">Janela de 24h da Meta (agora)</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Leads com a janela aberta</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums">{taxa(dados.janelas.abertas, dados.janelas.total)}</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{dados.janelas.total ? <NumeroContando valor={Math.round((dados.janelas.abertas / dados.janelas.total) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.total ? `${dados.janelas.abertas.toLocaleString("pt-BR")} de ${dados.janelas.total.toLocaleString("pt-BR")} ${dados.janelas.total === 1 ? "lead ativo" : "leads ativos"} (só o cliente reabre a janela)` : "nenhum lead ativo"}
               </p>
@@ -331,9 +340,9 @@ export function Painel() {
                 <div className="h-2 rounded-pilula bg-sucesso transition-[width] duration-300" style={{ width: `${dados.janelas.total ? (dados.janelas.abertas / dados.janelas.total) * 100 : 0}%` }} />
               </div>
             </div>
-            <div className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <p className="text-sm text-texto-suave">Janelas fechando em menos de 2 h</p>
-              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}>{dados.janelas.fechando.toLocaleString("pt-BR")}</p>
+              <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}><NumeroContando valor={dados.janelas.fechando} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.atencao.toLocaleString("pt-BR")} {dados.janelas.atencao === 1 ? "lead" : "leads"} com 2 a 6 h sobrando
               </p>
@@ -350,7 +359,7 @@ export function Painel() {
                 ["Resposta do bot", dados.tempos.bot, "só quando o bot respondeu primeiro"],
               ] as const
             ).map(([titulo, t, dica]) => (
-              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+              <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
                 <p className="text-sm text-texto-suave">{titulo}</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarDuracao(t.mediaSegundos)}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
@@ -368,7 +377,7 @@ export function Painel() {
 
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <h2 className="font-semibold">Funil</h2>
               <p className="mb-4 text-xs text-texto-fraco">Leads que chegaram a cada etapa no período e a conversão entre etapas.</p>
               <ol className="space-y-3">
@@ -388,7 +397,7 @@ export function Painel() {
                 ))}
               </ol>
             </section>
-            <section className="rounded-painel border border-borda bg-superficie p-4 shadow-painel">
+            <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
               <h2 className="mb-4 font-semibold">Apresentações agendadas por consultor</h2>
               <ul className="space-y-3">
                 {dados.apresentacoesPorConsultor.map((c) => (

@@ -70,8 +70,8 @@ export function BotaoRetornos() {
         title={rotulo}
         className={juntar(
           "contador-topo gap-1.5 px-2.5 sm:gap-2 sm:px-3",
-          // Com retorno para hoje ou atrasado, o halo âmbar continua pulsando para chamar atenção (pedido do Mateus, tarefa 22).
-          urgentes > 0 && "animate-chamar",
+          // Com retorno para hoje ou atrasado, o halo âmbar continua pulsando para chamar atenção (pedido do Mateus, tarefa 22). Só opacidade (pulso-chamar, globals.css).
+          urgentes > 0 && "pulso-chamar",
         )}
       >
         {/* Formato igual nos três contadores do topo; a cor fica só no ícone e no número. */}

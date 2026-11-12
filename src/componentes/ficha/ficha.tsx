@@ -10,7 +10,7 @@ import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
 import { Abas } from "../entalhe/abas";
 import { COR_ETAPA, juntar } from "../estilos";
-import { Avatar, Botao, Carregando, EstadoErro, Modal, Popover, Sino, classeEntrada } from "../ui";
+import { Avatar, Botao, CarregandoTela, EstadoErro, Modal, Popover, Sino, classeEntrada } from "../ui";
 import { useDefinirTituloTela } from "../titulo-tela";
 import { usePode } from "../usuario";
 import { AvisoMidias } from "../midias/aviso-midias";
@@ -63,7 +63,7 @@ function lerRecolhida(): boolean {
 
 export function Ficha({ id }: { id: string }) {
   const { dados: ficha, erro, carregando, recarregar } = useDados<FichaLead>(`/api/leads/${id}`);
-  if (carregando && !ficha) return <div className="mx-auto w-full max-w-6xl p-4"><Carregando linhas={4} /></div>;
+  if (carregando && !ficha) return <CarregandoTela />;
   if (!ficha) return <div className="mx-auto w-full max-w-6xl p-4"><EstadoErro texto={erro ?? "Lead não encontrado. Ele pode ter sido excluído."} aoTentar={recarregar} /></div>;
   return <FichaCarregada ficha={ficha} id={id} recarregar={recarregar} />;
 }

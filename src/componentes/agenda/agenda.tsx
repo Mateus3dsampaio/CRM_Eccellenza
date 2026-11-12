@@ -175,7 +175,7 @@ export function Agenda() {
                 {dias.map((d) => {
                   const ehHoje = chaveDia(d) === hojeChave;
                   return (
-                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "bg-marca-suave text-marca-texto" : "bg-superficie")}>
+                    <th key={d.toISOString()} aria-current={ehHoje ? "date" : undefined} className={juntar("sticky top-0 z-10 border-b border-l border-borda p-2 text-left font-semibold", ehHoje ? "luz-marca-hoje bg-marca-suave text-marca-texto" : "bg-superficie")}>
                       <span className="capitalize">{formatarDiaSemana(d)}</span> <span className={ehHoje ? "font-semibold" : "font-normal text-texto-suave"}>{formatarData(d).slice(0, 5)}</span>
                       {ehHoje && <span className="ml-1.5 rounded-pilula bg-marca px-2 py-0.5 text-[11px] font-medium text-sobre-marca">Hoje</span>}
                     </th>

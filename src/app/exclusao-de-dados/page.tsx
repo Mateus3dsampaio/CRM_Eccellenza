@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PaginaPublica } from "@/componentes/pagina-publica";
 import { secoesExclusao } from "@/regras/privacidade";
 
 export const metadata: Metadata = { title: "Como excluir seus dados – Eccellenza" };
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic"; // lê as variáveis de ambiente quando 
 export default function PaginaExclusaoDeDados() {
   const rascunho = process.env.PRIVACIDADE_APROVADA !== "1";
   return (
-    <main className="mx-auto min-h-dvh max-w-3xl px-4 py-10 sm:px-6">
+    <PaginaPublica>
       <h1 className="text-2xl font-semibold tracking-tight">Como excluir seus dados</h1>
       <p className="mt-1 text-sm text-texto-suave">Eccellenza – móveis planejados Italínea, Juazeiro do Norte (CE)</p>
       {rascunho && (
@@ -34,6 +35,6 @@ export default function PaginaExclusaoDeDados() {
           Ver a política de privacidade
         </Link>
       </p>
-    </main>
+    </PaginaPublica>
   );
 }

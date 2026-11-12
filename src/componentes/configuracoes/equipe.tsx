@@ -61,7 +61,7 @@ export function EquipeConfig({ equipe, recarregar }: { equipe: Membro[]; recarre
   const consultoresAtivos = equipe.filter((u) => u.perfil === "consultor" && u.ativo);
 
   return (
-    <section className="rounded-painel border border-borda bg-superficie p-5 shadow-painel">
+    <section className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold">
           <Users className="size-4 text-texto-suave" aria-hidden /> Equipe
