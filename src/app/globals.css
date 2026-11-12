@@ -112,6 +112,39 @@ body {
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
   }
+  /* Vidro escuro: o aviso do canto (toast), que precisa se destacar do que está atrás. */
+  .vidro-escuro {
+    background-color: color-mix(in srgb, var(--color-fundo) 86%, transparent);
+  }
+  /* Véu: o escuro atrás da gaveta e das janelas. Na janela soma o desfoque (veu-desfoque); na gaveta não, para não pesar no uso do dia a dia. */
+  .veu {
+    background-color: color-mix(in srgb, var(--color-fundo) 70%, transparent);
+  }
+  .veu-desfoque {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    animation: veu-entrar var(--tempo-surgir) ease-out both;
+  }
+  /* Janela entra como o cartão do login: sobe 12 px na curva de mola. */
+  .janela-entrar {
+    animation: janela-entrar var(--tempo-janela) var(--ease-mola) both;
+  }
+  /* Menu do topo nasce do canto do botão que o abriu (canto de cima, à direita). */
+  .menu-nascer {
+    transform-origin: top right;
+    animation: menu-nascer var(--tempo-surgir) var(--ease-mola) both;
+  }
+  /* Filete colorido na borda esquerda do aviso; a cor vem do texto (text-sucesso, text-alerta, text-aviso). */
+  .filete-aviso {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: currentColor;
+    box-shadow: 0 0 8px 0 currentColor;
+  }
   /* Rótulo de seção: caixa alta pequena e espaçada, como o "ECCELLENZA" do login. */
   .rotulo-secao {
     font-size: 0.75rem;
@@ -153,6 +186,18 @@ body {
     opacity: 0;
     animation: menu-onda 400ms var(--ease-mola) 170ms both;
   }
+}
+@keyframes veu-entrar {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes janela-entrar {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-nascer {
+  from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes menu-onda {
   from { transform: scale(0.35); opacity: 0.95; }

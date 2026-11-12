@@ -4,20 +4,21 @@ Plano aprovado pelo Mateus em 11/11/2026. **Só layout e visual: nenhuma funçã
 Sem animação que deixe lento o uso do dia a dia; animação só onde fica legal (telas de pouco uso).
 
 ## Onde paramos (12/11/2026)
-- Branch: `feat/visual-identidade` (no GitHub, **sem PR aberto**). Commit `51bad06`.
-- Feitos: blocos **A** e **B**.
-- **Aguardando o teste do Mateus** dos blocos A e B antes de seguir.
-- Próximo bloco, na ordem recomendada: **E**, depois D, C e F (G junto de F).
+- Branch: `feat/visual-identidade` (no GitHub, **sem PR aberto**).
+- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026) e **E**.
+- **Aguardando o teste do Mateus** do bloco E antes de seguir.
+- Próximo bloco, na ordem recomendada: **D**, depois C e F (G junto de F).
 
 ## Como retomar
 1. Ler este arquivo e a linha "Identidade visual" em `docs/mapa-do-codigo.md` (seção "Onde mexer para…").
-2. Perguntar ao Mateus o resultado do teste de A e B e ajustar o que ele apontar.
+2. Perguntar ao Mateus o resultado do teste do último bloco feito e ajustar o que ele apontar.
 3. Seguir um bloco por vez, parando para ele testar. Marcar `[x]` aqui ao concluir.
 4. Ao terminar tudo: abrir o PR da branch para a `main` (só com autorização).
 
 ## Peças já prontas (usar, não recriar)
 - `src/app/globals.css`: `luz-marca-forte`, `luz-marca-media`, `luz-marca-fio` (luz da marca); `vidro` (só no que flutua); `rotulo-secao`; `menu-ativo`, `menu-ativo-filete`, `menu-onda`.
-- `src/app/tokens.css`: `--tempo-clique` (90 ms), `--tempo-surgir` (160 ms), `--tempo-painel` (280 ms), curva `--ease-mola`.
+- `src/app/globals.css` (bloco E): `veu` e `veu-desfoque` (escuro atrás de gaveta e janela), `janela-entrar`, `menu-nascer`, `vidro-escuro` e `filete-aviso` (aviso do canto).
+- `src/app/tokens.css`: `--tempo-clique` (90 ms), `--tempo-surgir` (160 ms), `--tempo-janela` (220 ms), `--tempo-painel` (280 ms), curva `--ease-mola`.
 - "Selecionado": navegação = `afundado` + `menu-ativo`; abas e filtros = vidro (`Abas`); temas = anel.
 
 ## A. Base (feito)
@@ -34,14 +35,15 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 - [x] 9. Esfera dá um giro rápido na troca de tela.
 - [x] 10. Celular: bolinha da barra de baixo mantida; "E" do topo virou a mini esfera.
 
-Falta conferir em A e B: a sensação do movimento ao vivo (mola, onda, giro) e a esfera no topo do celular.
+## E. Janelas, menus e avisos (feito, falta o teste do Mateus)
+- [x] 18. Fundo das janelas escuro com desfoque, o mesmo véu da gaveta (`veu` + `veu-desfoque` no `Modal`; a folha do `Popover` no celular usa o mesmo véu, sem desfoque).
+- [x] 19. Janela em vidro, entrando como o cartão do login (sobe 12 px com mola, 220 ms).
+- [x] 20. Menus do topo (Retornos, Janelas, Esperando, menu do usuário) em vidro, nascendo do canto do botão (160 ms). O desfoque do cabeçalho passou para uma camada atrás (`before`), senão o vidro dos menus não desfocava a tela.
+- [x] 21. Aviso (toast) em vidro escuro com filete colorido à esquerda (verde = certo, vermelho = erro, âmbar = alerta). O botão do aviso ("Abrir") ficou na cor da marca nos três.
+- [x] 22. Gaveta do lead: fio de luz no cabeçalho; o movimento atual ficou. O véu da gaveta não tem desfoque de propósito (uso do dia a dia).
 
-## E. Janelas, menus e avisos (próximo)
-- [ ] 18. Fundo das janelas escuro com desfoque, o mesmo véu da gaveta (hoje é claro, leitoso).
-- [ ] 19. Janela em vidro, entrando como o cartão do login (sobe 12 px com mola, 220 ms).
-- [ ] 20. Menus do topo (Retornos, Janelas, Esperando, menu do usuário) em vidro, nascendo do canto do botão (160 ms).
-- [ ] 21. Aviso (toast) em vidro escuro com filete colorido à esquerda (verde, vermelho, âmbar). Fica em `src/componentes/dados.tsx`.
-- [ ] 22. Gaveta do lead: só a luz no topo; o movimento atual fica. Fica em `src/componentes/ficha/gaveta.tsx`.
+Falta conferir em E: a sensação ao vivo da janela subindo e do menu nascendo; o aviso de alerta (cliente esperando) agora é âmbar, antes era vermelho; tudo no celular (janela vira folha de baixo).
+Ficaram de fora do E (decidir com o Mateus): `Popover` no PC, dica ⓘ (`Dica`), menu do card do Kanban e a barra "alterações não salvas" de Configurações continuam sólidos, sem vidro.
 
 ## D. Botões e campos
 - [ ] 14. "Tecla" mais fina nos secundários (2 px); 4 px só no primário.

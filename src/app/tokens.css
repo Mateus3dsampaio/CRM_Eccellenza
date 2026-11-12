@@ -169,10 +169,12 @@
 /*
  * Três tempos de movimento, todos na curva do login (--ease-mola): clique (tecla afunda), surgir (menu, dica, aviso)
  * e painel (gaveta, menu lateral, indicador). Movimento novo usa um destes, nunca um número solto.
+ * A janela (Modal) tem o seu, entre o surgir e o painel: sobe como o cartão do login.
  */
 :root {
   --tempo-clique: 90ms;
   --tempo-surgir: 160ms;
+  --tempo-janela: 220ms;
   --tempo-painel: 280ms;
 }
 

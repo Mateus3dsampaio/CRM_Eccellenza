@@ -161,14 +161,14 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg"
   }, [aberto]);
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-texto/40 p-0 sm:items-center sm:p-4" onMouseDown={aoFechar}>
+    <div className="veu veu-desfoque fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" onMouseDown={aoFechar}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
         onMouseDown={(e) => e.stopPropagation()}
-        className={juntar("max-h-[92dvh] w-full animate-surgir overflow-y-auto rounded-t-painel bg-superficie p-5 shadow-flutuante max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-painel", largura)}
+        className={juntar("vidro janela-entrar max-h-[92dvh] w-full overflow-y-auto rounded-t-painel p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-painel", largura)}
       >
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">{titulo}</h2>
@@ -243,7 +243,7 @@ export function Popover({
       {aberto && (
         <>
           {/* Celular: fundo escurecido atrás da folha. */}
-          {typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[49] bg-texto/40 sm:hidden" aria-hidden onMouseDown={aoFechar} />, document.body)}
+          {typeof document !== "undefined" && createPortal(<div className="veu fixed inset-0 z-[49] sm:hidden" aria-hidden onMouseDown={aoFechar} />, document.body)}
           <div
             role="dialog"
             aria-label={titulo}

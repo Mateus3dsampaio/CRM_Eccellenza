@@ -65,7 +65,7 @@ export function MenuUsuario() {
         {usuario.nome.slice(0, 1)}
       </button>
       {aberto && (
-        <div role="menu" aria-label="Menu do usuário" className="absolute right-0 top-full z-50 mt-2 w-64 animate-surgir rounded-card border border-borda bg-superficie p-1.5 shadow-flutuante">
+        <div role="menu" aria-label="Menu do usuário" className="vidro menu-nascer absolute right-0 top-full z-50 mt-2 w-64 rounded-card p-1.5">
           <div className="px-3 py-2">
             <p className="truncate text-sm font-semibold">{usuario.nome}</p>
             <p className="text-xs text-texto-fraco">{perfil}</p>

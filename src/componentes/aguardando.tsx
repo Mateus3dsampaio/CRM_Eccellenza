@@ -57,7 +57,7 @@ export function BotaoAguardando() {
         <div
           role="dialog"
           aria-label="Leads aguardando"
-          className="fixed inset-x-3 top-[calc(var(--spacing-topo)+0.5rem)] z-50 animate-surgir rounded-card border border-borda bg-superficie shadow-flutuante sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96"
+          className="vidro menu-nascer fixed inset-x-3 top-[calc(var(--spacing-topo)+0.5rem)] z-50 rounded-card sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96"
         >
           <p className="border-b border-borda px-4 py-3 text-sm font-semibold">
             {total === 0 ? "Ninguém esperando resposta" : `${total} ${total === 1 ? "lead aguardando" : "leads aguardando"} ${ehAdmin ? "um consultor" : "você"}`}
