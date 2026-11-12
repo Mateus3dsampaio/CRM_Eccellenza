@@ -5,9 +5,9 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 
 ## Onde paramos (12/11/2026)
 - Branch: `feat/visual-identidade` (no GitHub, **sem PR aberto**).
-- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026), **E** e **D**.
-- **Aguardando o teste do Mateus** dos blocos E e D.
-- Próximo bloco, na ordem recomendada: **C**, depois F (G junto de F).
+- Feitos: blocos **A**, **B** (aprovados pelo Mateus em 12/11/2026), **E**, **D** e **C**.
+- **Aguardando o teste do Mateus** dos blocos E, D e C.
+- Próximo bloco: **F** (G junto de F).
 
 ## Como retomar
 1. Ler este arquivo e a linha "Identidade visual" em `docs/mapa-do-codigo.md` (seção "Onde mexer para…").
@@ -20,6 +20,7 @@ Sem animação que deixe lento o uso do dia a dia; animação só onde fica lega
 - `src/app/globals.css` (bloco E): `veu` e `veu-desfoque` (escuro atrás de gaveta e janela), `janela-entrar`, `menu-nascer`, `vidro-escuro` e `filete-aviso` (aviso do canto).
 - `src/app/tokens.css`: `--tempo-clique` (90 ms), `--tempo-surgir` (160 ms), `--tempo-janela` (220 ms), `--tempo-painel` (280 ms), curva `--ease-mola`.
 - `src/app/globals.css` (bloco D): `botao-icone` (+ `botao-icone-compacto`, `botao-icone-perigo`), `interruptor` (classe numa caixa de marcar de verdade) e a seta das listas (`select`, vale sozinha em toda lista). `src/app/tokens.css`: curva `--ease-salto`.
+- `src/app/globals.css` (bloco C): `topo-luz` (brilho e linha em degradê da barra de cima), `contador-topo` (formato único de Janelas, Retornos e Esperando) e `luz-marca-media` agora medida pela janela (usada no fundo das telas, em `src/app/(app)/layout.tsx`).
 - "Selecionado": navegação = `afundado` + `menu-ativo`; abas e filtros = vidro (`Abas`); temas = anel.
 
 ## A. Base (feito)
@@ -56,10 +57,12 @@ Falta conferir em D: a sensação ao vivo da bolinha do interruptor e da tecla f
 Ficaram de fora do D (decidir com o Mateus): caixas de **seleção** (escolher instruções para exportar, "confirmada" da medida, "entendi" do Zerar painel) continuam caixas, porque não são liga/desliga; a lista aberta continua a do navegador (só o campo fechado mudou); botões de ícone do card do Kanban, do Simulador, do visualizador de imagem, o clipe da conversa (tem borda) e o lápis do título da coluna não foram trocados.
 Visto de passagem, sem mexer: em Configurações > Geral, campos com largura própria (ex.: "Quem recebe o aviso", `w-48`) aparecem na largura toda. Conferir se é de antes.
 
-## C. Cabeçalho e fundo
-- [ ] 11. Cabeçalho continua a luz do menu: brilho fraco à esquerda e linha de baixo em degradê (marca → transparente).
-- [ ] 12. Luz parada no fundo das telas, bem leve, no canto superior esquerdo, sem animação.
-- [ ] 13. Contadores do topo (Janelas, Retornos, Esperando) no mesmo formato: vidro, com a cor só no número e no ícone.
+## C. Cabeçalho e fundo (feito, falta o teste do Mateus)
+- [x] 11. Cabeçalho continua a luz do menu: brilho fraco à esquerda e linha de baixo em degradê (marca → transparente).
+- [x] 12. Luz parada no fundo das telas, bem leve, no canto superior esquerdo, sem animação. Sobe junto com a rolagem (não fica presa na janela, para não pesar).
+- [x] 13. Contadores do topo (Janelas, Retornos, Esperando) no mesmo formato: vidro, com a cor só no número e no ícone. Janelas e Esperando em vermelho quando há alguém; Retornos em âmbar quando há retorno de hoje ou atrasado, e o halo âmbar continua pulsando (o pulso será refeito no item 29).
+
+Falta conferir em C: se a luz do fundo está leve demais ou de menos; se o "Esperando" e o "Retornos" continuam chamando atenção sem o fundo cheio (antes eram vermelho e âmbar sólidos); os temas de cor; o celular.
 
 ## F. Tela por tela
 - [ ] 23. Painel: fio de luz no topo dos cartões e números contando (600 ms, só ao abrir).

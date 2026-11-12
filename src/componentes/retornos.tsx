@@ -69,14 +69,15 @@ export function BotaoRetornos() {
         aria-label={rotulo}
         title={rotulo}
         className={juntar(
-          "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium sm:gap-2 sm:px-3 shadow-card transition active:scale-[0.97]",
-          // Com retorno para hoje ou atrasado, o botão pisca em âmbar para chamar atenção (pedido do Mateus, tarefa 22).
-          urgentes > 0 ? "animate-chamar bg-aviso font-bold text-sobre-cor ring-2 ring-aviso/50 ring-offset-2 ring-offset-fundo hover:brightness-110" : "bg-superficie-suave text-texto-suave hover:text-texto",
+          "contador-topo gap-1.5 px-2.5 sm:gap-2 sm:px-3",
+          // Com retorno para hoje ou atrasado, o halo âmbar continua pulsando para chamar atenção (pedido do Mateus, tarefa 22).
+          urgentes > 0 && "animate-chamar",
         )}
       >
-        <CalendarClock className="size-4" aria-hidden />
+        {/* Formato igual nos três contadores do topo; a cor fica só no ícone e no número. */}
+        <CalendarClock className={juntar("size-4", urgentes > 0 && "text-aviso")} aria-hidden />
         <span className="hidden whitespace-nowrap xl:inline">Retornos</span>
-        <span className="tabular-nums">{total}</span>
+        <span className={juntar("tabular-nums", urgentes > 0 && "font-bold text-aviso")}>{total}</span>
       </button>
 
       {aberto && (

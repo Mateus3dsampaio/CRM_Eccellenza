@@ -43,14 +43,12 @@ export function BotaoAguardando() {
         aria-haspopup="dialog"
         aria-label={rotulo}
         title={rotulo}
-        className={juntar(
-          "inline-flex min-h-toque items-center gap-1.5 rounded-controle px-2.5 text-sm font-medium sm:gap-2 sm:px-3 shadow-card transition active:scale-[0.97]",
-          total > 0 ? "bg-alerta text-sobre-cor hover:opacity-90" : "bg-superficie-suave text-texto-suave hover:text-texto",
-        )}
+        className="contador-topo gap-1.5 px-2.5 sm:gap-2 sm:px-3"
       >
-        <BellRing className="size-4" aria-hidden />
+        {/* Formato igual nos três contadores do topo; a cor fica só no ícone e no número. */}
+        <BellRing className={juntar("size-4", total > 0 && "text-alerta")} aria-hidden />
         <span className="hidden whitespace-nowrap xl:inline">Esperando</span>
-        <span className="tabular-nums">{total}</span>
+        <span className={juntar("tabular-nums", total > 0 && "font-bold text-alerta")}>{total}</span>
       </button>
 
       {aberto && (

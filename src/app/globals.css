@@ -176,12 +176,56 @@ body {
   .luz-marca-forte {
     background-image: radial-gradient(ellipse 150% 48% at 50% -6%, color-mix(in srgb, var(--color-marca) 30%, transparent), transparent 100%);
   }
+  /* Medida pela janela (vw/vh), não pela área: numa tela comprida a luz não estica junto. Parada, sobe com a rolagem. */
   .luz-marca-media {
-    background-image: radial-gradient(ellipse 60% 55% at 0% 0%, color-mix(in srgb, var(--color-marca) 13%, transparent), transparent 100%);
+    background-image: radial-gradient(ellipse 60vw 55vh at 0% 0%, color-mix(in srgb, var(--color-marca) 13%, transparent), transparent 100%);
+    background-repeat: no-repeat;
   }
   .luz-marca-fio {
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 9%, transparent), transparent 56px);
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 32%, transparent), var(--shadow-painel);
+  }
+  /*
+   * Barra de cima: continua a luz do menu lateral. Brilho fraco que entra pela esquerda (na camada de trás, junto do desfoque)
+   * e a linha de baixo em degradê, da cor da marca até sumir, por cima da borda.
+   */
+  .topo-luz::before {
+    background-image: radial-gradient(ellipse 42% 220% at 0% 0%, color-mix(in srgb, var(--color-marca) 20%, transparent), transparent 100%);
+  }
+  .topo-luz::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--color-marca-texto) 70%, transparent), color-mix(in srgb, var(--color-marca) 35%, transparent) 30%, transparent 72%);
+  }
+  /*
+   * Contador do topo (Janelas, Retornos, Esperando): um formato só, em vidro. A cor fica só no ícone e no número (no TSX).
+   * Sem desfoque próprio: o topo já desfoca a tela de trás.
+   */
+  .contador-topo {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-toque);
+    border-radius: var(--radius-controle);
+    border: 1px solid color-mix(in srgb, var(--color-borda-forte) 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-superficie) 72%, transparent);
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    color: var(--color-texto-suave);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    transition: background-color var(--tempo-clique) ease-out, color var(--tempo-clique) ease-out, transform var(--tempo-clique) ease-out;
+  }
+  .contador-topo:hover {
+    background-color: color-mix(in srgb, var(--color-superficie-suave) 85%, transparent);
+    color: var(--color-texto);
+  }
+  .contador-topo:active {
+    transform: scale(0.97);
   }
   /* Vidro: a superfície do cartão do login. Só para o que flutua (janela, menu, aviso, dica); card de trabalho continua sólido. */
   .vidro {
