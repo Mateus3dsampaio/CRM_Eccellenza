@@ -28,6 +28,18 @@ body {
   }
 }
 
+/*
+ * Celular: campo com letra menor que 16px faz o iPhone dar zoom na tela ao focar (e não volta sozinho).
+ * Fora de camada de propósito: vale mais que o text-sm dos campos. No computador nada muda.
+ */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Rolagem fina nas colunas. */
 .rolagem-fina {
   scrollbar-width: thin;

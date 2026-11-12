@@ -47,7 +47,7 @@ export function Cabecalho({ simulador = true }: { simulador?: boolean }) {
               {tituloDaTela.conteudo}
             </div>
           ) : (
-            <p className="truncate text-lg font-semibold tracking-tight" data-titulo-tela>
+            <p className="truncate text-lg font-semibold tracking-tight max-sm:hidden" data-titulo-tela>
               {titulo}
             </p>
           )}

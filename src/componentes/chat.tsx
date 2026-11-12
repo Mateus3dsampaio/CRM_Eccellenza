@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bot, Download, FileText, Headset, Trash2, Zap } from "lucide-react";
 import { familiaDoTipo, formatarTamanho, rotuloDoArquivo } from "@/regras/midia";
 import { formatarData, formatarHora, inicioDoDiaLocal } from "@/regras/tempo";
 import { juntar } from "./estilos";
 import { StatusMensagem } from "./ui";
+import { VisualizadorMidia } from "./midias/visualizador";
 
 export interface MensagemChat {
   id: string;
@@ -29,13 +30,36 @@ export interface MensagemChat {
  */
 export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTocarBotao }: { mensagens: MensagemChat[]; lado: "loja" | "cliente"; digitando?: boolean; aoApagarMidia?: (mensagemId: string) => void; aoTocarBotao?: (texto: string) => void }) {
   const fim = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Rola só a caixa da conversa até o fim. `scrollIntoView` rolava também a gaveta e a página,
-    // e a gaveta abria cortando o topo.
+  // A conversa fica "grudada" no fim enquanto a pessoa não rolar para cima para ler o que passou.
+  const grudado = useRef(true);
+  const caixaDaConversa = useCallback(() => {
     let caixa = fim.current?.parentElement ?? null;
     while (caixa && !/(auto|scroll)/.test(getComputedStyle(caixa).overflowY)) caixa = caixa.parentElement;
+    return caixa;
+  }, []);
+  // Rola só a caixa da conversa até o fim. `scrollIntoView` rolava também a gaveta e a página,
+  // e a gaveta abria cortando o topo.
+  const irAoFim = useCallback(() => {
+    const caixa = caixaDaConversa();
     if (caixa) caixa.scrollTop = caixa.scrollHeight;
-  }, [mensagens.length, digitando]);
+  }, [caixaDaConversa]);
+  useEffect(() => {
+    grudado.current = true;
+    irAoFim();
+  }, [mensagens.length, digitando, irAoFim]);
+  useEffect(() => {
+    const caixa = caixaDaConversa();
+    if (!caixa) return;
+    const aoRolar = () => {
+      grudado.current = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
+    };
+    caixa.addEventListener("scroll", aoRolar, { passive: true });
+    return () => caixa.removeEventListener("scroll", aoRolar);
+  }, [caixaDaConversa]);
+  // Imagem e vídeo só ganham altura depois de carregar: sem isto a conversa abria "para trás" das últimas mensagens.
+  const aoCarregarMidia = useCallback(() => {
+    if (grudado.current) irAoFim();
+  }, [irAoFim]);
 
   const diaDe = (m: MensagemChat) => inicioDoDiaLocal(new Date(m.enviadaEm)).toISOString();
   return (
@@ -66,7 +90,7 @@ export function ListaMensagens({ mensagens, lado, digitando, aoApagarMidia, aoTo
                     {m.modelo && <span className="font-normal">· modelo aprovado</span>}
                   </p>
                 )}
-                {m.midia && <MidiaDaMensagem m={m} aoApagar={aoApagarMidia} />}
+                {m.midia && <MidiaDaMensagem m={m} aoApagar={aoApagarMidia} aoCarregar={aoCarregarMidia} />}
                 {m.texto && <p className="whitespace-pre-wrap break-words">{lado === "cliente" && m.autor === "consultor" ? <TextoComNome texto={m.texto} /> : m.texto}</p>}
                 {/* Botões de resposta rápida: só o do último movimento da conversa (depois que o cliente responde, somem). */}
                 {aoTocarBotao && m.botoes && i === mensagens.length - 1 && (
@@ -113,14 +137,15 @@ function TextoComNome({ texto }: { texto: string }) {
 }
 
 /** Imagem, vídeo ou PDF dentro da bolha. Os arquivos vêm de uma rota protegida (só logado). */
-function MidiaDaMensagem({ m, aoApagar }: { m: MensagemChat; aoApagar?: (mensagemId: string) => void }) {
+function MidiaDaMensagem({ m, aoApagar, aoCarregar }: { m: MensagemChat; aoApagar?: (mensagemId: string) => void; aoCarregar?: () => void }) {
+  const [ampliada, setAmpliada] = useState(false);
   const url = `/api/midias/${m.midia}`;
   const familia = m.midiaTipo ? familiaDoTipo(m.midiaTipo) : "imagem"; // mensagens antigas só tinham imagem
   const nome = m.midiaNome || "arquivo";
   return (
     <div className="mb-1">
       {familia === "video" ? (
-        <video src={url} controls preload="metadata" className="max-h-72 w-full rounded-controle bg-black" aria-label="Vídeo da conversa" />
+        <video src={url} controls playsInline preload="metadata" onLoadedMetadata={aoCarregar} className="max-h-72 w-full rounded-controle bg-black" aria-label="Vídeo da conversa" />
       ) : familia === "documento" ? (
         <a href={url} download className="flex items-center gap-3 rounded-controle bg-superficie-suave px-3 py-2 hover:bg-superficie" title="Baixar arquivo">
           <FileText className="size-8 shrink-0 text-alerta" aria-hidden />
@@ -131,8 +156,14 @@ function MidiaDaMensagem({ m, aoApagar }: { m: MensagemChat; aoApagar?: (mensage
           <Download className="size-4 shrink-0 text-texto-suave" aria-hidden />
         </a>
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota protegida
-        <img src={url} alt="Imagem da conversa" className="max-h-72 rounded-controle object-contain" />
+        <>
+          {/* Tocar na imagem abre o visualizador (com X para fechar). */}
+          <button type="button" onClick={() => setAmpliada(true)} className="block cursor-zoom-in rounded-controle" aria-label="Ampliar imagem" title="Ampliar imagem">
+            {/* eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota protegida */}
+            <img src={url} alt="Imagem da conversa" onLoad={aoCarregar} className="max-h-72 rounded-controle object-contain" />
+          </button>
+          <VisualizadorMidia midia={ampliada ? { url, familia: "imagem", nome } : null} aoFechar={() => setAmpliada(false)} />
+        </>
       )}
       {aoApagar && (
         <button type="button" onClick={() => aoApagar(m.id)} className="mt-1 inline-flex items-center gap-1 text-[11px] text-alerta hover:underline">
