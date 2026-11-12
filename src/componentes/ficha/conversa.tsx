@@ -130,19 +130,19 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-painel border border-borda bg-chat-fundo shadow-painel">
-      <div className="flex items-center gap-2 border-b border-borda bg-superficie px-4 py-2">
-        <span className={juntar("flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
+      <div className="flex items-center gap-2 border-b border-borda bg-superficie px-4 py-2 max-sm:flex-wrap max-sm:px-3">
+        <span className={juntar("flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium max-sm:min-w-[9rem] max-sm:text-[13px]", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
           {ficha.modo === "bot" ? <Bot className="size-4 shrink-0" aria-hidden /> : <Headset className="size-4 shrink-0" aria-hidden />}
           {modoTexto}
         </span>
         <div className="flex shrink-0 gap-2">
           {ficha.modo !== "humano" && (
-            <Botao onClick={() => conversa({ acao: "assumir" }, "Você assumiu a conversa.")} disabled={enviando}>
+            <Botao className="max-sm:min-h-9 max-sm:px-3 max-sm:text-[13px]" onClick={() => conversa({ acao: "assumir" }, "Você assumiu a conversa.")} disabled={enviando}>
               Assumir conversa
             </Botao>
           )}
           {ficha.modo !== "bot" && (
-            <Botao onClick={() => conversa({ acao: "devolver" }, "Conversa devolvida ao bot.")} disabled={enviando} icone={<Bot className="size-4" aria-hidden />}>
+            <Botao className="max-sm:min-h-9 max-sm:px-3 max-sm:text-[13px]" onClick={() => conversa({ acao: "devolver" }, "Conversa devolvida ao bot.")} disabled={enviando} icone={<Bot className="size-4" aria-hidden />}>
               Devolver ao bot
             </Botao>
           )}
@@ -176,22 +176,26 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
           O bot não conseguiu responder: {ficha.erroBot} A conversa está aguardando um consultor.
         </p>
       )}
-      <div className="rolagem-fina min-h-24 flex-1 overflow-y-auto p-4">
+      <div className="rolagem-fina min-h-24 flex-1 overflow-y-auto p-4 max-sm:p-3">
         <ListaMensagens mensagens={ficha.mensagens} lado="loja" aoApagarMidia={podeApagarMidia ? setApagar : undefined} />
       </div>
       {/* Atalhos da gaveta (agendar, lembrete, nota): o que costuma nascer de uma conversa. */}
       {atalhos && <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-t border-borda bg-coluna px-2 py-1">{atalhos}</div>}
       {/* Área de envio fixa embaixo: nunca encolhe nem é cortada; quem cede espaço é a lista de mensagens. */}
-      <form onSubmit={enviar} className="shrink-0 space-y-2 border-t border-borda bg-superficie p-3">
+      <form onSubmit={enviar} className="shrink-0 space-y-2 border-t border-borda bg-superficie p-3 max-sm:p-2.5">
         {!ficha.janelaAberta && (
           <div className="flex flex-wrap items-center gap-2 rounded-controle bg-aviso-suave px-3 py-2 text-xs text-aviso">
             <Info className="size-4 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1">Fora da janela de 24h (regra da Meta): só é possível enviar um modelo aprovado. A janela reabre quando o cliente escrever.</span>
+            <span className="min-w-0 flex-1">
+              {/* Celular: versão curta, para sobrar altura para as mensagens. */}
+              <span className="sm:hidden">Fora da janela de 24h: só modelo aprovado.</span>
+              <span className="max-sm:hidden">Fora da janela de 24h (regra da Meta): só é possível enviar um modelo aprovado. A janela reabre quando o cliente escrever.</span>
+            </span>
             {/* Só escolhe o modelo e deixa o texto à vista: quem envia é o vendedor. */}
             <button
               type="button"
               onClick={() => { setModelo("retomada"); setAnexo(null); }}
-              className="inline-flex min-h-toque items-center gap-1.5 rounded-controle border border-aviso/60 px-3 font-semibold hover:bg-aviso/10"
+              className="inline-flex min-h-toque shrink-0 items-center gap-1.5 whitespace-nowrap rounded-controle border border-aviso/60 px-3 font-semibold hover:bg-aviso/10 max-sm:min-h-9"
             >
               <RotateCcw className="size-3.5" aria-hidden />
               Reabrir com modelo
@@ -293,14 +297,16 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
             disabled={!texto.trim() || !!previa || !ficha.janelaAberta || enviando}
             title="Corrige ortografia, concordância e pontuação. Você vê a mudança antes de aceitar."
             icone={<SpellCheck className="size-4" aria-hidden />}
+            className="shrink-0 max-sm:px-3"
           >
-            Revisar texto
+            {/* Celular: só o ícone, para o seletor de modelo e o Enviar caberem na linha. */}
+            <span className="max-sm:sr-only">Revisar texto</span>
           </Botao>
           <Botao type="submit" variante="primario" carregando={enviando} disabled={!podeEnviar} className="ml-auto shrink-0" icone={<Send className="size-4" aria-hidden />}>
             Enviar
           </Botao>
         </div>
-        {ficha.modo === "bot" && <p className="text-xs text-texto-fraco">Ao responder, você assume a conversa e o bot para de responder (dá para devolver depois).</p>}
+        {ficha.modo === "bot" && <p className="text-xs text-texto-fraco max-sm:hidden">Ao responder, você assume a conversa e o bot para de responder (dá para devolver depois).</p>}
       </form>
       <Modal aberto={!!apagar} aoFechar={() => setApagar(null)} titulo="Apagar arquivo" largura="max-w-md">
         <p className="text-sm text-texto-suave">Apagar este arquivo da conversa? A mensagem fica, mas o arquivo é apagado do sistema e não dá para recuperar.</p>

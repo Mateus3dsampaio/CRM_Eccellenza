@@ -146,6 +146,40 @@ export function Quadro() {
   // "Ainda negociando": a janela de Negociação pede a data nova (sem trazer a data vencida preenchida).
   const [novoRetorno, setNovoRetorno] = useState(false);
 
+  // Celular: deslizar rápido para o lado troca de coluna (uma por vez). Segurar o dedo no card continua sendo arrastar.
+  const refAbas = useRef<HTMLDivElement>(null);
+  const toque = useRef<{ x: number; y: number; quando: number } | null>(null);
+  const [sentidoCelular, setSentidoCelular] = useState<"esquerda" | "direita" | null>(null);
+  function aoTocar(e: React.TouchEvent) {
+    const t = e.touches.length === 1 ? e.touches[0] : null;
+    toque.current = t ? { x: t.clientX, y: t.clientY, quando: e.timeStamp } : null;
+  }
+  function aoSoltarToque(e: React.TouchEvent) {
+    const inicio = toque.current;
+    toque.current = null;
+    // Com um card sendo arrastado, ou no computador (as colunas ficam lado a lado), o deslize não troca nada.
+    if (!inicio || arrastado || window.matchMedia("(min-width: 768px)").matches) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    // Só vale o gesto curto e claramente horizontal: rolar a lista meio torto não troca de coluna.
+    if (e.timeStamp - inicio.quando > 600 || Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const lista = nomesEtapas.lista;
+    const atual = lista.findIndex((c) => c.codigo === abaCelular);
+    const destino = lista[atual + (dx < 0 ? 1 : -1)];
+    if (!destino) return;
+    setSentidoCelular(dx < 0 ? "esquerda" : "direita");
+    setAbaCelular(destino.codigo);
+    window.scrollTo({ top: 0 });
+  }
+  // A aba da coluna aberta fica sempre à vista na faixa de nomes (rola só a faixa, não a página).
+  useEffect(() => {
+    const faixa = refAbas.current;
+    const aba = faixa?.querySelector<HTMLElement>("[role=tab][aria-selected=true]");
+    if (!faixa || !aba) return;
+    faixa.scrollTo({ left: Math.max(0, aba.offsetLeft - (faixa.clientWidth - aba.offsetWidth) / 2), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [abaCelular]);
+
   const sensores = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     // Celular: toque longo para arrastar (KAN-03).
@@ -549,13 +583,13 @@ export function Quadro() {
       ) : (
         <DndContext sensors={sensores} onDragStart={aoComecar} onDragEnd={aoSoltar} onDragCancel={() => setArrastado(null)}>
           {/* Celular: abas por etapa (também recebem cards arrastados) */}
-          <div className="sticky top-topo z-20 mt-3 flex gap-1 overflow-x-auto border-b border-borda bg-fundo px-4 pb-2 md:hidden" role="tablist" aria-label="Etapas">
+          <div ref={refAbas} className="sticky top-topo z-20 mt-3 flex gap-1 overflow-x-auto border-b border-borda bg-fundo px-4 pb-2 md:hidden" role="tablist" aria-label="Etapas">
             {nomesEtapas.lista.map((e) => (
-              <AbaEtapa key={e.codigo} codigo={e.codigo} nome={e.nome} total={porEtapa[e.codigo].length} ativa={abaCelular === e.codigo} aoEscolher={() => setAbaCelular(e.codigo)} />
+              <AbaEtapa key={e.codigo} codigo={e.codigo} nome={e.nome} total={porEtapa[e.codigo].length} ativa={abaCelular === e.codigo} aoEscolher={() => { setSentidoCelular(null); setAbaCelular(e.codigo); }} />
             ))}
           </div>
 
-          <div ref={refRolagem} className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
+          <div ref={refRolagem} onTouchStart={aoTocar} onTouchEnd={aoSoltarToque} onTouchCancel={() => (toque.current = null)} className="rolagem-fina mx-auto min-h-0 w-full max-w-[1800px] flex-1 overflow-x-auto">
             <div className="flex gap-4 p-4 md:h-full md:items-stretch md:[zoom:var(--zoom-kanban)]" style={{ "--zoom-kanban": zoom } as React.CSSProperties}>
             {nomesEtapas.lista.map((e) => (
               <Coluna
@@ -565,6 +599,7 @@ export function Quadro() {
                 cards={porEtapa[e.codigo]}
                 totalSemFiltro={cards.filter((c) => c.etapa === e.codigo).length}
                 visivelCelular={abaCelular === e.codigo}
+                entradaCelular={sentidoCelular}
                 acoes={acoes}
                 selecionando={selecionando}
                 selecionados={selecionados}
@@ -710,6 +745,8 @@ function Coluna(props: {
   cards: CardKanban[];
   totalSemFiltro: number;
   visivelCelular: boolean;
+  /** Celular: de que lado a coluna entra depois de um deslize (só animação). */
+  entradaCelular?: "esquerda" | "direita" | null;
   acoes: AcoesCard;
   selecionando: boolean;
   selecionados: Set<string>;
@@ -782,6 +819,8 @@ function Coluna(props: {
         "w-full shrink-0 flex-col rounded-painel p-3 transition md:flex md:max-h-full",
         ehDestaque ? "bg-etapa-apresentacao-suave shadow-coluna-destaque ring-1 ring-etapa-apresentacao/35 md:w-coluna-destaque" : "bg-coluna shadow-painel md:w-coluna",
         props.visivelCelular ? "flex" : "hidden",
+        props.visivelCelular && props.entradaCelular === "esquerda" && "max-md:animate-[entrar-da-direita_200ms_ease-out]",
+        props.visivelCelular && props.entradaCelular === "direita" && "max-md:animate-[entrar-da-esquerda_200ms_ease-out]",
         isOver && "bg-marca-suave ring-2 ring-marca/40",
       )}
     >

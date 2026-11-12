@@ -125,6 +125,15 @@
   --animate-chamar: chamar 1s ease-in-out infinite;
   --animate-piscar: piscar 1s ease-in-out infinite;
 
+  /* Kanban no celular: a coluna entra do lado para onde o dedo deslizou. */
+  @keyframes entrar-da-direita {
+    from { opacity: 0; transform: translateX(28px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes entrar-da-esquerda {
+    from { opacity: 0; transform: translateX(-28px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
   @keyframes surgir {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }

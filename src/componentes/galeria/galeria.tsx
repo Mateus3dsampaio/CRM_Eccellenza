@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { Download, ExternalLink, FileText, Film, MessageSquare, Trash2 } from "lucide-react";
+import { FileText, Film, MessageSquare, Trash2 } from "lucide-react";
 import { formatarTamanho, type FamiliaMidia } from "@/regras/midia";
 import { formatarDataHora } from "@/regras/tempo";
 import type { Galeria as DadosGaleria, ItemDaGaleria } from "@/servicos/midias";
@@ -12,6 +12,7 @@ import { juntar } from "../estilos";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, classeEntrada, Dica } from "../ui";
 import { usePode } from "../usuario";
 import { useGaveta } from "../ficha/gaveta";
+import { VisualizadorMidia, classeAcaoVisualizador } from "../midias/visualizador";
 
 const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
   { codigo: "", nome: "Tudo" },
@@ -21,6 +22,7 @@ const FILTROS: { codigo: "" | FamiliaMidia; nome: string }[] = [
 ];
 
 // Tamanho dos blocos, como no Windows: pequeno, médio e grande. O número de colunas define o tamanho, então a grade fica sempre alinhada.
+// Cada bloco é só a miniatura quadrada e o nome; os detalhes e as ações ficam no visualizador.
 type Tamanho = "pequeno" | "medio" | "grande";
 const TAMANHOS: { codigo: Tamanho; rotulo: string }[] = [
   { codigo: "pequeno", rotulo: "Pequeno" },
@@ -28,11 +30,10 @@ const TAMANHOS: { codigo: Tamanho; rotulo: string }[] = [
   { codigo: "grande", rotulo: "Grande" },
 ];
 const GRADE: Record<Tamanho, string> = {
-  pequeno: "grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9",
-  medio: "grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6",
-  grande: "grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+  pequeno: "grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6 lg:grid-cols-9 xl:grid-cols-12",
+  medio: "grid-cols-3 gap-x-3 gap-y-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8",
+  grande: "grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
 };
-const PROPORCAO: Record<Tamanho, string> = { pequeno: "aspect-square", medio: "aspect-[4/3]", grande: "aspect-video" };
 const ICONE: Record<Tamanho, string> = { pequeno: "size-6", medio: "size-9", grande: "size-12" };
 const CHAVE_TAMANHO = "galeria-tamanho";
 
@@ -79,8 +80,8 @@ export function Galeria() {
   const [limite, setLimite] = useState(60);
   const tamanho = useTamanhoGaleria();
   const escolherTamanho = gravarTamanho;
-  const pequeno = tamanho === "pequeno";
   const [apagar, setApagar] = useState<ItemDaGaleria | null>(null);
+  const [aberto, setAberto] = useState<ItemDaGaleria | null>(null);
   const consulta = new URLSearchParams({ limite: String(limite), ...(tipo ? { tipo } : {}), ...(vendedor ? { vendedor } : {}) }).toString();
   const { dados, erro, carregando, recarregar } = useDados<DadosGaleria>(`/api/galeria?${consulta}`);
 
@@ -93,6 +94,7 @@ export function Galeria() {
       avisar(e instanceof Error ? e.message : "Não foi possível apagar.", "erro");
     } finally {
       setApagar(null);
+      setAberto(null);
       await recarregar();
     }
   }
@@ -125,7 +127,7 @@ export function Galeria() {
           <p className="ml-auto inline-flex items-center gap-1 text-sm text-texto-suave">
             {dados.total} {dados.total === 1 ? "arquivo" : "arquivos"}
             {dados.bytes > 0 ? ` · ${formatarTamanho(dados.bytes)}` : ""}
-            <Dica rotulo="Prazo dos arquivos" texto="Arquivos com mais de 180 dias são apagados automaticamente. Para guardar um, baixe antes." />
+            <Dica lado="direita" rotulo="Prazo dos arquivos" texto="Arquivos com mais de 180 dias são apagados automaticamente. Para guardar um, baixe antes." />
           </p>
         )}
       </div>
@@ -141,51 +143,37 @@ export function Galeria() {
           <>
             <ul className={juntar("grid", GRADE[tamanho])}>
               {dados.itens.map((i) => (
-                <li key={i.mensagemId} className="flex flex-col overflow-hidden rounded-card border border-borda bg-superficie shadow-card">
-                  <a href={`/api/midias/${i.arquivo}`} target="_blank" rel="noreferrer" className={juntar("flex items-center justify-center bg-superficie-suave", PROPORCAO[tamanho])} aria-label={`Abrir ${i.nome}`}>
+                <li key={i.mensagemId} className="min-w-0">
+                  {/* Miniatura quadrada, como no Windows: a imagem preenche o quadro, qualquer que seja a proporção. Tocar abre o visualizador. */}
+                  <button
+                    type="button"
+                    onClick={() => setAberto(i)}
+                    aria-label={`Abrir ${i.nome}`}
+                    className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-card border border-borda bg-superficie-suave shadow-card transition hover:border-borda-forte hover:brightness-110 active:scale-[0.98]"
+                  >
                     {i.familia === "imagem" ? (
                       // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota protegida
-                      <img src={`/api/midias/${i.arquivo}`} alt={i.nome} loading="lazy" className="size-full object-cover" />
+                      <img src={`/api/midias/${i.arquivo}`} alt="" loading="lazy" className="size-full object-cover" />
                     ) : i.familia === "video" ? (
                       <Film className={juntar(ICONE[tamanho], "text-texto-suave")} aria-hidden />
                     ) : (
                       <FileText className={juntar(ICONE[tamanho], "text-alerta")} aria-hidden />
                     )}
-                  </a>
-                  <div className={juntar("flex flex-1 flex-col gap-1 text-xs", pequeno ? "p-1.5" : "p-2.5")}>
-                    <p className="truncate text-sm font-medium" title={i.nome}>
+                    {i.apagaEmDias !== null && (
+                      <span className="absolute left-1 top-1 rounded-pilula bg-fundo/85 px-1.5 py-0.5 text-[10px] font-semibold text-aviso" title={`Será apagado em ${i.apagaEmDias} ${i.apagaEmDias === 1 ? "dia" : "dias"}`}>
+                        {i.apagaEmDias} d
+                      </span>
+                    )}
+                  </button>
+                  <div className="mt-1 flex items-center gap-0.5">
+                    <p className="min-w-0 flex-1 truncate text-xs text-texto-suave" title={i.nome}>
                       {i.nome}
                     </p>
-                    {!pequeno && (
-                      <>
-                        <p className="flex items-center gap-1 text-texto-suave">
-                          {i.rotulo}
-                          {i.bytes ? ` · ${formatarTamanho(i.bytes)}` : ""} · {i.daLoja ? "enviado" : "recebido"}
-                        </p>
-                        <p className="truncate text-texto-suave">{i.leadNome}</p>
-                        <p className="text-texto-fraco">{formatarDataHora(new Date(i.enviadaEm))}</p>
-                      </>
+                    {podeApagar && (
+                      <button type="button" onClick={() => setApagar(i)} className="inline-flex size-7 shrink-0 items-center justify-center rounded-controle text-alerta hover:bg-alerta-suave" title="Apagar arquivo" aria-label={`Apagar ${i.nome}`}>
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </button>
                     )}
-                    {i.apagaEmDias !== null && <p className="text-aviso">{pequeno ? `${i.apagaEmDias} d` : `Será apagado em ${i.apagaEmDias} ${i.apagaEmDias === 1 ? "dia" : "dias"}`}</p>}
-                    <div className={juntar("mt-auto flex flex-wrap items-center pt-1", pequeno ? "gap-0" : "gap-1")}>
-                      <a href={`/api/midias/${i.arquivo}?baixar=1`} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Baixar">
-                        <Download className="size-3.5" aria-hidden /> <span className={pequeno ? "sr-only" : undefined}>Baixar</span>
-                      </a>
-                      {i.familia !== "documento" && (
-                        <a href={`/api/midias/${i.arquivo}`} target="_blank" rel="noreferrer" className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Abrir em outra aba">
-                          <ExternalLink className="size-3.5" aria-hidden /> <span className={pequeno ? "sr-only" : undefined}>Abrir</span>
-                        </a>
-                      )}
-                      <Link href={gaveta.hrefDe(i.leadId)} scroll={false} className="inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-texto-suave hover:bg-superficie-suave" title="Ver a conversa">
-                        <MessageSquare className="size-3.5" aria-hidden /> <span className={pequeno ? "sr-only" : undefined}>Conversa</span>
-                      </Link>
-                      {podeApagar && (
-                        <button type="button" onClick={() => setApagar(i)} className="ml-auto inline-flex min-h-toque items-center gap-1 rounded-controle px-2 text-alerta hover:bg-alerta-suave" title="Apagar arquivo">
-                          <Trash2 className="size-3.5" aria-hidden />
-                          <span className="sr-only">Apagar</span>
-                        </button>
-                      )}
-                    </div>
                   </div>
                 </li>
               ))}
@@ -198,6 +186,32 @@ export function Galeria() {
           </>
         )
       )}
+
+      <VisualizadorMidia
+        midia={
+          aberto && {
+            url: `/api/midias/${aberto.arquivo}`,
+            familia: aberto.familia,
+            nome: aberto.nome,
+            detalhe: [aberto.rotulo, aberto.bytes ? formatarTamanho(aberto.bytes) : "", aberto.daLoja ? "enviado" : "recebido", aberto.leadNome, formatarDataHora(new Date(aberto.enviadaEm))].filter(Boolean).join(" · "),
+          }
+        }
+        aoFechar={() => setAberto(null)}
+        acoes={
+          aberto && (
+            <>
+              <Link href={gaveta.hrefDe(aberto.leadId)} scroll={false} onClick={() => setAberto(null)} className={classeAcaoVisualizador}>
+                <MessageSquare className="size-4" aria-hidden /> Ver a conversa
+              </Link>
+              {podeApagar && (
+                <button type="button" onClick={() => setApagar(aberto)} className={juntar(classeAcaoVisualizador, "text-alerta")}>
+                  <Trash2 className="size-4" aria-hidden /> Apagar
+                </button>
+              )}
+            </>
+          )
+        }
+      />
 
       <Modal aberto={!!apagar} aoFechar={() => setApagar(null)} titulo="Apagar arquivo" largura="max-w-md">
         <p className="text-sm text-texto-suave">

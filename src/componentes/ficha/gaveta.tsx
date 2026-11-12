@@ -87,7 +87,7 @@ function GavetaLead({ id, aoFechar }: { id: string | null; aoFechar: () => void 
           animate={semMovimento ? { opacity: 1 } : { x: 0 }}
           exit={semMovimento ? { opacity: 0 } : { x: "100%" }}
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-y-0 right-0 z-[56] flex w-full flex-col border-l border-borda bg-fundo shadow-flutuante sm:w-[640px]"
+          className="fixed inset-y-0 right-0 z-[56] flex w-full flex-col border-l border-borda bg-fundo pb-[env(safe-area-inset-bottom)] shadow-flutuante sm:w-[640px]"
         >
           <ConteudoGaveta id={id} aoFechar={aoFechar} />
         </motion.aside>
@@ -140,7 +140,7 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
   return (
     <>
       {/* Cabeçalho: quem é, com a etapa como botão (troca ali mesmo). */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-borda bg-superficie px-4 pb-3.5 pt-3">
+      <header className="flex shrink-0 items-center gap-3 border-b border-borda bg-superficie px-4 pb-3.5 pt-3 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-2 max-sm:pb-2.5">
         <Avatar nome={ficha.nomeExibicao} cor={ficha.avatarCor} />
         <div className="min-w-0 flex-1">
           <h2 className="flex items-center gap-2 text-base font-semibold leading-tight">
@@ -148,11 +148,14 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
             {ficha.aguardandoHumano && <Sino />}
           </h2>
           <p className="flex flex-wrap items-center gap-x-3 text-xs text-texto-suave">
-            <span>{ficha.telefone}</span>
+            <span className="max-sm:whitespace-nowrap">{ficha.telefone}</span>
             {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
           </p>
         </div>
-        <SeletorEtapa etapa={ficha.etapa} aoEscolher={acoes.pedirEtapa} />
+        {/* Celular: a etapa desce para uma linha própria (nome, ficha completa e fechar não cabem com ela em 375px). */}
+        <div className="max-sm:order-last max-sm:w-full">
+          <SeletorEtapa etapa={ficha.etapa} aoEscolher={acoes.pedirEtapa} />
+        </div>
         <Link href={`/lead/${ficha.id}`} aria-label="Abrir ficha completa" className="tecla inline-flex min-h-10 items-center gap-2 rounded-controle px-3 text-sm font-medium" title="Dados completos, medidas, notas e histórico">
           <Maximize2 className="size-4" aria-hidden />
           <span className="hidden sm:inline">Ficha completa</span>

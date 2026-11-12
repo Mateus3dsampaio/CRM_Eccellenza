@@ -230,14 +230,15 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
           )}
         </div>
       ) : (
-        <div className="mx-auto flex w-full flex-1 flex-col gap-4 p-4">
+        <div className="mx-auto flex w-full flex-1 flex-col gap-3 p-3 md:gap-4 md:p-4">
           {/* Celular: a barra de cima não tem espaço; etapa e ações ficam numa linha própria, acima das abas. */}
           <div className="flex items-center justify-between gap-2 pb-1">
             <SeletorEtapa etapa={ficha.etapa} aoEscolher={acoes.pedirEtapa} alinhar="esquerda" />
             <AcoesFicha leadId={ficha.id} arquivado={ficha.arquivado} podeExcluir={podeExcluir} acoes={acoesRef} />
           </div>
           <Abas itens={abas} valor={aba} aoMudar={setAba} rotuloAria="Seções da ficha" />
-          {aba === "conversa" && <div className="flex min-h-[28rem] flex-col">{conversa}</div>}
+          {/* Altura tirada da tela (topo, linha da etapa, abas e a barra de baixo): quem rola é a caixa da conversa, que abre no fim, e não a página. */}
+          {aba === "conversa" && <div className="flex h-[calc(100dvh-var(--spacing-topo)-14rem-env(safe-area-inset-bottom))] min-h-[22rem] flex-col md:h-[calc(100dvh-var(--spacing-topo)-10.75rem)]">{conversa}</div>}
           {aba === "ficha" && <div className="flex flex-col gap-3">{blocos()}</div>}
         </div>
       )}

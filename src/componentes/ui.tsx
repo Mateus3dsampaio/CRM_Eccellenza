@@ -168,7 +168,7 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "max-w-lg"
         aria-modal="true"
         aria-label={titulo}
         onMouseDown={(e) => e.stopPropagation()}
-        className={juntar("max-h-[92dvh] w-full animate-surgir overflow-y-auto rounded-t-painel bg-superficie p-5 shadow-flutuante sm:rounded-painel", largura)}
+        className={juntar("max-h-[92dvh] w-full animate-surgir overflow-y-auto rounded-t-painel bg-superficie p-5 shadow-flutuante max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-painel", largura)}
       >
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">{titulo}</h2>
@@ -248,7 +248,7 @@ export function Popover({
             role="dialog"
             aria-label={titulo}
             className={juntar(
-              "fixed inset-x-0 bottom-0 z-50 animate-surgir rounded-t-painel border border-borda bg-superficie p-4 shadow-flutuante sm:absolute sm:inset-x-auto sm:rounded-painel",
+              "fixed inset-x-0 bottom-0 z-50 animate-surgir rounded-t-painel border border-borda bg-superficie p-4 shadow-flutuante max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] sm:absolute sm:inset-x-auto sm:rounded-painel",
               abrir === "cima" ? "sm:bottom-full sm:mb-2" : "sm:bottom-auto sm:top-full sm:mt-2",
               alinhar === "direita" ? "sm:right-0" : "sm:left-0",
               largura,
@@ -264,7 +264,7 @@ export function Popover({
 }
 
 /** Ícone ⓘ com explicação (tarefa 29): aparece ao passar o mouse, ao focar com o teclado ou ao tocar. */
-export function Dica({ texto, children, rotulo = "Mais informações" }: { texto: string; children?: ReactNode; rotulo?: string }) {
+export function Dica({ texto, children, rotulo = "Mais informações", lado = "centro" }: { texto: string; children?: ReactNode; rotulo?: string; /** "direita": o balão abre para a esquerda do ícone (para ícone encostado na borda direita da tela, senão a página ganha rolagem para o lado). */ lado?: "centro" | "direita" }) {
   return (
     <span className="group/dica relative inline-flex">
       <button type="button" aria-label={rotulo} title={children ? undefined : texto} className="inline-flex size-7 items-center justify-center rounded-full text-texto-fraco hover:bg-superficie-suave hover:text-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-marca/40">
@@ -272,7 +272,10 @@ export function Dica({ texto, children, rotulo = "Mais informações" }: { texto
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none invisible absolute left-1/2 top-full z-50 mt-1 w-72 -translate-x-1/2 rounded-controle border border-borda bg-superficie p-3 text-left text-xs leading-relaxed text-texto opacity-0 shadow-flutuante transition group-focus-within/dica:pointer-events-auto group-focus-within/dica:visible group-focus-within/dica:opacity-100 group-hover/dica:pointer-events-auto group-hover/dica:visible group-hover/dica:opacity-100"
+        className={juntar(
+          lado === "direita" ? "right-0" : "left-1/2 -translate-x-1/2",
+          "pointer-events-none invisible absolute top-full z-50 mt-1 w-72 rounded-controle border border-borda bg-superficie p-3 text-left text-xs leading-relaxed text-texto opacity-0 shadow-flutuante transition group-focus-within/dica:pointer-events-auto group-focus-within/dica:visible group-focus-within/dica:opacity-100 group-hover/dica:pointer-events-auto group-hover/dica:visible group-hover/dica:opacity-100",
+        )}
       >
         {texto}
         {children}
