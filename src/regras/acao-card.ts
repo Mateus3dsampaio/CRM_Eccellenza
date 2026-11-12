@@ -32,6 +32,7 @@ export type CodigoAcao =
   | "retorno_hoje"
   | "compromisso"
   | "retorno_futuro"
+  | "cliente_respondeu"
   | "ia_atendendo"
   | "aguardando_cliente";
 
@@ -60,6 +61,7 @@ export const ORDEM_ACAO: CodigoAcao[] = [
   "retorno_hoje",
   "compromisso",
   "retorno_futuro",
+  "cliente_respondeu",
   "ia_atendendo",
   "aguardando_cliente",
 ];
@@ -78,6 +80,8 @@ export interface LeadParaAcao {
   modo: string;
   consultor: unknown | null;
   esperandoDesde: Instante;
+  /** O cliente escreveu e a mensagem não pede resposta (IA ou vendedor dispensou): informação cinza, sem prazo. */
+  respondeuSemEsperaEm?: Instante;
   ultimaMsgClienteEm: Instante;
   erroBot: string | null;
   decisao: { tipo: TipoDecisao; venceuEm: Date | string } | null;
@@ -122,6 +126,10 @@ export function acoesDoCard(lead: LeadParaAcao, ctx: ContextoDaAcao): AcaoCard[]
     if (faixa === "vermelho") acoes.push({ codigo: "responder_atrasado", cor: "vermelho", texto, precisaDeVoce: true, dica });
     else if (faixa === "amarelo") acoes.push({ codigo: "responder_atencao", cor: "ambar", texto, precisaDeVoce: true, dica });
     else acoes.push({ codigo: "responder", cor: "cinza", texto, precisaDeVoce: true, dica });
+  }
+  // Só informa: não corre prazo, não fica amarelo nem vermelho e não vai para "Precisa de você". Esperar resposta (acima) tem prioridade.
+  if (lead.respondeuSemEsperaEm && !lead.esperandoDesde && !encerrada) {
+    acoes.push({ codigo: "cliente_respondeu", cor: "cinza", texto: "Cliente respondeu", precisaDeVoce: false, dica: "O cliente escreveu, mas a mensagem não pede resposta (por exemplo, um \"ok\"). Se ele estiver esperando, use \"Precisa de resposta\" no menu do card." });
   }
   if (lead.erroBot) acoes.push({ codigo: "ia_travou", cor: "vermelho", texto: "IA sem resposta · assuma a conversa", precisaDeVoce: true, dica: lead.erroBot });
   if (!lead.consultor && lead.modo !== "bot" && !encerrada) {

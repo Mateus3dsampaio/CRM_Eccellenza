@@ -87,7 +87,7 @@ export async function assumirConversa(leadId: string, usuario: { nome: string })
 }
 
 export async function devolverAoBot(leadId: string, usuario: { nome: string }) {
-  await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "bot", aguardandoHumano: false, esperandoDesde: null, naoLidas: 0, erroBot: null } });
+  await db.lead.update({ where: { id: leadId }, data: { modoAtendimento: "bot", aguardandoHumano: false, esperandoDesde: null, respondeuSemEsperaEm: null, naoLidas: 0, erroBot: null } });
   await liberarPedidoParar(leadId);
   await registrarAlteracao(leadId, usuario.nome, "Devolveu a conversa ao bot");
   await marcarMudanca();

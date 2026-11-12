@@ -2,6 +2,13 @@
 export interface MensagemSimples {
   autor: string; // cliente | bot | consultor | sistema
   enviadaEm: Date;
+  /** Mensagem do cliente que não pedia resposta (a IA ou o vendedor dispensou): não conta como cliente esperando. */
+  dispensadaEm?: Date | null;
+}
+
+/** Tira da conta as mensagens do cliente dispensadas ("ok" depois de uma informação). */
+function semDispensadas<T extends MensagemSimples>(mensagens: T[]): T[] {
+  return mensagens.filter((m) => !(m.autor === "cliente" && m.dispensadaEm));
 }
 
 export interface TurnoCliente {
@@ -17,7 +24,8 @@ export interface TurnoCliente {
  * são um turno só. A resposta é a primeira mensagem do bot ou do consultor depois disso (mensagens do sistema não contam).
  * Só entram os turnos que começam dentro do período. As mensagens devem estar em ordem de horário.
  */
-export function turnosDoCliente(mensagens: MensagemSimples[], inicio: Date, fim: Date): TurnoCliente[] {
+export function turnosDoCliente(todas: MensagemSimples[], inicio: Date, fim: Date): TurnoCliente[] {
+  const mensagens = semDispensadas(todas);
   const turnos: TurnoCliente[] = [];
   for (let i = 0; i < mensagens.length; i++) {
     const m = mensagens[i];
@@ -46,7 +54,8 @@ export interface RespostaConsultor {
  * Se o bot respondeu no meio, a espera recomeça. Contato iniciado pelo consultor e mensagens seguidas dele não entram.
  * Vale a data da mensagem do consultor. As mensagens devem estar em ordem de horário.
  */
-export function temposDoConsultor(mensagens: MensagemSimples[], inicio: Date, fim: Date): RespostaConsultor[] {
+export function temposDoConsultor(todas: MensagemSimples[], inicio: Date, fim: Date): RespostaConsultor[] {
+  const mensagens = semDispensadas(todas);
   const respostas: RespostaConsultor[] = [];
   let esperaDesde: Date | null = null;
   for (const m of mensagens) {

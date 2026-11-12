@@ -73,7 +73,8 @@ model Lead {
   aguardandoHumano    Boolean   @default(false)
   repassadoEm         DateTime? // quando o bot passou o lead ao consultor (início da espera pela 1ª resposta dele)
   esperandoDesde      DateTime? // desde quando o cliente espera um humano; some quando o consultor responde ou devolve ao bot
-  naoLidas            Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (só conta com o lead aguardando humano)
+  naoLidas            Int       @default(0) // mensagens do cliente que nenhum humano abriu ainda (conta também quando o cliente respondeu sem esperar resposta: `respondeuSemEsperaEm`)
+  respondeuSemEsperaEm DateTime? // o cliente escreveu com o consultor no comando e a mensagem NÃO pede resposta (a IA ou o vendedor dispensou): faixa cinza "Cliente respondeu", sem prazo. Some quando o consultor responde, o lead volta ao bot ou vai para Perdido
   alertaPrazoPara     DateTime? // valor de esperandoDesde para o qual o admin já foi avisado do prazo vermelho (uma vez por espera)
   erroBot             String?
   naoReceberEm        DateTime? // cliente pediu para parar de receber mensagens automáticas (LGPD): sem retomada nem bot
@@ -145,6 +146,9 @@ model Mensagem {
   // Já foi passada ao bot (o progresso é por mensagem, não por horário: o relógio simulado pode mudar).
   processadaPeloBot Boolean   @default(false)
   idExterno         String?   @unique // id da mensagem na Meta (wamid): evita processar a mesma mensagem duas vezes
+  // Mensagem do cliente que não pede resposta do vendedor (ex.: "ok" depois de uma informação). Fica fora do "cliente escreveu e ninguém respondeu" do painel.
+  dispensadaEm      DateTime?
+  dispensadaPor     String? // "ia" ou o nome de quem marcou "Não precisa responder"
 
   @@index([leadId, enviadaEm])
 }

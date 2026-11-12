@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Bot, Check, FileCheck2, Headset, Hourglass, Info, Paperclip, RotateCcw, Send, SpellCheck, X } from "lucide-react";
+import { Bot, Check, FileCheck2, Headset, Hourglass, Info, Paperclip, Reply, RotateCcw, Send, SpellCheck, X } from "lucide-react";
 import { destacarMudancas } from "@/regras/revisao-texto";
 import type { ResultadoDaRevisao } from "@/servicos/revisao-texto";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
@@ -148,6 +148,29 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
           )}
         </div>
       </div>
+      {/* Espera do cliente: o vendedor para o cronômetro ("Não precisa responder") ou corrige a IA ("Precisa de resposta"). */}
+      {ficha.etapa !== "perdido" && ficha.esperandoDesde && (
+        <div data-espera-conversa="esperando" className="flex items-center gap-2 border-b border-borda bg-superficie-suave/40 px-4 py-1.5 text-xs text-texto-suave">
+          <Hourglass className="size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">O cliente está esperando resposta.</span>
+          <button type="button" data-nao-precisa-responder onClick={() => conversa({ acao: "nao_precisa_responder" }, "Pronto: o cronômetro parou.")} disabled={enviando} className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-controle border border-borda px-2.5 font-semibold text-texto transition hover:bg-superficie-suave disabled:opacity-50">
+            <Check className="size-3.5" aria-hidden />
+            Não precisa responder
+          </button>
+        </div>
+      )}
+      {ficha.etapa !== "perdido" && ficha.etapa !== "fechado" && !ficha.esperandoDesde && ficha.respondeuSemEsperaEm && (
+        <div data-espera-conversa="dispensada" className="flex items-center gap-2 border-b border-borda bg-superficie-suave/40 px-4 py-1.5 text-xs text-texto-suave">
+          <Reply className="size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">
+            Cliente respondeu, sem prazo de resposta ({ficha.respondeuSemEsperaPor === "ia" ? "marcado pela IA" : ficha.respondeuSemEsperaPor ? `marcado por ${ficha.respondeuSemEsperaPor}` : "marcado"}).
+          </span>
+          <button type="button" data-precisa-de-resposta onClick={() => conversa({ acao: "precisa_de_resposta" }, "Pronto: o cliente voltou para \"Precisa de você\".")} disabled={enviando} className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-controle border border-borda px-2.5 font-semibold text-texto transition hover:bg-superficie-suave disabled:opacity-50">
+            <Hourglass className="size-3.5" aria-hidden />
+            Precisa de resposta
+          </button>
+        </div>
+      )}
       {ficha.erroBot && (
         <p role="alert" className="border-b border-alerta/30 bg-alerta-suave px-4 py-2 text-sm text-alerta">
           O bot não conseguiu responder: {ficha.erroBot} A conversa está aguardando um consultor.
