@@ -15,8 +15,10 @@ import { registrarUmaVez } from "./metricas";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
 import { rodarPresenca } from "./presenca";
 import { rodarRecuperacao } from "./recuperacao";
+import { rodarRedeDeSeguranca } from "./rede-seguranca";
 import { enviarRetornosAutomaticos } from "./retorno-fechada";
 import { garantirMotivoParouDeResponder } from "./vendas";
+import { regrasDaRedeDeSeguranca } from "./configuracoes";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
 export interface ResultadoRotinas {
@@ -53,7 +55,10 @@ async function executar(): Promise<ResultadoRotinas> {
   const quando = await agora();
   const resultado: ResultadoRotinas = { retomadas: 0, semResposta: 0, excluidos: 0 };
 
-  const leads = await db.lead.findMany({
+  // Tarefa 41: a retomada antiga (modelo em 3 dias, Perdido 4 dias depois) só roda enquanto a rede de segurança está
+  // desligada. Ligada a rede, a retomada deixa de existir (decisão do Mateus 16/11/2026); o código sai depois disso.
+  const retomadaAntiga = !(await regrasDaRedeDeSeguranca()).ligado;
+  const leads = !retomadaAntiga ? [] : await db.lead.findMany({
     where: { arquivadoEm: null, etapa: "novo", modoAtendimento: "bot", ultimaMsgLojaEm: { not: null }, naoReceberEm: null },
     include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
   });
@@ -133,6 +138,13 @@ async function executar(): Promise<ResultadoRotinas> {
     await rodarRecuperacao();
   } catch (erro) {
     console.error("[rotinas] recuperação de leads falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
+
+  // Rede de segurança (tarefa 41): por último, para pegar só o que as outras regras não tiraram do quadro.
+  try {
+    await rodarRedeDeSeguranca();
+  } catch (erro) {
+    console.error("[rotinas] rede de segurança falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
   // O relógio simulado pode ter andado: confere os prazos de espera.

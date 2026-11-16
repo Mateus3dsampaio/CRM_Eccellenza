@@ -5,6 +5,7 @@ import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type 
 import { REGRAS_RETORNO_PADRAO, completarRegrasRetorno, validarRegrasRetorno, type RegrasRetorno } from "@/regras/retorno-fechada";
 import { REGRAS_RECUPERACAO_PADRAO, completarRegrasRecuperacao, validarRegrasRecuperacao, type RegrasRecuperacao } from "@/regras/recuperacao";
 import { REGRAS_DESCLASSIFICADOS_PADRAO, completarRegrasDesclassificados, validarRegrasDesclassificados, type RegrasDesclassificados } from "@/regras/desclassificados";
+import { REGRAS_REDE_PADRAO, completarRegrasRede, validarRegrasRede, type RegrasRedeDeSeguranca } from "@/regras/rede-seguranca";
 import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
@@ -150,5 +151,26 @@ export async function definirRegrasDeDesclassificados(regras: RegrasDesclassific
   const erro = validarRegrasDesclassificados(regras);
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_DESCLASSIFICADOS, JSON.stringify(regras));
+  await marcarMudanca();
+}
+
+const CHAVE_REDE = "rede_de_seguranca";
+
+/** Regras da rede de segurança (tarefa 41). Sem valor (ou inválido) vale o padrão (desligada, 5 dias). */
+export async function regrasDaRedeDeSeguranca(): Promise<RegrasRedeDeSeguranca> {
+  const bruto = await lerConfig(CHAVE_REDE);
+  if (!bruto) return REGRAS_REDE_PADRAO;
+  try {
+    const r = completarRegrasRede(JSON.parse(bruto) as Partial<RegrasRedeDeSeguranca>);
+    return validarRegrasRede(r) === null ? r : REGRAS_REDE_PADRAO;
+  } catch {
+    return REGRAS_REDE_PADRAO;
+  }
+}
+
+export async function definirRegrasDaRedeDeSeguranca(regras: RegrasRedeDeSeguranca): Promise<void> {
+  const erro = validarRegrasRede(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_REDE, JSON.stringify(regras));
   await marcarMudanca();
 }
