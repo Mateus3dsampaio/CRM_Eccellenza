@@ -8,10 +8,16 @@ Objetivo: a coluna Perdido se esvaziar sem ninguém precisar limpar.
 - Arquivado continua sendo excluído de vez 30 dias depois (regra que já existe). Ou seja: conversa e arquivos somem em 37 dias (automático) ou 90 dias (vendedor). Os números do painel ficam.
 
 ## Etapas
-- [ ] 1. Regra pura `src/regras/arquivar-perdido.ts`: o prazo depende do motivo (lista dos motivos automáticos); a data é a da última entrada em Perdido (`MudancaEtapa`). Com testes.
-- [ ] 2. Rotina em `rotinas.ts` usando `arquivarLeads` (autor "sistema"), com o texto "Arquivado automaticamente (N dias em Perdido)" na ficha.
-- [ ] 3. Contador no painel e linha no registro das rotinas.
-- [ ] 4. Mapa do código e pendências (fechar o item da seção E sobre "Sem resposta" sem prazo).
+- [x] 1. Regra pura `src/regras/arquivar-perdido.ts`: o prazo depende do motivo (lista dos motivos automáticos); a data é a da última entrada em Perdido (`MudancaEtapa`). Com testes.
+- [x] 2. Rotina em `rotinas.ts` usando `arquivarLeads` (autor "sistema"), com o texto "Arquivado automaticamente (N dias em Perdido)" na ficha.
+- [x] 3. Contador (`perdido_arquivado`) e linha no registro das rotinas. A linha no painel entra na tarefa 43.
+- [x] 4. Mapa do código e pendências (fechar o item da seção E sobre "Sem resposta" sem prazo).
+
+## Como ficou (16/11/2026)
+- "Automático" é o card que o **sistema** moveu para Perdido (olha quem fez a última mudança de etapa), e não uma lista de motivos. Assim um "Parou de responder" marcado pelo vendedor na Negociação conta como do vendedor (60 dias), e não some em 7.
+- O perdido do vendedor pode ser desligado à parte (`vendedorLigado`).
+- Card restaurado do arquivo e deixado em Perdido ganha o prazo inteiro de novo (senão voltaria ao arquivo no minuto seguinte).
+- Nasce desligado e sem tela (tarefa 43).
 
 ## Atenção
 - **Primeira execução em produção:** todo card que já está em Perdido há mais que o prazo é arquivado de uma vez. Avisar o Mateus antes de subir e mostrar quantos são.

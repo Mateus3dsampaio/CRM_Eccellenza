@@ -26,6 +26,7 @@ export type TipoEvento =
   | "desclassificado_perdido"
   | "rede_perdido"
   | "rede_arquivado"
+  | "perdido_arquivado"
   | `etapa_${string}`;
 
 export async function registrarEvento(tipo: TipoEvento, consultorId?: string | null, quando?: Date): Promise<void> {

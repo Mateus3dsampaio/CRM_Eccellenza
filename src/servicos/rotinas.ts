@@ -6,6 +6,7 @@ import { deveExcluirArquivado, deveExcluirFechado, DIAS_ARQUIVADO_ATE_EXCLUIR, D
 import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
 import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { formatarDataHora } from "@/regras/tempo";
+import { rodarArquivarPerdidos } from "./arquivar-perdido";
 import { avisarDecisoesVencidas, avisarPrazosVermelhos, avisarRetornos } from "./alertas";
 import { rodarDesclassificados } from "./desclassificados";
 import { registrarAlteracao } from "./historico";
@@ -147,6 +148,14 @@ async function executar(): Promise<ResultadoRotinas> {
     console.error("[rotinas] rede de segurança falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
+  // Perdido arquiva sozinho (tarefa 42). Depois das regras que movem para Perdido: o prazo conta da entrada na coluna.
+  let perdidosArquivados = 0;
+  try {
+    perdidosArquivados = await rodarArquivarPerdidos();
+  } catch (erro) {
+    console.error("[rotinas] arquivar perdidos falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
+
   // O relógio simulado pode ter andado: confere os prazos de espera.
   await avisarPrazosVermelhos();
   await avisarRetornos();
@@ -157,6 +166,7 @@ async function executar(): Promise<ResultadoRotinas> {
   if (resultado.semResposta) partes.push(`${resultado.semResposta} lead(s) movido(s) para "Perdido – Parou de responder" (${DIAS_PARA_SEM_RESPOSTA} dias após a retomada)`);
   if (resultado.excluidos) partes.push(`${resultado.excluidos} arquivado(s) excluído(s) de vez (${DIAS_ARQUIVADO_ATE_EXCLUIR} dias no arquivo)`);
   if (resultado.fechadosExcluidos) partes.push(`${resultado.fechadosExcluidos} cliente(s) que fecharam projeto excluído(s) de vez (${DIAS_FECHADO_ATE_EXCLUIR} dias após fechar)`);
+  if (perdidosArquivados) partes.push(`${perdidosArquivados} card(s) de Perdido arquivado(s) automaticamente`);
   if (partes.length) {
     await registrar(`${formatarDataHora(quando)}: ${partes.join("; ")}.`);
     await marcarMudanca();

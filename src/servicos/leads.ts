@@ -337,9 +337,12 @@ export async function arquivarLeads(ids: string[], autor: string): Promise<numbe
   return total;
 }
 
+/** Texto do registro de restauração. O "Perdido arquiva sozinho" procura por ele: restaurar recomeça o prazo (`servicos/arquivar-perdido.ts`). */
+export const TEXTO_RESTAUROU = "Restaurou o lead do arquivo";
+
 export async function restaurarLead(id: string, autor: string) {
   await db.lead.update({ where: { id }, data: { arquivadoEm: null } });
-  await registrarAlteracao(id, autor, "Restaurou o lead do arquivo");
+  await registrarAlteracao(id, autor, TEXTO_RESTAUROU);
   await marcarMudanca();
 }
 

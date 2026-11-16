@@ -6,6 +6,7 @@ import { REGRAS_RETORNO_PADRAO, completarRegrasRetorno, validarRegrasRetorno, ty
 import { REGRAS_RECUPERACAO_PADRAO, completarRegrasRecuperacao, validarRegrasRecuperacao, type RegrasRecuperacao } from "@/regras/recuperacao";
 import { REGRAS_DESCLASSIFICADOS_PADRAO, completarRegrasDesclassificados, validarRegrasDesclassificados, type RegrasDesclassificados } from "@/regras/desclassificados";
 import { REGRAS_REDE_PADRAO, completarRegrasRede, validarRegrasRede, type RegrasRedeDeSeguranca } from "@/regras/rede-seguranca";
+import { REGRAS_ARQUIVAR_PADRAO, completarRegrasArquivar, validarRegrasArquivar, type RegrasArquivarPerdido } from "@/regras/arquivar-perdido";
 import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
@@ -172,5 +173,26 @@ export async function definirRegrasDaRedeDeSeguranca(regras: RegrasRedeDeSeguran
   const erro = validarRegrasRede(regras);
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_REDE, JSON.stringify(regras));
+  await marcarMudanca();
+}
+
+const CHAVE_ARQUIVAR = "arquivar_perdido";
+
+/** Regras do "Perdido arquiva sozinho" (tarefa 42). Sem valor (ou inválido) vale o padrão (desligado, 7 e 60 dias). */
+export async function regrasDeArquivarPerdido(): Promise<RegrasArquivarPerdido> {
+  const bruto = await lerConfig(CHAVE_ARQUIVAR);
+  if (!bruto) return REGRAS_ARQUIVAR_PADRAO;
+  try {
+    const r = completarRegrasArquivar(JSON.parse(bruto) as Partial<RegrasArquivarPerdido>);
+    return validarRegrasArquivar(r) === null ? r : REGRAS_ARQUIVAR_PADRAO;
+  } catch {
+    return REGRAS_ARQUIVAR_PADRAO;
+  }
+}
+
+export async function definirRegrasDeArquivarPerdido(regras: RegrasArquivarPerdido): Promise<void> {
+  const erro = validarRegrasArquivar(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_ARQUIVAR, JSON.stringify(regras));
   await marcarMudanca();
 }
