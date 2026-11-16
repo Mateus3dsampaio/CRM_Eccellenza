@@ -13,7 +13,8 @@ import { horarioDoRetorno } from "@/regras/retorno-fechada";
 import { ETAPAS_COM_RETORNO } from "@/regras/vendas";
 import { dataLocal, formatarDataHora } from "@/regras/tempo";
 import { regrasDaAgenda, regrasDeRetorno } from "@/servicos/configuracoes";
-import { esquemaCampos, esquemaClassificar, esquemaMedidas, esquemaPassar, esquemaRetorno } from "./ferramentas";
+import { bloquearContato } from "@/servicos/bloqueio";
+import { esquemaCampos, esquemaClassificar, esquemaEncerrar, esquemaMedidas, esquemaPassar, esquemaRetorno, NOME_ENCERRAR_CONTATO } from "./ferramentas";
 
 export interface ResultadoFerramenta {
   conteudo: string;
@@ -126,6 +127,17 @@ export async function executarFerramenta(leadId: string, nome: string, entrada: 
         await atualizarResumo(leadId);
         await marcarMudanca();
         return { conteudo: "Lead passado ao consultor." };
+      }
+
+      case NOME_ENCERRAR_CONTATO: {
+        const { motivo } = esquemaEncerrar.parse(entrada);
+        const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId }, select: { etapa: true, modoAtendimento: true, aguardandoHumano: true } });
+        // Só o contato que ainda não saiu do bot: lead que já passou por um consultor não some do quadro por decisão do bot.
+        if (lead.etapa !== "novo" || lead.modoAtendimento !== "bot" || lead.aguardandoHumano) {
+          return { conteudo: "Não encerrado: este lead já foi passado ao consultor. Se a conversa precisa de uma pessoa, use passar_para_consultor.", erro: true };
+        }
+        await bloquearContato(leadId, "bot", motivo);
+        return { conteudo: "Contato encerrado e bloqueado. Nenhuma mensagem será enviada a ele." };
       }
 
       default:

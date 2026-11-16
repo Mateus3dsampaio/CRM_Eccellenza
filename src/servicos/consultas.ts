@@ -227,6 +227,7 @@ export async function fichaDoLead(id: string) {
     respondeuSemEsperaPor: [...lead.mensagens].reverse().find((m) => m.dispensadaEm)?.dispensadaPor ?? null,
     erroBot: lead.erroBot,
     arquivado: !!lead.arquivadoEm,
+    bloqueado: !!lead.bloqueadoEm,
     janelaAberta: janelaAberta(lead.ultimaMsgClienteEm, quando),
     ultimaMsgClienteEm: lead.ultimaMsgClienteEm?.toISOString() ?? null,
     janelaFechaEm: fecha?.toISOString() ?? null,
@@ -289,5 +290,7 @@ export async function listaArquivados() {
     avatarCor: l.avatarCor,
     arquivadoEm: l.arquivadoEm!.toISOString(),
     previa: l.ultimaMensagemPrevia,
+    bloqueado: !!l.bloqueadoEm,
+    bloqueadoPor: l.bloqueadoPor,
   }));
 }

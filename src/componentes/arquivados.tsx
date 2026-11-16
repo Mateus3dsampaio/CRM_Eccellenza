@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Ban, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { DIAS_ARQUIVADO_ATE_EXCLUIR } from "@/regras/limpeza";
 import { DIA, formatarData } from "@/regras/tempo";
 import { chamarApi, useAviso, useDados, useVersao } from "./dados";
@@ -11,7 +11,7 @@ import { Avatar, Botao, Carregando, EstadoErro, EstadoVazio, Modal } from "./ui"
 import { usePode } from "./usuario";
 import { useGaveta } from "./ficha/gaveta";
 
-interface Arquivado { id: string; nome: string; telefone: string; cidade: string | null; avatarCor: number; arquivadoEm: string; previa: string | null }
+interface Arquivado { id: string; nome: string; telefone: string; cidade: string | null; avatarCor: number; arquivadoEm: string; previa: string | null; bloqueado: boolean; bloqueadoPor: string | null }
 
 // Lista de arquivados: consultar, restaurar e (só o admin) excluir (LIMP-03, LIMP-05).
 export function Arquivados() {
@@ -25,7 +25,7 @@ export function Arquivados() {
   async function restaurar(id: string) {
     try {
       await chamarApi(`/api/leads/${id}`, { method: "PATCH", json: { restaurar: true } });
-      avisar("Lead restaurado ao kanban.");
+      avisar(dados?.leads.find((l) => l.id === id)?.bloqueado ? "Contato desbloqueado e de volta ao kanban." : "Lead restaurado ao kanban.");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "Não foi possível restaurar.", "erro");
     } finally {
@@ -42,7 +42,7 @@ export function Arquivados() {
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-4 md:pt-3">
       <div>
         <h1 className="sr-only">Arquivados</h1>
-        <p className="text-sm text-texto-suave">Leads arquivados saem do kanban e são excluídos de vez {DIAS_ARQUIVADO_ATE_EXCLUIR} dias depois, com mensagens e mídias.</p>
+        <p className="text-sm text-texto-suave">Leads arquivados saem do kanban e são excluídos de vez {DIAS_ARQUIVADO_ATE_EXCLUIR} dias depois, com mensagens e mídias. Contato bloqueado fica aqui sem a IA responder; desbloquear devolve ao kanban.</p>
       </div>
       {carregando && !dados ? (
         <Carregando linhas={3} />
@@ -56,7 +56,14 @@ export function Arquivados() {
             <li key={l.id} className="flex flex-wrap items-center gap-3 rounded-card border border-borda bg-superficie p-3 shadow-card">
               <Avatar nome={l.nome} cor={l.avatarCor} />
               <Link href={gaveta.hrefDe(l.id)} scroll={false} className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{l.nome}</p>
+                <p className="flex items-center gap-2 font-semibold">
+                  <span className="truncate">{l.nome}</span>
+                  {l.bloqueado && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-pilula border border-borda px-2 py-0.5 text-[11px] font-semibold text-aviso" title={`Bloqueado por ${l.bloqueadoPor === "bot" ? "a IA" : l.bloqueadoPor ?? "alguém"}: a IA não responde e as mensagens novas não geram aviso`}>
+                      <Ban className="size-3" aria-hidden /> Bloqueado{l.bloqueadoPor === "bot" ? " pela IA" : ""}
+                    </span>
+                  )}
+                </p>
                 <p className="truncate text-xs text-texto-suave">
                   {l.telefone}
                   {l.cidade && ` · ${l.cidade}`} · arquivado em {formatarData(new Date(l.arquivadoEm))} · excluído em {diasRestantes(l.arquivadoEm)} dia(s)
@@ -64,7 +71,7 @@ export function Arquivados() {
               </Link>
               <div className="flex gap-2">
                 <Botao onClick={() => restaurar(l.id)} icone={<ArchiveRestore className="size-4" aria-hidden />}>
-                  Restaurar
+                  {l.bloqueado ? "Desbloquear" : "Restaurar"}
                 </Botao>
                 {podeExcluir && (
                   <Botao variante="fantasma" className="ml-3 text-alerta hover:bg-alerta-suave hover:text-alerta" onClick={() => setExcluir(l)} icone={<Trash2 className="size-4" aria-hidden />}>

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { motivoDeRecusaDaMidia, TAMANHO_MAXIMO, tipoImagemValido } from "@/lib/midias";
 import { extensaoBloqueada, familiaDoTipo, limiteDoTipo, TIPO_GENERICO, tipoDoArquivo, tipoMidiaAceito } from "@/regras/midia";
+import { ARQUIVO_DE_BLOQUEADO, AUDIO_DE_BLOQUEADO, contatoBloqueado } from "./bloqueio";
 import { LIMITE_AUDIO_BYTES, tipoAudioAceito, transcreverAudio, transcricaoConfigurada } from "./transcricao";
 import { lerConfigWhatsapp } from "@/lib/whatsapp-config";
 import { agora } from "@/lib/relogio";
@@ -184,7 +185,11 @@ async function aplicarMensagem(m: MensagemRecebida) {
   }
   let midia: { dados: Buffer; tipo: string; nome: string | null } | null = null;
   let texto = m.texto;
-  if (m.tipo === "audio") {
+  // Contato bloqueado (tarefa 44): não gasta transcrição nem espaço. Só fica o registro de que algo chegou.
+  if (await contatoBloqueado(`+${m.telefone}`)) {
+    if (m.tipo === "audio") texto = AUDIO_DE_BLOQUEADO;
+    else if (m.midiaId) texto = [texto, ARQUIVO_DE_BLOQUEADO].filter(Boolean).join(" ");
+  } else if (m.tipo === "audio") {
     texto = await textoDoAudio(m);
   } else if (m.midiaId) {
     // Imagem, vídeo ou PDF: fica guardado e aparece na conversa e na galeria.

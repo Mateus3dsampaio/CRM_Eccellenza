@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Bot, Check, FileCheck2, Headset, Hourglass, Info, Paperclip, Reply, RotateCcw, Send, SpellCheck, X } from "lucide-react";
+import { Ban, Bot, Check, FileCheck2, Headset, Hourglass, Info, Paperclip, Reply, RotateCcw, Send, SpellCheck, X } from "lucide-react";
 import { destacarMudancas } from "@/regras/revisao-texto";
 import type { ResultadoDaRevisao } from "@/servicos/revisao-texto";
 import { ACEITO_NO_ANEXO, formatarTamanho, limiteDoTipo, tipoDoArquivo, tipoPodeEnviar } from "@/regras/midia";
@@ -125,29 +125,65 @@ export function ConversaConsultor({ ficha, aoMudar, atalhos }: { ficha: FichaLea
   // A sugestão só vale para o texto que foi revisado.
   const sugestao = revisao && revisao.original === texto && !previa ? revisao.resultado : null;
 
-  const modoTexto =
-    ficha.modo === "humano" ? "Consultor na conversa: o bot não responde." : ficha.modo === "pausado" ? "Bot pausado: o lead foi passado ao consultor." : "Bot atendendo esta conversa.";
+  // Contato bloqueado (tarefa 44): bloquear usa a permissão de arquivar; desbloquear é o "restaurar" de sempre.
+  const podeBloquear = usePode("arquivar_lead");
+  const [confirmarBloqueio, setConfirmarBloqueio] = useState(false);
+  async function bloquear(bloquearAgora: boolean) {
+    setConfirmarBloqueio(false);
+    try {
+      if (bloquearAgora) await chamarApi("/api/leads/acoes", { method: "POST", json: { acao: "bloquear", ids: [ficha.id] } });
+      else await chamarApi(`/api/leads/${ficha.id}`, { method: "PATCH", json: { restaurar: true } });
+      avisar(bloquearAgora ? "Contato bloqueado e arquivado." : "Contato desbloqueado e de volta ao kanban.");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "Não foi possível concluir.", "erro");
+    } finally {
+      aoMudar();
+    }
+  }
+
+  const modoTexto = ficha.bloqueado
+    ? "Contato bloqueado: a IA não responde e as mensagens novas não geram aviso."
+    : ficha.modo === "humano" ? "Consultor na conversa: o bot não responde." : ficha.modo === "pausado" ? "Bot pausado: o lead foi passado ao consultor." : "Bot atendendo esta conversa.";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-painel border border-borda bg-chat-fundo shadow-painel">
       <div className="flex items-center gap-2 border-b border-borda bg-superficie px-4 py-2 max-sm:flex-wrap max-sm:px-3">
-        <span className={juntar("flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium max-sm:min-w-[9rem] max-sm:text-[13px]", ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
-          {ficha.modo === "bot" ? <Bot className="size-4 shrink-0" aria-hidden /> : <Headset className="size-4 shrink-0" aria-hidden />}
+        <span className={juntar("flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium max-sm:min-w-[9rem] max-sm:text-[13px]", ficha.bloqueado ? "text-aviso" : ficha.modo === "bot" ? "text-sucesso" : "text-marca-texto")}>
+          {ficha.bloqueado ? <Ban className="size-4 shrink-0" aria-hidden /> : ficha.modo === "bot" ? <Bot className="size-4 shrink-0" aria-hidden /> : <Headset className="size-4 shrink-0" aria-hidden />}
           {modoTexto}
         </span>
         <div className="flex shrink-0 gap-2">
-          {ficha.modo !== "humano" && (
+          {ficha.bloqueado && podeBloquear && (
+            <Botao className="max-sm:min-h-9 max-sm:px-3 max-sm:text-[13px]" onClick={() => bloquear(false)} disabled={enviando}>
+              Desbloquear
+            </Botao>
+          )}
+          {!ficha.bloqueado && podeBloquear && (
+            <button type="button" data-bloquear-contato onClick={() => setConfirmarBloqueio(true)} disabled={enviando} aria-label="Bloquear contato" title="Bloquear contato (não é cliente)" className="botao-icone botao-icone-perigo">
+              <Ban className="size-4" aria-hidden />
+            </button>
+          )}
+          {!ficha.bloqueado && ficha.modo !== "humano" && (
             <Botao className="max-sm:min-h-9 max-sm:px-3 max-sm:text-[13px]" onClick={() => conversa({ acao: "assumir" }, "Você assumiu a conversa.")} disabled={enviando}>
               Assumir conversa
             </Botao>
           )}
-          {ficha.modo !== "bot" && (
+          {!ficha.bloqueado && ficha.modo !== "bot" && (
             <Botao className="max-sm:min-h-9 max-sm:px-3 max-sm:text-[13px]" onClick={() => conversa({ acao: "devolver" }, "Conversa devolvida ao bot.")} disabled={enviando} icone={<Bot className="size-4" aria-hidden />}>
               Devolver ao bot
             </Botao>
           )}
         </div>
       </div>
+      <Modal aberto={confirmarBloqueio} aoFechar={() => setConfirmarBloqueio(false)} titulo="Bloquear contato" largura="max-w-md">
+        <p className="text-sm text-texto-suave">
+          Bloquear {ficha.nomeExibicao}? Use para quem não é cliente (conversa sem relação com a loja). O contato vai para o arquivo, a IA para de responder e as mensagens novas dele não geram aviso. Em 30 dias ele é excluído de vez, com a conversa. Até lá dá para desbloquear em Arquivados.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao variante="fantasma" onClick={() => setConfirmarBloqueio(false)}>Cancelar</Botao>
+          <Botao variante="perigo" onClick={() => bloquear(true)} icone={<Ban className="size-4" aria-hidden />}>Bloquear</Botao>
+        </div>
+      </Modal>
       {/* Espera do cliente: o vendedor para o cronômetro ("Não precisa responder") ou corrige a IA ("Precisa de resposta"). */}
       {ficha.etapa !== "perdido" && ficha.esperandoDesde && (
         <div data-espera-conversa="esperando" className="flex items-center gap-2 border-b border-borda bg-superficie-suave/40 px-4 py-1.5 text-xs text-texto-suave">

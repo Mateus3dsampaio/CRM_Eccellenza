@@ -32,7 +32,7 @@ interface DadosPainel {
   /** Recuperação de leads no período: mensagens enviadas, quem respondeu depois de cada uma e quem foi para Perdido sozinho. */
   recuperacao: { primeira: number; segunda: number; respondeuPrimeira: number; respondeuSegunda: number; perdidos: number };
   /** Automação de leads no período (tarefas 40 a 42): cards que as regras tiraram do quadro sozinhas. */
-  automacao: { desclassificados: number; redePerdidos: number; redeArquivados: number; perdidosArquivados: number };
+  automacao: { desclassificados: number; redePerdidos: number; redeArquivados: number; perdidosArquivados: number; bloqueados: number };
   vendas: {
     emNegociacao: { quantidade: number; total: number; semValor: number };
     vendido: { quantidade: number; total: number };
@@ -337,13 +337,14 @@ export function Painel() {
           </div>
 
           <h2 className="-mb-1 rotulo-secao">Automação de leads</h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             {(
               [
                 ["Desclassificados para Perdido", dados.automacao.desclassificados, "outra cidade e curioso / sem perfil"],
                 ["Rede de segurança: para Perdido", dados.automacao.redePerdidos, "parados com a IA além do prazo"],
                 ["Rede de segurança: arquivados", dados.automacao.redeArquivados, "pós-venda parado"],
                 ["Perdidos arquivados", dados.automacao.perdidosArquivados, "saíram da coluna Perdido sozinhos"],
+                ["Contatos bloqueados", dados.automacao.bloqueados, "não eram clientes (pela IA ou à mão)"],
               ] as const
             ).map(([nome, valor, nota]) => (
               <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">

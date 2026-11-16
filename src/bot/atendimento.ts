@@ -18,7 +18,7 @@ import { configDoBot } from "@/servicos/provedor-bot";
 import { registrarUso } from "@/servicos/uso-api";
 import { executarFerramenta } from "./executor";
 import { avisoArquivoNaoLido, avisoDoTurno, avisoImagem, avisoMensagemEnviada, mensagemDoCliente } from "./avisos";
-import { FERRAMENTAS } from "./ferramentas";
+import { FERRAMENTAS, NOME_ENCERRAR_CONTATO } from "./ferramentas";
 import { deRespostaOpenAI, paraFerramentasOpenAI, paraMensagensOpenAI, type MotivoDeParada } from "./openai-conversao";
 import { montarPromptSistema } from "./prompt";
 import { juntarTextos, limparResposta, respostaDescartada } from "./saida";
@@ -197,6 +197,8 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
     if (lead.modoAtendimento !== "bot") return { respostas: [] };
     // Cliente que pediu para parar (LGPD): o bot não responde e a mensagem fica para um humano.
     if (lead.naoReceberEm) return { respostas: [] };
+    // Contato bloqueado (tarefa 44): nenhuma chamada à API.
+    if (lead.bloqueadoEm) return { respostas: [] };
 
     // Proteção de custo (tarefa 14): excesso de mensagens do cliente não chama a API, passa para um humano.
     const recentes = await db.mensagem.findMany({
@@ -230,6 +232,8 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
     // O histórico só cresce (nunca é editado). Guardado a cada volta para ficar sempre consistente.
     const salvar = () => db.conversaApi.update({ where: { leadId }, data: { mensagens: JSON.stringify(historico) } });
     let interrompido = false;
+    // O bot encerrou o contato (ferramenta encerrar_contato): nada é enviado ao cliente, nem o texto que veio junto.
+    let encerrado = false;
 
     const textos: string[] = [];
     try {
@@ -257,12 +261,17 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
             resultados.push({ type: "tool_result", tool_use_id: bloco.id, content: "Não executada: um consultor assumiu a conversa.", is_error: true });
             continue;
           }
+          if (encerrado) {
+            resultados.push({ type: "tool_result", tool_use_id: bloco.id, content: "Não executada: o contato foi encerrado.", is_error: true });
+            continue;
+          }
           const r = await executarFerramenta(leadId, bloco.name, bloco.input);
           resultados.push({ type: "tool_result", tool_use_id: bloco.id, content: r.conteudo, is_error: r.erro });
+          if (bloco.name === NOME_ENCERRAR_CONTATO && !r.erro) encerrado = true;
         }
         historico.push({ role: "user", content: resultados });
         await salvar();
-        if (interrompido) break;
+        if (interrompido || encerrado) break;
         if (volta === MAX_VOLTAS - 1) throw new ErroBot("o atendimento automático entrou em repetição.");
       }
       await salvar();
@@ -275,6 +284,10 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       return { respostas: [], erro: mensagem };
     }
 
+    if (encerrado) {
+      await marcarMudanca();
+      return { respostas: [] };
+    }
     const original = juntarTextos(textos);
     const final = limparResposta(original);
     // Confere de novo antes de enviar: se o consultor assumiu enquanto o bot pensava, o bot não envia.

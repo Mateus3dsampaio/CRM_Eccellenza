@@ -87,6 +87,10 @@ model Lead {
   ultimaMsgClienteEm   DateTime?
   ultimaMsgLojaEm      DateTime? // bot, consultor ou sistema
   retomadaEnviadaEm    DateTime?
+  // Contato bloqueado (tarefa 44): não era cliente (conversa sem relação com a loja). Vai para o arquivo; mensagem nova não chama a IA,
+  // não transcreve áudio, não baixa arquivo e não tira do arquivo. Sai do bloqueio ao ser restaurado ou excluído com o arquivo (30 dias).
+  bloqueadoEm          DateTime?
+  bloqueadoPor         String? // "bot" ou o nome de quem bloqueou
   avisoAlmocoSeq       Int? // almoço do consultor em que o aviso ao cliente já foi enviado
   semRespostaEm        DateTime?
 

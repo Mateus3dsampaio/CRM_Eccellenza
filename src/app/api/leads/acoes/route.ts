@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { ErroHttp, exigirUsuario } from "@/lib/sessao";
 import { CODIGOS_ETAPA, ETAPAS_LIMPAVEIS, etiquetaValida } from "@/regras/etapas";
 import { dadosDeVenda, esquemaDadosDeVenda } from "@/lib/esquema-venda";
+import { bloquearContato } from "@/servicos/bloqueio";
 import { alterarEtiqueta, arquivarLeads, conferirMudanca, moverEtapa } from "@/servicos/leads";
 import { excluirComRegistro } from "@/servicos/lgpd";
 
@@ -13,6 +14,7 @@ const esquema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("mover"), ids, etapa: z.enum(CODIGOS_ETAPA as [string, ...string[]]), dados: esquemaDadosDeVenda.optional(), cancelarCompromissos: z.boolean().optional() }),
   z.object({ acao: z.literal("arquivar"), ids }),
   z.object({ acao: z.literal("excluir"), ids }),
+  z.object({ acao: z.literal("bloquear"), ids }),
   z.object({ acao: z.literal("etiqueta"), ids, etiqueta: z.string(), ativa: z.boolean() }),
   z.object({ acao: z.literal("limpar_coluna"), etapa: z.enum(ETAPAS_LIMPAVEIS as [string, ...string[]]), modo: z.enum(["arquivar", "excluir"]) }),
 ]);
@@ -31,6 +33,13 @@ export const POST = rota(async (req: Request) => {
     case "arquivar":
       await exigirUsuario("arquivar_lead");
       return { ok: true, total: await arquivarLeads(corpo.ids, usuario.nome) };
+    case "bloquear": {
+      // Bloquear tira do quadro para o arquivo: mesma permissão de arquivar.
+      await exigirUsuario("arquivar_lead");
+      let total = 0;
+      for (const id of corpo.ids) if (await bloquearContato(id, usuario.nome)) total++;
+      return { ok: true, total };
+    }
     case "excluir":
       await exigirUsuario("excluir_lead");
       return { ok: true, total: await excluirComRegistro(corpo.ids, usuario.nome) };

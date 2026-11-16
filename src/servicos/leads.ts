@@ -341,7 +341,10 @@ export async function arquivarLeads(ids: string[], autor: string): Promise<numbe
 export const TEXTO_RESTAUROU = "Restaurou o lead do arquivo";
 
 export async function restaurarLead(id: string, autor: string) {
-  await db.lead.update({ where: { id }, data: { arquivadoEm: null } });
+  const antes = await db.lead.findUnique({ where: { id }, select: { bloqueadoEm: true } });
+  // Restaurar também desbloqueia (tarefa 44): contato bloqueado só existe dentro do arquivo.
+  await db.lead.update({ where: { id }, data: { arquivadoEm: null, bloqueadoEm: null, bloqueadoPor: null } });
+  if (antes?.bloqueadoEm) await registrarAlteracao(id, autor, "Desbloqueou o contato");
   await registrarAlteracao(id, autor, TEXTO_RESTAUROU);
   await marcarMudanca();
 }

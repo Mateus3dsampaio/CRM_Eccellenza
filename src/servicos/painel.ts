@@ -149,6 +149,7 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
       redePerdidos: contar("rede_perdido", inicio, fim),
       redeArquivados: contar("rede_arquivado", inicio, fim),
       perdidosArquivados: contar("perdido_arquivado", inicio, fim),
+      bloqueados: contar("contato_bloqueado", inicio, fim),
     },
     tempos,
     apresentacoesPorConsultor: consultores.map((c) => ({

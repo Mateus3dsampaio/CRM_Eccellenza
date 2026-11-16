@@ -25,6 +25,8 @@ export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
   removerEtiqueta: (id: string, etiqueta: string) => void;
   arquivar: (id: string) => void;
+  /** Bloquear o contato que não é cliente (tarefa 44): pede confirmação, arquiva e a IA para de responder. */
+  bloquear?: (id: string) => void;
   excluir?: (id: string) => void;
   /** Abre a janela de decisão (data vencida: medição, apresentação ou retorno da Negociação). */
   decidir?: (id: string) => void;
@@ -488,6 +490,19 @@ export function Card({
                     >
                       Arquivar
                     </button>
+                    {acoes.bloquear && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(null);
+                          acoes.bloquear?.(card.id);
+                        }}
+                        className="block min-h-11 w-full rounded-controle px-3 py-1.5 text-left text-sm hover:bg-superficie-suave"
+                      >
+                        Bloquear contato
+                        <span className="block text-xs text-texto-fraco">Não é cliente: arquiva e a IA para</span>
+                      </button>
+                    )}
                     {acoes.excluir && (
                       <button
                         role="menuitem"

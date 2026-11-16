@@ -89,7 +89,7 @@ function criarPainel(D) {
       },
       porConsultor: porConsultor,
       recuperacao: { primeira: contar("recuperacao_primeira"), segunda: contar("recuperacao_segunda"), respondeuPrimeira: contar("recuperacao_respondeu_primeira"), respondeuSegunda: contar("recuperacao_respondeu_segunda"), perdidos: contar("recuperacao_perdido") },
-      automacao: { desclassificados: contar("desclassificado_perdido"), redePerdidos: contar("rede_perdido"), redeArquivados: contar("rede_arquivado"), perdidosArquivados: contar("perdido_arquivado") },
+      automacao: { desclassificados: contar("desclassificado_perdido"), redePerdidos: contar("rede_perdido"), redeArquivados: contar("rede_arquivado"), perdidosArquivados: contar("perdido_arquivado"), bloqueados: contar("contato_bloqueado") },
       lista: encerrados.slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; })
     };
   };
@@ -168,7 +168,8 @@ function iniciarPagina() {
       cartao("Desclassificados para Perdido", num(aut.desclassificados), "outra cidade e curioso / sem perfil") +
       cartao("Rede de segurança: para Perdido", num(aut.redePerdidos), "parados com a IA além do prazo") +
       cartao("Rede de segurança: arquivados", num(aut.redeArquivados), "pós-venda parado") +
-      cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos");
+      cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos") +
+      cartao("Contatos bloqueados", num(aut.bloqueados), "não eram clientes (pela IA ou à mão)");
     var maiorFunil = Math.max.apply(null, [1].concat(r.funil.map(function (f) { return f.total; })));
     $("funil").innerHTML = r.funil.map(function (f, i) {
       return '<li><div class="linha"><span>' + esc(f.nome) + '</span><b>' + num(f.total) + (i > 0 ? ' <small>' + taxa(f.total, r.funil[i - 1].total) + ' da etapa anterior</small>' : '') + '</b></div><div class="barra"><div style="width:' + (f.total / maiorFunil * 100) + '%"></div></div></li>';

@@ -56,6 +56,14 @@ export async function marcarLidas(leadId: string): Promise<void> {
 /** Mensagem que chega do cliente (simulada). Aplica RET-02 e reabre arquivados. */
 export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string; nome?: string | null; bytes?: number }, idExterno?: string) {
   const quando = await agora();
+  // Contato bloqueado (tarefa 44): a mensagem só fica guardada na conversa. Não tira do arquivo, não abre espera, não avisa
+  // ninguém, não mexe no card e já entra como vista pelo bot (se um dia for desbloqueado, o bot não responde a ela).
+  const bloqueado = await db.lead.findUnique({ where: { id: leadId }, select: { bloqueadoEm: true } });
+  if (bloqueado?.bloqueadoEm) {
+    return db.mensagem.create({
+      data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno, processadaPeloBot: true },
+    });
+  }
   await marcarLidas(leadId);
   const mensagem = await db.mensagem.create({
     data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno },

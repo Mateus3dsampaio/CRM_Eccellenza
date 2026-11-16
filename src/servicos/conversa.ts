@@ -53,6 +53,8 @@ export async function receberMensagemCliente(params: {
     if (midia) await apagarMidia(midia.arquivo).catch(() => undefined);
     throw erro;
   }
+  // Contato bloqueado (tarefa 44): a mensagem já ficou guardada; nada mais acontece (nem bot, nem confirmação de "parar").
+  if (lead.bloqueadoEm) return { leadId: lead.id, respostas: [] as string[] };
   // LGPD: pedido claro para parar. Registra, confirma e não chama o bot.
   // (Áudio transcrito também vale: "parar" falado em voz alta é um pedido.)
   // O botão "Não tenho interesse" do modelo de retorno tem o mesmo efeito (tarefa 36).

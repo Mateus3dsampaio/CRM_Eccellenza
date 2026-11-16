@@ -334,6 +334,14 @@ export function Quadro() {
     mover,
     removerEtiqueta: (id, codigo) => void acao({ acao: "etiqueta", ids: [id], etiqueta: codigo, ativa: false }),
     arquivar: (id) => void acao({ acao: "arquivar", ids: [id] }, "Lead arquivado."),
+    bloquear: (id) =>
+      setConfirmacao({
+        titulo: "Bloquear contato",
+        texto: `Bloquear ${cards.find((c) => c.id === id)?.nome ?? "este contato"}? Use para quem não é cliente (conversa sem relação com a loja). O contato vai para o arquivo, a IA para de responder e as mensagens novas dele não geram aviso. Em 30 dias ele é excluído de vez, com a conversa. Até lá dá para desbloquear em Arquivados.`,
+        botao: "Bloquear",
+        perigo: true,
+        executar: () => acao({ acao: "bloquear", ids: [id] }, "Contato bloqueado e arquivado."),
+      }),
     excluir: podeExcluir ? (id) => confirmarExclusao([id]) : undefined,
     decidir: setDecidindo,
     marcarApresentacao: (id) => setAgendando({ id, tipo: "apresentacao" }),

@@ -149,7 +149,7 @@ describe("perdido arquiva sozinho: rotina com o banco", () => {
     await definirRegrasDeArquivarPerdido(R);
     await perder("+5588900000111", "sistema", "outro");
     await em(dia(8));
-    expect((await dadosDoPainel({ atalho: "hoje" })).automacao).toEqual({ desclassificados: 0, redePerdidos: 0, redeArquivados: 0, perdidosArquivados: 1 });
+    expect((await dadosDoPainel({ atalho: "hoje" })).automacao).toEqual({ desclassificados: 0, redePerdidos: 0, redeArquivados: 0, perdidosArquivados: 1, bloqueados: 0 });
     const html = gerarHtmlDoPainel(await dadosParaExportar());
     expect(html).toContain('id="automacao"');
     expect(html).toContain('id="recuperacao"');

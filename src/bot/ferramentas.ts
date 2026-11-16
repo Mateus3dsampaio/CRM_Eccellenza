@@ -2,6 +2,9 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { CODIGOS_CLASSIFICACAO } from "@/regras/etapas";
 
+/** Ferramenta que encerra e bloqueia o contato (tarefa 44). O atendimento para o turno depois dela, sem enviar nada. */
+export const NOME_ENCERRAR_CONTATO = "encerrar_contato";
+
 // BOT-03: ferramentas do bot. O bot não agenda (decisão do Mateus 04/11/2026): quem marca visita, medição e apresentação é o consultor. Esquemas para a API + validação (zod) antes de gravar no banco.
 const textoOpcional = { type: "string" } as const;
 const lista = { type: "array", items: { type: "string" } } as const;
@@ -92,6 +95,17 @@ export const FERRAMENTAS: Anthropic.Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: NOME_ENCERRAR_CONTATO,
+    description:
+      "Encerra e bloqueia um contato que não é cliente da loja. O contato sai do quadro para o arquivo, nenhuma mensagem é enviada a ele e o bot deixa de responder às próximas mensagens dele. Os critérios para usar estão nas instruções de atendimento. Só funciona enquanto o lead ainda está na primeira coluna, com o bot.",
+    input_schema: {
+      type: "object",
+      properties: { motivo: { type: "string", description: "Motivo curto, sem repetir o que o contato disse (ex.: conversa sem relação com a loja)." } },
+      required: ["motivo"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 const texto = z.string().trim().max(500).optional();
@@ -111,6 +125,8 @@ export const esquemaCampos = z
     observacoes: z.string().trim().max(2000).optional(),
   })
   .strict();
+
+export const esquemaEncerrar = z.object({ motivo: z.string().trim().min(1).max(300) }).strict();
 
 export const esquemaClassificar = z.object({ classificacao: z.enum(CODIGOS_CLASSIFICACAO as [string, ...string[]]), motivo: z.string().max(300).optional() }).strict();
 
