@@ -3,7 +3,7 @@ import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { MOTIVOS_DESCLASSIFICADO } from "@/regras/desclassificados";
 import { MOTIVO_SEM_RESPOSTA_AUTOMATICO, NOME_MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
-import { avaliarRede } from "@/regras/rede-seguranca";
+import { avaliarRede, type AcaoRede, type RegrasRedeDeSeguranca } from "@/regras/rede-seguranca";
 import { regrasDaRedeDeSeguranca } from "./configuracoes";
 import { registrarAlteracao } from "./historico";
 import { arquivarLeads, moverEtapa } from "./leads";
@@ -15,6 +15,21 @@ export interface ResultadoRede {
   arquivados: number;
 }
 
+/** Leads que a rede tiraria do quadro agora, com a ação de cada um. `regras` permite simular (prévia da tela). */
+export async function redeVencidos(regras: RegrasRedeDeSeguranca, quando: Date): Promise<{ id: string; consultorId: string | null; classificacao: string | null; acao: Exclude<AcaoRede, null> }[]> {
+  if (!regras.ligado) return [];
+  const leads = await db.lead.findMany({
+    where: { arquivadoEm: null, etapa: { notIn: ["perdido", "fechado"] }, modoAtendimento: "bot", aguardandoHumano: false, ultimaMsgClienteEm: { not: null } },
+    include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
+  });
+  const vencidos: { id: string; consultorId: string | null; classificacao: string | null; acao: Exclude<AcaoRede, null> }[] = [];
+  for (const lead of leads) {
+    const acao = avaliarRede({ ...lead, temVisitaFutura: lead.visitas.length > 0 }, regras, quando);
+    if (acao) vencidos.push({ id: lead.id, consultorId: lead.consultorId, classificacao: lead.classificacao, acao });
+  }
+  return vencidos;
+}
+
 /**
  * Rede de segurança (tarefa 41): lead com o bot há X dias sem mensagem do cliente vai para Perdido; pós-venda vai
  * direto para o arquivo. Roda a cada minuto (`rodarRotinas`). A regra fica em `regras/rede-seguranca.ts`.
@@ -23,16 +38,8 @@ export interface ResultadoRede {
 export async function rodarRedeDeSeguranca(): Promise<ResultadoRede> {
   const resultado: ResultadoRede = { perdidos: 0, arquivados: 0 };
   const regras = await regrasDaRedeDeSeguranca();
-  if (!regras.ligado) return resultado;
-  const quando = await agora();
-  const leads = await db.lead.findMany({
-    where: { arquivadoEm: null, etapa: { notIn: ["perdido", "fechado"] }, modoAtendimento: "bot", aguardandoHumano: false, ultimaMsgClienteEm: { not: null } },
-    include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
-  });
-  for (const lead of leads) {
-    const acao = avaliarRede({ ...lead, temVisitaFutura: lead.visitas.length > 0 }, regras, quando);
-    if (!acao) continue;
-    if (acao === "arquivar") {
+  for (const lead of await redeVencidos(regras, await agora())) {
+    if (lead.acao === "arquivar") {
       await registrarAlteracao(lead.id, "sistema", `Pós-venda parado há ${regras.dias} dias: arquivado automaticamente`);
       await arquivarLeads([lead.id], "sistema");
       await registrarUmaVez(lead.id, "rede_arquivado", lead.consultorId);

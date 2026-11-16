@@ -144,6 +144,12 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
       respondeuSegunda: contar("recuperacao_respondeu_segunda", inicio, fim),
       perdidos: contar("recuperacao_perdido", inicio, fim),
     },
+    automacao: {
+      desclassificados: contar("desclassificado_perdido", inicio, fim),
+      redePerdidos: contar("rede_perdido", inicio, fim),
+      redeArquivados: contar("rede_arquivado", inicio, fim),
+      perdidosArquivados: contar("perdido_arquivado", inicio, fim),
+    },
     tempos,
     apresentacoesPorConsultor: consultores.map((c) => ({
       nome: c.nome,

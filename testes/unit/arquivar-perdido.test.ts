@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { diasParaArquivar, REGRAS_ARQUIVAR_PADRAO, validarRegrasArquivar, type EstadoPerdido, type RegrasArquivarPerdido } from "@/regras/arquivar-perdido";
 import { dataLocal } from "@/regras/tempo";
+import { gerarHtmlDoPainel } from "@/regras/painel-html";
+import { dadosDaAutomacao } from "@/servicos/automacao";
 import { definirRegrasDeArquivarPerdido } from "@/servicos/configuracoes";
+import { dadosDoPainel } from "@/servicos/painel";
+import { dadosParaExportar } from "@/servicos/painel-exportar";
 import { moverEtapa, obterOuCriarLead, restaurarLead } from "@/servicos/leads";
 import { registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
@@ -122,5 +126,33 @@ describe("perdido arquiva sozinho: rotina com o banco", () => {
     expect((await ler(id)).arquivadoEm).toBeNull();
     await em(dia(17));
     expect((await ler(id)).arquivadoEm).not.toBeNull();
+  });
+
+  it("prévia da tela: com tudo desligado, conta quantos cards cada regra pegaria, sem mover nada", async () => {
+    const auto = await perder("+5588900000106", "sistema", "outro");
+    await perder("+5588900000107", "Ana", "preco");
+    // Lead parado com a IA desde o dia 1, e um pós-venda na mesma situação.
+    for (const [telefone, classificacao] of [["+5588900000108", null], ["+5588900000109", "pos_venda"], ["+5588900000110", "outra_cidade"]] as const) {
+      vi.setSystemTime(dia(1));
+      const lead = await obterOuCriarLead(telefone);
+      await registrarMensagemCliente(lead.id, "Oi");
+      await db.lead.update({ where: { id: lead.id }, data: { classificacao } });
+    }
+    vi.setSystemTime(dia(20));
+    const d = await dadosDaAutomacao();
+    expect([d.desclassificados.ligado, d.rede.ligado, d.arquivar.ligado]).toEqual([false, false, false]);
+    expect(d.previa).toEqual({ desclassificados: 1, redePerdido: 2, redeArquivar: 1, arquivarAutomatico: 1, arquivarVendedor: 0 });
+    expect((await ler(auto)).arquivadoEm).toBeNull();
+  });
+
+  it("o painel e o arquivo exportado mostram o que a automação fez", async () => {
+    await definirRegrasDeArquivarPerdido(R);
+    await perder("+5588900000111", "sistema", "outro");
+    await em(dia(8));
+    expect((await dadosDoPainel({ atalho: "hoje" })).automacao).toEqual({ desclassificados: 0, redePerdidos: 0, redeArquivados: 0, perdidosArquivados: 1 });
+    const html = gerarHtmlDoPainel(await dadosParaExportar());
+    expect(html).toContain('id="automacao"');
+    expect(html).toContain('id="recuperacao"');
+    expect(html).toContain("perdido_arquivado");
   });
 });

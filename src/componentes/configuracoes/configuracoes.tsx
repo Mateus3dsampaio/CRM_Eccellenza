@@ -16,6 +16,7 @@ import { juntar } from "../estilos";
 import { Campo, Carregando, EstadoErro, classeEntrada } from "../ui";
 import { EquipeConfig, type Membro } from "./equipe";
 import { MetasApresentacaoConfig } from "./metas-apresentacao";
+import { AutomacaoDeLeads, type DadosAutomacao } from "./automacao";
 import { RecuperacaoDeLeads } from "./recuperacao";
 import { InstrucoesAtendimento } from "./instrucoes";
 import { Armazenamento } from "./armazenamento";
@@ -35,6 +36,7 @@ interface Dados {
   regrasPresenca: RegrasPresenca;
   regrasRetorno: RegrasRetorno;
   regrasRecuperacao: RegrasRecuperacao;
+  automacao: DadosAutomacao;
   metasApresentacao?: Record<string, number>;
   periodoExportacao: { de: string; ate: string };
 }
@@ -46,7 +48,7 @@ const SECOES: { codigo: Secao; rotulo: string; icone: typeof Shuffle }[] = [
   { codigo: "geral", rotulo: "Geral", icone: SlidersHorizontal },
   { codigo: "equipe", rotulo: "Equipe", icone: Users },
   { codigo: "vendas", rotulo: "Vendas", icone: Tag },
-  { codigo: "recuperacao", rotulo: "Recuperação de leads", icone: MessageCircleReply },
+  { codigo: "recuperacao", rotulo: "Automação de leads", icone: MessageCircleReply },
   { codigo: "instrucoes", rotulo: "Instruções de atendimento", icone: MessageSquareText },
   { codigo: "api", rotulo: "Chaves de API", icone: KeyRound },
   { codigo: "armazenamento", rotulo: "Armazenamento", icone: HardDrive },
@@ -126,7 +128,10 @@ function ConfiguracoesComBarra() {
         <VendasConfig />
       ) : aba === "recuperacao" ? (
         dados ? (
-          <RecuperacaoDeLeads regras={dados.regrasRecuperacao} aoSalvar={(r) => chamar("/api/configuracoes/recuperacao", "PUT", r, "Recuperação de leads salva.")} />
+          <>
+            <RecuperacaoDeLeads regras={dados.regrasRecuperacao} aoSalvar={(r) => chamar("/api/configuracoes/recuperacao", "PUT", r, "Recuperação de leads salva.")} />
+            <AutomacaoDeLeads dados={dados.automacao} aoSalvar={(corpo, sucesso) => chamar("/api/configuracoes/automacao", "PUT", corpo, sucesso)} />
+          </>
         ) : (
           <Carregando linhas={3} />
         )

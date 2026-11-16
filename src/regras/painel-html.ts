@@ -88,6 +88,8 @@ function criarPainel(D) {
         apresentacoesFechadas: apresentacoes.filter(function (c) { return c.f; }).length
       },
       porConsultor: porConsultor,
+      recuperacao: { primeira: contar("recuperacao_primeira"), segunda: contar("recuperacao_segunda"), respondeuPrimeira: contar("recuperacao_respondeu_primeira"), respondeuSegunda: contar("recuperacao_respondeu_segunda"), perdidos: contar("recuperacao_perdido") },
+      automacao: { desclassificados: contar("desclassificado_perdido"), redePerdidos: contar("rede_perdido"), redeArquivados: contar("rede_arquivado"), perdidosArquivados: contar("perdido_arquivado") },
       lista: encerrados.slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; })
     };
   };
@@ -155,6 +157,18 @@ function iniciarPagina() {
     $("conversoes").innerHTML =
       cartao("Medições que viraram apresentação", taxa(c.medicoesComApresentacao, c.medicoes), c.medicoes ? num(c.medicoesComApresentacao) + " de " + num(c.medicoes) + " leads com medição marcada no período" : "nenhum lead com medição marcada no período") +
       cartao("Apresentações que viraram venda", taxa(c.apresentacoesFechadas, c.apresentacoes), c.apresentacoes ? num(c.apresentacoesFechadas) + " de " + num(c.apresentacoes) + " leads com apresentação marcada no período" : "nenhum lead com apresentação marcada no período");
+    var rec = r.recuperacao, aut = r.automacao;
+    $("recuperacao").innerHTML =
+      cartao("Receberam a 1ª mensagem", num(rec.primeira)) +
+      cartao("Receberam a 2ª mensagem", num(rec.segunda)) +
+      cartao("Responderam depois da 1ª", num(rec.respondeuPrimeira), "de " + num(rec.primeira) + " enviadas") +
+      cartao("Responderam depois da 2ª", num(rec.respondeuSegunda), "de " + num(rec.segunda) + " enviadas") +
+      cartao("Foram para Perdido (automático)", num(rec.perdidos));
+    $("automacao").innerHTML =
+      cartao("Desclassificados para Perdido", num(aut.desclassificados), "outra cidade e curioso / sem perfil") +
+      cartao("Rede de segurança: para Perdido", num(aut.redePerdidos), "parados com a IA além do prazo") +
+      cartao("Rede de segurança: arquivados", num(aut.redeArquivados), "pós-venda parado") +
+      cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos");
     var maiorFunil = Math.max.apply(null, [1].concat(r.funil.map(function (f) { return f.total; })));
     $("funil").innerHTML = r.funil.map(function (f, i) {
       return '<li><div class="linha"><span>' + esc(f.nome) + '</span><b>' + num(f.total) + (i > 0 ? ' <small>' + taxa(f.total, r.funil[i - 1].total) + ' da etapa anterior</small>' : '') + '</b></div><div class="barra"><div style="width:' + (f.total / maiorFunil * 100) + '%"></div></div></li>';
@@ -213,6 +227,8 @@ export function gerarHtmlDoPainel(dados: DadosDoPainelExportado): string {
 <p class="sub" id="periodo"></p>
 <h2>Resultado</h2><div class="grade" id="resultado"></div>
 <h2>Leads no período</h2><div class="grade" id="leads"></div>
+<h2>Recuperação de leads</h2><div class="grade" id="recuperacao"></div>
+<h2>Automação de leads</h2><div class="grade" id="automacao"></div>
 <h2>Conversão da agenda</h2><div class="grade" id="conversoes"></div>
 <div class="duas">
 <div><h2>Funil</h2><div class="caixa"><ul id="funil"></ul></div></div>
