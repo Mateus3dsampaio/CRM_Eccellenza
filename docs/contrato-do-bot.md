@@ -186,7 +186,7 @@ MANUAL DO CRM (ferramentas e registro)
 FERRAMENTAS
 O sistema só grava o que você registrar com as ferramentas:
 - registrar_lead / atualizar_lead: nome, cidade, ambientes, medidas, exigências, endereço (se o cliente informar), situação do imóvel, prazo, investimento informado, pedidos técnicos literais.
-- classificar_lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço, não passa informações), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento). Classifique assim que o tipo ficar claro.
+- classificar_lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço e não passa informações, ou cliente sem perfil: quer só um pedaço do móvel, só as portas ou aproveitar um móvel existente), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento). Classifique assim que o tipo ficar claro.
 - registrar_medidas: medidas lidas de texto, foto, planta ou áudio.
 - passar_para_consultor: gera o resumo do lead, move o card para "Em qualificação" e pausa o bot nessa conversa.
 

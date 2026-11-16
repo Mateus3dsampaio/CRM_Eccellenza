@@ -11,6 +11,7 @@ export const VERSOES_DO_MANUAL: readonly string[] = [
   "1a9b452d5b57c0669a4082a738283a8520446dc9ec0cdf9792b3e0be3012fa7e", // 08/11/2026: seção LOJA FECHADA (registrar_retorno)
   "4ba1e41db546e843120d9b6ab849776ee696d28101c5a633577feed8ce594cd9", // 08/11/2026: Manual aprovado, sem as marcas de provisório
   "2df3c6e74937724c052214baa11ce4188b69434080392d788d4037a0ce8e3cb4", // 08/11/2026: sem citar instruções nem regras de roteiro
+  "2d28c83ef2e738843d8214f960171a0a17c3bf379754c52d3ea35acce590ed1a", // 16/11/2026: curioso inclui cliente sem perfil (tarefa 40)
 ];
 
 /** sha256 do texto sem espaços nas pontas e com quebras de linha do Windows trocadas por \n. */
