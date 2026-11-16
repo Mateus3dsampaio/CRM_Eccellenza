@@ -9,13 +9,19 @@ Objetivo: cliente que a loja não atende (outra cidade, curioso ou sem perfil) d
 - Cliente que escrever de novo volta sozinho para a coluna em que estava (já funciona assim).
 
 ## Etapas
-- [ ] 1. Regra pura `src/regras/desclassificados.ts`: quais classificações valem, prazo em horas, quando mover. Só para lead com o bot, sem consultor no comando e sem visita marcada. Com testes.
-- [ ] 2. `avaliarRecuperacao` (`src/regras/recuperacao.ts`) passa a pular `outra_cidade` e `curioso`, como já pula `pos_venda`. Ajustar os testes.
-- [ ] 3. Rotina em `src/servicos/desclassificados.ts`, chamada por `rotinas.ts`: move para Perdido com os motivos "Outra cidade (automático)" e "Curioso / sem perfil (automático)", criados sozinhos como o "Sem resposta (automático)". Registra na ficha e conta no painel.
-- [ ] 4. Nome da classificação na tela vira "Curioso / sem perfil" (`src/regras/etapas.ts`).
+- [x] 1. Regra pura `src/regras/desclassificados.ts`: quais classificações valem, prazo em horas, quando mover. Só para lead com o bot, sem consultor no comando e sem visita marcada. Com testes.
+- [x] 2. `avaliarRecuperacao` (`src/regras/recuperacao.ts`) passa a pular `outra_cidade` e `curioso`, como já pula `pos_venda`. Ajustar os testes.
+- [x] 3. Rotina em `src/servicos/desclassificados.ts`, chamada por `rotinas.ts`: move para Perdido com os motivos "Outra cidade (automático)" e "Curioso / sem perfil (automático)", criados sozinhos como o "Sem resposta (automático)". Registra na ficha e conta no painel.
+- [x] 4. Nome da classificação na tela vira "Curioso / sem perfil" (`src/regras/etapas.ts`).
 - [ ] 5. Manual do CRM: **propor ao Mateus** o texto novo da linha do `classificar_lead`, incluindo sem perfil. Só com a aprovação: `manual-inicial.ts`, `manual-versoes.ts` e `npm run contrato:bot`.
-- [ ] 6. Seção 4 de `src/bot/contrato.ts`: frase sobre o que acontece com o desclassificado. Gerar o contrato de novo.
-- [ ] 7. Mapa do código e pendências.
+- [x] 6. Seção 4 de `src/bot/contrato.ts`: frase sobre o que acontece com o desclassificado. Gerar o contrato de novo.
+- [x] 7. Mapa do código e pendências.
+
+## Como ficou (16/11/2026)
+- A regra nasce **desligada** (chave `desclassificados` em `Configuracao`) e ainda não tem tela: o liga/desliga e o prazo entram na tarefa 43. Enquanto estiver desligada, nada muda em produção.
+- A recuperação só deixa de mandar mensagem a esses leads quando a regra está ligada. Assim ninguém fica sem regra nenhuma no meio do caminho.
+- O contador `desclassificado_perdido` já é gravado; a linha no painel entra na tarefa 43.
+- Falta a etapa 5 (texto do Manual), que depende da aprovação do Mateus.
 
 ## Do Mateus
 - Colocar nas instruções numeradas (repositório de instruções) o critério de sem perfil e que o bot classifica esses casos como `curioso`.

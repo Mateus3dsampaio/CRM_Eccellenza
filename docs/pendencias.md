@@ -1,7 +1,7 @@
 # Pendências (para a próxima sessão)
 
 Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e anote a data. Guia de como fazer cada passo: `docs/colocar-no-ar.md`.
-Última atualização: 10/11/2026 (recuperação de leads); antes, 05/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais; avisos com o CRM minimizado funcionando no Windows).
+Última atualização: 16/11/2026 (automação de leads, tarefa 40); antes, 10/11/2026 (recuperação de leads) e 05/11/2026 (versão 0.10.0; CRM no Railway, webhook funcionando, texto, foto, vídeo, ZIP e galeria testados com mensagens reais; avisos com o CRM minimizado funcionando no Windows).
 
 ## A. Do Mateus (conta, chave, decisão)
 
@@ -51,6 +51,8 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [ ] Aprovar o texto do **Manual do CRM** (PROVISÓRIO; aparece em Configurações > Instruções, abaixo das numeradas).
 
 - [ ] **Recuperação de leads (10/11/2026, branch `feat/recuperacao-de-leads`)**: (1) ligar em Configurações > Recuperação de leads (vem desligada) depois de conferir os valores PROVISÓRIOS: 1ª após 30 min, 2ª no dia seguinte às 10h (modo escolhido por mim; o Mateus escolhe), horário permitido 8h–20h, Perdido 5 h após a 2ª; (2) conferir no simulador (relógio) o fluxo completo; (3) **nunca testado com a Meta**: envio real das duas mensagens (texto livre dentro da janela de 24h) e o status "entregue"/"lido"; (4) conferir no Railway que a migração `0012_recuperacao_de_leads` subiu; (5) `npm run test:postgres` não foi rodado (precisa de Postgres de teste); (6) a exportação do painel em HTML (`painel-html.ts`) ainda não leva o bloco novo.
+
+- [ ] **Automação de leads (tarefas 40 a 43, 16/11/2026, branch `claude/eloquent-goldberg-d3anlv`)**: tarefa 40 feita (desclassificados saem sozinhos; **desligada e sem tela até a tarefa 43**). Do Mateus: (1) aprovar a linha nova do `classificar_lead` no Manual do CRM (curioso passa a incluir sem perfil); (2) pôr nas instruções numeradas o critério de sem perfil (só um pedaço do móvel, só as portas, aproveitar móvel existente) classificado como `curioso`. Faltam as tarefas 41 (rede de segurança e fim da retomada antiga), 42 (Perdido arquiva sozinho) e 43 (tela e painel).
 
 ## B. Do Claude (código)
 - [ ] **Card novo do kanban (tarefa 39, 10/11/2026)**: o Mateus confere no simulador com o dia a dia (faixa de ação, cores, divisor da coluna). Ficou de fora, para decidir depois: avisos do canto cobrindo a coluna Negociação, "Esperando" repetido no topo e na linha de filtros, e o tema claro não foi conferido com o card novo.

@@ -7,6 +7,7 @@ import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/r
 import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { formatarDataHora } from "@/regras/tempo";
 import { avisarDecisoesVencidas, avisarPrazosVermelhos, avisarRetornos } from "./alertas";
+import { rodarDesclassificados } from "./desclassificados";
 import { registrarAlteracao } from "./historico";
 import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
@@ -118,6 +119,13 @@ async function executar(): Promise<ResultadoRotinas> {
     await enviarRetornosAutomaticos();
   } catch (erro) {
     console.error("[rotinas] retorno automático falhou:", erro instanceof Error ? erro.message : "desconhecido");
+  }
+
+  // Desclassificados (tarefa 40): outra cidade e curioso / sem perfil saem do quadro sem mensagem. Antes da recuperação.
+  try {
+    await rodarDesclassificados();
+  } catch (erro) {
+    console.error("[rotinas] desclassificados falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
   // Recuperação de leads: 1ª e 2ª mensagem para quem sumiu e, depois, Perdido. Erro aqui não para o resto.

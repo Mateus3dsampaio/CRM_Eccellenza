@@ -44,10 +44,15 @@ export async function garantirMotivoParouDeResponder(): Promise<void> {
 
 /** O motivo "Sem resposta (automático)" é o da recuperação de leads: cria no fim da lista se faltar (banco antigo ou apagado). */
 export async function garantirMotivoSemRespostaAutomatico(): Promise<void> {
+  await garantirMotivoAutomatico(MOTIVO_SEM_RESPOSTA_AUTOMATICO, NOME_MOTIVO_SEM_RESPOSTA_AUTOMATICO);
+}
+
+/** Motivo gravado por uma rotina automática: cria no fim da lista se faltar (banco antigo ou apagado pelo admin). */
+export async function garantirMotivoAutomatico(codigo: string, nome: string): Promise<void> {
   await motivosDePerda();
-  if (await db.motivoPerda.findUnique({ where: { codigo: MOTIVO_SEM_RESPOSTA_AUTOMATICO } })) return;
+  if (await db.motivoPerda.findUnique({ where: { codigo } })) return;
   const ultimo = await db.motivoPerda.aggregate({ _max: { ordem: true } });
-  await db.motivoPerda.create({ data: { codigo: MOTIVO_SEM_RESPOSTA_AUTOMATICO, nome: NOME_MOTIVO_SEM_RESPOSTA_AUTOMATICO, pergunta: null, ordem: (ultimo._max.ordem ?? -1) + 1 } }).catch(() => undefined);
+  await db.motivoPerda.create({ data: { codigo, nome, pergunta: null, ordem: (ultimo._max.ordem ?? -1) + 1 } }).catch(() => undefined);
 }
 
 /**

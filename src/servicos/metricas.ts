@@ -23,6 +23,7 @@ export type TipoEvento =
   | "recuperacao_respondeu_primeira"
   | "recuperacao_respondeu_segunda"
   | "recuperacao_perdido"
+  | "desclassificado_perdido"
   | `etapa_${string}`;
 
 export async function registrarEvento(tipo: TipoEvento, consultorId?: string | null, quando?: Date): Promise<void> {

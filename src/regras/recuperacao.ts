@@ -1,5 +1,6 @@
 // Recuperação de leads: cliente abre a conversa e some. Até 2 mensagens automáticas de texto fixo, só dentro da
 // janela de 24h da Meta, e depois o lead vai para Perdido ("Sem resposta (automático)"). Só regra, sem banco.
+import { classificacaoDesclassificada } from "./desclassificados";
 import { janelaAberta, JANELA_MS } from "./janela24h";
 import { HORA, dataLocal, partesLocais } from "./tempo";
 
@@ -173,9 +174,13 @@ export function horarioDaSegunda(primeiraEm: Date, ultimaMsgClienteEm: Date, r: 
  * Nunca dispara se: o cliente pediu para parar, o lead está em Perdido (ou Fechado/arquivado), a conversa foi passada
  * ao consultor (modo humano ou pausado, aguardando humano), ou o lead é pós-venda ou tem visita marcada.
  * Uma vez por lead: com a 1ª mensagem já enviada, o ciclo nunca recomeça.
+ *
+ * `desclassificadosLigado` (tarefa 40): com a regra dos desclassificados ligada, outra cidade e curioso / sem perfil
+ * ficam fora daqui (nem mensagem, nem Perdido por esta regra): quem os tira do quadro é `regras/desclassificados.ts`.
  */
-export function avaliarRecuperacao(lead: EstadoRecuperacao, r: RegrasRecuperacao, agora: Date): AcaoRecuperacao {
+export function avaliarRecuperacao(lead: EstadoRecuperacao, r: RegrasRecuperacao, agora: Date, desclassificadosLigado = false): AcaoRecuperacao {
   if (!r.ligado) return null;
+  if (desclassificadosLigado && classificacaoDesclassificada(lead.classificacao)) return null;
   if (lead.arquivadoEm || lead.naoReceberEm) return null;
   if (lead.etapa === "perdido" || lead.etapa === "fechado") return null;
   if (lead.classificacao === "pos_venda" || lead.temVisitaFutura) return null;

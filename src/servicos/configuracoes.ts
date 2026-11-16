@@ -4,6 +4,7 @@ import type { ModoDistribuicao } from "@/regras/distribuicao";
 import { REGRAS_AGENDA_PADRAO, completarRegrasAgenda, validarRegrasAgenda, type RegrasAgenda } from "@/regras/agenda";
 import { REGRAS_RETORNO_PADRAO, completarRegrasRetorno, validarRegrasRetorno, type RegrasRetorno } from "@/regras/retorno-fechada";
 import { REGRAS_RECUPERACAO_PADRAO, completarRegrasRecuperacao, validarRegrasRecuperacao, type RegrasRecuperacao } from "@/regras/recuperacao";
+import { REGRAS_DESCLASSIFICADOS_PADRAO, completarRegrasDesclassificados, validarRegrasDesclassificados, type RegrasDesclassificados } from "@/regras/desclassificados";
 import { REGRAS_PRESENCA_PADRAO, completarRegrasPresenca, validarRegrasPresenca, type RegrasPresenca } from "@/regras/presenca";
 import { PRAZOS_ESPERA_PADRAO, validarPrazos, type PrazosEspera } from "@/regras/espera";
 
@@ -128,5 +129,26 @@ export async function definirRegrasDeRecuperacao(regras: RegrasRecuperacao): Pro
   const erro = validarRegrasRecuperacao(regras);
   if (erro) throw new Error(erro);
   await gravarConfig(CHAVE_RECUPERACAO, JSON.stringify(regras));
+  await marcarMudanca();
+}
+
+const CHAVE_DESCLASSIFICADOS = "desclassificados";
+
+/** Regras dos desclassificados (tarefa 40). Sem valor (ou inválido) vale o padrão (desligado, 24 horas). */
+export async function regrasDeDesclassificados(): Promise<RegrasDesclassificados> {
+  const bruto = await lerConfig(CHAVE_DESCLASSIFICADOS);
+  if (!bruto) return REGRAS_DESCLASSIFICADOS_PADRAO;
+  try {
+    const r = completarRegrasDesclassificados(JSON.parse(bruto) as Partial<RegrasDesclassificados>);
+    return validarRegrasDesclassificados(r) === null ? r : REGRAS_DESCLASSIFICADOS_PADRAO;
+  } catch {
+    return REGRAS_DESCLASSIFICADOS_PADRAO;
+  }
+}
+
+export async function definirRegrasDeDesclassificados(regras: RegrasDesclassificados): Promise<void> {
+  const erro = validarRegrasDesclassificados(regras);
+  if (erro) throw new Error(erro);
+  await gravarConfig(CHAVE_DESCLASSIFICADOS, JSON.stringify(regras));
   await marcarMudanca();
 }
