@@ -1,6 +1,6 @@
 // Rede de segurança (tarefa 41): nenhum lead fica para sempre com o bot. Depois de X dias sem mensagem do cliente,
 // não importa quem falou por último, o card sai da coluna: vai para Perdido, ou direto para o arquivo se for pós-venda
-// (decisões do Mateus 16/11/2026). Substitui a retomada antiga (`regras/retomada.ts`), que só roda com esta desligada.
+// (decisões do Mateus 16/11/2026). Substituiu a retomada antiga (modelo após 3 dias), que saiu em 17/11/2026.
 // Só regra, sem banco.
 import { DIA } from "./tempo";
 
@@ -33,17 +33,19 @@ export interface EstadoRede {
   /** Retorno marcado (pelo bot com a loja fechada, ou por uma pessoa): enquanto estiver no futuro, o lead espera. */
   proximoContatoEm: Date | null;
   ultimaMsgClienteEm: Date | null;
+  /** Um consultor já entrou nesta conversa (ver `EstadoRecuperacao.passouPorHumano`): a rotina não mexe. */
+  passouPorHumano: boolean;
 }
 
 export type AcaoRede = "perdido" | "arquivar" | null;
 
 /**
- * O que a rotina faz com o lead agora. Só vale para quem está com o bot: lead passado ao consultor, com visita ou
+ * O que a rotina faz com o lead agora. Só vale para quem está com o bot e nunca passou por um consultor: lead passado ao consultor, com visita ou
  * retorno marcado para a frente, em Perdido/Fechado ou arquivado fica como está. Pós-venda não é venda perdida:
  * vai direto para o arquivo, sem passar por Perdido (não distorce as métricas de perda).
  */
 export function avaliarRede(lead: EstadoRede, r: RegrasRedeDeSeguranca, agora: Date): AcaoRede {
-  if (!r.ligado || lead.arquivadoEm) return null;
+  if (!r.ligado || lead.arquivadoEm || lead.passouPorHumano) return null;
   if (lead.etapa === "perdido" || lead.etapa === "fechado") return null;
   if (lead.modoAtendimento !== "bot" || lead.aguardandoHumano || lead.temVisitaFutura) return null;
   if (lead.proximoContatoEm && lead.proximoContatoEm.getTime() > agora.getTime()) return null;

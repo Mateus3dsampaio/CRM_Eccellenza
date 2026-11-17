@@ -1,4 +1,4 @@
-// Texto do Manual do CRM, aprovado pelo Mateus em 08/11/2026 (sem marca de provisório); linha do curioso / sem perfil aprovada em 16/11/2026 (tarefa 40). Só muda aqui, por proposta aprovada por ele (tarefa 38).
+// Texto do Manual do CRM, aprovado pelo Mateus em 08/11/2026 (sem marca de provisório); linha do encerrar_contato aprovada em 17/11/2026 (tarefa 44). Só muda aqui, por proposta aprovada por ele (tarefa 38).
 // O sistema grava no banco quando o manual não existe e, quando este texto muda, troca sozinho o do banco se ninguém editou
 // na tela (servicos/instrucoes.ts + bot/manual-versoes.ts). Mudou aqui: acrescente a impressão em manual-versoes.ts e rode npm run contrato:bot.
 export const MANUAL_INICIAL = `MANUAL DO CRM (ferramentas e registro)
@@ -6,9 +6,10 @@ export const MANUAL_INICIAL = `MANUAL DO CRM (ferramentas e registro)
 FERRAMENTAS
 O sistema só grava o que você registrar com as ferramentas:
 - registrar_lead / atualizar_lead: nome, cidade, ambientes, medidas, exigências, endereço (se o cliente informar), situação do imóvel, prazo, investimento informado, pedidos técnicos literais.
-- classificar_lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço e não passa informações, ou cliente sem perfil: quer só um pedaço do móvel, só as portas ou aproveitar um móvel existente), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento). Classifique assim que o tipo ficar claro.
+- classificar_lead: qualificado (concluiu o roteiro, região atendida), curioso (só quer preço, não passa informações), outra_cidade, parceiro (arquiteto, designer ou construtora), pos_venda (já comprou e fala de entrega, montagem ou assistência), ja_atendido (já foi atendido por consultor ou já tem orçamento). Classifique assim que o tipo ficar claro.
 - registrar_medidas: medidas lidas de texto, foto, planta ou áudio.
 - passar_para_consultor: gera o resumo do lead, move o card para "Em qualificação" e pausa o bot nessa conversa.
+- encerrar_contato: use quando o contato claramente não é cliente da loja (conversa sem relação com móveis planejados). O contato é bloqueado e arquivado e você não envia mais nada. Na dúvida, não encerre: continue o atendimento.
 
 COMO REGISTRAR
 - Grave no CRM cada informação que o cliente disser, assim que ele disser, inclusive quando o cliente vai direto ao consultor: ex.: arquiteta que diz "casa toda" → ambientes ["casa toda"]. Grave só o que o cliente disse: nunca invente nem deduza dados (não use o nome do perfil em observações).

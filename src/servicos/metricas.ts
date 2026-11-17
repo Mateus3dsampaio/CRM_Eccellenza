@@ -23,7 +23,6 @@ export type TipoEvento =
   | "recuperacao_respondeu_primeira"
   | "recuperacao_respondeu_segunda"
   | "recuperacao_perdido"
-  | "desclassificado_perdido"
   | "rede_perdido"
   | "rede_arquivado"
   | "perdido_arquivado"

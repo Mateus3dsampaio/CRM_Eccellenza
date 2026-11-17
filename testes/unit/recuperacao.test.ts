@@ -40,6 +40,7 @@ const base: EstadoRecuperacao = {
   recuperacaoPrimeiraEm: null,
   recuperacaoSegundaEm: null,
   recuperacaoFalhou: false,
+  passouPorHumano: false,
 };
 
 describe("recuperação de leads: regras puras", () => {
@@ -199,6 +200,7 @@ describe("recuperação de leads: regras puras", () => {
       ["está arquivado", { arquivadoEm: seg(9, 10) }],
       ["é pós-venda", { classificacao: "pos_venda" }],
       ["tem visita marcada", { temVisitaFutura: true }],
+      ["já passou por um consultor (mesmo devolvido ao bot)", { passouPorHumano: true }],
     ])("não dispara se o lead %s", (_nome, mudanca) => {
       expect(avaliarRecuperacao({ ...base, ...mudanca }, R, seg(10, 0))).toBeNull();
       const segunda = { ...base, ...mudanca, recuperacaoPrimeiraEm: seg(9, 31) };

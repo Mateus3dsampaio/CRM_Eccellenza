@@ -1,7 +1,7 @@
 import { rodarRotinas } from "./rotinas";
 
 // Agendador das rotinas de tempo (tarefa 11): em produção ninguém precisa estar com o kanban aberto.
-// Roda a cada minuto: retomada, "Parou de responder" (Perdido), limpeza de arquivados e avisos de retorno/prazo vermelho.
+// Roda a cada minuto: recuperação, rede de segurança, arquivar perdidos, limpeza de arquivados e avisos de retorno/prazo vermelho.
 export const INTERVALO_ROTINAS_MS = 60_000;
 
 let timer: ReturnType<typeof setInterval> | null = null;

@@ -11,7 +11,7 @@ Objetivo: nenhum lead ficar preso para sempre na coluna "IA atendendo", e acabar
 - [x] 1. Regra pura `src/regras/rede-seguranca.ts`: 5 dias desde a última mensagem do cliente; só lead com o bot, sem consultor no comando, sem visita marcada, sem retorno futuro marcado. Devolve "perdido" ou, para pós-venda, "arquivar". Com testes.
 - [x] 2. Rotina em `rotinas.ts`: Perdido com o motivo "Sem resposta (automático)"; pós-venda é arquivado com registro na ficha.
 - [x] 3a. A retomada antiga deixa de rodar quando a rede de segurança está ligada (`rotinas.ts`).
-- [ ] 3b. Depois que o Mateus ligar a rede em produção: apagar `src/regras/retomada.ts`, o trecho de `rotinas.ts`, os contadores, a etiqueta "Retomada enviada" e os testes. O modelo `retomada` continua existindo para o vendedor enviar à mão (já é assim na conversa).
+- [x] 3b. (feito em 17/11/2026, na tarefa 45, sem esperar a rede ser ligada) Depois que o Mateus ligar a rede em produção: apagar `src/regras/retomada.ts`, o trecho de `rotinas.ts`, os contadores, a etiqueta "Retomada enviada" e os testes. O modelo `retomada` continua existindo para o vendedor enviar à mão (já é assim na conversa).
 - [x] 4. Seção 4 de `src/bot/contrato.ts` e `npm run contrato:bot`.
 - [x] 5. Mapa do código, `docs/requisitos.md` (RET-01 e RET-03) e pendências.
 

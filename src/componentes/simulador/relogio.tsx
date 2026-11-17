@@ -19,7 +19,7 @@ const PASSOS: { horas: number; minutos?: number; rotulo: string }[] = [
   { horas: 24 * 30, rotulo: "+30 dias" },
 ];
 
-// Relógio simulado (RET-04): avança o tempo e roda as rotinas (retomada, "Parou de responder", exclusão de arquivados).
+// Relógio simulado (RET-04): avança o tempo e roda as rotinas (recuperação, rede de segurança, arquivar perdidos, exclusão de arquivados).
 export function Relogio() {
   const avisar = useAviso();
   const { dados, recarregar } = useDados<{ agora: string; deslocamentoHoras: number; registros: { id: string; texto: string }[] }>("/api/relogio");
@@ -29,9 +29,9 @@ export function Relogio() {
   async function mudar(corpo: object) {
     setOcupado(true);
     try {
-      const r = await chamarApi<{ resultado: { retomadas: number; semResposta: number; excluidos: number } }>("/api/relogio", { method: "POST", json: corpo });
-      const { retomadas, semResposta, excluidos } = r.resultado;
-      avisar(retomadas || semResposta || excluidos ? `Rotinas: ${retomadas} retomada(s), ${semResposta} sem resposta, ${excluidos} excluído(s).` : "Tempo avançado. Nenhuma rotina disparou.");
+      const r = await chamarApi<{ resultado: { mensagens: number; perdidos: number; arquivados: number; excluidos: number } }>("/api/relogio", { method: "POST", json: corpo });
+      const { mensagens, perdidos, arquivados, excluidos } = r.resultado;
+      avisar(mensagens || perdidos || arquivados || excluidos ? `Rotinas: ${mensagens} mensagem(ns) de recuperação, ${perdidos} para Perdido, ${arquivados} arquivado(s), ${excluidos} excluído(s).` : "Tempo avançado. Nenhuma rotina disparou.");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "Não foi possível mudar o relógio.", "erro");
     } finally {
@@ -64,7 +64,7 @@ export function Relogio() {
       </div>
       <p className="text-xs text-texto-fraco">Presença (tarefa 35): ao passar do horário de fechamento da loja todos os vendedores ficam offline; depois da abertura, use +15 min e +30 min para ver a fila ser repartida e o aviso de quem não ficou online.</p>
       <p className="text-xs text-texto-fraco">O relógio só anda para a frente. Para recomeçar do zero, rode <code>npm run seed</code>.</p>
-      <p className="text-xs text-texto-fraco">Regras: retomada após 3 dias sem resposta (só cards no &quot;Novo&quot; com o bot atendendo); 4 dias depois vai para &quot;Perdido&quot; com o motivo &quot;Parou de responder&quot; (PROVISÓRIO); arquivados excluídos em 30 dias.</p>
+      <p className="text-xs text-texto-fraco">Regras (as que estiverem ligadas em Configurações &gt; Automação de leads): mensagens de recuperação e Perdido para quem some da IA; rede de segurança para quem fica parado com a IA; Perdido vai para o arquivo; arquivados excluídos em 30 dias. Lead que já passou por um consultor não entra nessas rotinas.</p>
       <div>
         <h3 className="mb-2 text-sm font-semibold">O que aconteceu</h3>
         <ol className="rolagem-fina max-h-72 space-y-2 overflow-y-auto pr-1 text-xs text-texto-suave">
@@ -77,7 +77,7 @@ export function Relogio() {
         </ol>
       </div>
       <Modal aberto={!!confirmar} aoFechar={() => setConfirmar(null)} titulo={`Avançar o relógio ${confirmar?.rotulo ?? ""}?`} largura="max-w-md">
-        <p className="text-sm text-texto-suave">O relógio só anda para a frente. As rotinas rodam: retomadas, &quot;Parou de responder&quot; e exclusão de arquivados com mais de 30 dias. Para voltar, só recomeçando os dados de teste.</p>
+        <p className="text-sm text-texto-suave">O relógio só anda para a frente. As rotinas rodam: recuperação, rede de segurança, arquivar perdidos e exclusão de arquivados com mais de 30 dias. Para voltar, só recomeçando os dados de teste.</p>
         <div className="mt-5 flex justify-end gap-2">
           <Botao variante="fantasma" onClick={() => setConfirmar(null)}>Cancelar</Botao>
           <Botao

@@ -4,7 +4,6 @@ import { janelaAberta } from "@/regras/janela24h";
 import { deveExcluirArquivado } from "@/regras/limpeza";
 import { escolherConsultor } from "@/regras/distribuicao";
 import { pode, podeEditarAgendaDe } from "@/regras/permissoes";
-import { avaliarRetomada } from "@/regras/retomada";
 import { gerarResumo } from "@/servicos/resumo";
 import { limparResposta, respostaDescartada } from "@/bot/saida";
 import { normalizarTelefone } from "@/regras/telefone";
@@ -19,45 +18,6 @@ describe("janela de 24h (MSG-02)", () => {
   });
   it("número que nunca falou com a loja: janela fechada", () => {
     expect(janelaAberta(null, base)).toBe(false);
-  });
-});
-
-describe("retomada (RET-01/03)", () => {
-  const lead = {
-    etapa: "novo", modoAtendimento: "bot", aguardandoHumano: false, temVisitaFutura: false,
-    arquivadoEm: null, ultimaMsgClienteEm: base, ultimaMsgLojaEm: new Date(base.getTime() + 60_000), retomadaEnviadaEm: null,
-  };
-  it("só envia depois de 3 dias sem resposta", () => {
-    expect(avaliarRetomada(lead, new Date(base.getTime() + 2.9 * DIA))).toBeNull();
-    expect(avaliarRetomada(lead, new Date(base.getTime() + 3.1 * DIA))).toBe("enviar_retomada");
-  });
-  it("nunca envia uma segunda retomada; 4 dias depois vai para Sem resposta", () => {
-    const enviada = { ...lead, retomadaEnviadaEm: new Date(base.getTime() + 3 * DIA), ultimaMsgLojaEm: new Date(base.getTime() + 3 * DIA) };
-    expect(avaliarRetomada(enviada, new Date(base.getTime() + 6 * DIA))).toBeNull();
-    expect(avaliarRetomada(enviada, new Date(base.getTime() + 7.1 * DIA))).toBe("mover_sem_resposta");
-    expect(avaliarRetomada(enviada, new Date(base.getTime() + 30 * DIA))).toBe("mover_sem_resposta");
-  });
-  it("cliente que já comprou (pós-venda) nunca recebe retomada nem vai para Perdido", () => {
-    const posVenda = { ...lead, classificacao: "pos_venda" };
-    expect(avaliarRetomada(posVenda, new Date(base.getTime() + 3.1 * DIA))).toBeNull();
-    const enviada = { ...posVenda, retomadaEnviadaEm: new Date(base.getTime() + 3 * DIA), ultimaMsgLojaEm: new Date(base.getTime() + 3 * DIA) };
-    expect(avaliarRetomada(enviada, new Date(base.getTime() + 30 * DIA))).toBeNull();
-    expect(avaliarRetomada({ ...lead, classificacao: "curioso" }, new Date(base.getTime() + 3.1 * DIA))).toBe("enviar_retomada");
-  });
-  it("cliente respondeu depois da retomada: nada a fazer", () => {
-    const respondeu = { ...lead, retomadaEnviadaEm: new Date(base.getTime() + 3 * DIA), ultimaMsgClienteEm: new Date(base.getTime() + 4 * DIA) };
-    expect(avaliarRetomada(respondeu, new Date(base.getTime() + 9 * DIA))).toBeNull();
-  });
-  it("não age em leads arquivados, fora do Novo, com o consultor ou com visita marcada", () => {
-    const depois = new Date(base.getTime() + 5 * DIA);
-    expect(avaliarRetomada({ ...lead, etapa: "fechado" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, etapa: "qualificacao" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, etapa: "visita" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, arquivadoEm: base }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, modoAtendimento: "pausado" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, modoAtendimento: "humano" }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, aguardandoHumano: true }, depois)).toBeNull();
-    expect(avaliarRetomada({ ...lead, temVisitaFutura: true }, depois)).toBeNull();
   });
 });
 

@@ -89,7 +89,7 @@ function criarPainel(D) {
       },
       porConsultor: porConsultor,
       recuperacao: { primeira: contar("recuperacao_primeira"), segunda: contar("recuperacao_segunda"), respondeuPrimeira: contar("recuperacao_respondeu_primeira"), respondeuSegunda: contar("recuperacao_respondeu_segunda"), perdidos: contar("recuperacao_perdido") },
-      automacao: { desclassificados: contar("desclassificado_perdido"), redePerdidos: contar("rede_perdido"), redeArquivados: contar("rede_arquivado"), perdidosArquivados: contar("perdido_arquivado"), bloqueados: contar("contato_bloqueado") },
+      automacao: { redePerdidos: contar("rede_perdido"), redeArquivados: contar("rede_arquivado"), perdidosArquivados: contar("perdido_arquivado"), bloqueados: contar("contato_bloqueado") },
       lista: encerrados.slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; })
     };
   };
@@ -165,7 +165,6 @@ function iniciarPagina() {
       cartao("Responderam depois da 2ª", num(rec.respondeuSegunda), "de " + num(rec.segunda) + " enviadas") +
       cartao("Foram para Perdido (automático)", num(rec.perdidos));
     $("automacao").innerHTML =
-      cartao("Desclassificados para Perdido", num(aut.desclassificados), "outra cidade e curioso / sem perfil") +
       cartao("Rede de segurança: para Perdido", num(aut.redePerdidos), "parados com a IA além do prazo") +
       cartao("Rede de segurança: arquivados", num(aut.redeArquivados), "pós-venda parado") +
       cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos") +

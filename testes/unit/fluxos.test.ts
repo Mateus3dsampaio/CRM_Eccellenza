@@ -9,17 +9,17 @@ import { DIA, HORA, chaveDia, dataLocal, inicioDoDiaLocal, partesLocais, somarDi
 import { janelaDeAgendamento } from "@/regras/agenda";
 import { agendarVisita, cancelarVisita, criarBloqueio, horariosLivresEmTorno, horariosLivresParaLead } from "@/servicos/agenda";
 import { converterFunilAntigo } from "@/servicos/conversao-funil";
-import { motivosDePerda } from "@/servicos/vendas";
 import { cardsDoKanban } from "@/servicos/consultas";
 import { dadosDoPainel } from "@/servicos/painel";
 import { AVISO_ALMOCO } from "@/regras/almoco";
 import { REGRAS_AGENDA_PADRAO } from "@/regras/agenda";
-import { definirModoDistribuicao, definirRegrasDaAgenda, regrasDaAgenda } from "@/servicos/configuracoes";
+import { definirModoDistribuicao, definirRegrasDaAgenda, definirRegrasDaRedeDeSeguranca, definirRegrasDeRecuperacao, regrasDaAgenda } from "@/servicos/configuracoes";
+import { REGRAS_RECUPERACAO_PADRAO } from "@/regras/recuperacao";
 import { definirStatusConsultor, distribuirFila, escolherProximoConsultor } from "@/servicos/distribuicao";
 import { arquivarLeads, conferirMudanca, excluirLeads, moverEtapa, obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
-import { receberMensagemCliente } from "@/servicos/conversa";
+import { assumirConversa, devolverAoBot, receberMensagemCliente } from "@/servicos/conversa";
 import { criarConsultores, limparBanco, criarRoteiroDeTeste } from "./ajuda";
 
 // PNG mínimo válido (1x1).
@@ -29,36 +29,34 @@ beforeEach(async () => {
   await limparBanco();
 });
 
-describe("retomada e Sem resposta com o relógio simulado (RET-01 a RET-03)", () => {
-  it("envia uma única retomada, move para Perdido (Parou de responder) e volta quando o cliente responde", async () => {
+describe("rotinas não mexem em quem já passou por um consultor (decisão do Mateus 17/11/2026)", () => {
+  it("sem a retomada antiga: nenhum modelo automático sai, e conversa devolvida ao bot não recebe recuperação nem vai para Perdido", async () => {
+    await definirRegrasDeRecuperacao({ ...REGRAS_RECUPERACAO_PADRAO, ligado: true, horarioInicio: 0, horarioFim: 24 });
+    await definirRegrasDaRedeDeSeguranca({ ligado: true, dias: 5 });
+    // Lead que nunca falou com um humano: recebe a 1ª mensagem de recuperação.
+    const so = await obterOuCriarLead("+5588900001110", "Só com o bot");
+    await registrarMensagemCliente(so.id, "Oi, quero uma cozinha");
+    await enviarMensagemLoja({ leadId: so.id, autor: "bot", texto: "Oi! Qual ambiente?" });
+    // Lead em que o consultor assumiu, respondeu e devolveu ao bot.
     const lead = await obterOuCriarLead("+5588900001111", "Cliente Teste");
     await registrarMensagemCliente(lead.id, "Oi, quero uma cozinha");
     await enviarMensagemLoja({ leadId: lead.id, autor: "bot", texto: "Oi! Qual ambiente?" });
+    await assumirConversa(lead.id, { nome: "Carlos" });
+    await enviarMensagemLoja({ leadId: lead.id, autor: "consultor", autorNome: "Carlos", texto: "Oi, aqui é o Carlos" });
+    await devolverAoBot(lead.id, { nome: "Carlos" });
+    expect((await db.lead.findUniqueOrThrow({ where: { id: lead.id } })).modoAtendimento).toBe("bot");
 
-    await avancarRelogio(3 * DIA + HORA);
-    expect((await rodarRotinas()).retomadas).toBe(1);
-    expect((await rodarRotinas()).retomadas).toBe(0);
-    let atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(lerLista(atual.etiquetas)).toContain("retomada");
-    expect(await db.mensagem.count({ where: { leadId: lead.id, modelo: "retomada" } })).toBe(1);
-
-    await avancarRelogio(4 * DIA + HORA);
-    expect((await rodarRotinas()).semResposta).toBe(1);
-    atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
-    expect(atual).toMatchObject({ etapa: "perdido", motivoPerda: "parou_de_responder", etapaAnterior: "novo" });
-    expect((await motivosDePerda()).some((m) => m.codigo === "parou_de_responder")).toBe(true);
-
-    // Muito tempo depois: continua uma retomada só.
+    await avancarRelogio(HORA);
+    expect((await rodarRotinas()).mensagens).toBe(1);
+    expect(await db.mensagem.count({ where: { leadId: so.id, autorNome: "Recuperação automática" } })).toBe(1);
     await avancarRelogio(10 * DIA);
     await rodarRotinas();
-    expect(await db.mensagem.count({ where: { leadId: lead.id, modelo: "retomada" } })).toBe(1);
-
-    await registrarMensagemCliente(lead.id, "Oi, ainda quero sim");
-    atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect(await db.mensagem.count({ where: { leadId: lead.id, autor: "sistema" } })).toBe(0);
+    expect(await db.mensagem.count({ where: { modelo: "retomada" } })).toBe(0);
+    const atual = await db.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect(atual.etapa).toBe("novo");
-    expect(atual.motivoPerda).toBeNull();
     expect(lerLista(atual.etiquetas)).not.toContain("retomada");
-    expect(await db.eventoMetrica.count({ where: { tipo: "retomada_voltou" } })).toBe(1);
+    expect((await db.lead.findUniqueOrThrow({ where: { id: so.id } })).etapa).toBe("perdido");
   });
 });
 

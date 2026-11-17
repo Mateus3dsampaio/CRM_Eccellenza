@@ -1,23 +1,21 @@
 "use client";
 
-import { Archive, ShieldCheck, UserX } from "lucide-react";
+import { Archive, ShieldCheck } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { RegrasArquivarPerdido } from "@/regras/arquivar-perdido";
-import type { RegrasDesclassificados } from "@/regras/desclassificados";
 import type { RegrasRedeDeSeguranca } from "@/regras/rede-seguranca";
 import { juntar } from "../estilos";
 import { classeEntrada } from "../ui";
 import { useBlocoSalvavel } from "./barra-salvar";
 
 export interface DadosAutomacao {
-  desclassificados: RegrasDesclassificados;
   rede: RegrasRedeDeSeguranca;
   arquivar: RegrasArquivarPerdido;
   /** Quantos cards cada regra pegaria agora, com os prazos salvos. */
-  previa: { desclassificados: number; redePerdido: number; redeArquivar: number; arquivarAutomatico: number; arquivarVendedor: number };
+  previa: { redePerdido: number; redeArquivar: number; arquivarAutomatico: number; arquivarVendedor: number };
 }
 
-type Salvar = (corpo: Partial<Pick<DadosAutomacao, "desclassificados" | "rede" | "arquivar">>, sucesso: string) => Promise<void>;
+type Salvar = (corpo: Partial<Pick<DadosAutomacao, "rede" | "arquivar">>, sucesso: string) => Promise<void>;
 
 const cards = (n: number) => `${n.toLocaleString("pt-BR")} ${n === 1 ? "card" : "cards"}`;
 
@@ -61,11 +59,10 @@ function Previa({ mostrar, children }: { mostrar: boolean; children: ReactNode }
 }
 
 /**
- * Configurações > Automação de leads, abaixo da recuperação: as três regras que tiram cards do quadro sozinhas
- * (tarefas 40 a 42). Todas nascem desligadas; cada uma mostra quantos cards pegaria agora, antes de o admin ligar.
+ * Configurações > Automação de leads, abaixo da recuperação: as regras que tiram cards do quadro sozinhas
+ * (rede de segurança e arquivar perdidos). Nascem desligadas; cada uma mostra quantos cards pegaria agora, antes de o admin ligar.
  */
 export function AutomacaoDeLeads({ dados, aoSalvar }: { dados: DadosAutomacao; aoSalvar: Salvar }) {
-  const [desc, setDesc] = useRascunho("automacao-desclassificados", dados.desclassificados, (r) => aoSalvar({ desclassificados: r }, "Desclassificados: regra salva."));
   const [rede, setRede] = useRascunho("automacao-rede", dados.rede, (r) => aoSalvar({ rede: r }, "Rede de segurança salva."));
   const [arq, setArq] = useRascunho("automacao-arquivar", dados.arquivar, (r) => aoSalvar({ arquivar: r }, "Arquivamento de perdidos salvo."));
   const p = dados.previa;
@@ -73,24 +70,9 @@ export function AutomacaoDeLeads({ dados, aoSalvar }: { dados: DadosAutomacao; a
   return (
     <>
       <Cartao
-        icone={<UserX className="size-4 text-texto-suave" aria-hidden />}
-        titulo="Desclassificados"
-        texto="Cliente que a IA classificou como outra cidade ou curioso / sem perfil não recebe as mensagens de recuperação e sai sozinho do quadro. Só vale para quem ainda está com a IA; lead passado ao consultor não é tocado. Se o cliente escrever depois, o card volta para a coluna em que estava."
-      >
-        <Interruptor rotulo="Mover desclassificados para Perdido" ligado={desc.ligado} aoMudar={(v) => setDesc((r) => ({ ...r, ligado: v }))} />
-        <label className={juntar("mt-2 flex flex-wrap items-center gap-2 text-sm", !desc.ligado && "opacity-60")}>
-          <span>Mover após</span>
-          <Numero rotulo="Horas até mover o desclassificado para Perdido" valor={desc.horas} min={1} max={168} desabilitado={!desc.ligado} aoMudar={(v) => setDesc((r) => ({ ...r, horas: v }))} />
-          <span>horas sem o cliente escrever</span>
-        </label>
-        <p className="mt-1 text-xs text-texto-fraco">Motivos gravados: &quot;Outra cidade (automático)&quot; e &quot;Curioso / sem perfil (automático)&quot;. Desligada, esses clientes seguem a recuperação de leads normal.</p>
-        <Previa mostrar={!dados.desclassificados.ligado}>Ao ligar com o prazo salvo, {cards(p.desclassificados)} {p.desclassificados === 1 ? "vai" : "vão"} para Perdido na hora.</Previa>
-      </Cartao>
-
-      <Cartao
         icone={<ShieldCheck className="size-4 text-texto-suave" aria-hidden />}
         titulo="Rede de segurança"
-        texto="Nenhum card fica para sempre na coluna da IA. Depois do prazo sem mensagem do cliente, não importa quem falou por último, o card vai para Perdido com o motivo &quot;Sem resposta (automático)&quot;. Pós-venda não é venda perdida: vai direto para o arquivo. Não vale para lead com o consultor, com visita marcada ou com retorno marcado para a frente."
+        texto="Nenhum card fica para sempre na coluna da IA. Depois do prazo sem mensagem do cliente, não importa quem falou por último, o card vai para Perdido com o motivo &quot;Sem resposta (automático)&quot;. Pós-venda não é venda perdida: vai direto para o arquivo. Não vale para lead que já passou por um consultor, com visita marcada ou com retorno marcado para a frente."
       >
         <Interruptor rotulo="Rede de segurança ligada" ligado={rede.ligado} aoMudar={(v) => setRede((r) => ({ ...r, ligado: v }))} />
         <label className={juntar("mt-2 flex flex-wrap items-center gap-2 text-sm", !rede.ligado && "opacity-60")}>
@@ -98,8 +80,7 @@ export function AutomacaoDeLeads({ dados, aoSalvar }: { dados: DadosAutomacao; a
           <Numero rotulo="Dias sem mensagem do cliente até sair do quadro" valor={rede.dias} min={1} max={60} desabilitado={!rede.ligado} aoMudar={(v) => setRede((r) => ({ ...r, dias: v }))} />
           <span>dias sem mensagem do cliente</span>
         </label>
-        <p className="mt-1 text-xs text-texto-fraco">Com a rede ligada, a retomada antiga (modelo enviado após 3 dias) deixa de ser enviada.</p>
-        <Previa mostrar={!dados.rede.ligado}>
+                <Previa mostrar={!dados.rede.ligado}>
           Ao ligar com o prazo salvo, {cards(p.redePerdido)} {p.redePerdido === 1 ? "vai" : "vão"} para Perdido e {cards(p.redeArquivar)} de pós-venda {p.redeArquivar === 1 ? "vai" : "vão"} para o arquivo na hora.
         </Previa>
       </Cartao>
@@ -116,7 +97,7 @@ export function AutomacaoDeLeads({ dados, aoSalvar }: { dados: DadosAutomacao; a
             <Numero rotulo="Dias em Perdido até arquivar o perdido automático" valor={arq.diasAutomatico} min={1} max={365} desabilitado={!arq.ligado} aoMudar={(v) => setArq((r) => ({ ...r, diasAutomatico: v }))} />
             <span>dias</span>
           </label>
-          <p className="text-xs text-texto-fraco">É o card que o sistema moveu: sem resposta, outra cidade, curioso / sem perfil.</p>
+          <p className="text-xs text-texto-fraco">É o card que o sistema moveu (sem resposta).</p>
           <Interruptor rotulo="Arquivar também o perdido marcado pelo vendedor" ligado={arq.vendedorLigado} desabilitado={!arq.ligado} aoMudar={(v) => setArq((r) => ({ ...r, vendedorLigado: v }))} />
           <label className={juntar("flex flex-wrap items-center gap-2 text-sm", !arq.vendedorLigado && "opacity-60")}>
             <span>Perdido marcado pelo vendedor: arquivar após</span>

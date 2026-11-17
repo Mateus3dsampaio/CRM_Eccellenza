@@ -140,8 +140,8 @@ describe("perdido arquiva sozinho: rotina com o banco", () => {
     }
     vi.setSystemTime(dia(20));
     const d = await dadosDaAutomacao();
-    expect([d.desclassificados.ligado, d.rede.ligado, d.arquivar.ligado]).toEqual([false, false, false]);
-    expect(d.previa).toEqual({ desclassificados: 1, redePerdido: 2, redeArquivar: 1, arquivarAutomatico: 1, arquivarVendedor: 0 });
+    expect([d.rede.ligado, d.arquivar.ligado]).toEqual([false, false]);
+    expect(d.previa).toEqual({ redePerdido: 2, redeArquivar: 1, arquivarAutomatico: 1, arquivarVendedor: 0 });
     expect((await ler(auto)).arquivadoEm).toBeNull();
   });
 
@@ -149,7 +149,7 @@ describe("perdido arquiva sozinho: rotina com o banco", () => {
     await definirRegrasDeArquivarPerdido(R);
     await perder("+5588900000111", "sistema", "outro");
     await em(dia(8));
-    expect((await dadosDoPainel({ atalho: "hoje" })).automacao).toEqual({ desclassificados: 0, redePerdidos: 0, redeArquivados: 0, perdidosArquivados: 1, bloqueados: 0 });
+    expect((await dadosDoPainel({ atalho: "hoje" })).automacao).toEqual({ redePerdidos: 0, redeArquivados: 0, perdidosArquivados: 1, bloqueados: 0 });
     const html = gerarHtmlDoPainel(await dadosParaExportar());
     expect(html).toContain('id="automacao"');
     expect(html).toContain('id="recuperacao"');

@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { avaliarRecuperacao, montarTextoRecuperacao, MOTIVO_SEM_RESPOSTA_AUTOMATICO } from "@/regras/recuperacao";
-import { regrasDeDesclassificados, regrasDeRecuperacao } from "./configuracoes";
+import { regrasDeRecuperacao } from "./configuracoes";
+import { idsQuePassaramPorHumano } from "./passou-por-humano";
 import { registrarAlteracao } from "./historico";
 import { moverEtapa } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
@@ -26,15 +27,15 @@ export async function rodarRecuperacao(): Promise<ResultadoRecuperacao> {
   const regras = await regrasDeRecuperacao();
   if (!regras.ligado) return resultado;
   const quando = await agora();
-  const semDesclassificados = (await regrasDeDesclassificados()).ligado;
 
   const leads = await db.lead.findMany({
     where: { arquivadoEm: null, naoReceberEm: null, etapa: { notIn: ["perdido", "fechado"] }, modoAtendimento: "bot", aguardandoHumano: false, recuperacaoFalhou: false, ultimaMsgClienteEm: { not: null } },
     include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
   });
 
+  const humanos = await idsQuePassaramPorHumano(leads.map((l) => l.id));
   for (const lead of leads) {
-    const acao = avaliarRecuperacao({ ...lead, temVisitaFutura: lead.visitas.length > 0 }, regras, quando, semDesclassificados);
+    const acao = avaliarRecuperacao({ ...lead, temVisitaFutura: lead.visitas.length > 0, passouPorHumano: humanos.has(lead.id) }, regras, quando);
     if (!acao) continue;
 
     if (acao === "mover_perdido") {

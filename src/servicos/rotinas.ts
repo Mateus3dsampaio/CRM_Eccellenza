@@ -1,30 +1,25 @@
 import { db } from "@/lib/db";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
-import { temConsentimento } from "@/regras/consentimento";
 import { deveExcluirArquivado, deveExcluirFechado, DIAS_ARQUIVADO_ATE_EXCLUIR, DIAS_FECHADO_ATE_EXCLUIR } from "@/regras/limpeza";
-import { avaliarRetomada, DIAS_PARA_RETOMADA, DIAS_PARA_SEM_RESPOSTA } from "@/regras/retomada";
-import { MOTIVO_PAROU_DE_RESPONDER } from "@/regras/vendas";
 import { formatarDataHora } from "@/regras/tempo";
 import { rodarArquivarPerdidos } from "./arquivar-perdido";
 import { avisarDecisoesVencidas, avisarPrazosVermelhos, avisarRetornos } from "./alertas";
-import { rodarDesclassificados } from "./desclassificados";
-import { registrarAlteracao } from "./historico";
-import { alterarEtiqueta, excluirLeads, moverEtapa } from "./leads";
-import { enviarMensagemLoja } from "./mensagens";
-import { registrarUmaVez } from "./metricas";
+import { excluirLeads } from "./leads";
 import { apagarMidiasAntigas, apagarMidiasSoltas } from "./midias";
 import { rodarPresenca } from "./presenca";
 import { rodarRecuperacao } from "./recuperacao";
 import { rodarRedeDeSeguranca } from "./rede-seguranca";
 import { enviarRetornosAutomaticos } from "./retorno-fechada";
-import { garantirMotivoParouDeResponder } from "./vendas";
-import { regrasDaRedeDeSeguranca } from "./configuracoes";
 import { limparLogsAntigos, reprocessarEventosPendentes } from "./whatsapp";
 
 export interface ResultadoRotinas {
-  retomadas: number;
-  semResposta: number;
+  /** Mensagens de recuperação enviadas (1ª e 2ª). */
+  mensagens: number;
+  /** Leads que as rotinas moveram para Perdido (recuperação e rede de segurança). */
+  perdidos: number;
+  /** Leads que as rotinas mandaram para o arquivo (Perdido vencido e pós-venda parado). */
+  arquivados: number;
   excluidos: number;
   /** Parte de `excluidos` que foi por passar 180 dias do fechamento. */
   fechadosExcluidos?: number;
@@ -46,7 +41,7 @@ async function registrar(texto: string) {
 // Evita duas execuções ao mesmo tempo (ex.: duas abas avançando o relógio).
 let emExecucao: Promise<ResultadoRotinas> | null = null;
 
-/** Rotinas de tempo (RET-01, RET-03, LIMP-04). Rodam ao avançar o relógio e ao abrir o kanban. */
+/** Rotinas de tempo: recuperação, rede de segurança, arquivar perdidos, limpezas (LIMP-04). Rodam a cada minuto, ao avançar o relógio e ao abrir o kanban. */
 export function rodarRotinas(): Promise<ResultadoRotinas> {
   if (!emExecucao) emExecucao = executar().finally(() => (emExecucao = null));
   return emExecucao;
@@ -54,36 +49,7 @@ export function rodarRotinas(): Promise<ResultadoRotinas> {
 
 async function executar(): Promise<ResultadoRotinas> {
   const quando = await agora();
-  const resultado: ResultadoRotinas = { retomadas: 0, semResposta: 0, excluidos: 0 };
-
-  // Tarefa 41: a retomada antiga (modelo em 3 dias, Perdido 4 dias depois) só roda enquanto a rede de segurança está
-  // desligada. Ligada a rede, a retomada deixa de existir (decisão do Mateus 16/11/2026); o código sai depois disso.
-  const retomadaAntiga = !(await regrasDaRedeDeSeguranca()).ligado;
-  const leads = !retomadaAntiga ? [] : await db.lead.findMany({
-    where: { arquivadoEm: null, etapa: "novo", modoAtendimento: "bot", ultimaMsgLojaEm: { not: null }, naoReceberEm: null },
-    include: { visitas: { where: { status: "agendada", inicio: { gt: quando } }, select: { id: true } } },
-  });
-  for (const lead of leads) {
-    const acao = avaliarRetomada({ ...lead, temVisitaFutura: lead.visitas.length > 0 }, quando);
-    if (acao === "enviar_retomada") {
-      // Retomada é mensagem iniciada pela loja: só com consentimento (regras/consentimento.ts).
-      if (!temConsentimento(lead)) continue;
-      // Marca antes de enviar: garante uma retomada só, mesmo se o envio falhar.
-      const r = await db.lead.updateMany({ where: { id: lead.id, retomadaEnviadaEm: null }, data: { retomadaEnviadaEm: quando } });
-      if (!r.count) continue;
-      await enviarMensagemLoja({ leadId: lead.id, autor: "sistema", autorNome: "Retomada automática", modelo: "retomada" });
-      await alterarEtiqueta(lead.id, "retomada", true, "sistema");
-      await registrarAlteracao(lead.id, "sistema", `Retomada enviada (${DIAS_PARA_RETOMADA} dias sem resposta)`);
-      await registrarUmaVez(lead.id, "retomada_enviada");
-      resultado.retomadas++;
-    } else if (acao === "mover_sem_resposta") {
-      // Tarefa 21: não existe mais a coluna "Sem resposta"; o lead vai para Perdido com o motivo "Parou de responder"
-      // e volta para onde estava se o cliente escrever de novo (servicos/mensagens.ts).
-      await garantirMotivoParouDeResponder();
-      await moverEtapa(lead.id, "perdido", "sistema", { guardarAnterior: true, semExigencias: true, dados: { motivoPerda: MOTIVO_PAROU_DE_RESPONDER } });
-      resultado.semResposta++;
-    }
-  }
+  const resultado: ResultadoRotinas = { mensagens: 0, perdidos: 0, arquivados: 0, excluidos: 0 };
 
   // Cliente que fechou projeto segue a regra dos 180 dias (abaixo), mesmo arquivado; os demais arquivados saem em 30 dias.
   const arquivados = await db.lead.findMany({ where: { arquivadoEm: { not: null }, etapa: { not: "fechado" } }, select: { id: true, arquivadoEm: true } });
@@ -127,31 +93,27 @@ async function executar(): Promise<ResultadoRotinas> {
     console.error("[rotinas] retorno automático falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
-  // Desclassificados (tarefa 40): outra cidade e curioso / sem perfil saem do quadro sem mensagem. Antes da recuperação.
-  try {
-    await rodarDesclassificados();
-  } catch (erro) {
-    console.error("[rotinas] desclassificados falhou:", erro instanceof Error ? erro.message : "desconhecido");
-  }
-
   // Recuperação de leads: 1ª e 2ª mensagem para quem sumiu e, depois, Perdido. Erro aqui não para o resto.
   try {
-    await rodarRecuperacao();
+    const r = await rodarRecuperacao();
+    resultado.mensagens += r.primeiras + r.segundas;
+    resultado.perdidos += r.perdidos;
   } catch (erro) {
     console.error("[rotinas] recuperação de leads falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
-  // Rede de segurança (tarefa 41): por último, para pegar só o que as outras regras não tiraram do quadro.
+  // Rede de segurança: por último, para pegar só o que a recuperação não tirou do quadro.
   try {
-    await rodarRedeDeSeguranca();
+    const r = await rodarRedeDeSeguranca();
+    resultado.perdidos += r.perdidos;
+    resultado.arquivados += r.arquivados;
   } catch (erro) {
     console.error("[rotinas] rede de segurança falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
 
   // Perdido arquiva sozinho (tarefa 42). Depois das regras que movem para Perdido: o prazo conta da entrada na coluna.
-  let perdidosArquivados = 0;
   try {
-    perdidosArquivados = await rodarArquivarPerdidos();
+    resultado.arquivados += await rodarArquivarPerdidos();
   } catch (erro) {
     console.error("[rotinas] arquivar perdidos falhou:", erro instanceof Error ? erro.message : "desconhecido");
   }
@@ -162,11 +124,11 @@ async function executar(): Promise<ResultadoRotinas> {
   await avisarDecisoesVencidas();
 
   const partes: string[] = [];
-  if (resultado.retomadas) partes.push(`${resultado.retomadas} retomada(s) enviada(s) após ${DIAS_PARA_RETOMADA} dias sem resposta`);
-  if (resultado.semResposta) partes.push(`${resultado.semResposta} lead(s) movido(s) para "Perdido – Parou de responder" (${DIAS_PARA_SEM_RESPOSTA} dias após a retomada)`);
+  if (resultado.mensagens) partes.push(`${resultado.mensagens} mensagem(ns) de recuperação enviada(s)`);
+  if (resultado.perdidos) partes.push(`${resultado.perdidos} lead(s) movido(s) para Perdido sem resposta`);
+  if (resultado.arquivados) partes.push(`${resultado.arquivados} card(s) arquivado(s) automaticamente`);
   if (resultado.excluidos) partes.push(`${resultado.excluidos} arquivado(s) excluído(s) de vez (${DIAS_ARQUIVADO_ATE_EXCLUIR} dias no arquivo)`);
   if (resultado.fechadosExcluidos) partes.push(`${resultado.fechadosExcluidos} cliente(s) que fecharam projeto excluído(s) de vez (${DIAS_FECHADO_ATE_EXCLUIR} dias após fechar)`);
-  if (perdidosArquivados) partes.push(`${perdidosArquivados} card(s) de Perdido arquivado(s) automaticamente`);
   if (partes.length) {
     await registrar(`${formatarDataHora(quando)}: ${partes.join("; ")}.`);
     await marcarMudanca();

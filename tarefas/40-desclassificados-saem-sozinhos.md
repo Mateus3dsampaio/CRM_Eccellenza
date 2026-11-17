@@ -1,4 +1,6 @@
-# Tarefa 40 – Desclassificados saem sozinhos da "IA atendendo"
+# Tarefa 40 – Desclassificados saem sozinhos da "IA atendendo" (DESFEITA em 17/11/2026)
+
+> **Desfeita.** Em 17/11/2026 o Mateus achou o conjunto de regras confuso e aprovou um caminho único (ver `tarefas/45-automacao-enxuta.md`): quem conversa com coerência sobre móveis é lead e segue o caminho normal, seja de outra cidade, curioso ou sem perfil. O código desta tarefa saiu; o texto abaixo fica só como histórico.
 
 Objetivo: cliente que a loja não atende (outra cidade, curioso ou sem perfil) deixar de ocupar o quadro e de receber mensagem de recuperação. Primeira de quatro tarefas da automação de leads (40 a 43).
 

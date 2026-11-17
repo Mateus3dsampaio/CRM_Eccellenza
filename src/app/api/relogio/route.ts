@@ -22,7 +22,7 @@ export const GET = rota(async () => {
   };
 });
 
-// O relógio só anda para a frente (voltar o tempo bagunçaria janelas de 24h e retomadas).
+// O relógio só anda para a frente (voltar o tempo bagunçaria janelas de 24h e as rotinas).
 // Horas, ou minutos (de 5 em 5 a 59) para testar o horário de repartir a fila e de verificar a presença.
 const esquema = z.union([z.object({ horas: z.number().int().min(1).max(24 * 60) }), z.object({ minutos: z.number().int().min(5).max(59) })]);
 

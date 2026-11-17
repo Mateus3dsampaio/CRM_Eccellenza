@@ -145,7 +145,6 @@ export async function dadosDoPainel(pedido: PedidoPainel) {
       perdidos: contar("recuperacao_perdido", inicio, fim),
     },
     automacao: {
-      desclassificados: contar("desclassificado_perdido", inicio, fim),
       redePerdidos: contar("rede_perdido", inicio, fim),
       redeArquivados: contar("rede_arquivado", inicio, fim),
       perdidosArquivados: contar("perdido_arquivado", inicio, fim),

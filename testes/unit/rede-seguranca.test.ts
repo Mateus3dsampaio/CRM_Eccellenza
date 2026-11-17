@@ -7,6 +7,7 @@ import { definirRegrasDaRedeDeSeguranca } from "@/servicos/configuracoes";
 import { obterOuCriarLead } from "@/servicos/leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "@/servicos/mensagens";
 import { rodarRotinas } from "@/servicos/rotinas";
+import { assumirConversa, devolverAoBot } from "@/servicos/conversa";
 import { limparBanco } from "./ajuda";
 
 // Novembro de 2026, horário de Fortaleza.
@@ -23,6 +24,7 @@ const base: EstadoRede = {
   temVisitaFutura: false,
   proximoContatoEm: null,
   ultimaMsgClienteEm: dia(9),
+  passouPorHumano: false,
 };
 
 describe("rede de segurança: regras puras", () => {
@@ -61,6 +63,7 @@ describe("rede de segurança: regras puras", () => {
     ["está arquivado", { arquivadoEm: dia(10) }],
     ["tem visita marcada", { temVisitaFutura: true }],
     ["nunca escreveu", { ultimaMsgClienteEm: null }],
+    ["já passou por um consultor", { passouPorHumano: true }],
   ])("não mexe se o lead %s", (_nome, mudanca) => {
     expect(avaliarRede({ ...base, ...mudanca }, R, dia(20))).toBeNull();
   });
@@ -86,7 +89,6 @@ async function montarLead(telefone: string, opcoes: { clientePorUltimo?: boolean
 }
 
 const ler = (id: string) => db.lead.findUniqueOrThrow({ where: { id } });
-const retomadas = () => db.mensagem.count({ where: { autorNome: "Retomada automática" } });
 async function em(quando: Date) {
   vi.setSystemTime(quando);
   await rodarRotinas();
@@ -112,33 +114,6 @@ describe("rede de segurança: rotina com o banco", () => {
     expect(await ler(id)).toMatchObject({ etapa: "novo", motivoPerda: null });
   });
 
-  it("ligada: a retomada antiga não é mais enviada, e quem estava no meio dela sai pela rede", async () => {
-    await definirRegrasDaRedeDeSeguranca(R);
-    const id = await montarLead("+5588900000092");
-    // Estava no meio da retomada antiga: recebeu o modelo no dia 12.
-    await db.lead.update({ where: { id }, data: { retomadaEnviadaEm: dia(12) } });
-    const novo = await montarLead("+5588900000093");
-    await em(dia(13));
-    expect(await retomadas()).toBe(0);
-    expect((await ler(novo)).retomadaEnviadaEm).toBeNull();
-    await em(dia(14));
-    expect((await ler(id)).etapa).toBe("perdido");
-    expect((await ler(novo)).etapa).toBe("perdido");
-    // Uma vez só: rodar de novo não move nem conta de novo.
-    await em(dia(17));
-    expect(await db.eventoMetrica.count({ where: { tipo: "rede_perdido" } })).toBe(2);
-    expect(await db.mudancaEtapa.count({ where: { leadId: id, para: "perdido" } })).toBe(1);
-  });
-
-  it("desligada (padrão de fábrica): a retomada antiga continua como antes", async () => {
-    const id = await montarLead("+5588900000094");
-    // Na retomada antiga a última mensagem precisa ser da loja (8h55): a do cliente volta para 8h50.
-    await db.lead.update({ where: { id }, data: { ultimaMsgClienteEm: dia(9, 8, 50) } });
-    await em(dia(13));
-    expect((await ler(id)).retomadaEnviadaEm).not.toBeNull();
-    expect(await db.eventoMetrica.count({ where: { tipo: "rede_perdido" } })).toBe(0);
-  });
-
   it("pós-venda parado vai direto para o arquivo, sem passar por Perdido", async () => {
     await definirRegrasDaRedeDeSeguranca(R);
     const id = await montarLead("+5588900000095", { classificacao: "pos_venda" });
@@ -150,11 +125,20 @@ describe("rede de segurança: rotina com o banco", () => {
     expect(await db.eventoMetrica.count({ where: { tipo: "rede_arquivado" } })).toBe(1);
   });
 
-  it("outra cidade com a regra dos desclassificados desligada leva o motivo próprio", async () => {
+  it("outra cidade parada vai para Perdido como qualquer lead, com o motivo de sempre", async () => {
     await definirRegrasDaRedeDeSeguranca(R);
     const id = await montarLead("+5588900000096", { classificacao: "outra_cidade" });
     await em(dia(14));
-    expect(await ler(id)).toMatchObject({ etapa: "perdido", motivoPerda: "outra_cidade_automatico" });
+    expect(await ler(id)).toMatchObject({ etapa: "perdido", motivoPerda: MOTIVO_SEM_RESPOSTA_AUTOMATICO });
+  });
+
+  it("conversa que um consultor assumiu e devolveu ao bot não é tocada", async () => {
+    await definirRegrasDaRedeDeSeguranca(R);
+    const id = await montarLead("+5588900000098");
+    await assumirConversa(id, { nome: "Carlos" });
+    await devolverAoBot(id, { nome: "Carlos" });
+    await em(dia(20));
+    expect(await ler(id)).toMatchObject({ etapa: "novo", arquivadoEm: null });
   });
 
   it("lead passado ao consultor não é tocado", async () => {

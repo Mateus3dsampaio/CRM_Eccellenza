@@ -47,9 +47,9 @@ Um requisito só está "atendido" se o critério de aceite puder ser demonstrado
 - **AGENDA-04 (E1)** Três compromissos (tarefa 21): visita à loja (não move o card), medição na casa do cliente (2h por padrão, editável; move para "Medição agendada"; não ocupa vaga da loja) e apresentação na loja (move para "Apresentação agendada"). Nenhum pode coincidir com outro do mesmo consultor. Marcar nunca volta o card de etapa mais avançada (Negociação continua em Negociação; Perdido volta ao funil). Cancelar medição/apresentação sem outra marcada volta o card para Em qualificação. O próximo compromisso aparece no card com o tipo.
 
 ## RET – retomada e "Parou de responder"
-- **RET-01 (E1)** 3 dias sem resposta depois da última mensagem do bot → envia **uma** retomada (modelo) e aplica a etiqueta "Retomada enviada". Nunca envia mais de uma retomada por lead.
-- **RET-02 (E1)** Se o cliente responder, o card volta à etapa em que estava e a etiqueta sai.
-- **RET-03 (E1)** Sem resposta 4 dias depois da retomada (provisório) → card vai para "Perdido" com o motivo "Parou de responder" (a coluna "Sem resposta" saiu na tarefa 21). Se o cliente escrever de novo, o card volta para onde estava.
+- **RET-01 (E1)** Lead parado com a IA recebe as mensagens de recuperação (Configurações > Automação de leads) e, sem resposta, vai para "Perdido" com o motivo "Sem resposta (automático)". A retomada antiga (modelo após 3 dias) saiu em 17/11/2026.
+- **RET-02 (E1)** Se o cliente responder, o card volta à etapa em que estava.
+- **RET-03 (E1)** Rede de segurança: lead com a IA parado há 5 dias sem mensagem do cliente vai para "Perdido" (pós-venda vai para o arquivo). Lead que já passou por um consultor nunca entra nessas rotinas (decisão do Mateus 17/11/2026).
 - **RET-04 (E1)** Relógio simulado: controle visível no simulador para avançar horas e dias e disparar as rotinas, com registro do que aconteceu.
 
 ## LIMP – arquivar e excluir

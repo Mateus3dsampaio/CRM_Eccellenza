@@ -105,7 +105,7 @@ export function nomeEtiqueta(codigo: string): string {
 
 export const CLASSIFICACOES = {
   qualificado: "Qualificado",
-  curioso: "Curioso / sem perfil",
+  curioso: "Curioso",
   outra_cidade: "Outra cidade",
   parceiro: "Arquiteto/designer/construtora",
   pos_venda: "Cliente antigo/pós-venda",

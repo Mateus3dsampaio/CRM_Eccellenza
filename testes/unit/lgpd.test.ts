@@ -24,7 +24,7 @@ describe("pedido para parar (regra)", () => {
 describe("LGPD no sistema", () => {
   beforeEach(limparBanco);
 
-  it("cliente que pede para parar: confirma, etiqueta, bot não responde e não recebe retomada", async () => {
+  it("cliente que pede para parar: confirma, etiqueta, bot não responde e não recebe mensagem automática", async () => {
     const r = await receberMensagemCliente({ telefone: "+5588900001111", nomePerfil: "Ana", texto: "parar" });
     expect(r.respostas).toEqual([]);
     const lead = await db.lead.findUniqueOrThrow({ where: { telefone: "+5588900001111" }, include: { mensagens: true } });
@@ -35,7 +35,7 @@ describe("LGPD no sistema", () => {
 
     await avancarRelogio(5 * 24 * 3600_000);
     const rot = await rodarRotinas();
-    expect(rot.retomadas).toBe(0);
+    expect(rot.mensagens).toBe(0);
     await db.configuracao.deleteMany({ where: { chave: "relogio_deslocamento_ms" } });
   });
 
