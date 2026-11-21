@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login C3 · Cometas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* Tokens iguais aos de src/app/tokens.css (mesmos nomes), para a proposta escolhida ir para o CRM sem tradução. */
+:root {
+  --color-fundo: #0e131a;
+  --color-coluna: #141c26;
+  --color-superficie: #1a2430;
+  --color-superficie-suave: #273545;
+  --color-borda: #263444;
+  --color-borda-forte: #2f3f51;
+  --color-texto: #e6edf4;
+  --color-texto-suave: #b4bdc8;
+  --color-texto-fraco: #969faa;
+  --color-marca: #3f74ec;
+  --color-marca-forte: #5a89ef;
+  --color-marca-lado: #254389;
+  --color-marca-texto: #8aaaf0;
+  --color-alerta: #f2766f;
+  --color-alerta-suave: #3b1c1f;
+  --color-aviso: #f0b04a;
+  --ease-mola: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-salto: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:root[data-tema] {
+  --color-fundo: var(--t0);
+  --color-coluna: color-mix(in srgb, var(--t0) 74%, var(--t1));
+  --color-superficie: color-mix(in srgb, var(--t0) 50%, var(--t1));
+  --color-superficie-suave: color-mix(in srgb, var(--t1) 72%, var(--t2));
+  --color-borda: color-mix(in srgb, var(--t1) 68%, var(--t2));
+  --color-borda-forte: color-mix(in srgb, var(--t1) 45%, var(--t2));
+  --color-texto: color-mix(in srgb, var(--t4) 55%, #fff);
+  --color-texto-suave: color-mix(in srgb, var(--t4) 88%, var(--t0));
+  --color-texto-fraco: color-mix(in srgb, var(--t4) 72%, var(--t0));
+  --color-marca: var(--m);
+  --color-marca-forte: var(--mf);
+  --color-marca-lado: var(--ml);
+  --color-marca-texto: var(--mt);
+}
+:root[data-tema="ametista"] { --t0: #0e0b1d; --t1: #2a1e4d; --t2: #5a3b8c; --t4: #c9c2e3; --m: #6a47b8; --mf: #7f5fd0; --mt: #b2a5f0; --ml: #3f2a75; }
+:root[data-tema="cafe"] { --t0: #1a120e; --t1: #3a2418; --t2: #6b4a2e; --t4: #d5c4ae; --m: #9a5a24; --mf: #b56e2e; --mt: #d9a56e; --ml: #6b3e16; }
+:root[data-tema="floresta"] { --t0: #0f1f17; --t1: #1e3a2e; --t2: #3e5a3f; --t4: #c7cbb8; --m: #4a7a4f; --mf: #5c9062; --mt: #9cc79f; --ml: #2e5232; }
+:root[data-tema="marinho"] { --t0: #0b132b; --t1: #1c2541; --t2: #3a506b; --t4: #f4d6b0; --m: #b85c08; --mf: #d97706; --mt: #f4b46a; --ml: #7a3c05; }
+:root[data-tema="petroleo"] { --t0: #0a0f14; --t1: #0f3d3e; --t2: #2e6f73; --t4: #eadcc8; --m: #b5541a; --mf: #c6601f; --mt: #f0a06a; --ml: #78360e; }
+:root[data-tema="rosa"] { --t0: #121212; --t1: #1f2937; --t2: #334155; --t4: #f1f5f9; --m: #d6317f; --mf: #ec4899; --mt: #f58dbb; --ml: #8f1f52; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ---------- Cartão de login (igual nas três; só o palco muda) ---------- */
+.vidro {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-superficie) 78%, transparent), color-mix(in srgb, var(--color-superficie) 58%, transparent));
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid color-mix(in srgb, var(--color-texto) 9%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 18px 40px rgb(0 0 0 / 0.45),
+    0 40px 90px -20px rgb(0 0 0 / 0.6);
+}
+.cartao { width: min(372px, 100%); border-radius: 18px; padding: 30px 28px 20px; position: relative; }
+.cartao::before {
+  /* fio de luz da marca no topo (luz-marca-fio) */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 12%, transparent), transparent 70px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 35%, transparent);
+}
+.cartao > * { position: relative; }
+.cartao h1 { margin: 0; text-align: center; font-size: 22px; font-weight: 800; letter-spacing: 0.16em; padding-left: 0.16em; }
+.cartao .sub { margin: 6px 0 22px; text-align: center; font-size: 14px; color: var(--color-texto-suave); }
+.campo { display: block; margin-top: 14px; }
+.campo > span { display: block; font-size: 13px; font-weight: 600; color: var(--color-texto-suave); margin-bottom: 6px; }
+.caixa { position: relative; }
+.entrada {
+  width: 100%; height: 44px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--color-borda-forte);
+  background: color-mix(in srgb, var(--color-fundo) 72%, transparent);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
+  color: var(--color-texto); font: inherit; font-size: 15px; outline: none;
+  transition: border-color 160ms, box-shadow 160ms, background 160ms;
+}
+.entrada:hover { border-color: color-mix(in srgb, var(--color-marca) 45%, var(--color-borda-forte)); }
+.entrada:focus { border-color: var(--color-marca); background: color-mix(in srgb, var(--color-fundo) 85%, transparent); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 3px color-mix(in srgb, var(--color-marca) 30%, transparent); }
+.entrada.senha { padding-right: 46px; }
+.olho {
+  position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--color-texto-fraco); cursor: pointer; display: grid; place-items: center;
+  transition: color 160ms, background 160ms;
+}
+.olho:hover { color: var(--color-texto); background: color-mix(in srgb, var(--color-texto) 7%, transparent); }
+.olho:focus-visible { outline: 2px solid var(--color-marca-texto); outline-offset: 1px; }
+.caps { margin: 6px 0 0; font-size: 12px; color: var(--color-aviso); display: none; align-items: center; gap: 6px; }
+.caps.on { display: flex; }
+.erro { margin: 14px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: var(--color-alerta-suave); color: var(--color-alerta); display: none; }
+.erro.on { display: block; }
+.tecla-pri {
+  margin-top: 22px; width: 100%; height: 46px; border: 0; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(180deg, var(--color-marca-forte), var(--color-marca));
+  color: #fff; font: inherit; font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
+  box-shadow: 0 4px 0 var(--color-marca-lado), 0 7px 14px color-mix(in srgb, var(--color-marca) 38%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3);
+  transition: transform 90ms, box-shadow 90ms, filter 160ms;
+  position: relative; overflow: hidden;
+}
+.tecla-pri:hover { filter: brightness(1.08); }
+.tecla-pri:active, .tecla-pri.afundou { transform: translateY(3px); box-shadow: 0 1px 0 var(--color-marca-lado), 0 2px 4px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.25); }
+.tecla-pri:focus-visible { outline: 2px solid var(--color-marca-texto); outline-offset: 3px; }
+.tecla-pri::after {
+  /* brilho que passa pela tecla a cada poucos segundos */
+  content: ""; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+  animation: brilho-tecla 5.5s var(--ease-mola) 2.6s infinite;
+}
+@keyframes brilho-tecla { 0% { transform: translateX(-120%); } 22%, 100% { transform: translateX(120%); } }
+.giro { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.35); border-top-color: #fff; animation: girar 700ms linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.versao { margin: 16px 0 0; text-align: center; font-size: 12px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+
+/* Seletor de tema da proposta (só no protótipo: mostra que segue o tema do aparelho) */
+.temas {
+  position: fixed; left: 16px; bottom: 16px; z-index: 50; display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 999px; font-size: 12px; color: var(--color-texto-fraco);
+  background: color-mix(in srgb, var(--color-fundo) 70%, transparent); backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--color-texto) 8%, transparent);
+}
+.temas b { color: var(--color-texto-suave); font-weight: 600; }
+.temas button { width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; background: var(--c); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.15); transition: transform 160ms var(--ease-salto); }
+.temas button:hover { transform: scale(1.2); }
+.temas button.ativo { border-color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
+
+
+/* ---------- Proposta C: o próprio Kanban trabalhando ao fundo, em perspectiva ---------- */
+body { background: var(--color-fundo); }
+.palco { position: fixed; inset: 0; overflow: hidden; perspective: 1500px; perspective-origin: 40% 20%; }
+.camera { position: absolute; left: 44%; top: 40%; width: 0; height: 0; transform-style: preserve-3d; will-change: transform; }
+.deriva { position: absolute; transform-style: preserve-3d; animation: deriva 28s ease-in-out infinite alternate; }
+@keyframes deriva { from { transform: translate3d(-120px, 40px, 0); } to { transform: translate3d(140px, -60px, 0); } }
+.quadro { position: absolute; left: -1000px; top: -760px; width: 2000px; height: 1520px; transform-style: preserve-3d; opacity: 0; transition: opacity 1200ms ease; }
+.pronto .quadro { opacity: 1; }
+.coluna { position: absolute; top: 0; height: 1520px; width: 304px; border-radius: 18px; background: color-mix(in srgb, var(--color-coluna) 92%, transparent); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.3); }
+.coluna.destaque { background: color-mix(in srgb, #c49bff 9%, var(--color-coluna)); box-shadow: inset 0 1px 0 color-mix(in srgb, #c49bff 40%, transparent), 0 10px 40px color-mix(in srgb, #c49bff 14%, transparent); }
+.cab { position: absolute; left: 0; right: 0; top: 0; height: 60px; padding: 16px 16px 0; display: flex; align-items: center; gap: 10px; border-radius: 18px 18px 0 0; }
+.cab::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; border-radius: 18px 18px 0 0; background: var(--cor); }
+.cab b { font-size: 15px; font-weight: 700; }
+.cab .qtd { min-width: 26px; height: 22px; padding: 0 7px; border-radius: 999px; font-size: 12px; font-weight: 700; display: grid; place-items: center; background: var(--color-superficie-suave); color: var(--color-texto-suave); transition: transform 300ms var(--ease-salto), background 300ms; }
+.cab .soma { margin-left: auto; font-size: 12px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.coluna.recebe .cab::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, color-mix(in srgb, var(--cor) 30%, transparent), transparent); animation: acender 1s ease forwards; }
+.coluna.recebe .qtd { transform: scale(1.25); background: var(--cor); color: #0a1222; }
+@keyframes acender { from { opacity: 1; } to { opacity: 0; } }
+
+.lead {
+  position: absolute; left: 0; top: 0; width: 280px; height: 138px; padding: 12px 12px 10px; border-radius: 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-superficie) 100%, #fff 3%), var(--color-superficie));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
+  transition: transform 750ms var(--ease-mola), opacity 500ms ease;
+  display: flex; flex-direction: column; gap: 8px; font-size: 12px;
+}
+.lead.atualizou::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; box-shadow: 0 0 0 1.5px var(--color-marca-texto), 0 0 26px color-mix(in srgb, var(--color-marca) 55%, transparent); animation: realce 1.3s ease-out forwards; }
+@keyframes realce { from { opacity: 1; } to { opacity: 0; } }
+.lead .faixa { transition: background 400ms ease, color 400ms ease; }
+.lead.voando { transition: none; z-index: 5; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 30px 50px rgb(0 0 0 / 0.55), 0 8px 16px rgb(0 0 0 / 0.4); }
+.l1 { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #0a1222; background: var(--av); flex: none; }
+.l1 b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l1 time { margin-left: auto; font-size: 11px; color: var(--color-texto-fraco); }
+.l1 .nao-lidas { margin-left: auto; min-width: 20px; height: 20px; border-radius: 999px; background: #3fcf7e; color: #0a1222; font-size: 11px; font-weight: 800; display: grid; place-items: center; animation: estourar 500ms var(--ease-salto); }
+@keyframes estourar { from { transform: scale(0); } }
+.faixa { height: 24px; margin: 0 -12px; padding: 0 12px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; }
+.faixa i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.f-vermelho { background: #3b1c1f; color: #f2766f; }
+.f-ambar { background: #3a2c12; color: #f0b04a; }
+.f-azul { background: #172f45; color: #8cc6ee; }
+.f-verde { background: #14341f; color: #4fd184; }
+.f-cinza { background: color-mix(in srgb, var(--color-superficie-suave) 60%, transparent); color: var(--color-texto-suave); }
+.digitando { display: inline-flex; gap: 3px; margin-left: 2px; }
+.digitando span { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: pulo 1s ease-in-out infinite; }
+.digitando span:nth-child(2) { animation-delay: 0.15s; } .digitando span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes pulo { 0%, 60%, 100% { transform: none; opacity: 0.5; } 30% { transform: translateY(-3px); opacity: 1; } }
+.lead p { margin: 0; max-height: 2.8em; flex: none; color: var(--color-texto-suave); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.l4 { margin-top: auto; white-space: nowrap; display: flex; align-items: center; gap: 6px; color: var(--color-texto-fraco); font-size: 11.5px; }
+.l4 strong { color: var(--color-texto); font-weight: 700; flex: none; }
+.l4 > span:not(.ini) { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.l4 .ini { flex: none; }
+.l4 .ini { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 9px; font-weight: 800; background: var(--color-superficie-suave); color: var(--color-texto-suave); }
+
+/* Névoa: some o fundo distante e abre espaço para o cartão e a chamada */
+.nevoa { position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    linear-gradient(180deg, var(--color-fundo) 0%, color-mix(in srgb, var(--color-fundo) 55%, transparent) 22%, transparent 45%),
+    linear-gradient(90deg, transparent 40%, color-mix(in srgb, var(--color-fundo) 70%, transparent) 64%, color-mix(in srgb, var(--color-fundo) 92%, transparent) 82%),
+    radial-gradient(48vw 46vh at 12% 96%, var(--color-fundo) 38%, color-mix(in srgb, var(--color-fundo) 80%, transparent) 60%, transparent 100%),
+    radial-gradient(50vw 50vh at 38% 30%, color-mix(in srgb, var(--color-marca) 10%, transparent), transparent 70%); }
+.pagina { position: relative; z-index: 3; height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) 460px; pointer-events: none; }
+.pagina > * { pointer-events: auto; }
+.esquerda { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 0 88px 64px; pointer-events: none; }
+.marca-topo { position: absolute; left: 64px; top: 36px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 800; letter-spacing: 0.32em; color: var(--color-texto-suave); }
+.marca-topo svg { color: var(--color-marca-texto); }
+.ao-vivo { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border-radius: 999px; font-size: 13px; color: var(--color-texto-suave); background: color-mix(in srgb, var(--color-superficie) 70%, transparent); border: 1px solid color-mix(in srgb, var(--color-texto) 8%, transparent); backdrop-filter: blur(10px); }
+.ao-vivo i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: #3fcf7e; }
+.ao-vivo i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #3fcf7e; animation: radar 1.8s ease-out infinite; }
+@keyframes radar { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+.ao-vivo b { color: var(--color-texto); font-variant-numeric: tabular-nums; display: inline-block; }
+.chamada h2 { margin: 18px 0 12px; font-size: clamp(36px, 4vw, 56px); line-height: 1.02; font-weight: 800; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, var(--color-texto) 30%, var(--color-marca-texto)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chamada p { margin: 0; max-width: 440px; font-size: 16px; line-height: 1.5; color: var(--color-texto-suave); }
+.chamada > * { opacity: 0; transform: translateY(14px); animation: subir 800ms var(--ease-mola) forwards; }
+.chamada > :nth-child(2) { animation-delay: 120ms; } .chamada > :nth-child(3) { animation-delay: 220ms; }
+.lado { display: flex; align-items: center; justify-content: center; padding: 24px 48px 24px 0; }
+.cartao { animation: subir 600ms var(--ease-mola) 150ms both; }
+@keyframes subir { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---------- Cometas: gráficos que riscam a tela e somem (canvas por cima do quadro, por baixo do login) ---------- */
+.cometas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+@media (max-width: 900px) {
+  .pagina { grid-template-columns: 1fr; }
+  .esquerda { display: none; }
+  .lado { padding: 16px; }
+  .camera { left: 50%; }
+}
+</style>
+</head>
+<body data-proposta="C3 · Cometas">
+<div class="palco" aria-hidden="true">
+  <div class="camera" id="camera"><div class="deriva"><div class="quadro" id="quadro"></div></div></div>
+</div>
+<div class="nevoa" aria-hidden="true"></div>
+<canvas id="cometas" class="cometas" aria-hidden="true"></canvas>
+<div class="pagina">
+  <section class="esquerda">
+    <div class="marca-topo">
+      <svg width="22" height="22" viewBox="0 0 22 22"><g fill="currentColor"><circle cx="11" cy="3" r="1.4"/><circle cx="17" cy="6" r="1.2"/><circle cx="19" cy="11" r="1.4"/><circle cx="17" cy="16" r="1.2"/><circle cx="11" cy="19" r="1.4"/><circle cx="5" cy="16" r="1.2"/><circle cx="3" cy="11" r="1.4"/><circle cx="5" cy="6" r="1.2"/><circle cx="11" cy="11" r="1.8"/></g></svg>
+      ECCELLENZA
+    </div>
+    <div class="chamada">
+      <span class="ao-vivo"><i></i>Assistente atendendo agora · <b id="n-conv">3 conversas</b></span>
+      <h2>Cada conversa<br />no lugar certo.</h2>
+      <p>O assistente responde, preenche a ficha e organiza o funil. Você entra para fechar a venda.</p>
+    </div>
+  </section>
+  <section class="lado">
+    <form id="cartao" class="cartao vidro" autocomplete="on" novalidate>
+  <h1>ECCELLENZA</h1>
+  <p class="sub">CRM de atendimento</p>
+  <label class="campo"><span>Usuário</span>
+    <input id="usuario" class="entrada" autocomplete="username" autofocus required />
+  </label>
+  <label class="campo"><span>Senha</span>
+    <span class="caixa">
+      <input id="senha" class="entrada senha" type="password" autocomplete="current-password" required />
+      <button id="olho" class="olho" type="button" aria-label="Mostrar senha"></button>
+    </span>
+  </label>
+  <p id="caps" class="caps" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 8 8h-4v6H8v-6H4z"/></svg> Caps Lock ligado</p>
+  <p id="erro" class="erro" role="alert"></p>
+  <button id="entrar" class="tecla-pri" type="submit">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
+    Entrar
+  </button>
+  <p class="versao">Versão 1.0.0</p>
+</form>
+
+  </section>
+</div>
+<script>
+// Comportamento comum do cartão: olho da senha, aviso de Caps Lock, simulação do Entrar e seletor de tema.
+// Cada proposta define window.aoEntrar(nome) (animação de saída) e opcionalmente window.aoTrocarTema().
+(function () {
+  const reduzir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.REDUZIR = reduzir;
+  const form = document.getElementById("cartao");
+  const senha = document.getElementById("senha");
+  const olho = document.getElementById("olho");
+  const caps = document.getElementById("caps");
+  const botao = document.getElementById("entrar");
+  const rotuloBotao = botao.innerHTML;
+  const olhoAberto = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const olhoFechado = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  olho.innerHTML = olhoAberto;
+  olho.addEventListener("click", () => {
+    const ver = senha.type === "password";
+    senha.type = ver ? "text" : "password";
+    olho.innerHTML = ver ? olhoFechado : olhoAberto;
+    olho.setAttribute("aria-label", ver ? "Esconder senha" : "Mostrar senha");
+    senha.focus();
+  });
+  const verCaps = (e) => { if (e.getModifierState) caps.classList.toggle("on", e.getModifierState("CapsLock")); };
+  senha.addEventListener("keydown", verCaps);
+  senha.addEventListener("keyup", verCaps);
+  senha.addEventListener("blur", () => caps.classList.remove("on"));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    botao.disabled = true;
+    botao.innerHTML = '<span class="giro" aria-hidden="true"></span> Entrando…';
+    await new Promise((r) => setTimeout(r, 700));
+    const nome = (document.getElementById("usuario").value || "").trim();
+    if (window.aoEntrar) await window.aoEntrar(nome);
+    botao.disabled = false;
+    botao.innerHTML = rotuloBotao;
+  });
+
+  const temas = [
+    ["", "#3f74ec", "Ardósia (padrão)"], ["cafe", "#9a5a24", "Café"], ["floresta", "#4a7a4f", "Floresta"],
+    ["marinho", "#b85c08", "Marinho"], ["ametista", "#6a47b8", "Ametista"], ["petroleo", "#b5541a", "Petróleo"], ["rosa", "#d6317f", "Rosa"],
+  ];
+  const barra = document.createElement("div");
+  barra.className = "temas";
+  barra.innerHTML = "<b>" + (document.body.dataset.proposta || "") + "</b><span>Tema</span>";
+  temas.forEach(([id, cor, nome], i) => {
+    const b = document.createElement("button");
+    b.style.setProperty("--c", cor);
+    b.title = nome;
+    b.setAttribute("aria-label", "Tema " + nome);
+    if (i === 0) b.classList.add("ativo");
+    b.addEventListener("click", () => {
+      if (id) document.documentElement.dataset.tema = id; else delete document.documentElement.dataset.tema;
+      barra.querySelectorAll("button").forEach((x) => x.classList.toggle("ativo", x === b));
+      window.aoTrocarTema && window.aoTrocarTema();
+    });
+    barra.appendChild(b);
+  });
+  document.body.appendChild(barra);
+  const q = new URLSearchParams(location.search).get("tema");
+  if (q) { const i = temas.findIndex((t) => t[0] === q); if (i > 0) barra.querySelectorAll("button")[i].click(); }
+})();
+
+</script>
+<script>
+(function () {
+  const quadro = document.getElementById("quadro");
+  const ETAPAS = [
+    { nome: "Novo contato", cor: "#8fb2ff", faixas: [["f-vermelho", "Sem resposta há 14 min"], ["f-cinza", "Assistente digitando", 1], ["f-azul", "Responder hoje"]] },
+    { nome: "Qualificação", cor: "#f2b84b", faixas: [["f-ambar", "Falta a medida da parede"], ["f-cinza", "Aguardando o cliente"], ["f-ambar", "Falta a cidade"]] },
+    { nome: "Medição", cor: "#5fd3c4", faixas: [["f-ambar", "Falta marcar medição"], ["f-verde", "Medição sáb 9h"], ["f-azul", "Medição hoje 15h"]] },
+    { nome: "Apresentação", cor: "#c49bff", faixas: [["f-azul", "Apresentação hoje 16h"], ["f-verde", "Apresentação qui 10h"]] },
+    { nome: "Negociação", cor: "#ff9f6e", faixas: [["f-ambar", "Retornar a proposta"], ["f-azul", "Retornar hoje"], ["f-cinza", "Aguardando o cliente"]] },
+    { nome: "Fechado", cor: "#3ccf8e", faixas: [["f-verde", "Contrato assinado"], ["f-verde", "Projeto executivo"]] },
+  ];
+  const NOMES = ["Ana Beatriz Lima", "Carlos Eduardo Reis", "Fernanda Alves", "João Pedro Sousa", "Mariana Costa", "Rafael Teixeira", "Luciana Rocha", "Thiago Martins", "Patrícia Gomes", "Bruno Carvalho", "Juliana Freitas", "Diego Araújo", "Camila Duarte", "Rodrigo Nunes", "Larissa Pinto", "Marcelo Batista", "Aline Moreira", "Gustavo Ribeiro", "Renata Melo", "Felipe Cardoso", "Bianca Lopes", "André Farias", "Sabrina Castro", "Vinícius Barros", "Helena Prado", "Otávio Lins", "Débora Sales", "Caio Mendes"];
+  const CIDADES = ["Juazeiro do Norte", "Crato", "Barbalha", "Juazeiro do Norte", "Missão Velha", "Juazeiro do Norte"];
+  const AMBIENTES = ["Cozinha", "Dormitório casal", "Closet", "Home theater", "Banheiro", "Cozinha e área", "Escritório"];
+  const MSGS = ["Boa tarde! Queria um orçamento da cozinha, o apartamento é novo.", "Pode ser sábado de manhã? Durante a semana eu trabalho.", "Mandei as fotos da parede, a medida está na segunda.", "Gostei muito do projeto, vou ver com meu marido hoje à noite.", "Vocês fazem closet com porta de vidro?", "O pedreiro termina o piso semana que vem.", "Consegue me mandar o 3D do quarto do meu filho?", "Oi! Vi o Instagram de vocês, amei a cozinha verde.", "Fechado! Me manda o contrato que eu assino.", "Qual cor fica melhor com piso amadeirado?"];
+  const AVS = ["#7ba3f0", "#4fd184", "#b697ee", "#f0a06a", "#4cc9ae", "#f08a8d"];
+  const CONSULTORES = ["MS", "LR", "PA"];
+  const sorteio = (a) => a[Math.floor(Math.random() * a.length)];
+  const COL_W = 304, GAP = 34, CARD_TOP = 72, SLOT = 152, MAX = 10;
+  let nomeIdx = 0;
+
+  const colunas = ETAPAS.map((et, c) => {
+    const d = document.createElement("div");
+    d.className = "coluna" + (c === 3 ? " destaque" : "");
+    d.style.left = c * (COL_W + GAP) + "px";
+    d.style.setProperty("--cor", et.cor);
+    d.innerHTML = `<div class="cab"><b>${et.nome}</b><span class="qtd">0</span><span class="soma"></span></div>`;
+    quadro.appendChild(d);
+    return { el: d, qtd: d.querySelector(".qtd"), soma: d.querySelector(".soma"), cards: [] };
+  });
+
+  function novoLead(c) {
+    const nome = NOMES[nomeIdx++ % NOMES.length];
+    const ini = nome.split(" ").filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join("");
+    const valor = Math.round((18 + Math.random() * 78)) * 1000;
+    const el = document.createElement("div");
+    el.className = "lead";
+    el.style.setProperty("--av", AVS[nomeIdx % AVS.length]);
+    const h = 8 + Math.floor(Math.random() * 10), m = String(Math.floor(Math.random() * 60)).padStart(2, "0");
+    el.innerHTML = `<div class="l1"><span class="av">${ini}</span><b>${nome}</b><time>${h}:${m}</time></div><div class="faixa"></div><p>${sorteio(MSGS)}</p><div class="l4"><strong>R$ ${valor.toLocaleString("pt-BR")}</strong><span>· ${sorteio(CIDADES)} · ${sorteio(AMBIENTES)}</span><span class="ini">${sorteio(CONSULTORES)}</span></div>`;
+    const lead = { el, valor };
+    pintarFaixa(lead, c);
+    quadro.appendChild(el);
+    return lead;
+  }
+  function pintarFaixa(lead, c) {
+    const f = lead.el.querySelector(".faixa");
+    const [cls, txt, dig] = sorteio(ETAPAS[c].faixas);
+    f.className = "faixa " + cls;
+    f.innerHTML = `<i></i>${txt}${dig ? '<span class="digitando"><span></span><span></span><span></span></span>' : ""}`;
+  }
+
+  const pos = (c, s) => [c * (COL_W + GAP) + 12, CARD_TOP + s * SLOT];
+  function posicionar() {
+    colunas.forEach((col, c) => {
+      col.cards.forEach((lead, s) => {
+        if (lead.el.classList.contains("voando")) return;
+        const [x, y] = pos(c, s);
+        lead.el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      });
+      col.qtd.textContent = col.cards.length;
+      const total = col.cards.reduce((a, l) => a + l.valor, 0);
+      col.soma.textContent = c === 0 ? "" : "R$ " + Math.round(total / 1000).toLocaleString("pt-BR") + " mil";
+    });
+    window.atualizarFunil && window.atualizarFunil();
+  }
+  // Quadro inicial
+  [8, 8, 7, 6, 7, 5].forEach((n, c) => { for (let i = 0; i < n; i++) colunas[c].cards.push(novoLead(c)); });
+  posicionar();
+  // Entrada: os cards caem no quadro, coluna por coluna, já na abertura da tela
+  if (!window.REDUZIR) {
+    colunas.forEach((col, c) => col.cards.forEach((lead, s) => {
+      const [x, y] = pos(c, s);
+      lead.el.animate([
+        { transform: `translate3d(${x}px, ${y - 40}px, 260px)`, opacity: 0 },
+        { transform: `translate3d(${x}px, ${y}px, 0)`, opacity: 1 },
+      ], { duration: 900, delay: 120 + c * 110 + s * 55, easing: "cubic-bezier(.22,1,.36,1)", fill: "backwards" });
+    }));
+  }
+  requestAnimationFrame(() => document.body.classList.add("pronto"));
+  function realcar(lead) { lead.el.classList.remove("atualizou"); void lead.el.offsetWidth; lead.el.classList.add("atualizou"); }
+  const livres = (col) => col.cards.filter((l) => !l.el.classList.contains("voando"));
+
+  function piscarColuna(c) { const e = colunas[c].el; e.classList.remove("recebe"); void e.offsetWidth; e.classList.add("recebe"); setTimeout(() => e.classList.remove("recebe"), 1000); }
+
+  // O "bot" move um card para a etapa seguinte
+  function mover() {
+    const opcoes = [0, 1, 2, 3, 4].filter((c) => colunas[c].cards.length > 2);
+    if (!opcoes.length) return;
+    // Puxa um pouco mais para Fechado: é o que alimenta a meta
+    const c = opcoes.includes(4) && Math.random() < 0.3 ? 4 : sorteio(opcoes);
+    const candidatos = livres(colunas[c]).slice(0, 4);
+    if (!candidatos.length) return;
+    const escolhido = sorteio(candidatos);
+    const s = colunas[c].cards.indexOf(escolhido);
+    const [lead] = colunas[c].cards.splice(s, 1);
+    const [x0, y0] = pos(c, s);
+    colunas[c + 1].cards.unshift(lead);
+    const [x1, y1] = pos(c + 1, 0);
+    lead.el.classList.add("voando");
+    posicionar();
+    const ida = lead.el.animate([
+      { transform: `translate3d(${x0}px, ${y0}px, 0) rotate(0deg) scale(1)` },
+      { transform: `translate3d(${x0}px, ${y0}px, 80px) rotate(-3deg) scale(1.05)`, offset: 0.22 },
+      { transform: `translate3d(${x1}px, ${y1}px, 80px) rotate(2deg) scale(1.05)`, offset: 0.78 },
+      { transform: `translate3d(${x1}px, ${y1}px, 0) rotate(0deg) scale(1)` },
+    ], { duration: 1150, easing: "cubic-bezier(.45,0,.2,1)" });
+    setTimeout(() => pintarFaixa(lead, c + 1), 580);
+    ida.onfinish = () => {
+      lead.el.style.transform = `translate3d(${x1}px, ${y1}px, 0)`;
+      lead.el.classList.remove("voando");
+      piscarColuna(c + 1);
+      realcar(lead);
+      if (c + 1 === 5 && window.venda) window.venda(lead);
+      // Fechado não cresce para sempre: o mais antigo sai de cena
+      const destino = colunas[c + 1];
+      if (destino.cards.length > MAX) { const velho = destino.cards.pop(); velho.el.style.opacity = 0; setTimeout(() => velho.el.remove(), 500); }
+      posicionar();
+    };
+  }
+  // Chega cliente novo em "Novo contato"
+  function chegar() {
+    const lead = novoLead(0);
+    const [x, y] = pos(0, 0);
+    lead.el.style.transition = "none";
+    lead.el.style.transform = `translate3d(${x}px, ${y}px, 220px)`;
+    lead.el.style.opacity = 0;
+    colunas[0].cards.unshift(lead);
+    if (colunas[0].cards.length > MAX) { const v = colunas[0].cards.pop(); v.el.style.opacity = 0; setTimeout(() => v.el.remove(), 500); }
+    requestAnimationFrame(() => requestAnimationFrame(() => { lead.el.style.transition = ""; lead.el.style.opacity = 1; posicionar(); piscarColuna(0); realcar(lead); }));
+  }
+  // Mensagem nova num card
+  function mensagem() {
+    const col = colunas[Math.random() < 0.6 ? 0 : 1];
+    const lead = sorteio(col.cards.slice(0, 4));
+    if (!lead) return;
+    const l1 = lead.el.querySelector(".l1");
+    l1.querySelector("time, .nao-lidas")?.remove();
+    const n = document.createElement("span");
+    n.className = "nao-lidas"; n.textContent = 1 + Math.floor(Math.random() * 3);
+    l1.appendChild(n);
+    lead.el.querySelector("p").textContent = sorteio(MSGS);
+    realcar(lead);
+  }
+  // A situação de um card muda no lugar (respondeu, marcou, venceu o prazo)
+  function situacao() {
+    const c = Math.floor(Math.random() * 5);
+    const lead = sorteio(livres(colunas[c]).slice(0, 6));
+    if (!lead) return;
+    pintarFaixa(lead, c);
+    realcar(lead);
+  }
+  const conv = document.getElementById("n-conv");
+  function contarConversas() {
+    const n = 2 + Math.floor(Math.random() * 4);
+    conv.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-6px)", opacity: 0 }], { duration: 160 }).onfinish = () => {
+      conv.textContent = n + " conversas";
+      conv.animate([{ transform: "translateY(6px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], { duration: 220, easing: "cubic-bezier(.22,1,.36,1)" });
+    };
+  }
+  if (!window.REDUZIR) {
+    // Vários ritmos ao mesmo tempo, com um pouco de acaso, para nunca parecer um relógio
+    const ritmo = (fn, base, varia, inicio) => setTimeout(function vez() { fn(); setTimeout(vez, base + Math.random() * varia); }, inicio);
+    ritmo(() => { mover(); if (Math.random() < 0.35) setTimeout(mover, 300); }, 850, 500, 1100);
+    ritmo(mensagem, 550, 450, 900);
+    ritmo(situacao, 700, 500, 1300);
+    ritmo(chegar, 1900, 1200, 1600);
+    ritmo(contarConversas, 2600, 1500, 2000);
+  }
+
+  // Paralaxe da câmera com o mouse
+  const camera = document.getElementById("camera");
+  let ax = 0, ay = 0, x = 0, y = 0;
+  addEventListener("pointermove", (e) => { ax = (e.clientX / innerWidth - 0.5) * 2; ay = (e.clientY / innerHeight - 0.5) * 2; });
+  (function quadroAnim() {
+    x += (ax - x) * 0.04; y += (ay - y) * 0.04;
+    camera.style.transform = `rotateX(${55 - y * 3}deg) rotateZ(${-26 + x * 3}deg)`;
+    requestAnimationFrame(quadroAnim);
+  })();
+
+  // Entrar: a câmera mergulha no quadro (no CRM, cairia no Kanban de verdade)
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.aoEntrar = async () => {
+    const pag = document.querySelector(".pagina"), nevoa = document.querySelector(".nevoa"), palco = document.querySelector(".palco");
+    const op = { duration: 900, easing: "cubic-bezier(.7,0,.2,1)", fill: "forwards" };
+    pag.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: "forwards" });
+    nevoa.animate([{ opacity: 1 }, { opacity: 0.2 }], op);
+    palco.animate([{ transform: "scale(1)" }, { transform: "scale(1.5)" }], op);
+    await espera(1700);
+    [pag, nevoa, palco].forEach((e) => e.getAnimations().forEach((a) => a.cancel()));
+  };
+})();
+</script>
+<script>
+// ================= Cometas (só gráficos) =================
+// Um gráfico por vez, grande, cruzando a tela: linha crescente, silhueta de barras e funil.
+// Cabeça brilhante e cauda que apaga; 4 s de pausa entre um e outro.
+(function cometas() {
+  if (window.REDUZIR) return;
+  const cv = document.getElementById("cometas"), ctx = cv.getContext("2d");
+  let W, H;
+  function medir() { const d = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+  medir(); addEventListener("resize", medir);
+
+  let AZUL = "#8aaaf0", FUNDO = "#0e131a";
+  const lerCores = () => { const cs = getComputedStyle(document.documentElement); AZUL = cs.getPropertyValue("--color-marca-texto").trim() || "#8aaaf0"; FUNDO = cs.getPropertyValue("--color-fundo").trim() || "#0e131a"; };
+  lerCores();
+  const antes = window.aoTrocarTema; window.aoTrocarTema = () => { antes && antes(); lerCores(); };
+  const rgba = (hex, a) => { const h = hex.replace("#", ""); const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a))})`; };
+
+  const r = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v) => Math.max(0, Math.min(1, v));
+  const eIO = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  const eOut = (k) => 1 - Math.pow(1 - k, 3);
+  function reamostrar(pts, passo = 3) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.round(d / passo));
+      for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+    }
+    return out;
+  }
+  function brilho(x, y, cor, forca = 1, raio = 30) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, raio);
+    g.addColorStop(0, rgba("#ffffff", 0.95 * forca)); g.addColorStop(0.16, rgba(cor, 0.8 * forca)); g.addColorStop(1, rgba(cor, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, raio, 0, Math.PI * 2); ctx.fill();
+  }
+  // Trecho [cauda, cabeça] do caminho, mais forte e mais grosso perto da cabeça
+  function cometa(d, cauda, cabeca, cor, larg = 4) {
+    const i0 = Math.max(0, Math.floor(cauda * (d.length - 1))), i1 = Math.floor(cabeca * (d.length - 1));
+    if (i1 <= i0) return;
+    ctx.lineCap = "round";
+    for (let i = i0 + 1; i <= i1; i++) {
+      const k = (i - i0) / Math.max(1, i1 - i0), a = Math.pow(k, 1.5);
+      ctx.strokeStyle = rgba(cor, a); ctx.lineWidth = larg * (0.2 + 0.8 * k);
+      ctx.beginPath(); ctx.moveTo(d[i - 1].x, d[i - 1].y); ctx.lineTo(d[i].x, d[i].y); ctx.stroke();
+    }
+    if (cabeca < 1) brilho(d[i1].x, d[i1].y, cor, 1, 34);
+  }
+  function texto(t, x, y, a, tam, alinhar = "left", peso = 800, cor = "#ffffff") {
+    ctx.font = `${peso} ${tam}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = alinhar; ctx.textBaseline = "middle";
+    ctx.shadowColor = rgba(AZUL, 0.8 * a); ctx.shadowBlur = 16;
+    ctx.fillStyle = cor === "#ffffff" ? rgba("#ffffff", a) : rgba(cor, a);
+    ctx.fillText(t, x, y); ctx.shadowBlur = 0;
+  }
+  const corrida = (t, durCabeca, atrasoCauda, durCauda = durCabeca) => ({ cab: eIO(clamp(t / durCabeca)), cau: eIO(clamp((t - atrasoCauda) / durCauda)) });
+
+  const TIPOS = {
+    // Linha crescente de ponta a ponta da tela, com a área acendendo por baixo
+    linha: { dur: 4300, criar() {
+      const n = 16 + Math.floor(r(0, 5)), topo = H * r(0.12, 0.2), baixo = H * r(0.8, 0.9), x0 = -30, x1 = W - 200;
+      let v = 0; const vs = [0];
+      for (let i = 1; i < n; i++) { v += Math.random() < 0.2 ? -r(0.2, 0.6) : r(0.3, 1.3); vs.push(v); }
+      const mx = Math.max(...vs), mn = Math.min(...vs);
+      const d = reamostrar(vs.map((v, i) => ({ x: x0 + ((x1 - x0) * i) / (n - 1), y: baixo - ((v - mn) / (mx - mn)) * (baixo - topo) })));
+      const pct = "+" + Math.round(r(18, 62)) + "%", fim = d[d.length - 1];
+      return (t) => {
+        const { cab, cau } = corrida(t, 2700, 1000, 2700);
+        const i0 = Math.floor(cau * (d.length - 1)), i1 = Math.floor(cab * (d.length - 1));
+        if (i1 > i0) {
+          const g = ctx.createLinearGradient(0, topo, 0, H);
+          g.addColorStop(0, rgba(AZUL, 0.2 * (1 - cau))); g.addColorStop(1, rgba(AZUL, 0));
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(d[i0].x, H);
+          for (let i = i0; i <= i1; i += 3) ctx.lineTo(d[i].x, d[i].y);
+          ctx.lineTo(d[i1].x, H); ctx.closePath(); ctx.fill();
+        }
+        cometa(d, cau, cab, AZUL, 4.5);
+        const ta = clamp((t - 2500) / 350) * (1 - clamp((t - 3500) / 600));
+        if (ta > 0) texto(pct, fim.x + 18, fim.y - (t - 2500) * 0.015, ta, 40);
+        return t < 4300;
+      };
+    } },
+    // Silhueta de barras de um lado ao outro: o risco contorna e as barras acendem quando ele passa
+    barras: { dur: 4400, criar() {
+      const n = 13 + Math.floor(r(0, 5)), x0 = 30, x1 = W - 30, passo = (x1 - x0) / n, bw = passo * 0.62, base = H * 0.92, hMax = H * 0.72;
+      const alt = []; for (let i = 0; i < n; i++) alt.push(Math.min(hMax, (0.15 + 0.85 * (i / (n - 1))) * hMax * r(0.75, 1.08)));
+      const pts = [{ x: x0, y: base }];
+      alt.forEach((a, i) => { const bx = x0 + i * passo + (passo - bw) / 2; pts.push({ x: bx, y: base }, { x: bx, y: base - a }, { x: bx + bw, y: base - a }, { x: bx + bw, y: base }); });
+      pts.push({ x: x1, y: base });
+      const d = reamostrar(pts, 4);
+      return (t) => {
+        const { cab, cau } = corrida(t, 3200, 1000, 3200);
+        const xc = d[Math.floor(cab * (d.length - 1))].x;
+        alt.forEach((a, i) => {
+          const bx = x0 + i * passo + (passo - bw) / 2;
+          if (xc < bx + bw * 0.5) return;
+          const passou = (t - 3200 * eIO(clamp((bx + bw - x0) / (x1 - x0)))) / 900;
+          const f = (0.1 + 0.28 * Math.exp(-Math.max(0, passou) * 1.8)) * (1 - cau);
+          const g = ctx.createLinearGradient(0, base - a, 0, base);
+          g.addColorStop(0, rgba(AZUL, f)); g.addColorStop(1, rgba(AZUL, 0));
+          ctx.fillStyle = g; ctx.fillRect(bx, base - a, bw, a);
+        });
+        cometa(d, cau, cab, AZUL, 3.5);
+        return t < 4400;
+      };
+    } },
+    // Funil grande: o risco contorna, as etapas aparecem com o nome e a conversão
+    funil: { dur: 4600, criar() {
+      const livre = W - 460, h = H * 0.74, y = (H - h) / 2, topo = Math.min(livre * 0.62, 760), fundo = topo * 0.24, cx = livre / 2 + 90, niveis = 4;
+      const larg = (k) => topo + (fundo - topo) * k;
+      const d = reamostrar([{ x: cx - topo / 2, y }, { x: cx - fundo / 2, y: y + h }, { x: cx + fundo / 2, y: y + h }, { x: cx + topo / 2, y }, { x: cx - topo / 2, y }], 4);
+      const nomes = ["Novo contato", "Qualificação", "Apresentação", "Fechado"];
+      let v = 100; const pcts = [100]; for (let i = 1; i < niveis; i++) { v = Math.round(v * r(0.5, 0.72)); pcts.push(v); }
+      return (t) => {
+        const { cab, cau } = corrida(t, 3000, 1300, 2900);
+        const a = 1 - cau;
+        // preenchimento suave de cada faixa, de cima para baixo
+        for (let i = 0; i < niveis; i++) {
+          const ti = t - 500 - i * 380, f = eOut(clamp(ti / 700)) * a;
+          if (f <= 0) continue;
+          const k0 = i / niveis, k1 = (i + 1) / niveis, y0 = y + h * k0, y1 = y + h * k1;
+          const g = ctx.createLinearGradient(0, y0, 0, y1);
+          g.addColorStop(0, rgba(AZUL, 0.16 * f)); g.addColorStop(1, rgba(AZUL, 0.03 * f));
+          ctx.fillStyle = g; ctx.beginPath();
+          ctx.moveTo(cx - larg(k0) / 2, y0); ctx.lineTo(cx + larg(k0) / 2, y0); ctx.lineTo(cx + larg(k1) / 2, y1); ctx.lineTo(cx - larg(k1) / 2, y1); ctx.closePath(); ctx.fill();
+          if (i > 0) { // linha da etapa riscando da esquerda para a direita
+            const lw = larg(k0), gl = eOut(clamp(ti / 600));
+            ctx.strokeStyle = rgba(AZUL, 0.6 * a); ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx - lw / 2, y0); ctx.lineTo(cx - lw / 2 + lw * gl, y0); ctx.stroke();
+          }
+          const ym = (y0 + y1) / 2, lm = larg((k0 + k1) / 2);
+          texto(pcts[i] + "%", cx + 10, ym - 2, f, Math.max(22, h * 0.07), "center");
+          texto(nomes[i], cx + 10, ym + Math.max(22, h * 0.07) * 0.85, f * 0.75, 13, "center", 600, AZUL);
+        }
+        cometa(d, cau, cab, AZUL, 4);
+        return t < 4600;
+      };
+    } },
+  };
+  const ORDEM = ["linha", "barras", "funil"];
+
+  // Um por vez; o próximo nasce 4 s depois que o anterior sumiu
+  let atual = null, livreEm = performance.now() + 600, idx = Math.floor(Math.random() * 3);
+  (function quadro(agora) {
+    const t = agora || performance.now();
+    ctx.clearRect(0, 0, W, H);
+    if (!atual && t >= livreEm) { const nome = ORDEM[idx++ % ORDEM.length]; atual = { t0: t, dur: TIPOS[nome].dur, passo: TIPOS[nome].criar() }; }
+    if (atual) {
+      const v = t - atual.t0;
+      // véu: o quadro escurece um pouco enquanto o gráfico passa
+      ctx.fillStyle = rgba(FUNDO, 0.42 * clamp(v / 600) * (1 - clamp((v - (atual.dur - 700)) / 700)));
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "lighter";
+      const vivo = atual.passo(v);
+      ctx.globalCompositeOperation = "source-over";
+      if (!vivo) { atual = null; livreEm = t + 4000; }
+    }
+    requestAnimationFrame(quadro);
+  })();
+})();
+</script>
+</body>
+</html>
