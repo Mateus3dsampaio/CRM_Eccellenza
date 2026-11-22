@@ -1,0 +1,1476 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login D · Da conversa ao card</title>
+<!--
+  Proposta D da tela de login (aprovada para protótipo pelo Mateus em 22/11/2026).
+  Uma cena contínua: a mensagem chega, a esfera (o assistente) lê, as palavras voam para os campos do card,
+  a câmera se afasta e mostra o quadro, o card passa ao consultor e anda até Fechado.
+  Animação: GSAP 3.15.1 (licença "standard no charge", gratuita para uso comercial desde 30/04/2025).
+  Sem o GSAP (sem internet), o formulário continua funcionando e a cena fica parada.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ---------- Tokens: mesmos nomes de src/app/tokens.css ---------- */
+:root {
+  --color-fundo: #0e131a; --color-coluna: #141c26; --color-superficie: #1a2430; --color-superficie-suave: #273545;
+  --color-borda: #263444; --color-borda-forte: #2f3f51;
+  --color-texto: #e6edf4; --color-texto-suave: #b4bdc8; --color-texto-fraco: #969faa;
+  --color-marca: #3f74ec; --color-marca-forte: #5a89ef; --color-marca-lado: #254389; --color-marca-suave: #1b2a46; --color-marca-texto: #8aaaf0;
+  --color-sobre-cor: #0a1222;
+  --color-whatsapp: #3fcf7e; --color-check-lido: #5bb4f0;
+  --color-alerta: #f2766f; --color-alerta-suave: #3b1c1f; --color-aviso: #f0b04a; --color-aviso-suave: #3a2c12;
+  --color-sucesso: #4fd184; --color-sucesso-suave: #14341f;
+  --color-etapa-novo: #8fb2ff; --color-etapa-qualificacao: #f2b84b; --color-etapa-medicao: #5fd3c4;
+  --color-etapa-apresentacao: #c49bff; --color-etapa-negociacao: #ff9f6e; --color-etapa-fechado: #3ccf8e; --color-etapa-perdido: #8a94a6;
+  --color-chat-cliente: #1d2839;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-painel: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 16px rgb(0 0 0 / 0.3);
+  --ease-mola: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-salto: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:root[data-tema] {
+  --color-fundo: var(--t0);
+  --color-coluna: color-mix(in srgb, var(--t0) 74%, var(--t1));
+  --color-superficie: color-mix(in srgb, var(--t0) 50%, var(--t1));
+  --color-superficie-suave: color-mix(in srgb, var(--t1) 72%, var(--t2));
+  --color-borda: color-mix(in srgb, var(--t1) 68%, var(--t2));
+  --color-borda-forte: color-mix(in srgb, var(--t1) 45%, var(--t2));
+  --color-texto: color-mix(in srgb, var(--t4) 55%, #fff);
+  --color-texto-suave: color-mix(in srgb, var(--t4) 88%, var(--t0));
+  --color-texto-fraco: color-mix(in srgb, var(--t4) 72%, var(--t0));
+  --color-marca: var(--m); --color-marca-forte: var(--mf); --color-marca-lado: var(--ml); --color-marca-texto: var(--mt);
+  --color-marca-suave: color-mix(in srgb, var(--t0) 72%, var(--m));
+  --color-chat-cliente: color-mix(in srgb, var(--t1) 70%, var(--t2));
+}
+:root[data-tema="ametista"] { --t0: #0e0b1d; --t1: #2a1e4d; --t2: #5a3b8c; --t4: #c9c2e3; --m: #6a47b8; --mf: #7f5fd0; --mt: #b2a5f0; --ml: #3f2a75; }
+:root[data-tema="cafe"] { --t0: #1a120e; --t1: #3a2418; --t2: #6b4a2e; --t4: #d5c4ae; --m: #9a5a24; --mf: #b56e2e; --mt: #d9a56e; --ml: #6b3e16; }
+:root[data-tema="floresta"] { --t0: #0f1f17; --t1: #1e3a2e; --t2: #3e5a3f; --t4: #c7cbb8; --m: #4a7a4f; --mf: #5c9062; --mt: #9cc79f; --ml: #2e5232; }
+:root[data-tema="marinho"] { --t0: #0b132b; --t1: #1c2541; --t2: #3a506b; --t4: #f4d6b0; --m: #b85c08; --mf: #d97706; --mt: #f4b46a; --ml: #7a3c05; }
+:root[data-tema="petroleo"] { --t0: #0a0f14; --t1: #0f3d3e; --t2: #2e6f73; --t4: #eadcc8; --m: #b5541a; --mf: #c6601f; --mt: #f0a06a; --ml: #78360e; }
+:root[data-tema="rosa"] { --t0: #121212; --t1: #1f2937; --t2: #334155; --t4: #f1f5f9; --m: #d6317f; --mf: #ec4899; --mt: #f58dbb; --ml: #8f1f52; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--color-fundo); color: var(--color-texto);
+  font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+svg.ic { width: 1em; height: 1em; flex: none; }
+
+/* ---------- Fundo com a luz da marca (mesma receita do .login-fundo do CRM) ---------- */
+.fundo { position: fixed; inset: 0;
+  background-image:
+    radial-gradient(42vmax 34vmax at var(--cx, 34%) var(--cy, 46%), color-mix(in srgb, var(--color-marca) 22%, transparent), transparent 70%),
+    radial-gradient(120vmax 90vmax at 50% 120%, color-mix(in srgb, var(--color-superficie) 85%, transparent), transparent 60%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-superficie) 70%, var(--color-fundo)) 0%, var(--color-fundo) 60%); }
+
+/* ---------- Palco 3D: tudo do mundo está em "px do mundo" (1,4 × o tamanho do CRM), a câmera reduz ---------- */
+#palco { position: fixed; inset: 0; overflow: hidden; perspective: 1500px; }
+#mundo { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; transform-style: preserve-3d; will-change: transform; }
+#mundo > * { position: absolute; left: 0; top: 0; }
+.marco { width: 2px; height: 2px; pointer-events: none; }
+
+/* Coluna do kanban (igual a Coluna em componentes/kanban/quadro.tsx) */
+.coluna { width: 372px; height: 1700px; padding: 17px; border-radius: 22px; background: var(--color-coluna); box-shadow: var(--shadow-painel); transition: background-color 260ms, box-shadow 260ms; }
+.coluna .tit { margin: 0; font-size: 19.5px; font-weight: 600; letter-spacing: -0.005em; }
+.coluna .qtd { margin: 3px 0 0; font-size: 16.8px; color: var(--color-texto-fraco); display: flex; gap: 6px; }
+.num { display: inline-grid; overflow: hidden; font-variant-numeric: tabular-nums; }
+.num > span { grid-area: 1 / 1; }
+.coluna .barra { height: 6px; margin-top: 17px; border-radius: 999px; background: var(--cor); }
+.coluna .luz { position: absolute; left: 0; right: 0; top: 0; height: 180px; border-radius: 22px 22px 0 0; opacity: 0; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cor) 34%, transparent), transparent); }
+.coluna .varre { position: absolute; left: 0; right: 0; top: 0; height: 420px; opacity: 0; pointer-events: none; border-radius: 22px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--cor) 26%, transparent) 50%, transparent); }
+.coluna.destaque { background: color-mix(in srgb, var(--color-etapa-apresentacao) 11%, var(--color-coluna));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px color-mix(in srgb, var(--color-etapa-apresentacao) 20%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-etapa-apresentacao) 40%, transparent), inset 0 0 0 1.4px color-mix(in srgb, var(--color-etapa-apresentacao) 35%, transparent); }
+.coluna.destaque .barra { height: 8px; box-shadow: 0 0 20px 1px color-mix(in srgb, var(--color-etapa-apresentacao) 55%, transparent); }
+.coluna.alvo { background: color-mix(in srgb, var(--color-marca) 16%, var(--color-coluna)); box-shadow: var(--shadow-painel), inset 0 0 0 2.8px color-mix(in srgb, var(--color-marca) 40%, transparent); }
+
+/* Card (igual a ConteudoCard em componentes/kanban/card.tsx, medidas × 1,4) */
+.card { width: 338px; border-radius: 20px; border: 1.4px solid var(--color-borda); background: var(--color-superficie);
+  box-shadow: var(--shadow-card); overflow: hidden; font-size: 19.5px; cursor: grab; user-select: none; }
+.card.preso { cursor: grabbing; }
+.c1 { display: flex; align-items: center; gap: 11px; padding: 14px 17px 11px; }
+.av-wrap { position: relative; flex: none; }
+.av { width: 45px; height: 45px; border-radius: 50%; display: grid; place-items: center; font-size: 16.8px; font-weight: 600; color: var(--color-sobre-cor); background: var(--av); transition: background-color 300ms ease; }
+.selo { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 14px;
+  background: var(--color-superficie-suave); color: var(--color-texto); box-shadow: 0 0 0 3px var(--color-superficie); }
+.selo .ic { grid-area: 1 / 1; }
+.nome { margin: 0; flex: 1; min-width: 0; font-weight: 600; line-height: 1.375; }
+.nome-t, .cid-t, .amb-t span { display: inline-block; }
+.hora { flex: none; font-size: 15.4px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.faixa { margin: 0; display: flex; align-items: center; gap: 8.4px; padding: 8.4px 17px; font-size: 16.8px; font-weight: 600; transition: background-color 350ms, color 350ms; }
+.faixa .ic { font-size: 19.6px; }
+.faixa .fc { display: flex; align-items: center; gap: 8.4px; min-width: 0; }
+.f-vermelho { background: var(--color-alerta-suave); color: var(--color-alerta); }
+.f-ambar { background: var(--color-aviso-suave); color: var(--color-aviso); }
+.f-azul { background: var(--color-marca-suave); color: var(--color-marca-texto); }
+.f-verde { background: var(--color-sucesso-suave); color: var(--color-sucesso); }
+.f-cinza { background: color-mix(in srgb, var(--color-superficie-suave) 55%, transparent); color: var(--color-texto-suave); font-weight: 500; }
+.faixa.vazia { background: transparent; }
+.previa { margin: 0; padding: 11px 17px 0; color: var(--color-texto-suave); line-height: 1.43;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.det { margin: 0; padding: 8.4px 17px 0; display: flex; flex-wrap: wrap; gap: 1px 14px; font-size: 16.8px; color: var(--color-texto-fraco); }
+.det > span { display: inline-flex; align-items: center; gap: 5.6px; }
+.det .ic { font-size: 19.6px; }
+.rod { min-height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 8.4px 17px 11px; }
+.anel { width: 22.4px; height: 22.4px; transform: rotate(-90deg); }
+.anel circle { fill: none; stroke: currentColor; stroke-width: 3; }
+.anel .trilho { stroke-opacity: 0.25; }
+.anel .arco { stroke-linecap: round; }
+.a-verde { color: var(--color-sucesso); } .a-amarelo { color: var(--color-aviso); } .a-vermelho { color: var(--color-alerta); }
+.ini { width: 33.6px; height: 33.6px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: var(--color-superficie-suave); color: var(--color-texto-suave); }
+.brilho { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 2.8px var(--cor-brilho, var(--color-marca-texto)), inset 0 0 36px color-mix(in srgb, var(--cor-brilho, var(--color-marca-texto)) 55%, transparent); }
+.sombra { width: 338px; border-radius: 20px; background: rgb(0 0 0 / 0.55); filter: blur(18px); opacity: 0; pointer-events: none; }
+
+/* Esqueleto do card que está nascendo */
+.esq { position: absolute; border-radius: 8px; pointer-events: none; transform-origin: 0 50%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-texto) 7%, transparent) 30%, color-mix(in srgb, var(--color-texto) 14%, transparent) 50%, color-mix(in srgb, var(--color-texto) 7%, transparent) 70%);
+  background-size: 300% 100%; animation: brilho-esq 1.6s linear infinite; }
+@keyframes brilho-esq { from { background-position: 100% 0; } to { background-position: -200% 0; } }
+.av.vazio { background: color-mix(in srgb, var(--color-texto) 10%, transparent); }
+
+/* Balão da mensagem do cliente (bg-chat-cliente do CRM; o verde do WhatsApp só no rótulo do canal) */
+.balao { width: 470px; }
+.balao .rot { display: flex; align-items: center; gap: 9px; margin: 0 0 11px 6px; font-size: 15.4px; font-weight: 600; color: var(--color-texto-fraco); letter-spacing: 0.01em; }
+.balao .rot i { width: 9px; height: 9px; border-radius: 50%; background: var(--color-whatsapp); box-shadow: 0 0 12px color-mix(in srgb, var(--color-whatsapp) 70%, transparent); }
+.corpo { position: relative; padding: 15px 19px 9px; border-radius: 6px 20px 20px 20px; background: var(--color-chat-cliente);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgb(255 255 255 / 0.04); font-size: 20.5px; line-height: 1.5; }
+.rabo { position: absolute; left: -10px; top: 0; width: 12px; height: 15px; background: var(--color-chat-cliente); clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.corpo .texto { margin: 0; }
+.w { display: inline-block; }
+.kw { position: relative; white-space: nowrap; transition: color 300ms ease; }
+.kw.acesa { color: var(--color-marca-texto); }
+.kw::before { content: ""; position: absolute; inset: 1px -5px; border-radius: 7px; z-index: -1;
+  background: color-mix(in srgb, var(--color-marca) 30%, transparent); transform: scaleX(var(--k, 0)); transform-origin: 0 50%; }
+.corpo .texto { position: relative; z-index: 0; }
+.pontos { position: absolute; left: 22px; top: 22px; display: flex; gap: 7px; }
+.pontos span { width: 9px; height: 9px; border-radius: 50%; background: var(--color-texto-fraco); }
+.pe { display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-top: 2px; font-size: 15.4px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.checks { font-size: 19px; color: var(--color-texto-fraco); transition: color 250ms; }
+.checks.lido { color: var(--color-check-lido); }
+
+/* Palavra voando e linha-guia do encaixe */
+.voo { white-space: nowrap; font-size: 20.5px; line-height: normal; font-weight: 400; color: var(--color-marca-texto); pointer-events: none;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--color-marca) 80%, transparent); }
+/* Caixa de encaixe: marca o campo exato em que o dado caiu, com o nome do campo em cima (como uma seleção) */
+.encaixe { pointer-events: none; opacity: 0; border: 1.4px solid var(--color-marca-texto); border-radius: 8px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-marca) 16%, transparent), 0 0 22px color-mix(in srgb, var(--color-marca) 45%, transparent); }
+.encaixe b { position: absolute; left: -1.4px; bottom: calc(100% + 6px); padding: 3px 7px; border-radius: 6px; white-space: nowrap;
+  font-size: 12.6px; font-weight: 700; letter-spacing: 0.12em; color: #fff; background: var(--color-marca); box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
+
+/* Névoa: apaga o fundo distante e abre espaço para o cartão */
+.nevoa { position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    linear-gradient(180deg, var(--color-fundo) 0%, color-mix(in srgb, var(--color-fundo) 60%, transparent) 16%, transparent 40%),
+    linear-gradient(90deg, transparent 52%, color-mix(in srgb, var(--color-fundo) 55%, transparent) 70%, color-mix(in srgb, var(--color-fundo) 88%, transparent) 90%),
+    radial-gradient(60vw 40vh at 30% 108%, color-mix(in srgb, var(--color-fundo) 85%, transparent), transparent 100%); }
+
+/* Esfera (o assistente) e o cursor do consultor: por cima do mundo, por baixo do cartão de login */
+#esfera { position: fixed; left: 0; top: 0; width: 220px; height: 220px; pointer-events: none; z-index: 2; }
+#cursor { position: fixed; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; }
+#cursor .seta { display: block; filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.5)); }
+#cursor .tag { position: absolute; left: 17px; top: 21px; padding: 3px 9px 4px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--color-marca); color: #fff; box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
+#cursor .onda { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--color-marca-texto); opacity: 0; }
+
+/* ---------- Página: marca no topo, cartão de login à direita ---------- */
+.pagina { position: relative; z-index: 3; height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) 460px; pointer-events: none; }
+.esquerda { position: relative; }
+.marca-topo { position: absolute; left: 64px; top: 36px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 800; letter-spacing: 0.32em; color: var(--color-texto-suave); }
+.marca-topo .lugar-esfera { width: 22px; height: 22px; position: relative; }
+.lado { display: flex; align-items: center; justify-content: center; padding: 24px 48px 24px 0; pointer-events: auto; }
+
+.vidro {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-superficie) 78%, transparent), color-mix(in srgb, var(--color-superficie) 58%, transparent));
+  backdrop-filter: blur(20px) saturate(1.35); -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid color-mix(in srgb, var(--color-texto) 9%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.09), 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 40px rgb(0 0 0 / 0.45), 0 40px 90px -20px rgb(0 0 0 / 0.6);
+}
+.cartao { width: min(372px, 100%); border-radius: 18px; padding: 30px 28px 20px; position: relative; }
+.cartao::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-marca) 12%, transparent), transparent 70px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-marca-texto) 35%, transparent); }
+.cartao > * { position: relative; }
+.cartao h1 { margin: 0; text-align: center; font-size: 22px; font-weight: 800; letter-spacing: 0.16em; padding-left: 0.16em; }
+.cartao .sub { margin: 6px 0 22px; text-align: center; font-size: 14px; color: var(--color-texto-suave); }
+.campo { display: block; margin-top: 14px; }
+.campo > span { display: block; font-size: 13px; font-weight: 600; color: var(--color-texto-suave); margin-bottom: 6px; }
+.caixa { position: relative; display: block; }
+.entrada { width: 100%; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--color-borda-forte);
+  background: color-mix(in srgb, var(--color-fundo) 72%, transparent); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
+  color: var(--color-texto); font: inherit; font-size: 15px; outline: none; transition: border-color 160ms, box-shadow 160ms, background 160ms; }
+.entrada:hover { border-color: color-mix(in srgb, var(--color-marca) 45%, var(--color-borda-forte)); }
+.entrada:focus { border-color: var(--color-marca); background: color-mix(in srgb, var(--color-fundo) 85%, transparent); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 3px color-mix(in srgb, var(--color-marca) 30%, transparent); }
+.entrada.senha { padding-right: 46px; }
+.olho { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-texto-fraco); cursor: pointer; display: grid; place-items: center; transition: color 160ms, background 160ms; }
+.olho:hover { color: var(--color-texto); background: color-mix(in srgb, var(--color-texto) 7%, transparent); }
+.olho:focus-visible { outline: 2px solid var(--color-marca-texto); outline-offset: 1px; }
+.caps { margin: 6px 0 0; font-size: 12px; color: var(--color-aviso); display: none; align-items: center; gap: 6px; }
+.caps.on { display: flex; }
+.erro { margin: 14px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: var(--color-alerta-suave); color: var(--color-alerta); display: none; }
+.erro.on { display: block; }
+.tecla-pri { margin-top: 22px; width: 100%; height: 46px; border: 0; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(180deg, var(--color-marca-forte), var(--color-marca)); color: #fff; font: inherit; font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
+  box-shadow: 0 4px 0 var(--color-marca-lado), 0 7px 14px color-mix(in srgb, var(--color-marca) 38%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.3);
+  transition: transform 90ms, box-shadow 90ms, filter 160ms; position: relative; overflow: hidden; }
+.tecla-pri:hover { filter: brightness(1.08); }
+.tecla-pri:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--color-marca-lado), 0 2px 4px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.25); }
+.tecla-pri:focus-visible { outline: 2px solid var(--color-marca-texto); outline-offset: 3px; }
+.tecla-pri:disabled { cursor: progress; }
+.giro { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.35); border-top-color: #fff; animation: girar 700ms linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.versao { margin: 16px 0 0; text-align: center; font-size: 12px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.cartao { animation: subir 700ms var(--ease-mola) 200ms both; }
+@keyframes subir { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---------- Controles do protótipo (não vão para o CRM) ---------- */
+.controles { position: fixed; left: 16px; bottom: 16px; z-index: 50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: calc(100vw - 32px);
+  padding: 7px 10px 7px 14px; border-radius: 999px; font-size: 12px; color: var(--color-texto-fraco);
+  background: color-mix(in srgb, var(--color-fundo) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--color-texto) 8%, transparent); }
+.controles b { color: var(--color-texto-suave); font-weight: 600; }
+.controles .ato { min-width: 168px; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
+.controles .sep { width: 1px; height: 16px; background: color-mix(in srgb, var(--color-texto) 12%, transparent); }
+.controles button.bt { height: 26px; min-width: 26px; padding: 0 8px; border-radius: 999px; border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  background: color-mix(in srgb, var(--color-texto) 7%, transparent); color: var(--color-texto-suave); font: inherit; font-size: 12px; font-weight: 600; }
+.controles button.bt:hover { background: color-mix(in srgb, var(--color-texto) 14%, transparent); color: var(--color-texto); }
+.controles button.bt[aria-pressed="true"] { background: color-mix(in srgb, var(--color-marca) 35%, transparent); color: #fff; }
+.controles .tema { width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; background: var(--c); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.15); transition: transform 160ms var(--ease-salto); }
+.controles .tema:hover { transform: scale(1.2); }
+.controles .tema.ativo { border-color: #fff; }
+.aviso-final { position: fixed; left: 50%; top: 50%; z-index: 60; transform: translate(-50%, -50%); padding: 22px 26px; border-radius: 16px; text-align: center; max-width: min(420px, calc(100vw - 32px)); opacity: 0; visibility: hidden; }
+.aviso-final p { margin: 0 0 14px; font-size: 15px; line-height: 1.5; color: var(--color-texto-suave); }
+.aviso-final b { color: var(--color-texto); }
+.aviso-final button { height: 40px; padding: 0 18px; border-radius: 10px; border: 0; cursor: pointer; font: inherit; font-weight: 700; color: #fff; background: var(--color-marca); }
+
+/* ---------- Celular: o palco fica em cima, o cartão embaixo ---------- */
+@media (max-width: 899px) {
+  body { overflow-y: auto; }
+  .pagina { grid-template-columns: 1fr; height: auto; min-height: 100dvh; }
+  .esquerda { height: 46dvh; }
+  .marca-topo { left: 20px; top: 20px; }
+  .lado { padding: 8px 16px 20px; align-items: flex-start; }
+  .controles { position: relative; left: auto; bottom: auto; margin: 0 16px 20px; border-radius: 18px; }
+  .nevoa { background: linear-gradient(180deg, var(--color-fundo) 0%, transparent 16%, transparent 40%, color-mix(in srgb, var(--color-fundo) 80%, transparent) 54%, var(--color-fundo) 70%); }
+  .controles .ato { min-width: 0; }
+}
+/* Reduzir movimento: sem transição nenhuma (0 s). Com 1 ms, o navegador ainda devolve a posição antiga logo depois
+   de uma mudança, e a câmera, que mede a tela para se enquadrar, erraria o lugar. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; }
+}
+</style>
+</head>
+<body>
+<div class="fundo" id="fundo" aria-hidden="true"></div>
+<div id="palco" aria-hidden="true"><div id="mundo"></div></div>
+<div class="nevoa" id="nevoa" aria-hidden="true"></div>
+<canvas id="esfera" aria-hidden="true"></canvas>
+<div id="cursor" aria-hidden="true">
+  <span class="onda"></span>
+  <svg class="seta" width="22" height="24" viewBox="0 0 22 24" style="margin:-2px 0 0 -2px"><path d="M2 2v18.5l5.2-4.6 3.6 7.6 3.3-1.6-3.6-7.4h7z" fill="#fff" stroke="#0a1222" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  <span class="tag">Rafael</span>
+</div>
+<div class="pagina" id="pagina">
+  <section class="esquerda">
+    <div class="marca-topo" id="marca-topo"><span class="lugar-esfera" id="lugar-esfera"></span>ECCELLENZA</div>
+  </section>
+  <section class="lado">
+    <form id="cartao" class="cartao vidro" autocomplete="on" novalidate>
+      <h1>ECCELLENZA</h1>
+      <p class="sub">CRM de atendimento</p>
+      <label class="campo"><span>Usuário</span>
+        <input id="usuario" class="entrada" autocomplete="username" autofocus required />
+      </label>
+      <label class="campo"><span>Senha</span>
+        <span class="caixa">
+          <input id="senha" class="entrada senha" type="password" autocomplete="current-password" required />
+          <button id="olho" class="olho" type="button" aria-label="Mostrar senha"></button>
+        </span>
+      </label>
+      <p id="caps" class="caps" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 8 8h-4v6H8v-6H4z"/></svg> Caps Lock ligado</p>
+      <p id="erro" class="erro" role="alert"></p>
+      <button id="entrar" class="tecla-pri" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
+        Entrar
+      </button>
+      <p class="versao">Versão 1.0.0</p>
+    </form>
+  </section>
+</div>
+<div class="aviso-final vidro" id="aviso-final" role="status">
+  <p><b>Protótipo:</b> neste ponto o CRM abre o seu kanban de verdade.</p>
+  <button type="button" id="ver-de-novo">Ver de novo</button>
+</div>
+<div class="controles" id="controles" role="toolbar" aria-label="Controles do protótipo"></div>
+
+<script>
+// ===== Comum: cartão de login e controles do protótipo (funciona mesmo sem o GSAP) =====
+const PARAMS = new URLSearchParams(location.search);
+const REDUZIR = matchMedia("(prefers-reduced-motion: reduce)").matches || PARAMS.get("movimento") === "reduzido";
+
+(function cartaoDeLogin() {
+  const form = document.getElementById("cartao");
+  const senha = document.getElementById("senha");
+  const olho = document.getElementById("olho");
+  const caps = document.getElementById("caps");
+  const botao = document.getElementById("entrar");
+  const erro = document.getElementById("erro");
+  const rotulo = botao.innerHTML;
+  const olhoAberto = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const olhoFechado = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  olho.innerHTML = olhoAberto;
+  olho.addEventListener("click", () => {
+    const ver = senha.type === "password";
+    senha.type = ver ? "text" : "password";
+    olho.innerHTML = ver ? olhoFechado : olhoAberto;
+    olho.setAttribute("aria-label", ver ? "Esconder senha" : "Mostrar senha");
+    senha.focus();
+  });
+  const verCaps = (e) => { if (e.getModifierState) caps.classList.toggle("on", e.getModifierState("CapsLock")); };
+  senha.addEventListener("keydown", verCaps);
+  senha.addEventListener("keyup", verCaps);
+  senha.addEventListener("blur", () => caps.classList.remove("on"));
+
+  // Simulação do servidor: a senha "erro" faz o papel de senha errada; qualquer outra entra.
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (botao.disabled) return;
+    botao.disabled = true;
+    erro.classList.remove("on");
+    botao.innerHTML = '<span class="giro" aria-hidden="true"></span> Entrando…';
+    await new Promise((r) => setTimeout(r, 550));
+    if (senha.value.trim().toLowerCase() === "erro") {
+      erro.textContent = "Usuário ou senha incorretos.";
+      erro.classList.add("on");
+      if (window.aoErrar) window.aoErrar(form);
+      botao.disabled = false;
+      botao.innerHTML = rotulo;
+      senha.select();
+      return;
+    }
+    if (window.aoEntrar) await window.aoEntrar();
+    else document.getElementById("aviso-final").style.cssText = "opacity:1;visibility:visible";
+  });
+  document.getElementById("ver-de-novo").addEventListener("click", () => location.reload());
+})();
+
+(function controles() {
+  const barra = document.getElementById("controles");
+  const temas = [
+    ["", "#3f74ec", "Ardósia (padrão)"], ["cafe", "#9a5a24", "Café"], ["floresta", "#4a7a4f", "Floresta"],
+    ["marinho", "#b85c08", "Marinho"], ["ametista", "#6a47b8", "Ametista"], ["petroleo", "#b5541a", "Petróleo"], ["rosa", "#d6317f", "Rosa"],
+  ];
+  const ic = {
+    pausar: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg>',
+    tocar: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>',
+    recomecar: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+  };
+  barra.innerHTML =
+    '<b>D · Da conversa ao card</b><span class="sep"></span>' +
+    '<span class="ato" id="ato">Preparando…</span>' +
+    '<button type="button" class="bt" id="bt-pausa" title="Pausar (barra de espaço)" aria-label="Pausar">' + ic.pausar + "</button>" +
+    '<button type="button" class="bt" id="bt-vel" title="Velocidade (câmera lenta para revisar)">1×</button>' +
+    '<button type="button" class="bt" id="bt-recomecar" title="Recomeçar do ato 1" aria-label="Recomeçar">' + ic.recomecar + "</button>" +
+    '<button type="button" class="bt" id="bt-reduzir" title="Como fica para quem ligou &quot;reduzir movimento&quot; no computador" aria-pressed="' + REDUZIR + '">Movimento reduzido</button>' +
+    '<span class="sep"></span><span>Tema</span>';
+  temas.forEach(([id, cor, nome]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tema" + ((document.documentElement.dataset.tema || "") === id ? " ativo" : "");
+    b.style.setProperty("--c", cor);
+    b.title = nome;
+    b.setAttribute("aria-label", "Tema " + nome);
+    b.addEventListener("click", () => {
+      if (id) document.documentElement.dataset.tema = id; else delete document.documentElement.dataset.tema;
+      barra.querySelectorAll(".tema").forEach((x) => x.classList.toggle("ativo", x === b));
+      window.aoTrocarTema && window.aoTrocarTema();
+    });
+    barra.appendChild(b);
+  });
+  const q = PARAMS.get("tema");
+  if (q) { const i = temas.findIndex((t) => t[0] === q); if (i > 0) barra.querySelectorAll(".tema")[i].click(); }
+
+  // Pausa e velocidade valem para tudo o que anda (GSAP e a física própria): window.VEL é lido a cada quadro.
+  window.VEL = 1;
+  let pausado = false, vel = 1;
+  const bPausa = document.getElementById("bt-pausa"), bVel = document.getElementById("bt-vel");
+  const aplicar = () => {
+    window.VEL = pausado ? 0 : vel;
+    if (window.gsap) { gsap.globalTimeline.paused(pausado); gsap.globalTimeline.timeScale(vel); }
+    bPausa.innerHTML = pausado ? ic.tocar : ic.pausar;
+    bPausa.setAttribute("aria-label", pausado ? "Continuar" : "Pausar");
+    bPausa.title = (pausado ? "Continuar" : "Pausar") + " (barra de espaço)";
+    bVel.textContent = vel === 1 ? "1×" : vel === 0.5 ? "½×" : "¼×";
+  };
+  window.despausar = () => { pausado = false; vel = 1; aplicar(); };
+  bPausa.addEventListener("click", () => { pausado = !pausado; aplicar(); });
+  bVel.addEventListener("click", () => { vel = vel === 1 ? 0.5 : vel === 0.5 ? 0.25 : 1; aplicar(); });
+  const recarregar = (extra) => {
+    const p = new URLSearchParams();
+    const t = document.documentElement.dataset.tema;
+    if (t) p.set("tema", t);
+    if (extra) p.set("movimento", extra);
+    location.search = p.toString();
+  };
+  document.getElementById("bt-recomecar").addEventListener("click", () => recarregar(REDUZIR && PARAMS.get("movimento") ? "reduzido" : ""));
+  document.getElementById("bt-reduzir").addEventListener("click", () => recarregar(REDUZIR ? "" : "reduzido"));
+  addEventListener("keydown", (e) => {
+    if (e.code !== "Space" || e.target.closest("input, button, textarea")) return;
+    e.preventDefault();
+    pausado = !pausado;
+    aplicar();
+  });
+  window.marcarAto = (texto) => { document.getElementById("ato").textContent = texto; };
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.1/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.1/dist/CustomEase.min.js"></script>
+<script>
+"use strict";
+// ===== Cena D: a mensagem vira card e o card anda pelo funil =====
+(function cena() {
+if (!window.gsap || !window.CustomEase) { marcarAto("Sem animação: o GSAP não carregou"); return; }
+gsap.registerPlugin(CustomEase);
+// As curvas do CRM (src/app/tokens.css), exatas: o login fala a mesma língua de movimento do sistema.
+CustomEase.create("mola", "0.22,1,0.36,1");
+CustomEase.create("salto", "0.34,1.56,0.64,1");
+CustomEase.create("cinema", "0.66,0,0.2,1");
+/** Mola de verdade (oscilador amortecido) como curva do GSAP: zeta = amortecimento, omega = rigidez. */
+function molaFisica(zeta, omega) {
+  const wd = omega * Math.sqrt(1 - zeta * zeta);
+  return (t) => (t >= 1 ? 1 : 1 - Math.exp(-zeta * omega * t) * (Math.cos(wd * t) + ((zeta * omega) / wd) * Math.sin(wd * t)));
+}
+const QUIQUE = molaFisica(0.38, 16);
+
+const $ = (s, r = document) => r.querySelector(s);
+const palco = $("#palco"), mundo = $("#mundo"), nevoa = $("#nevoa"), fundo = $("#fundo");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const ehCelular = () => innerWidth < 900;
+let CELULAR = ehCelular();
+
+// ---------- Medidas do mundo (CRM × 1,4: a câmera só reduz, então o texto fica sempre nítido) ----------
+const COL_W = 372, COL_GAP = 22, COL_PAD = 17, CARD_W = 338, CARD_GAP = 14;
+let CAB_H = 124; // medido do cabeçalho real depois que a fonte carrega
+// Camadas no 3D: coluna no plano (z 0), sombra a 0,5 px, card a 1 px. Planos iguais empatam e o navegador
+// às vezes entregava o clique do card para a coluna; com 1 px de folga o card sempre ganha (e não se vê a diferença).
+const Z_CARD = 1, Z_SOMBRA = 0.5, Z_TOPO = 3;
+const colX = (i) => i * (COL_W + COL_GAP);
+const cardX = (i) => colX(i) + COL_PAD;
+
+const ETAPAS = [
+  { nome: "IA atendendo", cor: "var(--color-etapa-novo)" },
+  { nome: "Em qualificação", cor: "var(--color-etapa-qualificacao)" },
+  { nome: "Medição agendada", cor: "var(--color-etapa-medicao)" },
+  { nome: "Apresentação agendada", cor: "var(--color-etapa-apresentacao)", destaque: true },
+  { nome: "Negociação", cor: "var(--color-etapa-negociacao)" },
+  { nome: "Fechado", cor: "var(--color-etapa-fechado)" },
+  { nome: "Perdido", cor: "var(--color-etapa-perdido)" },
+];
+const AVATAR = ["#7ba3f0", "#4fd184", "#b697ee", "#f0a06a", "#4cc9ae", "#f08a8d"];
+const CONSULTOR = { nome: "Rafael Souza", ini: "RS" };
+
+// Ícones (os mesmos do lucide que o card usa)
+const ICONES = {
+  bot: '<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+  headset: '<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  calendarCheck: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+  calendarClock: '<path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/>',
+  gavel: '<path d="m14.5 12.5-8 8a2.12 2.12 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>',
+  userRound: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  mapPin: '<path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  layoutGrid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  checkCheck: '<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>',
+};
+const ic = (nome, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[nome]}</svg>`;
+function iniciais(nome) { // igual a iniciais() de componentes/ui.tsx
+  const p = nome.replace(/[^\p{L}\s]/gu, " ").trim().split(/\s+/).filter(Boolean);
+  return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase() : "?";
+}
+
+// ---------- Textos fictícios (para o Mateus aprovar). [palavra|campo] = o que o assistente tira da mensagem ----------
+const CLIENTES = [
+  { nome: "Larissa", cor: 2, hora: "14:32", cidade: "Crato", ambientes: ["Cozinha", "Closet"],
+    texto: "Oi, aqui é a [Larissa|nome]! Quero orçar uma [cozinha|amb:0] e um [closet|amb:1]. Moro no [Crato|cidade]." },
+  { nome: "Bruno", cor: 0, hora: "15:07", cidade: "Barbalha", ambientes: ["Quarto de casal"],
+    texto: "Boa tarde! Sou o [Bruno|nome], de [Barbalha|cidade]. Queria um guarda-roupa planejado para o [quarto de casal|amb:0]." },
+  { nome: "Fernanda", cor: 4, hora: "16:41", cidade: "Juazeiro do Norte", ambientes: ["Home office", "Sala"],
+    texto: "Olá! Meu nome é [Fernanda|nome], moro em [Juazeiro do Norte|cidade]. Preciso de um [home office|amb:0] e de um painel para a [sala|amb:1]." },
+];
+const MARCA = /\[([^\]|]+)\|([^\]]+)\]/g;
+const textoLimpo = (t) => t.replace(MARCA, "$1");
+
+// Faixas do card: os textos e as cores reais de src/regras/acao-card.ts
+const F = {
+  ia: { cor: "cinza", icone: "bot", texto: "IA atendendo" },
+  responder: { cor: "cinza", icone: "clock", texto: "Responder · há 1 min" },
+  medicao: { cor: "verde", icone: "calendarCheck", texto: "Medição sáb 28/11 9h" },
+  apresentacao: { cor: "verde", icone: "calendarCheck", texto: "Apresentação qui 03/12 10h" },
+  retorno: { cor: "ambar", icone: "calendarClock", texto: "Definir o próximo contato" },
+};
+const FAIXA_DA_COLUNA = [F.ia, F.responder, F.medicao, F.apresentacao, F.retorno, null, null];
+
+// O resto do quadro (nomes, cidades e falas inventados; sem valores em R$, a página é pública)
+const f = (cor, icone, texto) => ({ cor, icone, texto });
+const QUADRO = [
+  [ { nome: "Diego Araújo", cor: 3, hora: "14:05", faixa: f("cinza", "bot", "IA atendendo"), previa: "Vocês fazem closet com porta de vidro?", cidade: "Juazeiro do Norte", ambientes: ["Closet"], anel: 0.92, modo: "bot" },
+    { nome: "Camila Duarte", cor: 1, hora: "13:48", faixa: f("cinza", "bot", "IA atendendo"), previa: "Queria ver umas ideias para a cozinha do apartamento novo.", cidade: "Barbalha", ambientes: ["Cozinha"], anel: 0.8, modo: "bot" } ],
+  [ { nome: "Thiago Martins", cor: 0, hora: "14:21", faixa: f("cinza", "clock", "Responder · há 6 min"), previa: "Mandei as fotos da parede, a medida está na segunda.", cidade: "Crato", ambientes: ["Cozinha", "Área de serviço"], anel: 0.86, ini: "MS" },
+    { nome: "Patrícia Gomes", cor: 5, hora: "12:10", faixa: f("cinza", "message", "Aguardando o cliente"), previa: "Pode ser sábado de manhã? Durante a semana eu trabalho.", cidade: "Juazeiro do Norte", ambientes: ["Dormitório casal"], anel: 0.55, ini: "LR" },
+    { nome: "Rodrigo Nunes", cor: 2, hora: "11:52", faixa: f("ambar", "clock", "Responder · há 19 min"), previa: "Ainda estou decidindo as cores.", cidade: "Missão Velha", ambientes: ["Home office"], anel: 0.3, ini: "PA" } ],
+  [ { nome: "Aline Moreira", cor: 4, hora: "ontem", faixa: f("verde", "calendarCheck", "Medição sáb 28/11 10h"), previa: "Combinado, sábado estarei em casa.", cidade: "Barbalha", ambientes: ["Cozinha"], anel: 0.62, ini: "MS" },
+    { nome: "Gustavo Ribeiro", cor: 3, hora: "ontem", faixa: f("verde", "calendarCheck", "Medição ter 24/11 15h"), previa: "O pedreiro termina o piso semana que vem.", cidade: "Juazeiro do Norte", ambientes: ["Banheiro"], anel: 0.4, ini: "LR" },
+    { nome: "Renata Melo", cor: 1, hora: "20/11", faixa: f("ambar", "gavel", "Decidir: a medição aconteceu?"), previa: "Pode vir à tarde?", cidade: "Crato", ambientes: ["Closet"], anel: 0.18, ini: "PA" } ],
+  [ { nome: "Felipe Cardoso", cor: 0, hora: "ontem", faixa: f("verde", "calendarCheck", "Apresentação qua 25/11 19h"), previa: "Gostei muito do projeto, vou ver com minha esposa.", cidade: "Juazeiro do Norte", ambientes: ["Sala", "Home theater"], anel: 0.7, ini: "LR" },
+    { nome: "Bianca Lopes", cor: 2, hora: "13:02", faixa: f("verde", "calendarCheck", "Apresentação sex 27/11 10h"), previa: "Consegue me mandar o 3D do quarto do meu filho?", cidade: "Barbalha", ambientes: ["Quarto infantil"], anel: 0.9, ini: "MS" },
+    { nome: "Helena Prado", cor: 5, hora: "19/11", faixa: f("ambar", "gavel", "Decidir: o cliente veio?"), previa: "Levo meu marido na apresentação.", cidade: "Crato", ambientes: ["Cozinha"], anel: 0.1, ini: "PA" } ],
+  [ { nome: "Otávio Lins", cor: 1, hora: "ontem", faixa: f("ambar", "calendarClock", "Definir o próximo contato"), previa: "Vou conversar com o arquiteto e te retorno.", cidade: "Juazeiro do Norte", ambientes: ["Apartamento inteiro"], anel: 0.5, ini: "MS" },
+    { nome: "Débora Sales", cor: 4, hora: "12:47", faixa: f("cinza", "message", "Aguardando o cliente"), previa: "Dá para dividir em mais vezes?", cidade: "Missão Velha", ambientes: ["Cozinha", "Lavanderia"], anel: 0.75, ini: "LR" },
+    { nome: "Caio Mendes", cor: 3, hora: "18/11", faixa: f("ambar", "gavel", "Decidir: fechou?"), previa: "Amei! Só quero trocar a cor do tampo.", cidade: "Crato", ambientes: ["Closet"], anel: 0.22, ini: "PA" } ],
+  [ { nome: "Ana Beatriz Lima", cor: 0, hora: "ontem", faixa: null, previa: "Fechado! Me manda o contrato que eu assino.", cidade: "Juazeiro do Norte", ambientes: ["Cozinha"], anel: null, ini: "MS" },
+    { nome: "Marcelo Batista", cor: 5, hora: "17/11", faixa: null, previa: "Obrigado pelo atendimento, ficou lindo.", cidade: "Barbalha", ambientes: ["Dormitório casal"], anel: null, ini: "LR" } ],
+  [ { nome: "Lucas Ferreira", cor: 3, hora: "16/11", faixa: null, previa: "Achei uma loja mais perto de casa, obrigado.", cidade: "Missão Velha", ambientes: ["Cozinha"], anel: null, ini: "PA" },
+    { nome: "Joana Ribeiro", cor: 1, hora: "14/11", faixa: null, previa: "Por enquanto vou deixar para o ano que vem.", cidade: "Juazeiro do Norte", ambientes: ["Closet"], anel: null, ini: "LR" } ],
+];
+
+// ---------- Construção ----------
+const CIRC = 2 * Math.PI * 9;
+const classeAnel = (fr) => (fr >= 0.35 ? "a-verde" : fr >= 0.12 ? "a-amarelo" : "a-vermelho");
+const ambHTML = (lista) => lista.map((a, i) => (i ? '<span class="virg">,&nbsp;</span>' : "") + `<span data-i="${i}">${esc(a)}</span>`).join("");
+
+function criarCard(d) {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML =
+    `<div class="c1"><span class="av-wrap"><span class="av" style="--av:${AVATAR[d.cor % 6]}"><span class="av-t">${iniciais(d.nome)}</span></span>` +
+    `<span class="selo">${ic("bot", "s-bot")}${ic("headset", "s-hum")}</span></span>` +
+    `<p class="nome"><span class="nome-t">${esc(d.nome)}</span></p><span class="hora">${esc(d.hora)}</span></div>` +
+    `<p class="faixa"><span class="fc"></span></p>` +
+    `<p class="previa">${esc(d.previa)}</p>` +
+    `<p class="det"><span class="cid">${ic("mapPin")}<span class="cid-t">${esc(d.cidade)}</span></span><span class="amb">${ic("layoutGrid")}<span class="amb-t">${ambHTML(d.ambientes)}</span></span></p>` +
+    `<div class="rod"><span class="anel-w"><svg class="anel" viewBox="0 0 24 24"><circle class="trilho" cx="12" cy="12" r="9"/><circle class="arco" cx="12" cy="12" r="9" stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="0"/></svg></span><span class="ini">${d.ini || ""}</span></div>` +
+    `<span class="brilho"></span>`;
+  const c = { el, d, col: 0, h: 0, heroi: false, incl: 0, vx: 0, voando: false, sombra: null };
+  c.q = {
+    av: $(".av", el), avT: $(".av-t", el), selo: $(".selo", el), sBot: $(".s-bot", el), sHum: $(".s-hum", el),
+    nomeT: $(".nome-t", el), hora: $(".hora", el), faixa: $(".faixa", el), fc: $(".fc", el), previa: $(".previa", el),
+    cid: $(".cid", el), cidT: $(".cid-t", el), amb: $(".amb", el), ambItens: [...el.querySelectorAll(".amb-t [data-i]")], virg: [...el.querySelectorAll(".virg")],
+    anelW: $(".anel-w", el), anel: $(".anel", el), arco: $(".arco", el), ini: $(".ini", el), brilho: $(".brilho", el),
+  };
+  pintarFaixa(c, d.faixa);
+  if (d.anel == null) gsap.set(c.q.anelW, { autoAlpha: 0 });
+  else { c.q.anel.classList.add(classeAnel(d.anel)); c.q.arco.setAttribute("stroke-dashoffset", (CIRC * (1 - d.anel)).toFixed(2)); }
+  gsap.set(d.modo === "bot" ? c.q.sHum : c.q.sBot, { autoAlpha: 0 });
+  if (!d.ini) gsap.set(c.q.ini, { autoAlpha: 0 });
+  mundo.appendChild(el);
+  gsap.set(el, { z: Z_CARD });
+  el._card = c;
+  return c;
+}
+function pintarFaixa(c, fx) {
+  const e = c.q.faixa;
+  e.className = "faixa" + (fx ? " f-" + fx.cor : "");
+  c.q.fc.innerHTML = fx ? ic(fx.icone) + `<span>${esc(fx.texto)}</span>` : "";
+  e.style.display = fx ? "" : "none";
+}
+
+const cols = [];
+function criarColuna(i) {
+  const e = ETAPAS[i];
+  const el = document.createElement("div");
+  el.className = "coluna" + (e.destaque ? " destaque" : "");
+  el.style.setProperty("--cor", e.cor);
+  el.innerHTML = `<span class="luz"></span><span class="varre"></span><div class="cab"><p class="tit">${e.nome}</p><p class="qtd"><span class="num"><span>0</span></span><span class="pal">conversas</span></p><div class="barra"></div></div>`;
+  mundo.appendChild(el);
+  gsap.set(el, { x: colX(i), y: 0 });
+  return { i, el, cab: $(".cab", el), num: $(".num", el), pal: $(".pal", el), luz: $(".luz", el), varre: $(".varre", el), cards: [], n: 0 };
+}
+
+// Texto do balão: cada palavra num <span class="w"> (entra uma a uma); o que o assistente extrai vira <span class="kw">.
+function montarTexto(t) {
+  const partes = []; let i = 0, m; MARCA.lastIndex = 0;
+  while ((m = MARCA.exec(t))) { if (m.index > i) partes.push({ txt: t.slice(i, m.index) }); partes.push({ txt: m[1], campo: m[2] }); i = MARCA.lastIndex; }
+  if (i < t.length) partes.push({ txt: t.slice(i) });
+  const palavras = []; let atual = null;
+  const fechar = () => { if (atual) palavras.push(atual); atual = null; };
+  for (const p of partes) {
+    if (p.campo) { (atual ||= { segs: [] }).segs.push(p); continue; }
+    for (const ch of p.txt) {
+      if (ch === " ") { fechar(); continue; }
+      atual ||= { segs: [] };
+      const ult = atual.segs[atual.segs.length - 1];
+      if (ult && !ult.campo) ult.txt += ch; else atual.segs.push({ txt: ch });
+    }
+  }
+  fechar();
+  return palavras.map((w) => '<span class="w">' + w.segs.map((s) => (s.campo ? `<span class="kw" data-campo="${s.campo}">${esc(s.txt)}</span>` : esc(s.txt))).join("") + "</span>").join(" ");
+}
+function criarBalao(cli) {
+  const el = document.createElement("div");
+  el.className = "balao";
+  el.innerHTML =
+    `<p class="rot"><i></i>WhatsApp · agora</p><div class="corpo"><span class="rabo"></span>` +
+    `<div class="pontos"><span></span><span></span><span></span></div><p class="texto">${montarTexto(cli.texto)}</p>` +
+    `<div class="pe"><span>${cli.hora}</span><span class="checks">${ic("checkCheck")}</span></div></div>`;
+  mundo.appendChild(el);
+  return { el, x: 0, y: 0, rot: $(".rot", el), corpo: $(".corpo", el), rabo: $(".rabo", el), pontos: [...el.querySelectorAll(".pontos span")],
+    pontosBox: $(".pontos", el), texto: $(".texto", el), pe: $(".pe", el), checks: $(".checks", el),
+    palavras: [...el.querySelectorAll(".w")], chaves: [...el.querySelectorAll(".kw")] };
+}
+
+// ---------- Posições: tudo em coordenadas do mundo (layout real, sem depender da câmera) ----------
+function posEm(el, ate) {
+  let x = 0, y = 0, n = el;
+  while (n && n !== ate) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+}
+function raizDoMundo(el) { let n = el; while (n && n.parentElement !== mundo) n = n.parentElement; return n; }
+function posNoMundo(el) {
+  const raiz = raizDoMundo(el);
+  const p = posEm(el, raiz);
+  p.x += gsap.getProperty(raiz, "x"); p.y += gsap.getProperty(raiz, "y");
+  return p;
+}
+function yDoSlot(col, idx) { let y = CAB_H; for (let k = 0; k < idx; k++) y += col.cards[k].h + CARD_GAP; return y; }
+function arrumarColuna(col, { dur = 0.55, ignorar = null, buraco = null, instante = false } = {}) {
+  let y = CAB_H;
+  col.cards.forEach((c, k) => {
+    if (buraco && k === buraco.indice) y += buraco.h + CARD_GAP;
+    if (c !== ignorar) {
+      if (instante) gsap.set(c.el, { x: cardX(col.i), y });
+      else gsap.to(c.el, { x: cardX(col.i), y, duration: dur, ease: "mola", overwrite: "auto" });
+    }
+    y += c.h + CARD_GAP;
+  });
+}
+function tirarDaColuna(c) { const col = cols[c.col]; const i = col.cards.indexOf(c); if (i >= 0) col.cards.splice(i, 1); return i; }
+function porNaColuna(c, i, idx = 0) { c.col = i; cols[i].cards.splice(idx, 0, c); }
+
+// ---------- Tempo do roteiro: tudo passa pelo GSAP (pausa e câmera lenta valem para tudo) ----------
+let geracao = 0;
+const CANCELADO = Symbol("cancelado");
+const vivo = (g) => g === geracao;
+const espera = (s, g) => new Promise((res, rej) => gsap.delayedCall(s, () => (vivo(g) ? res() : rej(CANCELADO))));
+function tw(alvo, vars, g) {
+  return new Promise((res, rej) => {
+    const fim = vars.onComplete;
+    gsap.to(alvo, { ...vars, onComplete() { fim && fim(); vivo(g) ? res() : rej(CANCELADO); }, onInterrupt() { vivo(g) ? res() : rej(CANCELADO); } });
+  });
+}
+const linha = (t, g) => new Promise((res, rej) => t.eventCallback("onComplete", () => (vivo(g) ? res() : rej(CANCELADO))));
+async function rodar(roteiro) {
+  const g = ++geracao;
+  try { await roteiro(g); } catch (e) { if (e !== CANCELADO) console.error(e); }
+}
+
+// ---------- Câmera: foco (ponto do mundo no centro do palco), escala e inclinação ----------
+const cam = { fx: 0, fy: 0, s: 1, rx: 0, rz: 0, par: 1 };
+const par = { x: 0, y: 0, ax: 0, ay: 0, congelado: false };
+let CX = 0, CY = 0, tempo = 0, seguir = null;
+function medirPalco() {
+  CELULAR = ehCelular();
+  if (CELULAR) { CX = innerWidth / 2; CY = innerHeight * 0.25 + 18; }
+  else { CX = (innerWidth - 460) / 2 + 8; CY = innerHeight / 2 + 4; }
+  palco.style.perspectiveOrigin = `${CX}px ${CY}px`;
+  fundo.style.setProperty("--cx", CX + "px");
+  fundo.style.setProperty("--cy", CY + "px");
+}
+const areaDoPalco = () => (CELULAR ? { w: innerWidth - 28, h: innerHeight * 0.46 - 84 } : { w: innerWidth - 460 - 80, h: innerHeight - 200 });
+function aplicarCamera() {
+  const rx = cam.rx - par.y * 2.2 * cam.par, ry = par.x * 3.2 * cam.par;
+  const s = cam.s * (1 + 0.005 * Math.sin(tempo * 0.55) * cam.par);
+  mundo.style.transform = `translate3d(${CX}px,${CY}px,0) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${cam.rz}deg) scale(${s}) translate3d(${-cam.fx}px,${-cam.fy}px,0)`;
+}
+addEventListener("pointermove", (e) => { par.ax = (e.clientX / innerWidth - 0.5) * 2; par.ay = (e.clientY / innerHeight - 0.5) * 2; });
+
+// Tela ↔ mundo: 4 marcos no plano do quadro dão a homografia exata (perspectiva incluída). Serve para o card
+// ficar exatamente embaixo do ponteiro ao arrastar e para enquadrar a câmera num ponto da tela.
+const MARCOS = [[-600, -200], [3000, -200], [3000, 1500], [-600, 1500]];
+const marcos = MARCOS.map(([x, y]) => { const m = document.createElement("span"); m.className = "marco"; mundo.appendChild(m); gsap.set(m, { x: x - 1, y: y - 1 }); return m; });
+function homografia() {
+  const p = marcos.map((m) => { const r = m.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = p;
+  const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3, dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+  let g = 0, h = 0;
+  if (Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) { const det = dx1 * dy2 - dx2 * dy1; g = (sx * dy2 - dx2 * sy) / det; h = (dx1 * sy - sx * dy1) / det; }
+  const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+  const [mx0, my0] = MARCOS[0], W = MARCOS[1][0] - mx0, Hh = MARCOS[2][1] - my0;
+  const A = e - f * h, B = f * g - d, C = d * h - e * g, D = c * h - b, E = a - c * g, Fv = b * g - a * h, G = b * f - c * e, Hm = c * d - a * f, I = a * e - b * d;
+  return {
+    paraTela(wx, wy) { const u = (wx - mx0) / W, v = (wy - my0) / Hh, w = g * u + h * v + 1; return { x: (a * u + b * v + c) / w, y: (d * u + e * v + f) / w }; },
+    paraMundo(X, Y) { const u = A * X + D * Y + G, v = B * X + E * Y + Hm, w = C * X + Fv * Y + I; return { x: mx0 + (u / w) * W, y: my0 + (v / w) * Hh }; },
+  };
+}
+/** Devolve a câmera `alvo` com o foco ajustado para o ponto `mundoP` aparecer no ponto `telaP`. */
+function enquadrar(alvo, mundoP, telaP) {
+  const salvo = { ...cam }, sx = par.x, sy = par.y;
+  Object.assign(cam, alvo); par.x = par.y = 0; aplicarCamera();
+  const w = homografia().paraMundo(telaP.x, telaP.y);
+  Object.assign(cam, salvo); par.x = sx; par.y = sy; aplicarCamera();
+  return { ...alvo, fx: alvo.fx + (mundoP.x - w.x), fy: alvo.fy + (mundoP.y - w.y) };
+}
+const centroDoCard = (c) => ({ x: gsap.getProperty(c.el, "x") + CARD_W / 2, y: gsap.getProperty(c.el, "y") + c.h / 2 });
+function camPerto(b, h) {
+  const bx = b.x, by = b.y, bw = b.el.offsetWidth, bh = b.el.offsetHeight;
+  const hx = gsap.getProperty(h.el, "x"), hy = gsap.getProperty(h.el, "y");
+  const x0 = Math.min(bx, hx) - 12, x1 = Math.max(bx + bw, hx + CARD_W) + 12;
+  const y0 = Math.min(by, hy) - 34, y1 = Math.max(by + bh, hy + h.h) + 12; // 34: rótulo da caixa de encaixe acima do nome
+  const a = areaDoPalco();
+  return { fx: (x0 + x1) / 2, fy: (y0 + y1) / 2, s: Math.min(1, a.w / (x1 - x0), a.h / (y1 - y0)), rx: 0, rz: 0 };
+}
+function camLonge(c) {
+  const a = areaDoPalco();
+  const s = Math.min(0.7, 0.7 * Math.min(a.w / 900, a.h / 700));
+  const ctr = centroDoCard(c);
+  return enquadrar({ fx: ctr.x, fy: ctr.y, s, rx: 42, rz: -12 }, ctr, { x: (innerWidth - 460) * 0.36, y: innerHeight * 0.46 });
+}
+
+// ---------- A esfera: o assistente. Mora na marca do topo, sai para ler e senta no selo do card ----------
+const esfCanvas = $("#esfera"), ctx = esfCanvas.getContext("2d");
+const ESF = 220, DPR = Math.min(devicePixelRatio || 1, 2), OURO = Math.PI * (3 - Math.sqrt(5));
+esfCanvas.width = ESF * DPR; esfCanvas.height = ESF * DPR;
+const PONTOS = Array.from({ length: 150 }, (_, i) => { const y = 1 - (2 * (i + 0.5)) / 150, r = Math.sqrt(1 - y * y), a = i * OURO; return { x: Math.cos(a) * r, y, z: Math.sin(a) * r }; });
+const esf = { x: 0, y: 0, r: 10, ang: 0.9, giro: 0.45, impulso: 0, brilho: 0.25, vis: 1, preso: null };
+let corEsfera = [138, 170, 240];
+function lerCorEsfera() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--color-marca-texto").trim();
+  const m = /^#?([0-9a-f]{6})$/i.exec(v);
+  if (m) { const n = parseInt(m[1], 16); corEsfera = [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+}
+const rgba = (a) => `rgba(${corEsfera[0]},${corEsfera[1]},${corEsfera[2]},${a})`;
+const lugarDaEsfera = () => { const r = $("#lugar-esfera").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: 10 }; };
+function desenharEsfera(dt) {
+  esf.ang += dt * (esf.giro + esf.impulso);
+  esf.impulso *= Math.exp(-dt * 2.5);
+  if (esf.preso) { const r = esf.preso.getBoundingClientRect(); esf.x = r.left + r.width / 2; esf.y = r.top + r.height / 2; esf.r = r.width * 0.5; }
+  const T = ESF / 2, R = Math.min(esf.r, T * 0.4);
+  esfCanvas.style.transform = `translate3d(${(esf.x - T).toFixed(2)}px,${(esf.y - T).toFixed(2)}px,0)`;
+  esfCanvas.style.opacity = esf.vis;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, ESF, ESF);
+  if (esf.vis < 0.01) return;
+  if (esf.brilho > 0.01) {
+    const g = ctx.createRadialGradient(T, T, 0, T, T, R * 3);
+    g.addColorStop(0, rgba(0.5 * esf.brilho)); g.addColorStop(0.45, rgba(0.16 * esf.brilho)); g.addColorStop(1, rgba(0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(T, T, R * 3, 0, Math.PI * 2); ctx.fill();
+  }
+  const cs = Math.cos(esf.ang), sn = Math.sin(esf.ang), ci = Math.cos(0.32), si = Math.sin(0.32);
+  const tam = Math.max(0.35, Math.min(1.5, R / 17));
+  const proj = PONTOS.map((p) => { const x = p.x * cs + p.z * sn, z0 = -p.x * sn + p.z * cs; return { x, y: p.y * ci - z0 * si, z: p.y * si + z0 * ci }; }).sort((a, b) => a.z - b.z);
+  for (const p of proj) {
+    const t = (p.z + 1) / 2;
+    ctx.fillStyle = rgba(0.22 + 0.78 * t);
+    ctx.beginPath(); ctx.arc(T + p.x * R, T + p.y * R, (0.5 + 1.3 * t) * tam, 0, Math.PI * 2); ctx.fill();
+  }
+}
+/** Voo em arco até um alvo que pode estar andando (a função é lida a cada quadro). */
+function voarAte(obj, alvo, { dur, arco = -80, ease = "power2.inOut", r = null }, g) {
+  const x0 = obj.x, y0 = obj.y, r0 = obj.r ?? 0, o = { p: 0 };
+  return tw(o, { p: 1, duration: dur, ease, onUpdate() {
+    const t = alvo(), p = o.p, q = 1 - p, mx = (x0 + t.x) / 2, my = (y0 + t.y) / 2 + arco;
+    obj.x = q * q * x0 + 2 * q * p * mx + p * p * t.x;
+    obj.y = q * q * y0 + 2 * q * p * my + p * p * t.y;
+    if (obj.r != null) obj.r = r0 + ((t.r ?? r ?? r0) - r0) * p;
+  } }, g);
+}
+
+// ---------- O cursor do consultor (Rafael) ----------
+const cursorEl = $("#cursor"), ondaEl = $("#cursor .onda");
+const cur = { x: innerWidth + 40, y: innerHeight * 0.4, vis: 0, s: 1, preso: null };
+function desenharCursor() {
+  if (cur.preso) { const r = cur.preso.el.getBoundingClientRect(); cur.x = r.left + r.width * cur.preso.fx; cur.y = r.top + r.height * cur.preso.fy; }
+  cursorEl.style.transform = `translate3d(${cur.x.toFixed(2)}px,${cur.y.toFixed(2)}px,0) scale(${cur.s})`;
+  cursorEl.style.opacity = cur.vis;
+}
+const pontoDe = (el, fx = 0.5, fy = 0.5) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height * fy }; };
+async function clicar(g) {
+  await tw(cur, { s: 0.84, duration: 0.09, ease: "power2.out" }, g);
+  gsap.fromTo(ondaEl, { scale: 0.4, opacity: 1 }, { scale: 2.2, opacity: 0, duration: 0.55, ease: "mola" });
+  await tw(cur, { s: 1, duration: 0.3, ease: "salto" }, g);
+}
+
+// ---------- Efeitos do quadro ----------
+function contar(col, n, animar = true) {
+  if (n === col.n && animar) return;
+  col.n = n;
+  col.pal.textContent = n === 1 ? "conversa" : "conversas";
+  const velho = col.num.firstElementChild, novo = document.createElement("span");
+  novo.textContent = n.toLocaleString("pt-BR");
+  col.num.appendChild(novo);
+  if (!animar || REDUZIR) { velho && velho.remove(); return; }
+  const sobe = !velho || n > Number(velho.textContent);
+  gsap.fromTo(novo, { yPercent: sobe ? 100 : -100, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.42, ease: "mola" });
+  if (velho) gsap.to(velho, { yPercent: sobe ? -100 : 100, opacity: 0, duration: 0.34, ease: "mola", onComplete: () => velho.remove() });
+}
+/** Confere todas as colunas (o card que está nascendo e ainda não pousou não conta). */
+const recontar = () => cols.forEach((col) => contar(col, col.cards.filter((k) => k !== heroi || heroi.noQuadro).length));
+const acenderColuna = (col) => gsap.fromTo(col.luz, { opacity: 1 }, { opacity: 0, duration: 1.2, ease: "power2.out" });
+function brilharCard(c, cor, vezes = 1) {
+  c.q.brilho.style.setProperty("--cor-brilho", cor);
+  gsap.fromTo(c.q.brilho, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power1.out", yoyo: true, repeat: vezes * 2 - 1, repeatDelay: 0.3 });
+}
+function trocarFaixa(c, fx) {
+  const t = gsap.timeline();
+  t.to(c.q.fc, { opacity: 0, x: -6, duration: 0.16, ease: "power1.in" })
+    .add(() => { pintarFaixa(c, fx); })
+    .fromTo(c.q.fc, { opacity: 0, x: 8 }, { opacity: 1, x: 0, duration: 0.38, ease: "mola" });
+  return t;
+}
+/**
+ * Caixa de encaixe: fecha em volta do campo em que o dado caiu (mira que trava) e mostra o nome do campo.
+ * Itens do mesmo grupo (vários ambientes) esticam a caixa que já está aberta: "AMBIENTE" vira "AMBIENTES".
+ */
+const caixasAbertas = {};
+function encaixe(el, rotulo, grupo = null) {
+  const p = posNoMundo(el);
+  const aberta = grupo && caixasAbertas[grupo];
+  const sumir = (cx) => gsap.timeline({ onComplete: () => { cx.e.remove(); if (grupo && caixasAbertas[grupo] === cx) delete caixasAbertas[grupo]; } });
+  if (aberta) {
+    aberta.saida.kill();
+    $("b", aberta.e).textContent = rotulo + "S";
+    gsap.to(aberta.e, { width: p.x + p.w + 7 - aberta.x0, opacity: 1, duration: 0.3, ease: "mola" });
+    aberta.saida = sumir(aberta).to(aberta.e, { opacity: 0, duration: 0.35, ease: "power1.in" }, 0.7);
+    return;
+  }
+  const e = document.createElement("span");
+  e.className = "encaixe";
+  e.innerHTML = `<b>${rotulo}</b>`;
+  mundo.appendChild(e);
+  const cx = { e, x0: p.x - 7 };
+  gsap.set(e, { x: cx.x0, y: p.y - 4, z: Z_CARD + 0.5, width: p.w + 14, height: p.h + 8 });
+  cx.saida = sumir(cx)
+    .fromTo(e, { opacity: 0, scale: 1.2 }, { opacity: 1, scale: 1, duration: 0.3, ease: "mola" })
+    .to(e, { opacity: 0, duration: 0.35, ease: "power1.in" }, "+=0.4");
+  if (grupo) caixasAbertas[grupo] = cx;
+}
+/** Sombra no chão do quadro para o card que sobe: fica no plano, o card sobe em z (paralaxe de verdade). */
+const voando = new Set();
+function erguer(c) {
+  if (!c.sombra) { c.sombra = document.createElement("span"); c.sombra.className = "sombra"; mundo.insertBefore(c.sombra, c.el); gsap.set(c.sombra, { z: Z_SOMBRA }); }
+  c.sombra.style.height = c.h + "px";
+  c.xAnt = gsap.getProperty(c.el, "x");
+  voando.add(c);
+}
+function pousou(c) {
+  voando.delete(c);
+  c.vx = 0;
+  gsap.to(c.el, { rotation: 0, duration: 0.4, ease: "mola" });
+  if (c.sombra) gsap.to(c.sombra, { opacity: 0, duration: 0.3, onComplete: () => { c.sombra && c.sombra.remove(); c.sombra = null; } });
+}
+function atualizarVoo(c, dt) {
+  const x = gsap.getProperty(c.el, "x"), y = gsap.getProperty(c.el, "y"), z = gsap.getProperty(c.el, "z");
+  if (dt > 0) { const vx = (x - c.xAnt) / dt; c.vx += (vx - c.vx) * (1 - Math.exp(-dt * 9)); }
+  c.xAnt = x;
+  gsap.set(c.el, { rotation: c.incl + gsap.utils.clamp(-7, 7, c.vx * 0.0045) });
+  if (c.sombra) gsap.set(c.sombra, { x: x + z * 0.2, y: y + z * 0.45, opacity: Math.min(1, z / 55) * 0.8, scale: 1 + z * 0.0012 });
+}
+
+gsap.ticker.add((t, dtMs) => {
+  const dt = (Math.min(dtMs, 64) / 1000) * (window.VEL ?? 1);
+  tempo += dt;
+  if (!par.congelado) { const k = 1 - Math.exp(-dt * 2.6); par.x += (par.ax - par.x) * k; par.y += (par.ay - par.y) * k; }
+  if (seguir && !par.congelado) {
+    const ctr = centroDoCard(seguir.card), k = 1 - Math.exp(-dt * 2.2);
+    cam.fx += (ctr.x + seguir.dx - cam.fx) * k; cam.fy += (ctr.y + seguir.dy - cam.fy) * k;
+  }
+  aplicarCamera();
+  voando.forEach((c) => atualizarVoo(c, dt));
+  desenharEsfera(dt);
+  desenharCursor();
+});
+
+// ---------- O cliente da vez: card vazio no topo de "IA atendendo" e o balão ao lado ----------
+let heroi = null, balao = null, nCliente = 0, quadroVisivel = false, mergulhando = false;
+function prepararCliente(cli) {
+  const d = { nome: cli.nome, cor: cli.cor, hora: cli.hora, faixa: F.ia, previa: textoLimpo(cli.texto), cidade: cli.cidade, ambientes: cli.ambientes, anel: 1, ini: CONSULTOR.ini, modo: "bot" };
+  const c = criarCard(d);
+  c.heroi = true; c.noQuadro = false;
+  c.h = c.el.offsetHeight;
+  porNaColuna(c, 0, 0);
+  gsap.set(c.el, { x: cardX(0), y: CAB_H, autoAlpha: 0 });
+  arrumarColuna(cols[0], { ignorar: c, dur: 0.8 });
+  vazio(c);
+  heroi = c;
+  const b = criarBalao(cli);
+  gsap.set(b.el, { autoAlpha: 0 });
+  const bw = b.el.offsetWidth, bh = b.el.offsetHeight;
+  if (CELULAR) { b.x = cardX(0) + CARD_W / 2 - bw / 2; b.y = CAB_H - bh - 74; }
+  else { b.x = cardX(0) - 104 - bw; b.y = CAB_H - b.corpo.offsetTop; }
+  gsap.set(b.el, { x: b.x, y: b.y, z: Z_TOPO });
+  balao = b;
+}
+/** Tudo o que o assistente vai preencher começa escondido, com o esqueleto por cima (o layout já é o final). */
+function vazio(c) {
+  const q = c.q;
+  c.esq = {};
+  const barra = (el, { w, h, x = 0, y = 0, raio } = {}) => {
+    const p = posEm(el, c.el), hh = h ?? Math.max(10, Math.round(p.h * 0.56));
+    const e = document.createElement("span");
+    e.className = "esq";
+    Object.assign(e.style, { left: p.x + x + "px", top: p.y + y + (p.h - hh) / 2 + "px", width: (w ?? p.w) + "px", height: hh + "px" });
+    if (raio) e.style.borderRadius = raio;
+    c.el.appendChild(e);
+    return e;
+  };
+  q.av.classList.add("vazio");
+  gsap.set(q.avT, { autoAlpha: 0, scale: 0.5 });
+  gsap.set([q.selo, q.sBot, q.sHum], { autoAlpha: 0 });
+  c.esq.nome = barra(q.nomeT, { w: 150 });
+  gsap.set(q.nomeT, { autoAlpha: 0 });
+  q.faixa.classList.add("vazia");
+  gsap.set(q.fc, { autoAlpha: 0 });
+  c.esq.faixa = barra(q.fc, { w: 132 });
+  const pv = posEm(q.previa, c.el), lh = 19.5 * 1.43;
+  c.esq.p1 = document.createElement("span"); c.esq.p2 = document.createElement("span");
+  [[c.esq.p1, CARD_W - 40, 0], [c.esq.p2, 170, lh]].forEach(([e, w, dy]) => {
+    e.className = "esq";
+    Object.assign(e.style, { left: pv.x + 17 + "px", top: pv.y + 11 + dy + (lh - 12) / 2 + "px", width: w + "px", height: "12px" });
+    c.el.appendChild(e);
+  });
+  gsap.set(q.previa, { clipPath: "inset(0% 100% 0% 0%)" });
+  c.esq.cid = barra(q.cid);
+  c.esq.amb = barra(q.amb, { w: Math.min(posEm(q.amb, c.el).w, 160) });
+  gsap.set([q.cid, q.amb, ...q.ambItens, ...q.virg], { autoAlpha: 0 });
+  gsap.set(q.arco, { attr: { "stroke-dashoffset": CIRC } });
+  gsap.set(q.anelW, { autoAlpha: 0 });
+  c.esq.anel = barra(q.anelW, { raio: "50%", h: 22, w: 22 });
+  gsap.set(q.ini, { autoAlpha: 0, scale: 0.4 });
+}
+const some = (el, d = 0.22) => el && gsap.to(el, { autoAlpha: 0, duration: d, ease: "power1.out" });
+function revelarFaixa(c, fx) {
+  pintarFaixa(c, fx);
+  some(c.esq.faixa);
+  gsap.fromTo(c.q.fc, { autoAlpha: 0, x: 8 }, { autoAlpha: 1, x: 0, duration: 0.45, ease: "mola" });
+}
+
+// Ato 1 · a mensagem chega (digitando… → o balão abre → as palavras entram) e o card nasce vazio
+async function ato1(g) {
+  marcarAto("Ato 1 de 6 · A mensagem chega");
+  const b = balao, c = heroi;
+  const bw = b.corpo.offsetWidth, bh = b.corpo.offsetHeight, R = "round 6px 20px 20px 20px";
+  gsap.set(b.el, { autoAlpha: 1 });
+  gsap.set(b.palavras, { autoAlpha: 0, y: 8 });
+  gsap.set([b.pe, b.rabo], { autoAlpha: 0 });
+  gsap.set(b.corpo, { clipPath: `inset(0px ${bw - 96}px ${bh - 58}px 0px ${R})` });
+  gsap.fromTo(b.rot, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.5, ease: "mola" });
+  gsap.fromTo(b.corpo, { autoAlpha: 0, scale: 0.7, transformOrigin: "0% 0%" }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: "salto", delay: 0.08 });
+  const pulo = gsap.to(b.pontos, { y: -6, duration: 0.3, ease: "sine.inOut", stagger: { each: 0.13, repeat: -1, yoyo: true } });
+  await espera(0.4, g);
+  gsap.fromTo(c.el, { autoAlpha: 0, y: CAB_H + 22, scale: 0.97 }, { autoAlpha: 1, y: CAB_H, scale: 1, duration: 0.75, ease: "mola" });
+  await espera(0.8, g);
+  gsap.to(b.pontosBox, { autoAlpha: 0, duration: 0.14, onComplete: () => pulo.kill() });
+  gsap.to(b.corpo, { clipPath: `inset(0px 0px 0px 0px ${R})`, duration: 0.62, ease: "mola",
+    onComplete: () => { gsap.set(b.corpo, { clipPath: "none" }); gsap.to(b.rabo, { autoAlpha: 1, duration: 0.2 }); } });
+  gsap.to(b.palavras, { autoAlpha: 1, y: 0, duration: 0.45, ease: "mola", stagger: 0.028, delay: 0.1 });
+  await espera(0.1 + b.palavras.length * 0.028 + 0.3, g);
+  gsap.fromTo(b.pe, { autoAlpha: 0, y: 4 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: "mola" });
+  await espera(0.4, g);
+}
+
+// Ato 2 · o assistente sai da marca, lê palavra por palavra e acende o que importa
+async function ato2(g) {
+  marcarAto("Ato 2 de 6 · O assistente lê");
+  const b = balao, ws = b.palavras, n = ws.length;
+  const ponto = (i) => { const r = ws[Math.max(0, Math.min(n - 1, i))].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top - r.height * 0.22, r: Math.max(12, Math.min(18, r.height * 0.55)) }; };
+  gsap.to(esf, { brilho: 0.75, giro: 1, duration: 0.6 });
+  await voarAte(esf, () => ponto(0), { dur: 1.0, arco: -110 }, g);
+  b.checks.classList.add("lido");
+  gsap.fromTo(b.checks, { scale: 1.45 }, { scale: 1, duration: 0.45, ease: "salto" });
+  const leitura = { u: 0 }, lidas = new Set();
+  await tw(leitura, { u: n - 1, duration: 0.1 * n, ease: "sine.inOut", onUpdate() {
+    const i = Math.floor(leitura.u), fr = leitura.u - i, a = ponto(i), z = ponto(i + 1);
+    esf.x = a.x + (z.x - a.x) * fr; esf.y = a.y + (z.y - a.y) * fr; esf.r = a.r + (z.r - a.r) * fr;
+    ws.forEach((w, k) => {
+      if (k > leitura.u + 0.35 || lidas.has(k)) return;
+      lidas.add(k);
+      const kw = $(".kw", w);
+      if (kw) { kw.classList.add("acesa"); gsap.to(kw, { "--k": 1, duration: 0.34, ease: "mola" }); esf.impulso += 2.5; }
+    });
+  } }, g);
+  gsap.to(esf, { brilho: 0.5, giro: 0.7, duration: 0.5 });
+}
+
+// Ato 3 · cada palavra voa até o campo exato do card; o balão vira a prévia; a esfera senta no selo
+async function voarPalavra(kw, c, g) {
+  const campo = kw.dataset.campo, q = c.q;
+  let alvo, rotulo, grupo = null, esq = null, extra = [];
+  if (campo === "nome") { alvo = q.nomeT; rotulo = "NOME"; esq = c.esq.nome; }
+  else if (campo === "cidade") { alvo = q.cidT; rotulo = "CIDADE"; grupo = q.cid; esq = c.esq.cid; }
+  else { const i = Number(campo.split(":")[1]); alvo = q.ambItens[i]; rotulo = "AMBIENTE"; grupo = q.amb; esq = i === 0 ? c.esq.amb : null; if (i > 0) extra = [q.virg[i - 1]]; }
+  const voo = document.createElement("span");
+  voo.className = "voo";
+  voo.textContent = kw.textContent;
+  mundo.appendChild(voo);
+  const fs0 = parseFloat(getComputedStyle(kw).fontSize), fs1 = parseFloat(getComputedStyle(alvo).fontSize);
+  const kN = voo.offsetHeight / fs0; // altura "normal" da linha da Inter: alinha o desenho das letras, não a caixa
+  const de = posNoMundo(kw), para = posNoMundo(alvo);
+  const tx = para.x, ty = para.y + (para.h - kN * fs1) / 2, s1 = fs1 / fs0;
+  const ctrl = CELULAR ? { x: (de.x + tx) / 2 + 110, y: (de.y + ty) / 2 } : { x: (de.x + tx) / 2, y: Math.min(de.y, ty) - 130 };
+  gsap.set(voo, { x: de.x, y: de.y, z: Z_CARD + 0.5, transformOrigin: "0 0" }); // meio px acima do card: pousa sem erro de perspectiva
+  gsap.to(kw, { opacity: 0.32, duration: 0.3 });
+  await tw(voo, { scale: 1.1, duration: 0.14, ease: "power2.out" }, g);
+  const o = { p: 0 };
+  await tw(o, { p: 1, duration: 0.72, ease: "power3.inOut", onUpdate() {
+    const p = o.p, r = 1 - p;
+    gsap.set(voo, { x: r * r * de.x + 2 * r * p * ctrl.x + p * p * tx, y: r * r * de.y + 2 * r * p * ctrl.y + p * p * ty, scale: 1.1 + (s1 - 1.1) * p });
+  } }, g);
+  gsap.to(voo, { opacity: 0, duration: 0.16, onComplete: () => voo.remove() });
+  if (grupo) gsap.set(grupo, { autoAlpha: 1 });
+  gsap.set([alvo, ...extra], { autoAlpha: 1 });
+  gsap.fromTo([alvo, ...extra], { opacity: 0 }, { opacity: 1, duration: 0.16 });
+  gsap.fromTo(alvo, { scale: 1.08 }, { scale: 1, duration: 0.5, ease: "salto", transformOrigin: "0% 60%" });
+  some(esq);
+  encaixe(alvo, rotulo, campo.startsWith("amb") ? "amb" : null);
+  if (campo === "nome") {
+    q.av.classList.remove("vazio");
+    gsap.fromTo(q.av, { scale: 0.84 }, { scale: 1, duration: 0.55, ease: "salto" });
+    gsap.to(q.avT, { autoAlpha: 1, scale: 1, duration: 0.45, ease: "salto", delay: 0.05 });
+  }
+}
+function recolherBalao(b, c) {
+  const de = posNoMundo(b.corpo), pv = posNoMundo(c.q.previa);
+  const alvo = { x: pv.x + 17, y: pv.y + 11, w: pv.w - 34, h: pv.h - 11 };
+  const k = alvo.w / de.w, ox = de.x - b.x, oy = de.y - b.y;
+  gsap.to(b.rot, { autoAlpha: 0, y: -8, duration: 0.25 });
+  gsap.to(b.el, { x: alvo.x - ox * k, y: alvo.y - oy * k, scale: k, transformOrigin: "0 0", duration: 0.7, ease: "power3.inOut" });
+  gsap.to(b.el, { autoAlpha: 0, duration: 0.32, delay: 0.3, ease: "power1.in" });
+  gsap.to(c.q.previa, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.6, delay: 0.32, ease: "mola" });
+  some(c.esq.p1); some(c.esq.p2);
+}
+const pontoDoSelo = (c) => () => { const r = c.q.selo.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width * 0.5 }; };
+async function ato3(g) {
+  marcarAto("Ato 3 de 6 · O card se preenche");
+  const b = balao, c = heroi;
+  const meio = () => {
+    const rb = b.corpo.getBoundingClientRect(), rc = c.el.getBoundingClientRect();
+    return CELULAR ? { x: rc.right - 24, y: (rb.bottom + rc.top) / 2, r: 14 } : { x: (rb.right + rc.left) / 2, y: rc.top + rc.height * 0.28, r: 14 };
+  };
+  voarAte(esf, meio, { dur: 0.55, arco: -40 }, g).catch(() => {});
+  await espera(0.3, g);
+  await Promise.all(b.chaves.map((kw, i) => espera(i * 0.3, g).then(() => voarPalavra(kw, c, g))));
+  await espera(0.7, g);
+  recolherBalao(b, c);
+  const ctr = centroDoCard(c); // a câmera recentra no card: agora ele é o assunto
+  gsap.to(cam, { fx: ctr.x, fy: ctr.y, duration: 1.4, ease: "power2.inOut" });
+  await espera(0.35, g);
+  some(c.esq.anel, 0.18);
+  gsap.set(c.q.anelW, { autoAlpha: 1 });
+  c.q.anel.classList.add("a-verde");
+  gsap.to(c.q.arco, { attr: { "stroke-dashoffset": 0 }, duration: 0.85, ease: "mola" });
+  await espera(0.25, g);
+  gsap.set(c.q.selo, { autoAlpha: 1 });
+  await voarAte(esf, pontoDoSelo(c), { dur: 0.6, arco: -50, ease: "power3.inOut" }, g);
+  esf.preso = c.q.selo;
+  gsap.to(esf, { brilho: 0.32, giro: 0.6, duration: 0.4 });
+  gsap.fromTo(c.q.selo, { scale: 1.35 }, { scale: 1, duration: 0.5, ease: "salto" });
+  revelarFaixa(c, F.ia);
+  await espera(0.4, g);
+  erguer(c);
+  gsap.to(c.el, { z: 40, duration: 0.7, ease: "mola" });
+  await espera(0.2, g);
+}
+
+// Ato 4 · a câmera se afasta, o quadro se monta em volta e o card pousa em "IA atendendo"
+function revelarQuadro(rapido = false) {
+  quadroVisivel = true;
+  const d = rapido ? 0.3 : 1;
+  cols.forEach((col) => {
+    gsap.fromTo(col.el, { autoAlpha: 0, z: -70 }, { autoAlpha: 1, z: 0, duration: 0.9 * d, ease: "mola", delay: col.i * 0.08 * d });
+    col.cards.forEach((k, j) => {
+      if (k === heroi) return;
+      gsap.fromTo(k.el, { autoAlpha: 0, z: 110 }, { autoAlpha: 1, z: Z_CARD, duration: 0.85 * d, ease: "mola", delay: (0.15 + col.i * 0.07 + j * 0.06) * d });
+    });
+    contar(col, col.cards.filter((k) => k !== heroi || k.noQuadro).length, false);
+  });
+}
+function esconderQuadro() {
+  quadroVisivel = false;
+  cols.forEach((col) => {
+    const atraso = ETAPAS.length - 1 - col.i;
+    gsap.to(col.el, { autoAlpha: 0, z: -50, duration: 0.7, ease: "power2.in", delay: atraso * 0.05 });
+    col.cards.forEach((k) => { if (k !== heroi) gsap.to(k.el, { autoAlpha: 0, z: 60, duration: 0.55, ease: "power2.in", delay: atraso * 0.04 }); });
+  });
+}
+function pousar(c, g) {
+  const t = gsap.timeline();
+  t.to(c.el, { z: Z_CARD, scale: 1, duration: 0.32, ease: "power2.in" }).to(c.el, { scale: 0.985, duration: 0.07, ease: "power1.out" }).to(c.el, { scale: 1, duration: 0.55, ease: QUIQUE });
+  return espera(0.32, g).then(() => pousou(c));
+}
+async function ato4(g) {
+  marcarAto("Ato 4 de 6 · O card entra no quadro");
+  const c = heroi;
+  seguir = null;
+  gsap.to(nevoa, { opacity: 1, duration: 1.6 });
+  gsap.killTweensOf(cam);
+  const mov = tw(cam, { ...camLonge(c), duration: 2.2, ease: "cinema" }, g);
+  mov.catch(() => {}); // se o roteiro for interrompido antes do await, o cancelamento não vira erro solto
+  await espera(0.35, g);
+  revelarQuadro();
+  await espera(1.05, g);
+  await pousar(c, g);
+  c.noQuadro = true;
+  contar(cols[0], cols[0].cards.length);
+  acenderColuna(cols[0]);
+  await mov;
+  const ctr = centroDoCard(c);
+  seguir = { card: c, dx: cam.fx - ctr.x, dy: cam.fy - ctr.y };
+}
+
+// ---------- Ato 5 e 6: o card anda pelo funil (o sistema move quando a data é marcada; Fechado é arrastado) ----------
+function esmaecerOutros(c, sim) {
+  cols.forEach((col) => col.cards.forEach((k) => { if (k !== c && quadroVisivel) gsap.to(k.el, { opacity: sim ? 0.78 : 1, duration: 0.25, overwrite: "auto" }); }));
+}
+/** Movimento do card feito pelo sistema (como no CRM quando a agenda move o card): sobe, atravessa, assenta. */
+async function moverCard(c, dest, g, dur = 1.0) {
+  const orig = c.col;
+  tirarDaColuna(c);
+  porNaColuna(c, dest, 0);
+  erguer(c);
+  arrumarColuna(cols[orig], { dur: 0.6 });
+  arrumarColuna(cols[dest], { dur: 0.6, ignorar: c });
+  gsap.to(c, { incl: 2, duration: 0.3 });
+  const t = gsap.timeline();
+  t.to(c.el, { z: 64, scale: 1.045, duration: 0.32, ease: "power2.out" })
+    .to(c.el, { x: cardX(dest), y: CAB_H, duration: dur, ease: "power2.inOut" }, 0.14)
+    .add(() => gsap.to(c, { incl: 0, duration: 0.4 }), 0.14 + dur * 0.7);
+  await espera(0.14 + dur * 0.8, g);
+  await pousar(c, g);
+  contar(cols[orig], cols[orig].cards.length);
+  contar(cols[dest], cols[dest].cards.length);
+  acenderColuna(cols[dest]);
+  await espera(0.15, g);
+}
+const pontoDaFaixa = (c) => () => pontoDe(c.q.faixa, 0.72, 0.55);
+async function trazerCursor(c, g) {
+  if (cur.vis > 0.5) return voarAte(cur, pontoDaFaixa(c), { dur: 0.45, arco: -20 }, g);
+  cur.x = innerWidth - 300; cur.y = innerHeight * 0.8; cur.s = 1; cur.preso = null;
+  gsap.to(cur, { vis: 1, duration: 0.45 });
+  return voarAte(cur, pontoDaFaixa(c), { dur: 0.9, arco: -70 }, g);
+}
+async function passarAoConsultor(g) {
+  marcarAto("Ato 5 de 6 · Passa ao consultor");
+  const c = heroi;
+  await espera(0.2, g);
+  if (esf.preso === c.q.selo) {
+    esf.preso = null;
+    gsap.to(esf, { brilho: 0.25, giro: 0.45, duration: 0.8 });
+    voarAte(esf, lugarDaEsfera, { dur: 1.25, arco: -170 }, g).catch(() => {});
+  }
+  gsap.to(c.q.sHum, { autoAlpha: 1, duration: 0.3, delay: 0.2 });
+  gsap.fromTo(c.q.selo, { scale: 1.3 }, { scale: 1, duration: 0.5, ease: "salto", delay: 0.2 });
+  await espera(0.25, g);
+  trocarFaixa(c, F.responder);
+  gsap.to(c.q.ini, { autoAlpha: 1, scale: 1, duration: 0.5, ease: "salto", delay: 0.15 });
+  await espera(0.4, g);
+  await moverCard(c, 1, g);
+  await trazerCursor(c, g);
+}
+async function marcarCompromisso(fx, dest, ato, g) {
+  marcarAto(ato);
+  const c = heroi;
+  await trazerCursor(c, g);
+  await clicar(g);
+  trocarFaixa(c, fx);
+  brilharCard(c, "var(--color-sucesso)");
+  await espera(0.4, g);
+  const segue = voarAte(cur, pontoDaFaixa(c), { dur: 1.4, arco: -30 }, g);
+  segue.catch(() => {});
+  await moverCard(c, dest, g);
+  if (dest === 3) brilharCard(c, "var(--color-etapa-apresentacao)");
+  await segue;
+  await espera(0.15, g);
+}
+function fecharCard(c) {
+  gsap.to(c.q.anelW, { autoAlpha: 0, duration: 0.3 });
+  gsap.to(c.q.faixa, { height: 0, paddingTop: 0, paddingBottom: 0, opacity: 0, duration: 0.42, ease: "mola", onComplete() {
+    pintarFaixa(c, null);
+    gsap.set(c.q.faixa, { clearProps: "height,paddingTop,paddingBottom,opacity" });
+    c.h = c.el.offsetHeight;
+    arrumarColuna(cols[c.col], { dur: 0.5 });
+  } });
+}
+/** Fechar a venda é com a mão do consultor: o cursor pega o card e arrasta até Fechado. */
+async function arrastarAteFechado(g) {
+  marcarAto("Ato 6 de 6 · Venda fechada");
+  const c = heroi, pega = { fx: 0.42, fy: 0.15 };
+  if (cur.vis < 0.5) { cur.x = innerWidth - 300; cur.y = innerHeight * 0.8; gsap.to(cur, { vis: 1, duration: 0.45 }); }
+  await voarAte(cur, () => pontoDe(c.el, pega.fx, pega.fy), { dur: 0.55, arco: -30 }, g);
+  await tw(cur, { s: 0.86, duration: 0.1 }, g);
+  const orig = c.col, dest = 5;
+  erguer(c);
+  c.el.classList.add("preso");
+  gsap.to(c, { incl: 3, duration: 0.25, ease: "power2.out" });
+  gsap.to(c.el, { z: 76, scale: 1.05, duration: 0.3, ease: "power2.out" });
+  esmaecerOutros(c, true);
+  cur.preso = { el: c.el, ...pega };
+  await espera(0.28, g);
+  tirarDaColuna(c);
+  porNaColuna(c, dest, 0);
+  arrumarColuna(cols[orig], { dur: 0.6 });
+  cols[dest].el.classList.add("alvo");
+  arrumarColuna(cols[dest], { dur: 0.6, ignorar: c });
+  const y0 = gsap.getProperty(c.el, "y");
+  gsap.to(c.el, { keyframes: { y: [y0, Math.min(y0, CAB_H) - 46, CAB_H] }, duration: 1.35, ease: "sine.inOut" });
+  await tw(c.el, { x: cardX(dest), duration: 1.35, ease: "power2.inOut" }, g);
+  cols[dest].el.classList.remove("alvo");
+  cur.preso = null;
+  gsap.to(cur, { s: 1, duration: 0.3, ease: "salto" });
+  gsap.to(c, { incl: 0, duration: 0.35 });
+  c.el.classList.remove("preso");
+  await pousar(c, g);
+  esmaecerOutros(c, false);
+  contar(cols[orig], cols[orig].cards.length);
+  contar(cols[dest], cols[dest].cards.length);
+  acenderColuna(cols[dest]);
+  fecharCard(c);
+}
+async function finale(g) {
+  const c = heroi, col = cols[5];
+  gsap.fromTo(col.varre, { autoAlpha: 1, y: -420 }, { y: 1300, duration: 1.5, ease: "power1.inOut", onComplete: () => gsap.set(col.varre, { autoAlpha: 0 }) });
+  brilharCard(c, "var(--color-etapa-fechado)");
+  await espera(0.4, g);
+  gsap.to(cur, { vis: 0, x: cur.x + 70, y: cur.y + 50, duration: 0.6, ease: "power2.in" });
+  await espera(1.0, g);
+}
+/** A história continua de onde o card está (também depois que a pessoa arrasta um card). */
+async function jornada(g) {
+  for (let guarda = 0; guarda < 8; guarda++) {
+    const col = heroi.col;
+    if (col === 0) await passarAoConsultor(g);
+    else if (col === 1) await marcarCompromisso(F.medicao, 2, "Ato 6 de 6 · A medição é marcada", g);
+    else if (col === 2) await marcarCompromisso(F.apresentacao, 3, "Ato 6 de 6 · A apresentação é marcada", g);
+    else if (col === 3 || col === 4) await arrastarAteFechado(g);
+    else if (col === 5) { await finale(g); return; }
+    else return; // Perdido: a história deste cliente acaba aqui
+  }
+}
+function podar(col, max) {
+  while (col.cards.length > max) {
+    const k = col.cards.pop();
+    gsap.to(k.el, { autoAlpha: 0, duration: 0.4, onComplete: () => k.el.remove() });
+  }
+}
+async function voltarAoInicio(g) {
+  marcarAto("Próximo cliente");
+  seguir = null;
+  heroi.heroi = false;
+  podar(cols[5], 4);
+  if (balao) { balao.el.remove(); balao = null; }
+  nCliente++;
+  gsap.to(nevoa, { opacity: 0.6, duration: 1.6 });
+  prepararCliente(CLIENTES[nCliente % CLIENTES.length]);
+  gsap.killTweensOf(cam);
+  gsap.to(cam, { ...camPerto(balao, heroi), duration: 2.0, ease: "cinema" });
+  await espera(0.45, g);
+  esconderQuadro();
+  await espera(1.2, g);
+}
+// Celular: só a parte da mensagem virando card (atos 1 a 3), sem o quadro
+async function finalCelular(g) {
+  const c = heroi;
+  await pousar(c, g);
+  await espera(1.8, g);
+  esf.preso = null;
+  voarAte(esf, lugarDaEsfera, { dur: 1, arco: -90 }, g).catch(() => {});
+  gsap.to(c.el, { autoAlpha: 0, y: CAB_H + 16, duration: 0.6, ease: "power2.in" });
+  await espera(0.8, g);
+  tirarDaColuna(c);
+  c.el.remove();
+  if (balao) { balao.el.remove(); balao = null; }
+  nCliente++;
+  prepararCliente(CLIENTES[nCliente % CLIENTES.length]);
+  Object.assign(cam, camPerto(balao, heroi));
+}
+async function ciclo(g) {
+  for (;;) {
+    await ato1(g); await ato2(g); await ato3(g);
+    if (CELULAR) { await finalCelular(g); continue; }
+    await ato4(g);
+    await jornada(g);
+    await voltarAoInicio(g);
+  }
+}
+
+// ---------- A pessoa pode pegar qualquer card do quadro e arrastar (a mesma física do kanban) ----------
+let arrasto = null, retomada = null;
+function interromperRoteiro() {
+  geracao++;
+  retomada && retomada.kill();
+  gsap.killTweensOf(heroi.el); gsap.killTweensOf(heroi);
+  gsap.to(cur, { vis: 0, duration: 0.3 });
+  cur.preso = null;
+  seguir = null;
+}
+function aplicarEstadoDaColuna(c, col) {
+  if (col > 0 && esf.preso === c.q.selo) {
+    esf.preso = null;
+    voarAte(esf, lugarDaEsfera, { dur: 1, arco: -120 }, geracao).catch(() => {});
+    gsap.to(c.q.sHum, { autoAlpha: 1, duration: 0.3 });
+    gsap.to(c.q.ini, { autoAlpha: 1, scale: 1, duration: 0.4, ease: "salto" });
+  }
+  if (col >= 5) { if (c.q.faixa.style.display !== "none") fecharCard(c); return; }
+  const fx = col === 0 ? (esf.preso === c.q.selo ? F.ia : F.responder) : FAIXA_DA_COLUNA[col];
+  if (c.q.faixa.style.display === "none") {
+    pintarFaixa(c, fx);
+    gsap.set(c.q.anelW, { autoAlpha: 1 });
+    c.h = c.el.offsetHeight;
+    arrumarColuna(cols[col], { dur: 0.4 });
+  } else trocarFaixa(c, fx);
+}
+mundo.addEventListener("pointerdown", (e) => {
+  if (REDUZIR || mergulhando || !quadroVisivel || CELULAR || e.button !== 0 || arrasto) return;
+  const el = e.target.closest(".card"), c = el && el._card;
+  if (!c || !cols[c.col].cards.includes(c)) return;
+  e.preventDefault();
+  interromperRoteiro();
+  marcarAto("Você está arrastando um card");
+  voando.forEach((k) => { if (k !== c) { gsap.set(k.el, { z: Z_CARD, scale: 1 }); pousou(k); } });
+  par.congelado = true;
+  const w = homografia().paraMundo(e.clientX, e.clientY);
+  const origCol = c.col, origIdx = tirarDaColuna(c);
+  arrasto = { c, origCol, origIdx, dest: null, idx: null, offX: w.x - gsap.getProperty(c.el, "x"), offY: w.y - gsap.getProperty(c.el, "y") };
+  arrumarColuna(cols[origCol], { dur: 0.45 });
+  erguer(c);
+  c.el.classList.add("preso");
+  gsap.to(c, { incl: 3, duration: 0.25, ease: "power2.out" });
+  gsap.to(c.el, { z: 76, scale: 1.05, duration: 0.28, ease: "power2.out" });
+  esmaecerOutros(c, true);
+});
+addEventListener("pointermove", (e) => {
+  if (!arrasto) return;
+  const a = arrasto, w = homografia().paraMundo(e.clientX, e.clientY);
+  gsap.set(a.c.el, { x: w.x - a.offX, y: w.y - a.offY });
+  const i = Math.floor((w.x + COL_GAP / 2) / (COL_W + COL_GAP));
+  const dest = i >= 0 && i < ETAPAS.length && w.y > -80 && w.y < 1700 ? i : null;
+  let idx = null;
+  if (dest != null) {
+    const meio = w.y - a.offY + a.c.h / 2, lista = cols[dest].cards;
+    idx = lista.findIndex((k, j) => meio < yDoSlot(cols[dest], j) + k.h / 2);
+    if (idx < 0) idx = lista.length;
+  }
+  if (dest === a.dest && idx === a.idx) return;
+  if (a.dest != null && a.dest !== dest) { cols[a.dest].el.classList.remove("alvo"); arrumarColuna(cols[a.dest], { dur: 0.45 }); }
+  a.dest = dest; a.idx = idx;
+  if (dest != null) { cols[dest].el.classList.add("alvo"); arrumarColuna(cols[dest], { dur: 0.45, buraco: { indice: idx, h: a.c.h } }); }
+});
+function soltar() {
+  if (!arrasto) return;
+  const { c, origCol, origIdx } = arrasto;
+  let dest = arrasto.dest, idx = arrasto.idx;
+  if (dest == null) { dest = origCol; idx = origIdx; } // fora do quadro: volta para onde estava, com mola (sem teletransporte)
+  arrasto = null;
+  cols.forEach((col) => col.el.classList.remove("alvo"));
+  porNaColuna(c, dest, Math.min(idx, cols[dest].cards.length));
+  arrumarColuna(cols[dest], { dur: 0.5, ignorar: c });
+  if (origCol !== dest) arrumarColuna(cols[origCol], { dur: 0.5 });
+  gsap.to(c, { incl: 0, duration: 0.35 });
+  c.el.classList.remove("preso");
+  gsap.to(c.el, { x: cardX(dest), y: yDoSlot(cols[dest], cols[dest].cards.indexOf(c)), duration: 0.5, ease: "mola" });
+  pousar(c, geracao).catch(() => {});
+  esmaecerOutros(c, false);
+  if (c === heroi) c.noQuadro = true;
+  recontar(); // todas: o roteiro interrompido pode ter deixado outra coluna sem atualizar
+  if (dest !== origCol) acenderColuna(cols[dest]);
+  if (c === heroi) aplicarEstadoDaColuna(c, dest);
+  par.congelado = false;
+  marcarAto("A história continua em instantes…");
+  retomada = gsap.delayedCall(2.6, () => { retomada = null; if (!arrasto && !mergulhando) rodar(continuar); });
+}
+addEventListener("pointerup", soltar);
+addEventListener("pointercancel", soltar);
+async function continuar(g) {
+  const c = heroi;
+  voando.forEach((k) => { gsap.set(k.el, { z: Z_CARD, scale: 1 }); pousou(k); });
+  if (!c.noQuadro) { c.noQuadro = true; gsap.set(c.el, { z: Z_CARD }); }
+  recontar();
+  gsap.killTweensOf(cam);
+  await tw(cam, { ...camLonge(c), duration: 1.2, ease: "cinema" }, g);
+  const ctr = centroDoCard(c);
+  seguir = { card: c, dx: cam.fx - ctr.x, dy: cam.fy - ctr.y };
+  await jornada(g);
+  await voltarAoInicio(g);
+  await ciclo(g);
+}
+
+// ---------- Entrar: a câmera mergulha no quadro e ele fica reto, do tamanho do kanban de verdade ----------
+async function mergulhar() {
+  mergulhando = true;
+  geracao++;
+  retomada && retomada.kill();
+  seguir = null; par.congelado = false; cam.par = 0; par.x = par.y = par.ax = par.ay = 0;
+  gsap.killTweensOf(cam);
+  const dur = REDUZIR ? 0.25 : 0.7;
+  gsap.to(cur, { vis: 0, duration: 0.2 });
+  if (balao) gsap.to(balao.el, { autoAlpha: 0, duration: 0.25 });
+  esf.preso = null;
+  const casa = lugarDaEsfera();
+  gsap.to(esf, { x: casa.x, y: casa.y, r: 10, brilho: 0.2, vis: 0, duration: 0.45, ease: "power2.inOut" });
+  gsap.to(["#cartao", "#controles", "#marca-topo"], { autoAlpha: 0, y: -10, scale: 0.98, duration: 0.28, ease: "power2.in" });
+  if (!quadroVisivel) revelarQuadro(true);
+  gsap.to(nevoa, { opacity: 0, duration: dur * 0.8 });
+  const s = 1 / 1.4; // 1 px do CRM = 1 px da tela
+  await new Promise((r) => gsap.to(cam, { rx: 0, rz: 0, s, fx: (CX - 88) / s, fy: (CY - 84) / s, duration: dur, ease: REDUZIR ? "none" : "cinema", onComplete: r }));
+  marcarAto("Entrou");
+  gsap.to("#aviso-final", { autoAlpha: 1, duration: 0.3 });
+}
+window.aoEntrar = async () => { window.despausar && window.despausar(); await mergulhar(); };
+const cartaoEl = $("#cartao");
+cartaoEl.addEventListener("animationend", () => { cartaoEl.style.animation = "none"; }, { once: true });
+window.aoErrar = (form) => { if (!REDUZIR) gsap.fromTo(form, { x: 0 }, { keyframes: { x: [0, -12, 10, -7, 4, -2, 0] }, duration: 0.48, ease: "power1.out" }); };
+window.aoTrocarTema = () => lerCorEsfera();
+
+// ---------- Movimento reduzido: a mesma história numa imagem parada ----------
+function cenaParada() {
+  marcarAto("Movimento reduzido: cena parada");
+  const cli = CLIENTES[0];
+  const c = criarCard({ nome: cli.nome, cor: cli.cor, hora: cli.hora, faixa: F.responder, previa: textoLimpo(cli.texto), cidade: cli.cidade, ambientes: cli.ambientes, anel: 1, ini: CONSULTOR.ini, modo: "humano" });
+  c.h = c.el.offsetHeight; c.heroi = true; c.noQuadro = true; heroi = c;
+  porNaColuna(c, 1, 0);
+  arrumarColuna(cols[1], { instante: true });
+  cols.forEach((col) => { gsap.set(col.el, { autoAlpha: 1 }); col.cards.forEach((k) => gsap.set(k.el, { autoAlpha: 1 })); contar(col, col.cards.length, false); });
+  quadroVisivel = true;
+  cam.par = 0; esf.giro = 0;
+  Object.assign(cam, camLonge(c));
+  gsap.set(nevoa, { opacity: 1 });
+}
+
+// ---------- Início ----------
+async function iniciar() {
+  medirPalco();
+  lerCorEsfera();
+  for (let i = 0; i < ETAPAS.length; i++) cols.push(criarColuna(i));
+  try { await Promise.race([Promise.all([document.fonts.load("400 20px Inter"), document.fonts.load("600 20px Inter")]).then(() => document.fonts.ready), new Promise((r) => setTimeout(r, 3000))]); } catch (e) {}
+  CAB_H = Math.round(cols[0].cab.offsetTop + cols[0].cab.offsetHeight + 17);
+  QUADRO.forEach((lista, i) => lista.forEach((d) => { const c = criarCard(d); c.h = c.el.offsetHeight; porNaColuna(c, i, cols[i].cards.length); }));
+  cols.forEach((col) => { arrumarColuna(col, { instante: true }); gsap.set(col.el, { autoAlpha: 0 }); col.cards.forEach((k) => gsap.set(k.el, { autoAlpha: 0 })); });
+  const casa = lugarDaEsfera();
+  Object.assign(esf, { x: casa.x, y: casa.y, r: 10 });
+  if (REDUZIR) { cenaParada(); return; }
+  prepararCliente(CLIENTES[0]);
+  Object.assign(cam, camPerto(balao, heroi));
+  gsap.set(nevoa, { opacity: 0.6 });
+  window.__cena = { get heroi() { return heroi; }, cols }; // só para os testes automáticos lerem o estado
+  window.CENA_PRONTA = true;
+  rodar(ciclo);
+}
+let larguraAntes = innerWidth;
+addEventListener("resize", () => {
+  if (ehCelular() !== CELULAR) { location.reload(); return; }
+  medirPalco();
+  if (!quadroVisivel && heroi && balao && !mergulhando) Object.assign(cam, camPerto(balao, heroi));
+  larguraAntes = innerWidth;
+});
+iniciar();
+})();
+</script>
+</body>
+</html>
