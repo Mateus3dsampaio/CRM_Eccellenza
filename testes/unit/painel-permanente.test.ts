@@ -239,6 +239,6 @@ describe("exportação do painel em HTML", () => {
     expect(html).toContain('id="dados"');
     expect(html).not.toMatch(/Fulano|5588900001601/);
     // O texto do concorrente não pode fechar a tag do script.
-    expect(html.match(/<\/script>/g)).toHaveLength(2);
+    expect(html.match(/<\/script>/g)).toHaveLength(3); // dados, dicas e o script
   });
 });
