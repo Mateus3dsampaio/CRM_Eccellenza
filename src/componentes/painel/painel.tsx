@@ -13,6 +13,8 @@ import { Botao, Carregando, EstadoErro, Modal, Popover, classeEntrada } from "..
 import { ExportarDesempenho } from "../configuracoes/exportar-desempenho";
 import { useUsuario } from "../usuario";
 import { NumeroContando } from "./numero-contando";
+import { TituloComDica } from "../dica";
+import { dicaDoPainel } from "@/regras/painel-dicas";
 
 interface DadosPainel {
   de: string;
@@ -241,7 +243,7 @@ export function Painel() {
           <h2 className="-mb-1 rotulo-secao">Resultado</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
-              <p className="text-sm text-texto-suave">Total em negociação</p>
+              <TituloComDica className="text-sm text-texto-suave" titulo="Total em negociação" dica={dicaDoPainel("em_negociacao")} />
               <p className="mt-1 text-4xl font-semibold tabular-nums"><NumeroContando valor={dados.vendas.emNegociacao.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.emNegociacao.quantidade} {dados.vendas.emNegociacao.quantidade === 1 ? "lead" : "leads"} em Apresentação agendada ou Negociação, agora
@@ -249,7 +251,7 @@ export function Painel() {
               </p>
             </div>
             <div className="rounded-painel border border-borda bg-superficie p-5 luz-marca-fio">
-              <p className="text-sm text-texto-suave">Total vendido</p>
+              <TituloComDica className="text-sm text-texto-suave" titulo="Total vendido" dica={dicaDoPainel("vendido")} />
               <p className={juntar("mt-1 text-4xl font-semibold tabular-nums", dados.vendas.vendido.total > 0 && "text-sucesso")}><NumeroContando valor={dados.vendas.vendido.total} formatar={formatarReais} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.vendas.vendido.quantidade} {dados.vendas.vendido.quantidade === 1 ? "venda fechada" : "vendas fechadas"} no período
@@ -264,7 +266,7 @@ export function Painel() {
               const v = variacao(i.tipo, i.atual, i.anterior);
               return (
                 <div key={i.tipo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                  <p className="text-sm text-texto-suave">{i.nome}</p>
+                  <TituloComDica className="text-sm text-texto-suave" titulo={i.nome} dica={dicaDoPainel(i.tipo)} />
                   <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={i.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
@@ -274,7 +276,7 @@ export function Painel() {
               );
             })}
             <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-              <p className="text-sm text-texto-suave">Motivos de perda</p>
+              <TituloComDica className="text-sm text-texto-suave" titulo="Motivos de perda" dica={dicaDoPainel("motivos_perda")} />
               {dados.vendas.perdidos.quantidade === 0 ? (
                 <p className="mt-2 text-xs text-texto-fraco">Nenhum lead perdido no período.</p>
               ) : (
@@ -321,15 +323,15 @@ export function Painel() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {(
               [
-                ["Receberam a 1ª mensagem", dados.recuperacao.primeira, null],
-                ["Receberam a 2ª mensagem", dados.recuperacao.segunda, null],
-                ["Responderam depois da 1ª", dados.recuperacao.respondeuPrimeira, dados.recuperacao.primeira],
-                ["Responderam depois da 2ª", dados.recuperacao.respondeuSegunda, dados.recuperacao.segunda],
-                ["Foram para Perdido (automático)", dados.recuperacao.perdidos, null],
+                ["Receberam a 1ª mensagem", dados.recuperacao.primeira, null, "recuperacao_primeira"],
+                ["Receberam a 2ª mensagem", dados.recuperacao.segunda, null, "recuperacao_segunda"],
+                ["Responderam depois da 1ª", dados.recuperacao.respondeuPrimeira, dados.recuperacao.primeira, "recuperacao_respondeu_primeira"],
+                ["Responderam depois da 2ª", dados.recuperacao.respondeuSegunda, dados.recuperacao.segunda, "recuperacao_respondeu_segunda"],
+                ["Foram para Perdido (automático)", dados.recuperacao.perdidos, null, "recuperacao_perdido"],
               ] as const
-            ).map(([nome, valor, de]) => (
+            ).map(([nome, valor, de, chave]) => (
               <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                <p className="text-sm text-texto-suave">{nome}</p>
+                <TituloComDica className="text-sm text-texto-suave" titulo={nome} dica={dicaDoPainel(chave)} />
                 <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={valor} animar={contarNumeros} /></p>
                 {de !== null && <p className="mt-1 text-xs text-texto-fraco">de {de.toLocaleString("pt-BR")} {de === 1 ? "mensagem enviada" : "mensagens enviadas"}</p>}
               </div>
@@ -340,14 +342,14 @@ export function Painel() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {(
               [
-                ["Rede de segurança: para Perdido", dados.automacao.redePerdidos, "parados com a IA além do prazo"],
-                ["Rede de segurança: arquivados", dados.automacao.redeArquivados, "pós-venda parado"],
-                ["Perdidos arquivados", dados.automacao.perdidosArquivados, "saíram da coluna Perdido sozinhos"],
-                ["Contatos bloqueados", dados.automacao.bloqueados, "não eram clientes (pela IA ou à mão)"],
+                ["Rede de segurança: para Perdido", dados.automacao.redePerdidos, "parados com a IA além do prazo", "rede_perdido"],
+                ["Rede de segurança: arquivados", dados.automacao.redeArquivados, "pós-venda parado", "rede_arquivado"],
+                ["Perdidos arquivados", dados.automacao.perdidosArquivados, "saíram da coluna Perdido sozinhos", "perdido_arquivado"],
+                ["Contatos bloqueados", dados.automacao.bloqueados, "não eram clientes (pela IA ou à mão)", "contato_bloqueado"],
               ] as const
-            ).map(([nome, valor, nota]) => (
+            ).map(([nome, valor, nota, chave]) => (
               <div key={nome} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                <p className="text-sm text-texto-suave">{nome}</p>
+                <TituloComDica className="text-sm text-texto-suave" titulo={nome} dica={dicaDoPainel(chave)} />
                 <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={valor} animar={contarNumeros} /></p>
                 <p className="mt-1 text-xs text-texto-fraco">{nota}</p>
               </div>
@@ -358,12 +360,12 @@ export function Painel() {
           <div className="grid gap-3 sm:grid-cols-3">
             {(
               [
-                ["Medições que viraram apresentação", dados.conversoes.medicoesComApresentacao, dados.conversoes.medicoes, "medição marcada no período"],
-                ["Apresentações que viraram venda", dados.conversoes.apresentacoesFechadas, dados.conversoes.apresentacoes, "apresentação marcada no período"],
+                ["Medições que viraram apresentação", dados.conversoes.medicoesComApresentacao, dados.conversoes.medicoes, "medição marcada no período", "conversao_medicao"],
+                ["Apresentações que viraram venda", dados.conversoes.apresentacoesFechadas, dados.conversoes.apresentacoes, "apresentação marcada no período", "conversao_apresentacao"],
               ] as const
-            ).map(([titulo, parte, todo, base]) => (
+            ).map(([titulo, parte, todo, base, chave]) => (
               <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                <p className="text-sm text-texto-suave">{titulo}</p>
+                <TituloComDica className="text-sm text-texto-suave" titulo={titulo} dica={dicaDoPainel(chave)} />
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{todo ? <NumeroContando valor={Math.round((parte / todo) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
                   {todo ? `${parte.toLocaleString("pt-BR")} de ${todo.toLocaleString("pt-BR")} ${todo === 1 ? "lead" : "leads"} com ${base}` : `nenhum lead com ${base}`}
@@ -377,7 +379,7 @@ export function Painel() {
               const v = variacao(faltaram.tipo, faltaram.atual, faltaram.anterior);
               return (
                 <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                  <p className="text-sm text-texto-suave">{faltaram.nome}</p>
+                  <TituloComDica className="text-sm text-texto-suave" titulo={faltaram.nome} dica={dicaDoPainel(faltaram.tipo)} />
                   <p className="mt-1 text-3xl font-semibold tabular-nums"><NumeroContando valor={faltaram.atual} animar={contarNumeros} /></p>
                   <p className={juntar("mt-1 inline-flex items-center gap-1 text-xs", v.cor)}>
                     {v.diferenca > 0 ? <ArrowUpRight className="size-3.5 shrink-0" aria-hidden /> : v.diferenca < 0 ? <ArrowDownRight className="size-3.5 shrink-0" aria-hidden /> : <Minus className="size-3.5 shrink-0" aria-hidden />}
@@ -392,7 +394,7 @@ export function Painel() {
           <h2 className="-mb-1 rotulo-secao">Janela de 24h da Meta (agora)</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-              <p className="text-sm text-texto-suave">Leads com a janela aberta</p>
+              <TituloComDica className="text-sm text-texto-suave" titulo="Leads com a janela aberta" dica={dicaDoPainel("janelas_abertas")} />
               <p className="mt-1 text-3xl font-semibold tabular-nums">{dados.janelas.total ? <NumeroContando valor={Math.round((dados.janelas.abertas / dados.janelas.total) * 100)} formatar={(n) => `${n.toLocaleString("pt-BR")}%`} animar={contarNumeros} /> : "–"}</p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.total ? `${dados.janelas.abertas.toLocaleString("pt-BR")} de ${dados.janelas.total.toLocaleString("pt-BR")} ${dados.janelas.total === 1 ? "lead ativo" : "leads ativos"} (só o cliente reabre a janela)` : "nenhum lead ativo"}
@@ -402,7 +404,7 @@ export function Painel() {
               </div>
             </div>
             <div className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-              <p className="text-sm text-texto-suave">Janelas fechando em menos de 2 h</p>
+              <TituloComDica className="text-sm text-texto-suave" titulo="Janelas fechando em menos de 2 h" dica={dicaDoPainel("janelas_fechando")} />
               <p className={juntar("mt-1 text-3xl font-semibold tabular-nums", dados.janelas.fechando > 0 && "text-alerta")}><NumeroContando valor={dados.janelas.fechando} animar={contarNumeros} /></p>
               <p className="mt-1 text-xs text-texto-fraco">
                 {dados.janelas.atencao.toLocaleString("pt-BR")} {dados.janelas.atencao === 1 ? "lead" : "leads"} com 2 a 6 h sobrando
@@ -414,14 +416,14 @@ export function Painel() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
-                ["Tempo médio de resposta", dados.tempos.geral, "bot ou consultor, o que responder primeiro"],
-                ["Resposta do consultor", dados.tempos.consultor, "toda mensagem do cliente respondida pelo consultor, ignorando o bot"],
-                ["1ª resposta após o repasse", dados.tempos.primeiraResposta, dados.tempos.primeiraResposta.aguardando ? `${dados.tempos.primeiraResposta.aguardando} ${dados.tempos.primeiraResposta.aguardando === 1 ? "lead aguarda" : "leads aguardam"} o consultor agora` : "da hora em que o bot passou o lead até a 1ª mensagem do consultor"],
-                ["Resposta do bot", dados.tempos.bot, "só quando o bot respondeu primeiro"],
+                ["Tempo médio de resposta", dados.tempos.geral, "bot ou consultor, o que responder primeiro", "tempo_geral"],
+                ["Resposta do consultor", dados.tempos.consultor, "toda mensagem do cliente respondida pelo consultor, ignorando o bot", "tempo_consultor"],
+                ["1ª resposta após o repasse", dados.tempos.primeiraResposta, dados.tempos.primeiraResposta.aguardando ? `${dados.tempos.primeiraResposta.aguardando} ${dados.tempos.primeiraResposta.aguardando === 1 ? "lead aguarda" : "leads aguardam"} o consultor agora` : "da hora em que o bot passou o lead até a 1ª mensagem do consultor", "tempo_primeira_resposta"],
+                ["Resposta do bot", dados.tempos.bot, "só quando o bot respondeu primeiro", "tempo_bot"],
               ] as const
-            ).map(([titulo, t, dica]) => (
+            ).map(([titulo, t, dica, chave]) => (
               <div key={titulo} className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-                <p className="text-sm text-texto-suave">{titulo}</p>
+                <TituloComDica className="text-sm text-texto-suave" titulo={titulo} dica={dicaDoPainel(chave)} />
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{formatarDuracao(t.mediaSegundos)}</p>
                 <p className="mt-1 text-xs text-texto-fraco">
                   {t.quantidade ? `mediana ${formatarDuracao(t.medianaSegundos)} · ${t.quantidade.toLocaleString("pt-BR")} ${t.quantidade === 1 ? "resposta" : "respostas"}` : "sem respostas no período"}
@@ -439,7 +441,7 @@ export function Painel() {
 
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-              <h2 className="font-semibold">Funil</h2>
+              <h2 className="font-semibold"><TituloComDica como="span" titulo="Funil" dica={dicaDoPainel(dados.vendedorId ? "funil_vendedor" : "funil")} /></h2>
               <p className="mb-4 text-xs text-texto-fraco">Leads que chegaram a cada etapa no período e a conversão entre etapas.</p>
               <ol className="space-y-3">
                 {dados.funil.map((f, i) => (
@@ -459,7 +461,7 @@ export function Painel() {
               </ol>
             </section>
             <section className="rounded-painel border border-borda bg-superficie p-4 luz-marca-fio">
-              <h2 className="mb-4 font-semibold">Apresentações agendadas por consultor</h2>
+              <h2 className="mb-4 font-semibold"><TituloComDica como="span" titulo="Apresentações agendadas por consultor" dica={dicaDoPainel("apresentacoes_por_consultor")} /></h2>
               <ul className="space-y-3">
                 {dados.apresentacoesPorConsultor.map((c) => (
                   <li key={c.nome}>
