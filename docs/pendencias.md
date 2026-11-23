@@ -56,6 +56,9 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 - [ ] **Bloquear contato que não é cliente (tarefa 44)**: no ar desde 16/11/2026 (o Railway publicava o branch `claude/eloquent-goldberg-d3anlv`). Linha do Manual aprovada em 17/11/2026 (tarefa 45). Falta a instrução numerada (item acima). **Nunca testado com a IA real**; migração `0014_contato_bloqueado` provavelmente aplicada no Railway (conferir no log do deploy).
 
+- [ ] **Login novo "Da conversa ao card" (tarefa 46, 23/11/2026)**: conferir no PC e no iPhone (a fluidez com placa de vídeo nunca foi medida; aqui, sem placa, deu ~52 quadros/s no começo e ~22 no quadro inclinado). Se travar num computador fraco, a cena congela sozinha numa imagem parada. O login antigo está em `docs/legado/login-esfera/` e na tag `login-esfera-v1`.
+- [ ] **Next.js avisou falha de segurança** na versão instalada (16.4.3), ao rodar `npm run build` em 23/11/2026. Decidir quando atualizar (mudança à parte, com teste completo).
+
 ## B. Do Claude (código)
 - [ ] **Card novo do kanban (tarefa 39, 10/11/2026)**: o Mateus confere no simulador com o dia a dia (faixa de ação, cores, divisor da coluna). Ficou de fora, para decidir depois: avisos do canto cobrindo a coluna Negociação, "Esperando" repetido no topo e na linha de filtros, e o tema claro não foi conferido com o card novo.
 - [x] **Tela de usuários** (Configurações > Geral > Equipe: criar, editar, nova senha, desativar, transferir leads) e **"trocar minha senha"** no cabeçalho (04/11/2026). Senha: 6+ caracteres com letra, número e maiúscula. Limitação conhecida: trocar a senha não derruba a sessão aberta (12 h); desativar derruba na hora (decisão do Mateus: não precisa agora).
@@ -64,6 +67,7 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 - [x] Status da Meta ("entregue", "lido") que chega antes de a mensagem ser gravada se perde (só visual). Corrigido em 05/11/2026: o evento fica pendente e é reaplicado em 2 s, 10 s e 1 min.
 - [ ] Status "falhou" vindo da Meta não desfaz `ultimaMsgLojaEm`.
 - [x] ~~Opcional: mandar PDF ao Claude para o bot ler~~ Decisão do Mateus (05/11/2026): o bot NÃO lê PDF nem outros arquivos; só texto, áudio transcrito e imagem. Feito e depois desfeito no mesmo dia.
+- [ ] Teste de tela "menu Mover para... move o card" (PC) falhou uma vez na rodada completa de 23/11/2026 e passou sozinho: intermitente, depende dos dados compartilhados entre os testes.
 - [ ] Dívida: a rota de arquivos lê o arquivo inteiro a cada pedido (usar `createReadStream` com Range).
 
 ### Erros da série de layout (tarefas 23–33), para corrigir quando o Mateus pedir

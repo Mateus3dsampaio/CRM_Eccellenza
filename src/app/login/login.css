@@ -1,0 +1,133 @@
+/*
+ * Tela de login "Da conversa ao card" (tarefa 46). A cena é desenhada 1,4× maior que o CRM (a câmera só reduz) e
+ * copia o visual do card do kanban (componentes/kanban/card.tsx). Tudo fica preso em .cena-login: estes nomes
+ * (.card, .coluna, .faixa...) não podem vazar para as outras telas. Cores só pelos tokens de tokens.css.
+ */
+.cena-login { position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+.cena-login .palco { position: absolute; inset: 0; overflow: hidden; perspective: 1500px; }
+.cena-login .mundo { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; transform-style: preserve-3d; will-change: transform; }
+.cena-login .mundo > * { position: absolute; left: 0; top: 0; }
+.cena-login .marco { width: 2px; height: 2px; pointer-events: none; }
+.cena-login svg.ic { width: 1em; height: 1em; flex: none; }
+
+/* Coluna (igual a Coluna em componentes/kanban/quadro.tsx, × 1,4) */
+.cena-login .coluna { width: 372px; height: 1700px; padding: 17px; border-radius: 22px; background: var(--color-coluna); box-shadow: var(--shadow-painel); transition: background-color 260ms, box-shadow 260ms; }
+.cena-login .coluna .tit { margin: 0; font-size: 19.5px; font-weight: 600; letter-spacing: -0.005em; color: var(--color-texto); }
+.cena-login .coluna .qtd { margin: 3px 0 0; font-size: 16.8px; color: var(--color-texto-fraco); display: flex; gap: 6px; }
+.cena-login .num { display: inline-grid; overflow: hidden; font-variant-numeric: tabular-nums; }
+.cena-login .num > span { grid-area: 1 / 1; }
+.cena-login .coluna .barra { height: 6px; margin-top: 17px; border-radius: 999px; background: var(--cor); }
+.cena-login .coluna .luz { position: absolute; left: 0; right: 0; top: 0; height: 180px; border-radius: 22px 22px 0 0; opacity: 0; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cor) 34%, transparent), transparent); }
+.cena-login .coluna .varre { position: absolute; left: 0; right: 0; top: 0; height: 420px; opacity: 0; pointer-events: none; border-radius: 22px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--cor) 26%, transparent) 50%, transparent); }
+.cena-login .coluna.destaque { background: var(--color-etapa-apresentacao-suave); box-shadow: var(--shadow-coluna-destaque), inset 0 0 0 1.4px color-mix(in srgb, var(--color-etapa-apresentacao) 35%, transparent); }
+.cena-login .coluna.destaque .barra { height: 8px; box-shadow: 0 0 20px 1px var(--color-etapa-apresentacao-brilho); }
+.cena-login .coluna.alvo { background: color-mix(in srgb, var(--color-marca) 16%, var(--color-coluna)); box-shadow: var(--shadow-painel), inset 0 0 0 2.8px color-mix(in srgb, var(--color-marca) 40%, transparent); }
+
+/* Card de vitrine (componentes/kanban/card.tsx × 1,4) */
+.cena-login .card { width: 338px; border-radius: 20px; border: 1.4px solid var(--color-borda); background: var(--color-superficie); box-shadow: var(--shadow-card);
+  overflow: hidden; font-size: 19.5px; color: var(--color-texto); cursor: grab; user-select: none; }
+.cena-login .arrastando, .cena-login .arrastando .card { cursor: grabbing; }
+.cena-login .c1 { display: flex; align-items: center; gap: 11px; padding: 14px 17px 11px; }
+.cena-login .av-wrap { position: relative; flex: none; }
+.cena-login .av { width: 45px; height: 45px; border-radius: 50%; display: grid; place-items: center; font-size: 16.8px; font-weight: 600; color: var(--color-sobre-cor); background: var(--av); transition: background-color 300ms ease; }
+.cena-login .av.vazio { background: color-mix(in srgb, var(--color-texto) 10%, transparent); }
+.cena-login .selo { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 14px;
+  background: var(--color-superficie-suave); color: var(--color-texto); box-shadow: 0 0 0 3px var(--color-superficie); }
+.cena-login .selo .ic { grid-area: 1 / 1; }
+.cena-login .nome { margin: 0; flex: 1; min-width: 0; font-weight: 600; line-height: 1.375; }
+.cena-login .nome-t, .cena-login .cid-t, .cena-login .amb-t span { display: inline-block; }
+.cena-login .hora { flex: none; font-size: 15.4px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.cena-login .faixa { margin: 0; display: flex; align-items: center; gap: 8.4px; padding: 8.4px 17px; font-size: 16.8px; font-weight: 600; transition: background-color 350ms, color 350ms; }
+.cena-login .faixa .ic { font-size: 19.6px; }
+.cena-login .faixa .fc { display: flex; align-items: center; gap: 8.4px; min-width: 0; }
+.cena-login .f-vermelho { background: var(--color-alerta-suave); color: var(--color-alerta); }
+.cena-login .f-ambar { background: var(--color-aviso-suave); color: var(--color-aviso); }
+.cena-login .f-azul { background: var(--color-marca-suave); color: var(--color-marca-texto); }
+.cena-login .f-verde { background: var(--color-sucesso-suave); color: var(--color-sucesso); }
+.cena-login .f-cinza { background: color-mix(in srgb, var(--color-superficie-suave) 55%, transparent); color: var(--color-texto-suave); font-weight: 500; }
+.cena-login .faixa.vazia { background: transparent; }
+.cena-login .previa { margin: 0; padding: 11px 17px 0; color: var(--color-texto-suave); line-height: 1.43; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cena-login .det { margin: 0; padding: 8.4px 17px 0; display: flex; flex-wrap: wrap; gap: 1px 14px; font-size: 16.8px; color: var(--color-texto-fraco); }
+.cena-login .det > span { display: inline-flex; align-items: center; gap: 5.6px; }
+.cena-login .det .ic { font-size: 19.6px; }
+.cena-login .rod { min-height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 8.4px 17px 11px; }
+.cena-login .anel { width: 22.4px; height: 22.4px; transform: rotate(-90deg); }
+.cena-login .anel circle { fill: none; stroke: currentColor; stroke-width: 3; }
+.cena-login .anel .trilho { stroke-opacity: 0.25; }
+.cena-login .anel .arco { stroke-linecap: round; }
+.cena-login .a-verde { color: var(--color-sucesso); }
+.cena-login .a-amarelo { color: var(--color-aviso); }
+.cena-login .a-vermelho { color: var(--color-alerta); }
+.cena-login .a-fechada { color: var(--color-texto-fraco); }
+.cena-login .a-fechada .arco { display: none; }
+.cena-login .ini { width: 33.6px; height: 33.6px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: var(--color-superficie-suave); color: var(--color-texto-suave); }
+.cena-login .brilho { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 2.8px var(--cor-brilho, var(--color-marca-texto)), inset 0 0 36px color-mix(in srgb, var(--cor-brilho, var(--color-marca-texto)) 55%, transparent); }
+.cena-login .sombra { width: 338px; border-radius: 20px; background: rgb(0 0 0 / 0.55); filter: blur(18px); opacity: 0; pointer-events: none; }
+.cena-login .esq { position: absolute; border-radius: 8px; pointer-events: none; transform-origin: 0 50%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-texto) 7%, transparent) 30%, color-mix(in srgb, var(--color-texto) 14%, transparent) 50%, color-mix(in srgb, var(--color-texto) 7%, transparent) 70%);
+  background-size: 300% 100%; animation: login-esqueleto 1.6s linear infinite; }
+@keyframes login-esqueleto { from { background-position: 100% 0; } to { background-position: -200% 0; } }
+
+/* Balão da mensagem do cliente (bg-chat-cliente do CRM; o verde do WhatsApp só no rótulo do canal) */
+.cena-login .balao { width: 470px; color: var(--color-texto); }
+.cena-login .balao .rot { display: flex; align-items: center; gap: 9px; margin: 0 0 11px 6px; font-size: 15.4px; font-weight: 600; color: var(--color-texto-fraco); letter-spacing: 0.01em; }
+.cena-login .balao .rot i { width: 9px; height: 9px; border-radius: 50%; background: var(--color-whatsapp); box-shadow: 0 0 12px color-mix(in srgb, var(--color-whatsapp) 70%, transparent); }
+.cena-login .corpo { position: relative; padding: 15px 19px 9px; border-radius: 6px 20px 20px 20px; background: var(--color-chat-cliente);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgb(255 255 255 / 0.04); font-size: 20.5px; line-height: 1.5; }
+.cena-login .rabo { position: absolute; left: -10px; top: 0; width: 12px; height: 15px; background: var(--color-chat-cliente); clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.cena-login .corpo .texto { margin: 0; position: relative; z-index: 0; }
+.cena-login .w { display: inline-block; }
+.cena-login .kw { position: relative; white-space: nowrap; transition: color 300ms ease; }
+.cena-login .kw.acesa { color: var(--color-marca-texto); }
+.cena-login .kw::before { content: ""; position: absolute; inset: 1px -5px; border-radius: 7px; z-index: -1;
+  background: color-mix(in srgb, var(--color-marca) 30%, transparent); transform: scaleX(var(--k, 0)); transform-origin: 0 50%; }
+.cena-login .pontos { position: absolute; left: 22px; top: 22px; display: flex; gap: 7px; }
+.cena-login .pontos span { width: 9px; height: 9px; border-radius: 50%; background: var(--color-texto-fraco); }
+.cena-login .pe { display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-top: 2px; font-size: 15.4px; color: var(--color-texto-fraco); font-variant-numeric: tabular-nums; }
+.cena-login .checks { font-size: 19px; color: var(--color-texto-fraco); transition: color 250ms; }
+.cena-login .checks.lido { color: var(--color-check-lido); }
+
+/* Palavra voando e caixa de encaixe do campo */
+.cena-login .voo { white-space: nowrap; font-size: 20.5px; line-height: normal; font-weight: 400; color: var(--color-marca-texto); pointer-events: none;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--color-marca) 80%, transparent); }
+.cena-login .encaixe { pointer-events: none; opacity: 0; border: 1.4px solid var(--color-marca-texto); border-radius: 8px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-marca) 16%, transparent), 0 0 22px color-mix(in srgb, var(--color-marca) 45%, transparent); }
+.cena-login .encaixe b { position: absolute; left: -1.4px; bottom: calc(100% + 6px); padding: 3px 7px; border-radius: 6px; white-space: nowrap;
+  font-size: 12.6px; font-weight: 700; letter-spacing: 0.12em; color: var(--color-sobre-marca); background: var(--color-marca); box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
+
+/* Névoa: apaga o fundo distante e abre espaço para o cartão */
+.cena-login .nevoa { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    linear-gradient(180deg, var(--color-fundo) 0%, color-mix(in srgb, var(--color-fundo) 60%, transparent) 16%, transparent 40%),
+    linear-gradient(90deg, transparent 52%, color-mix(in srgb, var(--color-fundo) 55%, transparent) 70%, color-mix(in srgb, var(--color-fundo) 88%, transparent) 90%),
+    radial-gradient(60vw 40vh at 30% 108%, color-mix(in srgb, var(--color-fundo) 85%, transparent), transparent 100%); }
+
+/* Esfera (o assistente) e cursor do consultor: por cima do mundo, por baixo do cartão de login */
+.cena-login .esfera { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; }
+.cena-login .cursor { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; }
+.cena-login .cursor .seta { display: block; margin: -2px 0 0 -2px; filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.5)); }
+.cena-login .cursor .tag { position: absolute; left: 17px; top: 21px; padding: 3px 9px 4px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--color-marca); color: var(--color-sobre-marca); box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
+.cena-login .cursor .onda { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--color-marca-texto); opacity: 0; }
+
+/* Cartão: sobe ao abrir; senha errada balança (o balanço fica no formulário, a entrada no envoltório) */
+.login-entrada { animation: login-subir 700ms var(--ease-mola) 200ms both; }
+@keyframes login-subir { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+.login-balanca { animation: login-balanca 480ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes login-balanca { 0%, 100% { transform: none; } 18% { transform: translateX(-12px); } 36% { transform: translateX(10px); } 54% { transform: translateX(-7px); } 72% { transform: translateX(4px); } 88% { transform: translateX(-2px); } }
+
+/* Celular em pé (iPhone): a cena na metade de cima, o cartão embaixo, sem rolar. O balão fica mais estreito e a névoa apaga antes do cartão. */
+@media (max-width: 899px) {
+  .cena-login .balao { width: 420px; }
+  .cena-login .nevoa { background:
+    linear-gradient(180deg, var(--color-fundo) 0%, color-mix(in srgb, var(--color-fundo) 40%, transparent) 9%, transparent 20%, transparent 34%, color-mix(in srgb, var(--color-fundo) 70%, transparent) 44%, var(--color-fundo) 51%); }
+}
+
+/* Reduzir movimento: sem transição nenhuma. O globals.css usa 1 ms e, com isso, o navegador ainda devolve a posição
+   antiga logo depois de uma mudança; a câmera mede a tela para se enquadrar e erraria o lugar. */
+@media (prefers-reduced-motion: reduce) {
+  .cena-login, .cena-login * { transition-duration: 0s !important; }
+}

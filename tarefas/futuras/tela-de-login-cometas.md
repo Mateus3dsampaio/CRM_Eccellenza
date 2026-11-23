@@ -1,7 +1,7 @@
 # Tela de login nova
 
 Tópico com as propostas de tela de login para trocar a atual (esfera de pontos em Three.js).
-- **Proposta D, "Da conversa ao card" (22/11/2026): a escolhida para seguir.** Protótipo pronto, esperando o Mateus aprovar.
+- **Proposta D, "Da conversa ao card" (22/11/2026): aprovada pelo Mateus em 23/11/2026 e levada ao CRM na tarefa 46** (`tarefas/46-login-da-conversa-ao-card.md`). O login antigo (esfera) ficou guardado em `docs/legado/login-esfera/`.
 - Proposta C3, "quadro vivo + gráficos cometa" (21/11/2026): guardada; dela fica só o quadro inclinado (ver o fim deste arquivo).
 
 ---
@@ -64,10 +64,10 @@ Colunas de `src/regras/etapas.ts` (as 7, com Apresentação agendada em destaque
 
 ### Etapas para levar ao CRM
 - [x] 1. Protótipo D (22/11/2026).
-- [ ] 2. Mateus aprova o protótipo e os textos.
-- [ ] 3. Virar a tarefa 46: separar em `src/componentes/login/` (cena e câmera, roteiro dos atos, card de vitrine, esfera do assistente, cursor), ajustar `src/app/login/page.tsx`, GSAP por npm carregado só no login, tirar a esfera grande e o Three.js, resolver a regra de "reduzir movimento", mergulho ligado ao `router.push` do login.
-- [ ] 4. Testes de tela (Playwright) e prints em 1440×900 e 1280×720; conferir o celular.
-- [ ] 5. Atualizar `docs/mapa-do-codigo.md` (tela de login) e marcar este tópico como feito.
+- [x] 2. Mateus aprova o protótipo e os textos (23/11/2026: "Gostei").
+- [x] 3. Virar a tarefa 46 (feita em 23/11/2026): separar em `src/componentes/login/` (cena e câmera, roteiro dos atos, card de vitrine, esfera do assistente, cursor), ajustar `src/app/login/page.tsx`, GSAP por npm carregado só no login, tirar a esfera grande e o Three.js, resolver a regra de "reduzir movimento", mergulho ligado ao `router.push` do login.
+- [x] 4. Testes de tela (Playwright) e prints em 1440×900, 1280×720 e iPhone (`docs/rodadas/prints-login-46/`).
+- [x] 5. Mapa do código atualizado. Falta só o Mateus conferir no PC e no iPhone (tarefa 46, etapa 6).
 
 ---
 

@@ -20,4 +20,4 @@ Caderno de ideias do Mateus. **Não é pendência e não tem urgência.** Serve 
 | Análises da equipe de vendas com o Claude | [`analises-com-claude.md`](analises-com-claude.md) | Ideia aprovada, sem etapa feita |
 | Teste do painel que falha dependendo do horário | [`teste-painel-horario.md`](teste-painel-horario.md) | Registrado em 08/11/2026, sem etapa feita |
 | Avisar a Meta quando o lead do anúncio avança (API de Conversões) | [`conversoes-meta-anuncios.md`](conversoes-meta-anuncios.md) | Registrado em 08/11/2026, sem etapa feita |
-| Tela de login nova: proposta D "Da conversa ao card" (a C3, gráficos "cometa", ficou guardada) | [`tela-de-login-cometas.md`](tela-de-login-cometas.md) | Protótipo D pronto em 22/11/2026, esperando aprovação do Mateus; não aplicado ao CRM |
+| Tela de login nova: proposta D "Da conversa ao card" (a C3, gráficos "cometa", ficou guardada) | [`tela-de-login-cometas.md`](tela-de-login-cometas.md) | Aprovada e levada ao CRM na tarefa 46 (23/11/2026); falta o Mateus conferir no PC e no iPhone |
