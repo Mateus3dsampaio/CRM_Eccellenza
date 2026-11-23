@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Login D · Da conversa ao card</title>
 <!--
   Proposta D da tela de login (aprovada para protótipo pelo Mateus em 22/11/2026).
@@ -251,15 +251,24 @@ svg.ic { width: 1em; height: 1em; flex: none; }
 .aviso-final button { height: 40px; padding: 0 18px; border-radius: 10px; border: 0; cursor: pointer; font: inherit; font-weight: 700; color: #fff; background: var(--color-marca); }
 
 /* ---------- Celular: o palco fica em cima, o cartão embaixo ---------- */
+/* Celular em pé (iPhone): a cena na metade de cima, o cartão compacto embaixo, sem rolar a página.
+   A história é a mesma do PC; só não dá para arrastar card com o dedo (brigaria com a rolagem). */
 @media (max-width: 899px) {
   body { overflow-y: auto; }
-  .pagina { grid-template-columns: 1fr; height: auto; min-height: 100dvh; }
-  .esquerda { height: 46dvh; }
-  .marca-topo { left: 20px; top: 20px; }
-  .lado { padding: 8px 16px 20px; align-items: flex-start; }
+  .pagina { grid-template-columns: 1fr; grid-template-rows: 54dvh auto; height: auto; min-height: 100dvh; }
+  .marca-topo { left: 20px; top: calc(env(safe-area-inset-top) + 16px); font-size: 12px; }
+  .lado { padding: 0 16px calc(env(safe-area-inset-bottom) + 14px); align-items: flex-start; }
+  .cartao { padding: 22px 22px 14px; }
+  .cartao h1 { font-size: 20px; }
+  .cartao .sub { margin: 4px 0 14px; }
+  .campo { margin-top: 10px; }
+  .tecla-pri { margin-top: 16px; }
+  .versao { margin-top: 10px; }
+  .balao { width: 420px; }
   .controles { position: relative; left: auto; bottom: auto; margin: 0 16px 20px; border-radius: 18px; }
-  .nevoa { background: linear-gradient(180deg, var(--color-fundo) 0%, transparent 16%, transparent 40%, color-mix(in srgb, var(--color-fundo) 80%, transparent) 54%, var(--color-fundo) 70%); }
   .controles .ato { min-width: 0; }
+  .nevoa { background:
+    linear-gradient(180deg, var(--color-fundo) 0%, color-mix(in srgb, var(--color-fundo) 40%, transparent) 9%, transparent 20%, transparent 36%, color-mix(in srgb, var(--color-fundo) 70%, transparent) 46%, var(--color-fundo) 53%); }
 }
 /* Reduzir movimento: sem transição nenhuma (0 s). Com 1 ms, o navegador ainda devolve a posição antiga logo depois
    de uma mudança, e a câmera, que mede a tela para se enquadrar, erraria o lugar. */
@@ -678,13 +687,13 @@ const par = { x: 0, y: 0, ax: 0, ay: 0, congelado: false };
 let CX = 0, CY = 0, tempo = 0, seguir = null;
 function medirPalco() {
   CELULAR = ehCelular();
-  if (CELULAR) { CX = innerWidth / 2; CY = innerHeight * 0.25 + 18; }
+  if (CELULAR) { CX = innerWidth / 2; CY = innerHeight * 0.29; }
   else { CX = (innerWidth - 460) / 2 + 8; CY = innerHeight / 2 + 4; }
   palco.style.perspectiveOrigin = `${CX}px ${CY}px`;
   fundo.style.setProperty("--cx", CX + "px");
   fundo.style.setProperty("--cy", CY + "px");
 }
-const areaDoPalco = () => (CELULAR ? { w: innerWidth - 28, h: innerHeight * 0.46 - 84 } : { w: innerWidth - 460 - 80, h: innerHeight - 200 });
+const areaDoPalco = () => (CELULAR ? { w: innerWidth - 24, h: innerHeight * 0.54 - 96 } : { w: innerWidth - 460 - 80, h: innerHeight - 200 });
 function aplicarCamera() {
   const rx = cam.rx - par.y * 2.2 * cam.par, ry = par.x * 3.2 * cam.par;
   const s = cam.s * (1 + 0.005 * Math.sin(tempo * 0.55) * cam.par);
@@ -729,8 +738,12 @@ function camPerto(b, h) {
 }
 function camLonge(c) {
   const a = areaDoPalco();
-  const s = Math.min(0.7, 0.7 * Math.min(a.w / 900, a.h / 700));
   const ctr = centroDoCard(c);
+  if (CELULAR) { // em pé: o card no meio do palco, o quadro subindo para o fundo da tela
+    const s = Math.min(0.62, 0.62 * (a.w / 366));
+    return enquadrar({ fx: ctr.x, fy: ctr.y, s, rx: 40, rz: -9 }, ctr, { x: innerWidth * 0.5, y: innerHeight * 0.31 });
+  }
+  const s = Math.min(0.7, 0.7 * Math.min(a.w / 900, a.h / 700));
   return enquadrar({ fx: ctr.x, fy: ctr.y, s, rx: 42, rz: -12 }, ctr, { x: (innerWidth - 460) * 0.36, y: innerHeight * 0.46 });
 }
 
@@ -1274,26 +1287,9 @@ async function voltarAoInicio(g) {
   esconderQuadro();
   await espera(1.2, g);
 }
-// Celular: só a parte da mensagem virando card (atos 1 a 3), sem o quadro
-async function finalCelular(g) {
-  const c = heroi;
-  await pousar(c, g);
-  await espera(1.8, g);
-  esf.preso = null;
-  voarAte(esf, lugarDaEsfera, { dur: 1, arco: -90 }, g).catch(() => {});
-  gsap.to(c.el, { autoAlpha: 0, y: CAB_H + 16, duration: 0.6, ease: "power2.in" });
-  await espera(0.8, g);
-  tirarDaColuna(c);
-  c.el.remove();
-  if (balao) { balao.el.remove(); balao = null; }
-  nCliente++;
-  prepararCliente(CLIENTES[nCliente % CLIENTES.length]);
-  Object.assign(cam, camPerto(balao, heroi));
-}
 async function ciclo(g) {
   for (;;) {
     await ato1(g); await ato2(g); await ato3(g);
-    if (CELULAR) { await finalCelular(g); continue; }
     await ato4(g);
     await jornada(g);
     await voltarAoInicio(g);
@@ -1418,7 +1414,8 @@ async function mergulhar() {
   if (!quadroVisivel) revelarQuadro(true);
   gsap.to(nevoa, { opacity: 0, duration: dur * 0.8 });
   const s = 1 / 1.4; // 1 px do CRM = 1 px da tela
-  await new Promise((r) => gsap.to(cam, { rx: 0, rz: 0, s, fx: (CX - 88) / s, fy: (CY - 84) / s, duration: dur, ease: REDUZIR ? "none" : "cinema", onComplete: r }));
+  const esq = CELULAR ? 12 : 88, topo = CELULAR ? 64 : 84; // no celular o kanban mostra uma coluna por vez
+  await new Promise((r) => gsap.to(cam, { rx: 0, rz: 0, s, fx: (CX - esq) / s, fy: (CY - topo) / s, duration: dur, ease: REDUZIR ? "none" : "cinema", onComplete: r }));
   marcarAto("Entrou");
   gsap.to("#aviso-final", { autoAlpha: 1, duration: 0.3 });
 }

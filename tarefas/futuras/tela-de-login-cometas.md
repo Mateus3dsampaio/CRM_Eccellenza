@@ -25,6 +25,8 @@ Uma cena contínua, sem corte, que conta o que o CRM faz: a mensagem do cliente 
 
 **Interação:** o mouse inclina a câmera (profundidade); dá para pegar qualquer card do quadro e soltar em outra coluna, com a mesma física (sobe, inclina, balança com a velocidade, os cards abrem espaço, assenta com quique) e a história continua sozinha 2,6 s depois. **Entrar:** a câmera mergulha e o quadro fica reto, no tamanho do kanban real. **Senha errada:** o cartão balança (no protótipo, a senha `erro` simula a senha errada; qualquer outra entra).
 
+**iPhone em pé** (ajuste de 23/11/2026, pedido do Mateus): a mesma história inteira, com a cena na metade de cima e o cartão compacto embaixo, sem rolar a página (conferido em 390×844). O quadro inclinado aparece em pé e some suave antes do cartão; o mergulho termina no kanban do tamanho do celular. Só não dá para arrastar card com o dedo (brigaria com a rolagem); no CRM real o arrasto no celular é com toque longo.
+
 **Controles do protótipo** (não vão para o CRM): ato atual, pausar (barra de espaço), câmera lenta (½× e ¼×), recomeçar, ver como fica com "reduzir movimento" e os 7 temas.
 
 ### Decisões do Mateus (22/11/2026)
@@ -44,7 +46,7 @@ Colunas de `src/regras/etapas.ts` (as 7, com Apresentação agendada em destaque
 - Gravação de vídeo sem tremer: Playwright com `page.clock.install()` + `pauseAt()` e `runFor(33)` por quadro (sem o `pauseAt`, o relógio anda sozinho enquanto o print é feito e o vídeo acelera).
 
 ### Testado em 22/11/2026 (Playwright)
-- Ciclo completo, 3 clientes seguidos, sem erro de JavaScript. Telas 1440×900, 1280×720, celular 390×844 (só os atos 1 a 3, cartão embaixo), "reduzir movimento" (imagem parada) e tema Café.
+- Ciclo completo, 3 clientes seguidos, sem erro de JavaScript. Telas 1440×900, 1280×720, iPhone em pé 390×844 (história inteira, sem rolar), "reduzir movimento" (imagem parada) e tema Café.
 - Arrastar card (inclusive no meio do roteiro), senha errada e entrar (mergulho).
 - Fluidez medida aqui, num navegador **sem placa de vídeo** (pior caso): ~52 quadros/s nos atos 1 a 3 e ~22 no quadro inclinado. O C3, no mesmo teste, deu ~19. No PC com placa de vídeo deve ser bem mais; **não verificado num PC de verdade**.
 
