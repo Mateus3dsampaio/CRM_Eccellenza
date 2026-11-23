@@ -14,7 +14,7 @@ Guardada a pedido do Mateus, para poder voltar se ele quiser.
 | `print-pc.png`, `print-iphone.png` | como a tela era, em 1440×900 e no iPhone (390×844) |
 
 Os arquivos desta pasta não entram no build (`tsconfig.json` exclui `docs/legado`).
-No GitHub também existe a marca (tag) **`login-esfera-v1`**, apontando para a versão do CRM que ainda tinha este login.
+No histórico do GitHub, a versão anterior ao merge da tarefa 46 na `main` também tem este login completo.
 
 ## Como voltar para este login
 Peça ao Claude: "volta o login da esfera que está em docs/legado/login-esfera". Os passos são:
