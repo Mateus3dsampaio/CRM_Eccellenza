@@ -2,6 +2,9 @@
 // Os dados vão dentro do arquivo; os cálculos rodam no navegador (SCRIPT abaixo). O teste `painel-exportado.test.ts` roda
 // esse script contra os mesmos dados do Painel e confere que os números batem.
 // Só números e códigos: nenhum nome, telefone ou texto de cliente.
+// As dicas (ⓘ) vêm de `painel-dicas.ts`, as mesmas do Painel: mouse parado 0,6 s abre; no celular, tocar no ⓘ.
+
+import { DICAS_DO_PAINEL } from "./painel-dicas";
 
 export interface DadosDoPainelExportado {
   geradoEm: string;
@@ -106,6 +109,26 @@ function iniciarPagina() {
   var nomeMotivo = function (cod) { for (var i = 0; i < D.motivos.length; i++) if (D.motivos[i].codigo === cod) return D.motivos[i].nome; return "Sem motivo registrado"; };
   var dataBr = function (d) { var p = d.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; };
   var esc = function (t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+  var noDicas = document.getElementById("dicas");
+  var DICAS = noDicas ? JSON.parse(noDicas.textContent) : {};
+  var dica = function (chave) {
+    var t = DICAS[chave];
+    return t ? '<button type="button" class="i" aria-label="O que é este número">i</button><span class="dica" role="tooltip">' + esc(t) + '</span>' : '';
+  };
+  // Toque no ⓘ abre e fecha (celular); tocar fora fecha. No PC o mouse parado abre pelo CSS.
+  document.addEventListener("click", function (ev) {
+    var botao = ev.target.closest ? ev.target.closest(".i") : null;
+    var dono = botao ? botao.parentNode : null;
+    var abertas = document.querySelectorAll(".com-dica.aberta");
+    for (var k = 0; k < abertas.length; k++) if (abertas[k] !== dono) abertas[k].classList.remove("aberta");
+    if (dono) dono.classList.toggle("aberta");
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Escape") return;
+    var abertas = document.querySelectorAll(".com-dica.aberta");
+    for (var k = 0; k < abertas.length; k++) abertas[k].classList.remove("aberta");
+  });
+  document.querySelectorAll("[data-dica]").forEach(function (el) { el.classList.add("com-dica"); el.insertAdjacentHTML("beforeend", dica(el.getAttribute("data-dica"))); });
   var todos = D.eventos.map(function (e) { return e.d; }).concat(D.encerrados.map(function (e) { return e.d; }));
   D.compromissos.forEach(function (c) { if (c.md) todos.push(c.md); if (c.ad) todos.push(c.ad); });
   todos.sort();
@@ -132,8 +155,8 @@ function iniciarPagina() {
   D.consultores.forEach(function (c) { var o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; sel.appendChild(o); });
   sel.onchange = function () { estado.vendedor = this.value; desenhar(); };
 
-  function cartao(titulo, valor, nota) {
-    return '<div class="cartao"><p class="t">' + esc(titulo) + '</p><p class="v">' + valor + '</p>' + (nota ? '<p class="n">' + nota + '</p>' : '') + '</div>';
+  function cartao(titulo, valor, nota, chave) {
+    return '<div class="cartao"><p class="t' + (DICAS[chave] ? ' com-dica' : '') + '">' + esc(titulo) + dica(chave) + '</p><p class="v">' + valor + '</p>' + (nota ? '<p class="n">' + nota + '</p>' : '') + '</div>';
   }
   function listaMotivos(motivos, vazio) {
     if (!motivos.length) return '<p class="n">' + vazio + '</p>';
@@ -147,28 +170,28 @@ function iniciarPagina() {
     var periodo = (estado.de || estado.ate) ? (estado.de ? dataBr(estado.de) : "início") + " a " + (estado.ate ? dataBr(estado.ate) : "hoje") : (menor ? dataBr(menor) + " a " + dataBr(maior) : "sem dados");
     $("periodo").textContent = "Período: " + periodo + (estado.vendedor ? " · vendedor: " + nomeConsultor(estado.vendedor) : "");
     $("resultado").innerHTML =
-      cartao("Total vendido", reais(r.vendido.total), num(r.vendido.quantidade) + (r.vendido.quantidade === 1 ? " venda fechada" : " vendas fechadas")) +
-      cartao("Leads perdidos", num(r.perdidos.quantidade), "não inclui os descartados") +
-      cartao("Descartados (não eram lead)", num(r.descartados.quantidade), "pós-venda, parceiro, emprego, canal errado");
-    $("leads").innerHTML = r.indicadores.map(function (i) { return cartao(i.nome, num(i.total)); }).join("");
+      cartao("Total vendido", reais(r.vendido.total), num(r.vendido.quantidade) + (r.vendido.quantidade === 1 ? " venda fechada" : " vendas fechadas"), "vendido") +
+      cartao("Leads perdidos", num(r.perdidos.quantidade), "não inclui os descartados", "perdidos") +
+      cartao("Descartados (não eram lead)", num(r.descartados.quantidade), "pós-venda, parceiro, emprego, canal errado", "descartados");
+    $("leads").innerHTML = r.indicadores.map(function (i) { return cartao(i.nome, num(i.total), "", i.tipo); }).join("");
     $("motivos").innerHTML = '<h3>Motivos de perda</h3>' + listaMotivos(r.perdidos.motivos, "Nenhum lead perdido no período.") +
       '<h3>Descartados</h3>' + listaMotivos(r.descartados.motivos, "Nenhum descartado no período.");
     var c = r.conversoes;
     $("conversoes").innerHTML =
-      cartao("Medições que viraram apresentação", taxa(c.medicoesComApresentacao, c.medicoes), c.medicoes ? num(c.medicoesComApresentacao) + " de " + num(c.medicoes) + " leads com medição marcada no período" : "nenhum lead com medição marcada no período") +
-      cartao("Apresentações que viraram venda", taxa(c.apresentacoesFechadas, c.apresentacoes), c.apresentacoes ? num(c.apresentacoesFechadas) + " de " + num(c.apresentacoes) + " leads com apresentação marcada no período" : "nenhum lead com apresentação marcada no período");
+      cartao("Medições que viraram apresentação", taxa(c.medicoesComApresentacao, c.medicoes), c.medicoes ? num(c.medicoesComApresentacao) + " de " + num(c.medicoes) + " leads com medição marcada no período" : "nenhum lead com medição marcada no período", "conversao_medicao") +
+      cartao("Apresentações que viraram venda", taxa(c.apresentacoesFechadas, c.apresentacoes), c.apresentacoes ? num(c.apresentacoesFechadas) + " de " + num(c.apresentacoes) + " leads com apresentação marcada no período" : "nenhum lead com apresentação marcada no período", "conversao_apresentacao");
     var rec = r.recuperacao, aut = r.automacao;
     $("recuperacao").innerHTML =
-      cartao("Receberam a 1ª mensagem", num(rec.primeira)) +
-      cartao("Receberam a 2ª mensagem", num(rec.segunda)) +
-      cartao("Responderam depois da 1ª", num(rec.respondeuPrimeira), "de " + num(rec.primeira) + " enviadas") +
-      cartao("Responderam depois da 2ª", num(rec.respondeuSegunda), "de " + num(rec.segunda) + " enviadas") +
-      cartao("Foram para Perdido (automático)", num(rec.perdidos));
+      cartao("Receberam a 1ª mensagem", num(rec.primeira), "", "recuperacao_primeira") +
+      cartao("Receberam a 2ª mensagem", num(rec.segunda), "", "recuperacao_segunda") +
+      cartao("Responderam depois da 1ª", num(rec.respondeuPrimeira), "de " + num(rec.primeira) + " enviadas", "recuperacao_respondeu_primeira") +
+      cartao("Responderam depois da 2ª", num(rec.respondeuSegunda), "de " + num(rec.segunda) + " enviadas", "recuperacao_respondeu_segunda") +
+      cartao("Foram para Perdido (automático)", num(rec.perdidos), "", "recuperacao_perdido");
     $("automacao").innerHTML =
-      cartao("Rede de segurança: para Perdido", num(aut.redePerdidos), "parados com a IA além do prazo") +
-      cartao("Rede de segurança: arquivados", num(aut.redeArquivados), "pós-venda parado") +
-      cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos") +
-      cartao("Contatos bloqueados", num(aut.bloqueados), "não eram clientes (pela IA ou à mão)");
+      cartao("Rede de segurança: para Perdido", num(aut.redePerdidos), "parados com a IA além do prazo", "rede_perdido") +
+      cartao("Rede de segurança: arquivados", num(aut.redeArquivados), "pós-venda parado", "rede_arquivado") +
+      cartao("Perdidos arquivados", num(aut.perdidosArquivados), "saíram da coluna Perdido sozinhos", "perdido_arquivado") +
+      cartao("Contatos bloqueados", num(aut.bloqueados), "não eram clientes (pela IA ou à mão)", "contato_bloqueado");
     var maiorFunil = Math.max.apply(null, [1].concat(r.funil.map(function (f) { return f.total; })));
     $("funil").innerHTML = r.funil.map(function (f, i) {
       return '<li><div class="linha"><span>' + esc(f.nome) + '</span><b>' + num(f.total) + (i > 0 ? ' <small>' + taxa(f.total, r.funil[i - 1].total) + ' da etapa anterior</small>' : '') + '</b></div><div class="barra"><div style="width:' + (f.total / maiorFunil * 100) + '%"></div></div></li>';
@@ -202,6 +225,13 @@ ul{list-style:none;margin:0;padding:0}li{padding:4px 0}li>span{display:inline-bl
 .duas{display:grid;grid-template-columns:1.5fr 1fr;gap:12px}@media(max-width:800px){.duas{grid-template-columns:1fr}}
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--borda)}th{color:var(--suave);font-weight:600;font-size:12px}.dir{text-align:right}
 .aviso{margin-top:28px;color:var(--suave);font-size:12px}
+.cartao,.duas>div,h2.com-dica{position:relative}.com-dica{display:flex;align-items:center;gap:4px}
+.i{flex:none;width:18px;height:18px;padding:0;border:1px solid var(--borda);border-radius:999px;background:transparent;color:var(--suave);font:italic 600 11px/16px Georgia,serif;cursor:pointer;text-transform:none}
+.i:hover,.com-dica.aberta .i{color:var(--texto);border-color:var(--suave)}
+.dica{position:absolute;left:8px;right:8px;top:calc(100% - 4px);z-index:5;max-width:340px;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;background:var(--cartao);color:var(--texto);font:400 12px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:0;text-transform:none;box-shadow:0 8px 24px rgb(0 0 0/.18);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .16s,transform .16s,visibility 0s linear .16s}
+.cartao .dica{top:auto;margin-top:4px}
+@media (hover:hover){.com-dica:hover .dica{opacity:1;visibility:visible;transform:none;transition:opacity .16s .6s,transform .16s .6s,visibility 0s linear .6s}}
+.com-dica.aberta .dica,.i:focus-visible+.dica{opacity:1;visibility:visible;transform:none;transition-delay:0s}
 `;
 
 /** Monta o arquivo HTML inteiro (estilo, dados e script dentro dele). */
@@ -231,15 +261,16 @@ export function gerarHtmlDoPainel(dados: DadosDoPainelExportado): string {
 <h2>Automação de leads</h2><div class="grade" id="automacao"></div>
 <h2>Conversão da agenda</h2><div class="grade" id="conversoes"></div>
 <div class="duas">
-<div><h2>Funil</h2><div class="caixa"><ul id="funil"></ul></div></div>
-<div><h2>Apresentações agendadas por consultor</h2><div class="caixa"><ul id="consultores"></ul></div></div>
+<div><h2 data-dica="funil">Funil</h2><div class="caixa"><ul id="funil"></ul></div></div>
+<div><h2 data-dica="apresentacoes_por_consultor">Apresentações agendadas por consultor</h2><div class="caixa"><ul id="consultores"></ul></div></div>
 </div>
-<h2>Motivos</h2><div class="caixa" id="motivos"></div>
+<h2 data-dica="motivos_perda">Motivos</h2><div class="caixa" id="motivos"></div>
 <h2>Leads encerrados no período</h2>
 <div class="caixa"><table><thead><tr><th>Data</th><th>Resultado</th><th>Motivo</th><th class="dir">Valor</th><th>Vendedor</th></tr></thead><tbody id="encerrados"></tbody></table></div>
 <p class="aviso">Este arquivo traz só números e códigos: nenhum nome, telefone ou conversa de cliente. Não inclui tempo de resposta nem a situação das janelas de 24h (são dados de agora, não do período) e não compara com o período anterior. Com um vendedor escolhido, os números vêm dos contadores daquele vendedor.</p>
 </main>
 <script type="application/json" id="dados">${jsonSeguro({ ...dados, geradoEm: undefined })}</script>
+<script type="application/json" id="dicas">${jsonSeguro(DICAS_DO_PAINEL)}</script>
 <script>${SCRIPT_DO_PAINEL_EXPORTADO}</script>
 </body>
 </html>
