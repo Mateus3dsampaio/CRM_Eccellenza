@@ -8,7 +8,7 @@ const PASTA = "docs/rodadas/evidencias/telas";
 async function entrar(page: Page) {
   await page.goto("/login");
   await page.getByLabel("Usuário").fill("mateus");
-  await page.getByLabel("Senha").fill("mateus123");
+  await page.getByLabel("Senha", { exact: true }).fill("mateus123");
   await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForURL("/");
 }
