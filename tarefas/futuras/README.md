@@ -21,3 +21,4 @@ Caderno de ideias do Mateus. **Não é pendência e não tem urgência.** Serve 
 | Teste do painel que falha dependendo do horário | [`teste-painel-horario.md`](teste-painel-horario.md) | Registrado em 08/11/2026, sem etapa feita |
 | Avisar a Meta quando o lead do anúncio avança (API de Conversões) | [`conversoes-meta-anuncios.md`](conversoes-meta-anuncios.md) | Registrado em 08/11/2026, sem etapa feita |
 | Tela de login nova: proposta D "Da conversa ao card" (a C3, gráficos "cometa", ficou guardada) | [`tela-de-login-cometas.md`](tela-de-login-cometas.md) | Aprovada e levada ao CRM na tarefa 46 (23/11/2026); falta o Mateus conferir no PC e no iPhone |
+| A recuperação de leads ignora o retorno marcado (a rede de segurança respeita) | [`recuperacao-ignora-retorno-marcado.md`](recuperacao-ignora-retorno-marcado.md) | Registrado em 25/11/2026 (tarefa 48), sem etapa feita |

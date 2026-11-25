@@ -5,14 +5,20 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 ## A. Do Mateus (conta, chave, decisão)
 
-### Instagram (tarefa 47, 25/11/2026, branch `feat/instagram`, nada commitado nem testado com a Meta)
+### Acompanhamento visual da automação (tarefa 48, 25/11/2026, branch `feat/acompanhamento-automacao`, sem push)
+- [ ] Conferir no simulador (Configurações > Recuperação de leads e Automação de leads ligadas): chips, olho, linha em cada card e balão nas colunas IA atendendo e Perdido; conferir que o consultor não vê nada. Prints em `docs/rodadas/prints-automacao-visual/`; relatório em `docs/rodadas/08-acompanhamento-automacao.md`.
+- [ ] Decidir sobre a regra que parece inconsistente: a recuperação ignora o retorno marcado (ver `tarefas/futuras/recuperacao-ignora-retorno-marcado.md`).
+- [ ] Conferir os textos dos chips da coluna Perdido ("arquiva em breve", "depois"), que o protótipo não mostrava.
+- **Nunca testado em produção** nem com volume grande de leads; só mostra, não muda nenhuma regra.
+
+### Instagram (tarefa 47, na `main` desde 25/11/2026; ligado no Railway e na Meta, falta o teste real)
 - [x] Meta: caso de uso Instagram e configuração de login unificado criados no app "CRM Eccellenza"; conta @italineaeccellenza no portfólio e aceita como Testador do Instagram (25/11/2026).
-- [ ] Revisar o código e juntar à `main`; subir no Railway (migração `0015_instagram`).
-- [ ] Railway: criar `INSTAGRAM_ACCOUNT_ID` (17841451828182322), `INSTAGRAM_VERIFY_TOKEN` (texto à escolha) e `INSTAGRAM_TOKEN` (token do usuário do sistema, que nunca expira; **o Mateus cola direto, sem passar por arquivo ou chat**). Usa a `META_APP_SECRET` que já existe.
-- [ ] Meta: cadastrar o webhook `https://crmeccellenza-production.up.railway.app/api/instagram/webhook` com o token acima e assinar o campo `messages` do Instagram; gerar o token (Claude no navegador do Mateus, com ele olhando).
+- [x] Código na `main` (PR #45) e no Railway; deploy ativo (25/11/2026).
+- [x] (feito em 25/11/2026) Railway: criar `INSTAGRAM_ACCOUNT_ID` (17841451828182322), `INSTAGRAM_VERIFY_TOKEN` (texto à escolha) e `INSTAGRAM_TOKEN` (token do usuário do sistema, que nunca expira; **o Mateus cola direto, sem passar por arquivo ou chat**). Usa a `META_APP_SECRET` que já existe.
+- [x] (feito em 25/11/2026: verificado; campos `messages` e `messaging_seen` assinados; assinatura da conta ligada) Meta: cadastrar o webhook `https://crmeccellenza-production.up.railway.app/api/instagram/webhook` com o token acima e assinar o campo `messages` do Instagram; gerar o token (Claude no navegador do Mateus, com ele olhando).
 - [ ] Teste real: mandar mensagem de outra conta para o Instagram da loja e conferir o lead sem telefone no kanban, a resposta do bot e o botão "Unir com WhatsApp".
 - [ ] Confirmar na Meta se o app já publicado exige App Review para `instagram_manage_messages` (auditoria: `docs/publicacao-meta/08-auditoria.md`) e se a tag de atendente humano (resposta até 7 dias) vale para a conta.
-- [ ] Aprovar o texto novo da política de privacidade citando o Instagram (`src/regras/privacidade.ts`: ainda NÃO alterado) e os textos PROVISÓRIOS de `src/regras/canal.ts` ("Instagram não tem modelo/arquivo").
+- [ ] Texto novo da política de privacidade citando o Instagram: o Mateus marcou como aprovado em 25/11/2026, mas **o texto ainda não foi escrito** (propor o trecho exato antes de alterar). Aprovar o texto novo da política de privacidade citando o Instagram (`src/regras/privacidade.ts`: ainda NÃO alterado) e os textos PROVISÓRIOS de `src/regras/canal.ts` ("Instagram não tem modelo/arquivo").
 - [ ] Nas instruções numeradas (outro repositório): frase para pedir o WhatsApp quando o contato vier do Instagram (ver `docs/contrato-do-bot.md`, seção 4).
 
 ### Meta / WhatsApp (começar primeiro: leva dias)

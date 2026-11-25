@@ -23,6 +23,8 @@ import { ETAPAS_QUE_PEDEM_DADOS, resumirReais } from "@/regras/vendas";
 import { ETAPAS_COM_SOMA, acoesDoCard, separarColuna } from "@/regras/acao-card";
 import type { CardKanban } from "@/servicos/consultas";
 import { chamarApi, useAviso, useDados } from "../dados";
+import { BotaoOlho, ChipsDaColuna, COLUNAS_COM_AUTOMACAO, contarCategorias, itensDaAutomacao, LinhaAutomacao, useOlhoDaColuna, usePrevisoes, type PrevisoesDoKanban } from "./automacao";
+import type { CategoriaPrevisao, PrevisaoCard } from "@/regras/previsao-automacao";
 import { COR_ETAPA, juntar } from "../estilos";
 import { AvisoMidias } from "../midias/aviso-midias";
 import { Botao, Carregando, EstadoErro, EstadoVazio, Modal, Popover, classeEntrada } from "../ui";
@@ -63,7 +65,7 @@ function contagem(n: number) {
 type Confirmacao = { titulo: string; texto: string; botao: string; recusar?: string; perigo: boolean; midias?: { ids: string[] } | { etapa: string }; executar: () => Promise<void> } | null;
 
 export function Quadro() {
-  const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[] }>("/api/kanban");
+  const { dados, erro, carregando, recarregar, setDados } = useDados<{ cards: CardKanban[]; consultores: { id: string; nome: string }[]; automacao?: PrevisoesDoKanban }>("/api/kanban");
   const avisar = useAviso();
   const podeExcluir = usePode("excluir_lead");
   const podeRenomear = usePode("configurar");
@@ -71,6 +73,8 @@ export function Quadro() {
   const nomesEtapas = useNomesEtapas();
   const usuario = useUsuario();
   const ehAdmin = usuario.perfil === "admin";
+  // Acompanhamento da automação (tarefa 48): o servidor só manda para o admin; aqui só se converte as datas.
+  const previsoes = usePrevisoes(ehAdmin ? dados?.automacao : undefined);
   const zoomEscolhido = useZoomKanban();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set(RECOLHIDAS_PADRAO));
   const [zoomAuto, setZoomAuto] = useState(1);
@@ -619,6 +623,7 @@ export function Quadro() {
                 recolhida={recolhidas.has(e.codigo)}
                 aoRecolher={(recolher) => alternarRecolhida(e.codigo, recolher)}
                 chegaram={chegaram}
+                previsoes={previsoes}
                 destaque={
                   e.codigo === "apresentacao" ? (
                     <PlacarApresentacao vendedorEscolhido={ehAdmin ? consultor || null : null} prontos={prontosIds.size} soProntos={soProntos} aoAlternarProntos={() => setSoProntos((v) => !v)} />
@@ -767,6 +772,8 @@ function Coluna(props: {
   aoRecolher: (recolher: boolean) => void;
   /** Cards que acabaram de entrar na coluna (comemoração). */
   chegaram: Set<string>;
+  /** Previsão da automação por lead (só admin; null para os outros). */
+  previsoes: Record<string, PrevisaoCard> | null;
   /** Conteúdo extra do cabeçalho (placar da Apresentação). */
   destaque?: ReactNode;
 }) {
@@ -782,9 +789,35 @@ function Coluna(props: {
   const comDivisor = grupos.precisaDeVoce.length > 0 && grupos.aguardando.length > 0;
   const esperando = cards.filter((c) => c.esperandoDesde !== null).length;
   const somaOrcamentos = (ETAPAS_COM_SOMA as string[]).includes(codigo) ? cards.reduce((s, c) => s + (c.valorOrcamento ?? 0), 0) : 0;
-  const cardDe = (c: CardKanban) => (
-    <Card key={c.id} card={c} pendencias={pendencias.get(c.id) ?? []} critico={criticos.has(c.id)} celebrar={props.chegaram.has(c.id)} acoes={props.acoes} selecionando={props.selecionando} selecionado={props.selecionados.has(c.id)} aoSelecionar={props.aoSelecionar} />
-  );
+  // Acompanhamento da automação (tarefa 48, só admin, colunas IA atendendo e Perdido): chips, olho e linha em cada card.
+  const [olhoLigado, alternarOlho] = useOlhoDaColuna(codigo);
+  const [filtroAutomacao, setFiltroAutomacao] = useState<CategoriaPrevisao | null>(null);
+  const previsoes = props.previsoes;
+  const comAutomacao = !!previsoes && COLUNAS_COM_AUTOMACAO.includes(codigo);
+  const itensAutomacao = useMemo(() => (comAutomacao && previsoes ? itensDaAutomacao(previsoes, cards.map((c) => c.id), agora) : null), [comAutomacao, previsoes, cards, agora]);
+  const contagemAutomacao = useMemo(() => (itensAutomacao ? contarCategorias(itensAutomacao) : null), [itensAutomacao]);
+  // O chip escolhido deixa de valer quando já não há card dessa categoria (ex.: o card saiu da coluna).
+  const filtroValido = filtroAutomacao && (contagemAutomacao?.get(filtroAutomacao) ?? 0) > 0 ? filtroAutomacao : null;
+  const passaNoFiltro = (c: CardKanban) => !filtroValido || itensAutomacao?.get(c.id)?.categoria === filtroValido;
+  const cardDe = (c: CardKanban) => {
+    const item = itensAutomacao?.get(c.id);
+    return (
+      <Card
+        key={c.id}
+        card={c}
+        pendencias={pendencias.get(c.id) ?? []}
+        critico={criticos.has(c.id)}
+        celebrar={props.chegaram.has(c.id)}
+        acoes={props.acoes}
+        selecionando={props.selecionando}
+        selecionado={props.selecionados.has(c.id)}
+        aoSelecionar={props.aoSelecionar}
+        automacao={item ? <LinhaAutomacao item={item} agora={agora} visivel={olhoLigado || !!filtroValido} /> : undefined}
+      />
+    );
+  };
+  const precisaDeVoce = grupos.precisaDeVoce.filter(passaNoFiltro);
+  const aguardando = grupos.aguardando.filter(passaNoFiltro);
   const { setNodeRef, isOver } = useDroppable({ id: codigo });
   const limpavel = (ETAPAS_LIMPAVEIS as string[]).includes(codigo);
   const telaGrande = useTelaGrande();
@@ -835,7 +868,7 @@ function Coluna(props: {
       <header className={juntar("px-1 pb-3", ehDestaque && "cabecalho-destaque -mx-3 -mt-3 rounded-t-painel px-4 pt-3")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} />
+            <NomeDaColuna codigo={codigo as CodigoEtapa} nome={nome} podeRenomear={props.podeRenomear} aoRenomear={props.aoRenomear} extra={comAutomacao ? <BotaoOlho ligado={olhoLigado} aoAlternar={alternarOlho} nome={nome} /> : undefined} />
             <p className="flex flex-wrap gap-x-2 text-xs text-texto-fraco">
               <span>
                 {contagem(props.totalSemFiltro)}
@@ -860,6 +893,7 @@ function Coluna(props: {
             <ChevronsLeftRight className="size-3.5" aria-hidden />
           </button>
         </div>
+        {itensAutomacao && contagemAutomacao && <ChipsDaColuna coluna={codigo} contagem={contagemAutomacao} ativo={filtroValido} aoEscolher={setFiltroAutomacao} />}
         {props.destaque}
         <div className={juntar("mt-3 rounded-pilula", ehDestaque ? "barra-destaque h-1.5" : "h-1", COR_ETAPA[codigo])} aria-hidden />
         {limpavel && props.totalSemFiltro > 0 && (
@@ -880,10 +914,10 @@ function Coluna(props: {
           <EstadoVazio titulo="Nenhum lead nesta etapa" />
         ) : (
           <>
-            {comDivisor && <TituloDoGrupo texto="Precisa de você" total={grupos.precisaDeVoce.length} />}
-            {grupos.precisaDeVoce.map(cardDe)}
-            {comDivisor && <TituloDoGrupo texto="Aguardando o cliente" total={grupos.aguardando.length} />}
-            {grupos.aguardando.map(cardDe)}
+            {comDivisor && <TituloDoGrupo texto="Precisa de você" total={precisaDeVoce.length} esmaecido={!!filtroValido && precisaDeVoce.length === 0} />}
+            {precisaDeVoce.map(cardDe)}
+            {comDivisor && <TituloDoGrupo texto="Aguardando o cliente" total={aguardando.length} esmaecido={!!filtroValido && aguardando.length === 0} />}
+            {aguardando.map(cardDe)}
           </>
         )}
       </div>
@@ -892,16 +926,16 @@ function Coluna(props: {
 }
 
 /** Divisor dentro da coluna (tarefa 39). Só aparece quando a coluna tem os dois grupos. */
-function TituloDoGrupo({ texto, total }: { texto: string; total: number }) {
+function TituloDoGrupo({ texto, total, esmaecido = false }: { texto: string; total: number; /** Com um chip da automação escolhido e nenhum card neste grupo. */ esmaecido?: boolean }) {
   return (
-    <h3 className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-texto-fraco">
+    <h3 className={juntar("px-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-texto-fraco", esmaecido && "opacity-35")}>
       {texto} · <span className="tabular-nums">{total}</span>
     </h3>
   );
 }
 
 /** Título da coluna. Para o admin, o lápis ao lado troca o nome ali mesmo (Enter salva, Esc cancela; vazio volta ao nome de fábrica). */
-function NomeDaColuna({ codigo, nome, podeRenomear, aoRenomear }: { codigo: CodigoEtapa; nome: string; podeRenomear: boolean; aoRenomear: (codigo: CodigoEtapa, nome: string) => Promise<void> }) {
+function NomeDaColuna({ codigo, nome, podeRenomear, aoRenomear, extra }: { codigo: CodigoEtapa; nome: string; podeRenomear: boolean; aoRenomear: (codigo: CodigoEtapa, nome: string) => Promise<void>; /** Botão extra ao lado do lápis (o olho da automação, só admin). */ extra?: ReactNode }) {
   const avisar = useAviso();
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(nome);
@@ -944,6 +978,7 @@ function NomeDaColuna({ codigo, nome, podeRenomear, aoRenomear }: { codigo: Codi
             <Pencil className="size-3.5" aria-hidden />
           </button>
         )}
+        {extra}
       </div>
     );
   }
