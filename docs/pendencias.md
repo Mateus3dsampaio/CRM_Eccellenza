@@ -5,6 +5,16 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 ## A. Do Mateus (conta, chave, decisão)
 
+### Instagram (tarefa 47, 25/11/2026, branch `feat/instagram`, nada commitado nem testado com a Meta)
+- [x] Meta: caso de uso Instagram e configuração de login unificado criados no app "CRM Eccellenza"; conta @italineaeccellenza no portfólio e aceita como Testador do Instagram (25/11/2026).
+- [ ] Revisar o código e juntar à `main`; subir no Railway (migração `0015_instagram`).
+- [ ] Railway: criar `INSTAGRAM_ACCOUNT_ID` (17841451828182322), `INSTAGRAM_VERIFY_TOKEN` (texto à escolha) e `INSTAGRAM_TOKEN` (token do usuário do sistema, que nunca expira; **o Mateus cola direto, sem passar por arquivo ou chat**). Usa a `META_APP_SECRET` que já existe.
+- [ ] Meta: cadastrar o webhook `https://crmeccellenza-production.up.railway.app/api/instagram/webhook` com o token acima e assinar o campo `messages` do Instagram; gerar o token (Claude no navegador do Mateus, com ele olhando).
+- [ ] Teste real: mandar mensagem de outra conta para o Instagram da loja e conferir o lead sem telefone no kanban, a resposta do bot e o botão "Unir com WhatsApp".
+- [ ] Confirmar na Meta se o app já publicado exige App Review para `instagram_manage_messages` (auditoria: `docs/publicacao-meta/08-auditoria.md`) e se a tag de atendente humano (resposta até 7 dias) vale para a conta.
+- [ ] Aprovar o texto novo da política de privacidade citando o Instagram (`src/regras/privacidade.ts`: ainda NÃO alterado) e os textos PROVISÓRIOS de `src/regras/canal.ts` ("Instagram não tem modelo/arquivo").
+- [ ] Nas instruções numeradas (outro repositório): frase para pedir o WhatsApp quando o contato vier do Instagram (ver `docs/contrato-do-bot.md`, seção 4).
+
 ### Meta / WhatsApp (começar primeiro: leva dias)
 - [x] Verificar a empresa na Meta Business (CNPJ e documentos). Concluída (04/11/2026, "Italínea Eccellenza").
 - [x] Criar o app da Meta com o produto WhatsApp. App "CRM Eccellenza" criado em 04/11/2026 (caso de uso só WhatsApp; Instagram e Messenger ficaram de fora de propósito).

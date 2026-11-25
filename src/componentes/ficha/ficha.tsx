@@ -15,6 +15,8 @@ import { useDefinirTituloTela } from "../titulo-tela";
 import { usePode } from "../usuario";
 import { AvisoMidias } from "../midias/aviso-midias";
 import { SeletorEtapa, useAcoesDoLead } from "./acoes-lead";
+import { SeloCanal } from "../icone-canal";
+import { UnirInstagram } from "./unir-instagram";
 import { ConversaConsultor } from "./conversa";
 import { BlocoCliente, BlocoGestao, BlocoMedidas, BlocoNotas, Painel } from "./dados-lead";
 import { BlocoProximoPasso, IconesDoPasso, useItensDoPasso } from "./proximo-passo";
@@ -123,7 +125,9 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
           {ficha.aguardandoHumano && <Sino />}
         </h1>
         <p className="flex items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-texto-suave">
-          <span>{ficha.telefone}</span>
+          <SeloCanal canais={ficha.canais} />
+          <span>{ficha.semTelefone && ficha.igUsuario ? `@${ficha.igUsuario} · sem telefone` : ficha.telefone}</span>
+          {ficha.semTelefone && <UnirInstagram leadId={ficha.id} aoUnir={(finalId) => router.replace(`/lead/${finalId}`)} />}
           {!telaGrande && (
             <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
               <span className={juntar("size-2 rounded-full", COR_ETAPA[ficha.etapa])} aria-hidden />
@@ -140,7 +144,7 @@ function FichaCarregada({ ficha, id, recarregar }: { ficha: FichaLead; id: strin
       )}
       {telaGrande && <AcoesFicha leadId={ficha.id} arquivado={ficha.arquivado} podeExcluir={podeExcluir} acoes={acoesRef} />}
     </>,
-    `${ficha.nomeExibicao}|${ficha.telefone}|${ficha.etapa}|${ficha.aguardandoHumano}|${ficha.arquivado}|${nomesEtapas.nome(ficha.etapa)}|${podeExcluir}|${telaGrande}|${telaLarga}`,
+    `${ficha.nomeExibicao}|${ficha.telefone}|${ficha.igUsuario}|${ficha.canais.join("+")}|${ficha.etapa}|${ficha.aguardandoHumano}|${ficha.arquivado}|${nomesEtapas.nome(ficha.etapa)}|${podeExcluir}|${telaGrande}|${telaLarga}`,
   );
 
   async function acao(corpo: object, sucesso: string, depois?: () => void) {

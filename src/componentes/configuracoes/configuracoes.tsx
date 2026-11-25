@@ -26,6 +26,7 @@ import { ProvedorBarraSalvar, useBarraSalvar, useBlocoSalvavel } from "./barra-s
 import { UsoDoBot } from "./uso-bot";
 import { VendasConfig } from "./vendas";
 import { WhatsappConfig } from "./whatsapp";
+import { InstagramConfig } from "./instagram";
 
 interface Dados {
   equipe: Membro[];
@@ -142,6 +143,7 @@ function ConfiguracoesComBarra() {
           <ChavesApi />
           <UsoDoBot />
           <WhatsappConfig />
+          <InstagramConfig />
         </div>
       ) : aba === "temas" ? (
         <Temas />

@@ -13,7 +13,7 @@ import { alterarEtiqueta, excluirLeads } from "./leads";
 import { enviarMensagemLoja } from "./mensagens";
 import { registrarLogWebhook } from "./whatsapp";
 
-const fim = (telefone: string) => telefone.replace(/\D/g, "").slice(-4);
+const fim = (telefone: string | null) => (telefone ?? "").replace(/\D/g, "").slice(-4);
 
 /** Exclusão pedida por uma pessoa (cliente ou admin): apaga tudo e guarda só que foi feito e quando (sem o conteúdo). */
 export async function excluirComRegistro(ids: string[], quem: string): Promise<number> {

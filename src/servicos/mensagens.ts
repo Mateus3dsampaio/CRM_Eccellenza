@@ -12,7 +12,10 @@ import { limparNomeParaCliente, textoComNome } from "@/regras/nome-cliente";
 import { simularSemWhatsapp } from "@/regras/telefone";
 import { modoSimulador } from "@/lib/modo";
 import { whatsappRealAtivo } from "@/lib/whatsapp-config";
+import { instagramRealAtivo } from "@/lib/instagram-config";
+import { canalDeEnvio, SEM_ARQUIVO_NO_INSTAGRAM, SEM_MODELO_NO_INSTAGRAM, temOsDoisCanais, type Canal } from "@/regras/canal";
 import { enviarPelaMeta } from "./whatsapp";
+import { enviarPeloInstagram } from "./instagram";
 import { registrarAlerta } from "./alertas";
 import { registrarAlteracao } from "./historico";
 import { agendarChecagemDaEspera } from "./espera-cliente";
@@ -26,14 +29,14 @@ export type StatusMensagem = "enviado" | "entregue" | "lido" | "falhou";
 const ATRASO_ENTREGA_MS = 3000;
 
 export function statusEfetivo(
-  m: { autor: string; status: string; enviadaEm: Date; lidaEm: Date | null },
+  m: { autor: string; status: string; enviadaEm: Date; lidaEm: Date | null; canal?: string },
   quando: Date,
 ): StatusMensagem | null {
   if (m.autor === "cliente") return null;
   if (m.status === "falhou") return "falhou";
   if (m.lidaEm) return "lido";
   // WhatsApp real: o status é o que a Meta contou (webhook); só o simulado "entrega" sozinho depois de uns segundos.
-  if (whatsappRealAtivo()) return m.status === "entregue" ? "entregue" : "enviado";
+  if (m.canal === "instagram" ? instagramRealAtivo() : whatsappRealAtivo()) return m.status === "entregue" ? "entregue" : "enviado";
   if (quando.getTime() - m.enviadaEm.getTime() >= ATRASO_ENTREGA_MS) return "entregue";
   return "enviado";
 }
@@ -54,19 +57,19 @@ export async function marcarLidas(leadId: string): Promise<void> {
 }
 
 /** Mensagem que chega do cliente (simulada). Aplica RET-02 e reabre arquivados. */
-export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string; nome?: string | null; bytes?: number }, idExterno?: string) {
+export async function registrarMensagemCliente(leadId: string, texto: string | null, midia?: { arquivo: string; tipo: string; nome?: string | null; bytes?: number }, idExterno?: string, canal: Canal = "whatsapp") {
   const quando = await agora();
   // Contato bloqueado (tarefa 44): a mensagem só fica guardada na conversa. Não tira do arquivo, não abre espera, não avisa
   // ninguém, não mexe no card e já entra como vista pelo bot (se um dia for desbloqueado, o bot não responde a ela).
   const bloqueado = await db.lead.findUnique({ where: { id: leadId }, select: { bloqueadoEm: true } });
   if (bloqueado?.bloqueadoEm) {
     return db.mensagem.create({
-      data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno, processadaPeloBot: true },
+      data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno, processadaPeloBot: true, canal },
     });
   }
   await marcarLidas(leadId);
   const mensagem = await db.mensagem.create({
-    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno },
+    data: { leadId, autor: "cliente", texto, midiaArquivo: midia?.arquivo, midiaTipo: midia?.tipo, midiaNome: midia?.nome ?? null, midiaBytes: midia?.bytes ?? null, enviadaEm: quando, status: "lido", idExterno, canal },
   });
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Com consultor no comando (ou bot pausado), o cliente fica aguardando humano.
@@ -136,6 +139,14 @@ export async function enviarMensagemLoja(params: {
 }) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: params.leadId } });
   const quando = await agora();
+  // Canal da resposta (tarefa 47). Modelo da Meta só existe no WhatsApp. Lead com os dois canais responde por onde o cliente escreveu por último.
+  const doisCanais = temOsDoisCanais(lead);
+  const ultimaDoCliente = doisCanais ? await db.mensagem.findFirst({ where: { leadId: lead.id, autor: "cliente" }, orderBy: { enviadaEm: "desc" }, select: { canal: true } }) : null;
+  const canal: Canal = params.modelo ? "whatsapp" : canalDeEnvio(lead, ultimaDoCliente?.canal);
+  // A janela de 24h é de cada canal: com os dois ligados, vale a última mensagem do cliente NESTE canal.
+  const ultimaNoCanal = doisCanais ? (await db.mensagem.findFirst({ where: { leadId: lead.id, autor: "cliente", canal }, orderBy: { enviadaEm: "desc" }, select: { enviadaEm: true } }))?.enviadaEm ?? null : lead.ultimaMsgClienteEm;
+  if (canal === "whatsapp" && !lead.telefone) throw new Error(params.modelo ? SEM_MODELO_NO_INSTAGRAM : "Este contato não tem telefone: só dá para responder pelo Instagram.");
+  if (canal === "instagram" && params.anexo) throw new Error(SEM_ARQUIVO_NO_INSTAGRAM);
   let texto = params.texto?.trim() ?? "";
   let parametros: Record<string, string> | undefined;
   if (params.modelo) {
@@ -153,8 +164,8 @@ export async function enviarMensagemLoja(params: {
       parametros = variaveisDoHorario(compromisso.inicio);
     }
     texto = parametros ? preencherModelo(modelo.texto, parametros) : modelo.texto;
-  } else if (!janelaAberta(lead.ultimaMsgClienteEm, quando)) {
-    throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
+  } else if (!janelaAberta(ultimaNoCanal, quando)) {
+    throw new Error(canal === "instagram" ? "Fora da janela de 24h do Instagram: só dá para responder depois que o cliente escrever de novo." : "Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
   if (!texto && !params.anexo) throw new Error("Mensagem vazia.");
   // O banco guarda o texto SEM o nome; o nome só entra no que vai para a Meta (arquivo sem legenda continua sem legenda).
@@ -171,14 +182,22 @@ export async function enviarMensagemLoja(params: {
   let idExterno: string | undefined;
   let mensagem: Awaited<ReturnType<typeof db.mensagem.create>>;
   try {
-    if (whatsappRealAtivo()) {
+    if (canal === "instagram") {
+      if (instagramRealAtivo()) {
+        const envio = await enviarPeloInstagram({ para: lead.igsid!, texto: textoParaMeta });
+        falhou = !envio.ok;
+        idExterno = envio.id;
+      } else {
+        falhou = !modoSimulador();
+      }
+    } else if (whatsappRealAtivo()) {
       // Envia para o número como a Meta o conhece (wa_id), que no Brasil pode ser sem o 9.
-      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone, texto: textoParaMeta, modelo: params.modelo, parametros, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
+      const envio = await enviarPelaMeta({ para: lead.waId ?? lead.telefone!, texto: textoParaMeta, modelo: params.modelo, parametros, anexo: params.anexo && nomeAnexo ? { ...params.anexo, nome: nomeAnexo } : undefined });
       falhou = !envio.ok;
       idExterno = envio.id;
       if (envio.ok && envio.waId && envio.waId !== lead.waId) await db.lead.update({ where: { id: lead.id }, data: { waId: envio.waId } });
     } else {
-      falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone);
+      falhou = !modoSimulador() || simularSemWhatsapp(lead.telefone!);
     }
     mensagem = await db.mensagem.create({
       data: {
@@ -193,6 +212,7 @@ export async function enviarMensagemLoja(params: {
         midiaNome: nomeAnexo ?? null,
         midiaBytes: params.anexo?.dados.length ?? null,
         status: falhou ? "falhou" : "enviado",
+        canal,
         idExterno,
         enviadaEm: quando,
       },

@@ -62,7 +62,7 @@ async function executar(): Promise<ResultadoRotinas> {
     const apagados = await excluirLeads(fechadosVencidos);
     if (apagados) {
       // Mesmo registro da exclusão pedida por pessoa: só a ação, quem e os 4 últimos dígitos.
-      await db.pedidoLgpd.createMany({ data: telefones.map((l) => ({ acao: "exclusao", quem: `sistema (${DIAS_FECHADO_ATE_EXCLUIR} dias após fechar)`, telefoneFim: l.telefone.replace(/\D/g, "").slice(-4) })) });
+      await db.pedidoLgpd.createMany({ data: telefones.map((l) => ({ acao: "exclusao", quem: `sistema (${DIAS_FECHADO_ATE_EXCLUIR} dias após fechar)`, telefoneFim: (l.telefone ?? "").replace(/\D/g, "").slice(-4) })) });
       resultado.excluidos += apagados;
       resultado.fechadosExcluidos = apagados;
     }
