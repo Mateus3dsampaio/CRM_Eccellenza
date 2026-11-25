@@ -20,7 +20,8 @@ export async function enviarRetornosAutomaticos(): Promise<number> {
   const quando = await agora();
   const regras = await regrasDeRetorno();
   const leads = await db.lead.findMany({
-    where: { arquivadoEm: null, retornoModeloEm: { not: null }, proximoContatoEm: { not: null, lte: quando } },
+    // Só WhatsApp: o Instagram não tem modelo de mensagem (tarefa 47). Contato do Instagram sem telefone fica de fora.
+    where: { arquivadoEm: null, telefone: { not: null }, retornoModeloEm: { not: null }, proximoContatoEm: { not: null, lte: quando } },
     include: { consultor: { select: { id: true, status: true, ativo: true } } },
   });
   let enviados = 0;

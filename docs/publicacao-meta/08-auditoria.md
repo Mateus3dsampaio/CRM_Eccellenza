@@ -9,7 +9,7 @@
 Sem Facebook Login, OAuth, Instagram nem Pages API no código.
 
 ## Advanced Access / App Review
-Pela documentação da Meta, quem usa a API só para o próprio negócio fica no acesso padrão e não precisa de Advanced Access nem de revisão. Condição: a conta do WhatsApp ser da mesma empresa do app (etapa 1). Instagram: reavaliar depois.
+Pela documentação da Meta, quem usa a API só para o próprio negócio fica no acesso padrão e não precisa de Advanced Access nem de revisão. Condição: a conta do WhatsApp ser da mesma empresa do app (etapa 1). Instagram: reavaliar depois (tarefa 47, 25/11/2026: o app usa login unificado; permissões `instagram_basic` e `instagram_manage_messages` em acesso padrão; falta confirmar com a Meta se o app já publicado exige App Review).
 
 ## Segurança (código)
 Correto: assinatura HMAC SHA-256 sobre o corpo exato com comparação em tempo constante; token de verificação em tempo constante; evento gravado antes do 200 e processado depois; proteção contra mensagem duplicada; limite de 1 MB no corpo; token só em variável de ambiente e fora de log; download de mídia só de hosts da Meta, em https, sem redirecionamento; cabeçalhos de segurança.

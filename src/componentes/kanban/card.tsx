@@ -20,6 +20,7 @@ import { BolinhaNaoLidas } from "./bolinha";
 import { RelogioJanela } from "./relogio-janela";
 import { useGaveta } from "../ficha/gaveta";
 import { useUsuario } from "../usuario";
+import { SeloCanal } from "../icone-canal";
 
 export interface AcoesCard {
   mover: (id: string, etapa: string) => void;
@@ -166,6 +167,7 @@ function ConteudoCard({
         <p className="line-clamp-2 min-w-0 flex-1 break-words font-semibold leading-snug text-texto" title={card.nome}>
           {nome ?? card.nome}
         </p>
+        <SeloCanal canais={card.canais} className="inline-flex shrink-0 items-center text-[#c13584]" />
         {direita ?? (card.naoLidas > 0 ? <BolinhaNaoLidas total={card.naoLidas} /> : <span className="shrink-0 text-[11px] tabular-nums text-texto-fraco">{card.horario}</span>)}
       </div>
       <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />

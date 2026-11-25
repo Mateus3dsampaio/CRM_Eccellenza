@@ -31,7 +31,10 @@ model Usuario {
 
 model Lead {
   id         String  @id @default(cuid())
-  telefone   String  @unique // E.164, ex.: +5588900000001
+  telefone   String? @unique // E.164, ex.: +5588900000001. Vazio no lead que nasceu no Instagram (a Meta não manda telefone) até alguém unir com o lead do WhatsApp (tarefa 47)
+  canal      String  @default("whatsapp") // canal em que o lead nasceu: whatsapp | instagram
+  igsid      String? @unique // id do cliente no Instagram (IGSID): é para ele que a loja responde
+  igUsuario  String? // @usuário do Instagram, só para mostrar
   nomePerfil String? // nome que aparece no perfil do WhatsApp
   nome       String?
   avatarCor  Int     @default(0)
@@ -143,6 +146,7 @@ model Mensagem {
   midiaNome         String? // nome original do arquivo (PDF), só para mostrar e baixar
   midiaBytes        Int? // tamanho do arquivo guardado (para avisar antes de apagar e medir o espaço)
   modelo            String? // código do modelo aprovado usado (MSG-02)
+  canal             String    @default("whatsapp") // whatsapp | instagram: por onde a mensagem entrou ou saiu
   status            String    @default("enviado") // enviado | entregue | lido | falhou (só para mensagens da loja)
   enviadaEm         DateTime
   entregueEm        DateTime?

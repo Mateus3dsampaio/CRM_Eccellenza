@@ -223,6 +223,8 @@ async function aplicarMensagem(m: MensagemRecebida) {
 
 /** Lê e aplica um payload da Meta. Lança em erro inesperado (quem chama decide se tenta de novo). */
 async function processarCorpo(payload: unknown): Promise<void> {
+  // Instagram (tarefa 47) chega na mesma caixa de entrada; o corpo diz `object: "instagram"`.
+  if ((payload as { object?: unknown } | null)?.object === "instagram") return (await import("./instagram")).processarCorpoInstagram(payload);
   const eventos = extrairEventos(payload);
   let adiados = 0;
   for (const s of eventos.statuses) {

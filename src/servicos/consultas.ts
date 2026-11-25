@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { Canal } from "@/regras/canal";
 import { lerLista } from "@/lib/json";
 import { agora } from "@/lib/relogio";
 import { esperaDoLead, ordenarParaColuna } from "@/regras/espera";
@@ -123,6 +124,9 @@ export async function cardsDoKanban() {
       id: l.id,
       nome,
       telefone: formatarTelefone(l.telefone),
+      semTelefone: !l.telefone,
+      igUsuario: l.igUsuario,
+      canais: [...(l.telefone ? ["whatsapp"] : []), ...(l.igsid ? ["instagram"] : [])] as Canal[],
       avatarCor: l.avatarCor,
       etapa: l.etapa,
       ordem: l.ordem,
@@ -164,7 +168,7 @@ export async function cardsDoKanban() {
       // Início do próximo compromisso: a faixa do card fica azul quando é hoje (regras/acao-card.ts).
       visitaEm: visita?.inicio.toISOString() ?? null,
       // Texto para a busca (nome, telefone e dados da ficha).
-      busca: [nome, l.telefone, formatarTelefone(l.telefone), l.cidade, l.endereco, ambientes.join(" "), lerLista(l.exigencias).join(" "), l.situacaoImovel, l.prazo, l.investimento, lerLista(l.pedidosTecnicos).join(" "), l.observacoes, l.resumo, l.notas.map((n) => n.texto).join(" ")]
+      busca: [nome, l.telefone, formatarTelefone(l.telefone), l.igUsuario, l.cidade, l.endereco, ambientes.join(" "), lerLista(l.exigencias).join(" "), l.situacaoImovel, l.prazo, l.investimento, lerLista(l.pedidosTecnicos).join(" "), l.observacoes, l.resumo, l.notas.map((n) => n.texto).join(" ")]
         .filter(Boolean)
         .join(" ")
         .toLowerCase(),
@@ -197,6 +201,9 @@ export async function fichaDoLead(id: string) {
     nomePerfil: lead.nomePerfil,
     nomeExibicao: nomeExibicao(lead),
     telefone: formatarTelefone(lead.telefone),
+    semTelefone: !lead.telefone,
+    igUsuario: lead.igUsuario,
+    canais: [...(lead.telefone ? ["whatsapp"] : []), ...(lead.igsid ? ["instagram"] : [])] as Canal[],
     avatarCor: lead.avatarCor,
     cidade: lead.cidade,
     endereco: lead.endereco,

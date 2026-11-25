@@ -10,6 +10,7 @@ import type { FichaLead } from "@/servicos/consultas";
 import { chamarApi, useDados } from "../dados";
 import { Avatar, Botao, Carregando, EstadoErro, Sino } from "../ui";
 import { MenuAgendar, SeletorEtapa, useAcoesDoLead } from "./acoes-lead";
+import { SeloCanal } from "../icone-canal";
 import { ConversaConsultor } from "./conversa";
 import { CamposDoCliente, linhaDoCliente } from "./dados-lead";
 import { PilulasAgora, useItensDoPasso } from "./proximo-passo";
@@ -148,7 +149,8 @@ function GavetaCarregada({ ficha, recarregar, aoFechar }: { ficha: FichaLead; re
             {ficha.aguardandoHumano && <Sino />}
           </h2>
           <p className="flex flex-wrap items-center gap-x-3 text-xs text-texto-suave">
-            <span className="max-sm:whitespace-nowrap">{ficha.telefone}</span>
+            <SeloCanal canais={ficha.canais} />
+            <span className="max-sm:whitespace-nowrap">{ficha.semTelefone && ficha.igUsuario ? `@${ficha.igUsuario} · sem telefone` : ficha.telefone}</span>
             {ficha.arquivado && <span className="font-medium text-aviso">Arquivado</span>}
           </p>
         </div>

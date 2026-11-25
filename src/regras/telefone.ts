@@ -18,7 +18,11 @@ export function normalizarTelefone(entrada: string): string | null {
   return `+${completo}`;
 }
 
-export function formatarTelefone(e164: string): string {
+/** Lead do Instagram ainda não tem telefone (vem vazio): mostra "Sem telefone". */
+export const SEM_TELEFONE = "Sem telefone";
+
+export function formatarTelefone(e164: string | null | undefined): string {
+  if (!e164) return SEM_TELEFONE;
   const d = e164.replace(/\D/g, "");
   if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
     const ddd = d.slice(2, 4);
@@ -38,8 +42,8 @@ export function simularSemWhatsapp(e164: string): boolean {
 }
 
 /** Nome que aparece para o lead: o nome corrigido, senão o do perfil do WhatsApp, senão o telefone. */
-export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | null; telefone: string }): string {
-  return lead.nome || lead.nomePerfil || formatarTelefone(lead.telefone);
+export function nomeExibicao(lead: { nome: string | null; nomePerfil: string | null; telefone: string | null; igUsuario?: string | null }): string {
+  return lead.nome || lead.nomePerfil || (!lead.telefone && lead.igUsuario ? `@${lead.igUsuario}` : formatarTelefone(lead.telefone));
 }
 
 /**

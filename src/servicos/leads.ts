@@ -51,6 +51,82 @@ export async function obterOuCriarLead(telefone: string, nomePerfil?: string | n
   return lead;
 }
 
+/** Lead que nasceu no Instagram (tarefa 47): achado pelo IGSID; sem telefone até alguém unir com o lead do WhatsApp. */
+export async function obterOuCriarLeadInstagram(igsid: string, nomePerfil?: string | null, usuario?: string | null) {
+  const existente = await db.lead.findUnique({ where: { igsid } });
+  if (existente) {
+    const dados: { nomePerfil?: string; igUsuario?: string } = {};
+    if (nomePerfil && !existente.nomePerfil) dados.nomePerfil = nomePerfil;
+    if (usuario && usuario !== existente.igUsuario) dados.igUsuario = usuario;
+    return Object.keys(dados).length ? db.lead.update({ where: { id: existente.id }, data: dados }) : existente;
+  }
+  const quando = await agora();
+  const lead = await db.lead.create({
+    data: {
+      telefone: null,
+      canal: "instagram",
+      igsid,
+      igUsuario: usuario ?? null,
+      nomePerfil: nomePerfil ?? null,
+      avatarCor: Math.floor(Math.random() * 6),
+      criadoEm: quando,
+      ordem: -quando.getTime(),
+      conversaApi: { create: {} },
+    },
+  });
+  await registrarUmaVez(lead.id, "lead_novo");
+  await registrarUmaVez(lead.id, "etapa_novo");
+  await registrarAlteracao(lead.id, "sistema", "Lead criado (Instagram)");
+  await db.mudancaEtapa.create({ data: { leadId: lead.id, de: null, para: lead.etapa, autor: "sistema", criadoEm: quando } });
+  await marcarMudanca();
+  return lead;
+}
+
+/**
+ * Une o lead do Instagram (sem telefone) com o lead do WhatsApp do mesmo cliente (tarefa 47): mensagens, notas, medidas, visitas e
+ * histórico passam para o lead do WhatsApp, que guarda o IGSID e o @usuário. O lead do Instagram deixa de existir.
+ * A conversa e o card que ficam são os do WhatsApp (etapa, consultor e ficha dele valem).
+ */
+export async function unirLeadInstagramComWhatsapp(leadInstagramId: string, leadWhatsappId: string, autor: string) {
+  if (leadInstagramId === leadWhatsappId) throw new ErroHttp(400, "Escolha dois leads diferentes.");
+  const ig = await db.lead.findUnique({ where: { id: leadInstagramId } });
+  const wa = await db.lead.findUnique({ where: { id: leadWhatsappId } });
+  if (!ig || !wa) throw new ErroHttp(404, "Lead não encontrado.");
+  if (!ig.igsid || ig.telefone) throw new ErroHttp(400, "O primeiro lead precisa ser um contato do Instagram sem telefone.");
+  if (!wa.telefone || wa.igsid) throw new ErroHttp(400, "O segundo lead precisa ser um contato do WhatsApp que ainda não tem Instagram ligado.");
+  await db.$transaction(async (tx) => {
+    // O IGSID é único: sai do lead antigo antes de entrar no novo.
+    await tx.lead.update({ where: { id: ig.id }, data: { igsid: null } });
+    await tx.lead.update({
+      where: { id: wa.id },
+      data: {
+        igsid: ig.igsid,
+        igUsuario: ig.igUsuario,
+        nomePerfil: wa.nomePerfil ?? ig.nomePerfil,
+        // O que o bot já descobriu no Instagram não se perde: só entra onde o lead do WhatsApp está vazio.
+        nome: wa.nome ?? ig.nome,
+        cidade: wa.cidade ?? ig.cidade,
+        endereco: wa.endereco ?? ig.endereco,
+        observacoes: [wa.observacoes, ig.observacoes].filter(Boolean).join("\n") || null,
+        // Conta como mensagem do cliente a mais recente das duas conversas.
+        ultimaMsgClienteEm: [wa.ultimaMsgClienteEm, ig.ultimaMsgClienteEm].filter((d): d is Date => !!d).sort((a, b) => b.getTime() - a.getTime())[0] ?? null,
+        naoLidas: wa.naoLidas + ig.naoLidas,
+      },
+    });
+    await tx.mensagem.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.nota.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.medida.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.visita.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.alteracao.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.alerta.updateMany({ where: { leadId: ig.id }, data: { leadId: wa.id } });
+    await tx.mudancaEtapa.deleteMany({ where: { leadId: ig.id } }); // a trajetória do card é a do lead do WhatsApp
+    await tx.lead.delete({ where: { id: ig.id } }); // a conversa da API sai junto (cascata)
+  });
+  await registrarAlteracao(wa.id, autor, `Uniu com o contato do Instagram${ig.igUsuario ? ` @${ig.igUsuario}` : ""}`);
+  await marcarMudanca();
+  return wa.id;
+}
+
 export interface OpcoesMover {
   guardarAnterior?: boolean;
   /** Dados de venda informados agora (data do retorno, valores, motivo da perda). */
@@ -366,7 +442,7 @@ export async function excluirLeads(ids: string[]): Promise<number> {
     await db.alerta.deleteMany({ where: { leadId: id } });
     // Eventos da Meta ainda não processados trazem o telefone e o texto do cliente: saem também.
     if (dono) {
-      const numeros = [...variantesTelefone(dono.telefone).map((t) => t.replace(/\D/g, "")), ...(dono.waId ? [dono.waId] : [])];
+      const numeros = [...(dono.telefone ? variantesTelefone(dono.telefone) : []).map((t) => t.replace(/\D/g, "")), ...(dono.waId ? [dono.waId] : [])];
       await db.eventoWebhook.deleteMany({ where: { OR: numeros.map((n) => ({ corpo: { contains: n } })) } });
     }
     total += r.count;

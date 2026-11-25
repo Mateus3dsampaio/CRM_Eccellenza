@@ -5,10 +5,11 @@ import { tipoCanonico } from "@/regras/midia";
 import { agora } from "@/lib/relogio";
 import { marcarMudanca } from "@/lib/versao";
 import { janelaAberta } from "@/regras/janela24h";
+import { canalDeEnvio, SEM_ARQUIVO_NO_INSTAGRAM, SEM_MODELO_NO_INSTAGRAM, temOsDoisCanais } from "@/regras/canal";
 import { nomeParaCliente } from "@/regras/nome-cliente";
 import { normalizarTelefone } from "@/regras/telefone";
 import { registrarAlteracao } from "./historico";
-import { obterOuCriarLead } from "./leads";
+import { obterOuCriarLead, obterOuCriarLeadInstagram } from "./leads";
 import { enviarMensagemLoja, registrarMensagemCliente } from "./mensagens";
 import { liberarPedidoParar, registrarPedidoParar } from "./lgpd";
 import { pediuParaParar, recusouPeloBotao } from "@/regras/optout";
@@ -18,7 +19,10 @@ export class ErroConversa extends Error {}
 
 /** Chegada de mensagem do cliente (simulada): grava, aplica regras e chama o bot. */
 export async function receberMensagemCliente(params: {
-  telefone: string;
+  /** Telefone do cliente (WhatsApp). Não vai quando a mensagem veio do Instagram. */
+  telefone?: string;
+  /** Mensagem do Instagram (tarefa 47): o cliente é achado pelo IGSID e pode não ter telefone. */
+  instagram?: { igsid: string; usuario?: string | null };
   nomePerfil?: string | null;
   texto?: string | null;
   /** Imagem, vídeo ou PDF que o cliente mandou. */
@@ -30,8 +34,8 @@ export async function receberMensagemCliente(params: {
   /** A mensagem veio do toque num botão de resposta rápida (modelo com botões). */
   botao?: boolean;
 }) {
-  const telefone = normalizarTelefone(params.telefone);
-  if (!telefone) throw new ErroConversa("Telefone inválido.");
+  const telefone = params.instagram ? null : normalizarTelefone(params.telefone ?? "");
+  if (!params.instagram && !telefone) throw new ErroConversa("Telefone inválido.");
   const texto = params.texto?.trim().slice(0, 4000) || null;
   if (!texto && !params.midia) throw new ErroConversa("Mensagem vazia.");
 
@@ -46,8 +50,10 @@ export async function receberMensagemCliente(params: {
   }
   let lead: Awaited<ReturnType<typeof obterOuCriarLead>>;
   try {
-    lead = await obterOuCriarLead(telefone, params.nomePerfil?.trim() || null, params.waId ?? null);
-    await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined);
+    lead = params.instagram
+      ? await obterOuCriarLeadInstagram(params.instagram.igsid, params.nomePerfil?.trim() || null, params.instagram.usuario ?? null)
+      : await obterOuCriarLead(telefone!, params.nomePerfil?.trim() || null, params.waId ?? null);
+    await registrarMensagemCliente(lead.id, texto, midia, params.idExterno ?? undefined, params.instagram ? "instagram" : "whatsapp");
   } catch (erro) {
     // Não deixa o arquivo solto no disco sem mensagem (nem a exclusão do cliente nem a limpeza de 180 dias chegariam nele).
     if (midia) await apagarMidia(midia.arquivo).catch(() => undefined);
@@ -75,6 +81,8 @@ async function nomeDoVendedor(usuario: { id?: string; nome: string }): Promise<s
 /** Consultor manda imagem, vídeo ou PDF (com legenda opcional). Só dentro da janela de 24h. Responder já assume a conversa. */
 export async function responderComoConsultorComArquivo(leadId: string, usuario: { id?: string; nome: string }, anexo: { dados: Buffer; tipo: string; nome: string }, legenda?: string) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
+  // Confere antes de assumir a conversa: envio recusado não pausa o bot.
+  if (!temOsDoisCanais(lead) && canalDeEnvio(lead) === "instagram") throw new Error(SEM_ARQUIVO_NO_INSTAGRAM);
   if (!janelaAberta(lead.ultimaMsgClienteEm, await agora())) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado. Arquivos só dentro da janela.");
   }
@@ -105,6 +113,7 @@ export async function marcarConversaVista(leadId: string) {
 export async function responderComoConsultor(leadId: string, usuario: { id?: string; nome: string }, texto?: string, modelo?: string) {
   const lead = await db.lead.findUniqueOrThrow({ where: { id: leadId } });
   // Confere a regra das 24h antes de assumir a conversa: envio recusado não pausa o bot.
+  if (modelo && !lead.telefone) throw new Error(SEM_MODELO_NO_INSTAGRAM);
   if (!modelo && !janelaAberta(lead.ultimaMsgClienteEm, await agora())) {
     throw new Error("Fora da janela de 24h: só é possível enviar um modelo aprovado.");
   }
