@@ -131,10 +131,13 @@ function ConteudoCard({
   aoMarcarApresentacao,
   aoRemoverEtiqueta,
   menu,
+  automacao,
 }: {
   card: CardKanban;
   acoes: AcaoCard[];
   critico?: boolean;
+  /** Linha do acompanhamento da automação (só admin, tarefa 48): logo abaixo da faixa de ação. */
+  automacao?: ReactNode;
   /** O nome como link ou botão (o card inteiro também abre a ficha ao clicar). */
   nome?: ReactNode;
   /** Troca a hora/bolinha do topo (ex.: a marca de seleção). */
@@ -171,6 +174,7 @@ function ConteudoCard({
         {direita ?? (card.naoLidas > 0 ? <BolinhaNaoLidas total={card.naoLidas} /> : <span className="shrink-0 text-[11px] tabular-nums text-texto-fraco">{card.horario}</span>)}
       </div>
       <FaixaDeAcao card={card} acoes={acoes} critico={critico} aoDecidir={aoDecidir} />
+      {automacao}
       {card.pronto && aoMarcarApresentacao && (
         <div className="px-3 pt-2">
           <button
@@ -258,8 +262,11 @@ export function Card({
   aoSelecionar,
   critico = false,
   celebrar = false,
+  automacao,
 }: {
   card: CardKanban;
+  /** Linha do acompanhamento da automação (só admin, colunas IA atendendo e Perdido). */
+  automacao?: ReactNode;
   /** Pendências do lead, da mais grave à menos grave (regras/acao-card.ts); a primeira vira a faixa. */
   pendencias: AcaoCard[];
   acoes: AcoesCard;
@@ -370,6 +377,7 @@ export function Card({
         card={card}
         acoes={pendencias}
         critico={critico}
+        automacao={automacao}
         nome={
           selecionando ? (
             <button type="button" onClick={() => aoSelecionar(card.id)} aria-pressed={selecionado} className="rounded-controle text-left">

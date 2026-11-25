@@ -5,6 +5,12 @@ Lista única do que falta para o CRM entrar no ar. Marque `[x]` ao concluir e an
 
 ## A. Do Mateus (conta, chave, decisão)
 
+### Acompanhamento visual da automação (tarefa 48, 25/11/2026, branch `feat/acompanhamento-automacao`, sem push)
+- [ ] Conferir no simulador (Configurações > Recuperação de leads e Automação de leads ligadas): chips, olho, linha em cada card e balão nas colunas IA atendendo e Perdido; conferir que o consultor não vê nada. Prints em `docs/rodadas/prints-automacao-visual/`; relatório em `docs/rodadas/08-acompanhamento-automacao.md`.
+- [ ] Decidir sobre a regra que parece inconsistente: a recuperação ignora o retorno marcado (ver `tarefas/futuras/recuperacao-ignora-retorno-marcado.md`).
+- [ ] Conferir os textos dos chips da coluna Perdido ("arquiva em breve", "depois"), que o protótipo não mostrava.
+- **Nunca testado em produção** nem com volume grande de leads; só mostra, não muda nenhuma regra.
+
 ### Instagram (tarefa 47, na `main` desde 25/11/2026; ligado no Railway e na Meta, falta o teste real)
 - [x] Meta: caso de uso Instagram e configuração de login unificado criados no app "CRM Eccellenza"; conta @italineaeccellenza no portfólio e aceita como Testador do Instagram (25/11/2026).
 - [x] Código na `main` (PR #45) e no Railway; deploy ativo (25/11/2026).
