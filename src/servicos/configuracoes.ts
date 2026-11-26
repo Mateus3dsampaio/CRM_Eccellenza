@@ -20,6 +20,18 @@ export async function gravarConfig(chave: string, valor: string): Promise<void> 
   await db.configuracao.upsert({ where: { chave }, create: { chave, valor }, update: { valor } });
 }
 
+const CHAVE_IA_LIGADA = "ia_atendendo";
+
+/** Chave geral do atendimento da IA (Configurações > Instruções de atendimento). Sem valor gravado vale ligada. */
+export async function atendimentoDaIaLigado(): Promise<boolean> {
+  return (await lerConfig(CHAVE_IA_LIGADA)) !== "desligado";
+}
+
+export async function definirAtendimentoDaIa(ligado: boolean): Promise<void> {
+  await gravarConfig(CHAVE_IA_LIGADA, ligado ? "ligado" : "desligado");
+  await marcarMudanca();
+}
+
 const CHAVE_ESPERA_AMARELO = "espera_amarelo_min";
 const CHAVE_ESPERA_VERMELHO = "espera_vermelho_min";
 

@@ -181,7 +181,7 @@ bot (src/bot) usa os mesmos serviços, por ferramentas.
 | `src/app/api/configuracoes/distribuicao/route.ts` | Modo de distribuição | `configuracoes` |
 | `src/app/api/configuracoes/prazos-espera/route.ts` | Prazos amarelo e vermelho da espera do cliente (minutos, PROVISÓRIO). Só admin | `configuracoes` |
 | `src/app/api/configuracoes/agenda/route.ts` | Gravar as regras da agenda (só admin) | `configuracoes` |
-| `src/app/api/configuracoes/instrucoes/route.ts` | Listar (numeradas + manual) e criar instruções | `instrucoes` |
+| `src/app/api/configuracoes/instrucoes/route.ts` | Listar (numeradas + manual, mais `iaLigada`), criar instruções e PUT da chave geral "Atendimento da IA" (liga/desliga; desligada, `responderCliente` passa todo cliente ao consultor sem chamar a API; padrão ligada, chave `ia_atendendo` em `Configuracao`) | `instrucoes`, `configuracoes` (`atendimentoDaIaLigado`) |
 | `src/app/api/configuracoes/instrucoes/[id]/route.ts` | Editar, ativar/desativar, excluir (o manual só edita o texto) | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/[id]/voltar/route.ts` | Voltar para a versão anterior | `instrucoes` |
 | `src/app/api/configuracoes/instrucoes/manual-do-codigo/route.ts` | Botão "Usar o texto do código": Manual volta ao texto do código (o da tela fica como anterior) | `instrucoes` |

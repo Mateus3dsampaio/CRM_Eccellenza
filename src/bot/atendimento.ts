@@ -12,6 +12,7 @@ import { regrasDaAgenda } from "@/servicos/configuracoes";
 import { registrarAlteracao } from "@/servicos/historico";
 import { enviarMensagemLoja } from "@/servicos/mensagens";
 import { obterChave } from "@/servicos/chaves-api";
+import { atendimentoDaIaLigado } from "@/servicos/configuracoes";
 import { instrucoesAtivas } from "@/servicos/instrucoes";
 import { familiaClaude } from "@/regras/modelos-ia";
 import { configDoBot } from "@/servicos/provedor-bot";
@@ -210,6 +211,16 @@ export function responderCliente(leadId: string): Promise<{ respostas: string[];
       const mensagem = `${limite.motivo}; o bot pausou para não gastar a API à toa.`;
       await db.mensagem.updateMany({ where: { leadId, autor: { not: "bot" }, processadaPeloBot: false }, data: { processadaPeloBot: true } });
       await marcarErro(leadId, mensagem);
+      return { respostas: [], erro: mensagem };
+    }
+
+    // Chave geral desligada pelo admin: nenhuma chamada à API, o cliente vai direto ao consultor.
+    if (!(await atendimentoDaIaLigado())) {
+      const mensagem = "o atendimento da IA está desligado (Configurações > Instruções de atendimento).";
+      await db.mensagem.updateMany({ where: { leadId, autor: { not: "bot" }, processadaPeloBot: false }, data: { processadaPeloBot: true } });
+      await executarFerramenta(leadId, "passar_para_consultor", { motivo: "atendimento da IA desligado" });
+      await db.lead.update({ where: { id: leadId }, data: { erroBot: mensagem } });
+      await marcarMudanca();
       return { respostas: [], erro: mensagem };
     }
 

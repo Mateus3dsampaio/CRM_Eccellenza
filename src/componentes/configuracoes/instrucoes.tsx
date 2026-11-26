@@ -29,7 +29,7 @@ type Edicao = { id: string | null; titulo: string; texto: string; manual?: boole
 
 export function InstrucoesAtendimento() {
   const avisar = useAviso();
-  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[]; manual: Instrucao; manualSituacao: "igual" | "voltou" | "desatualizado" | "editado" }>("/api/configuracoes/instrucoes");
+  const { dados, erro, carregando, recarregar } = useDados<{ instrucoes: Instrucao[]; manual: Instrucao; manualSituacao: "igual" | "voltou" | "desatualizado" | "editado"; iaLigada: boolean }>("/api/configuracoes/instrucoes");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -85,6 +85,13 @@ export function InstrucoesAtendimento() {
     } finally {
       await recarregar();
     }
+  }
+
+  const [mudandoIa, setMudandoIa] = useState(false);
+  async function mudarIa(ligada: boolean) {
+    setMudandoIa(true);
+    await agir(() => chamarApi("/api/configuracoes/instrucoes", { method: "PUT", json: { ligada } }), ligada ? "Atendimento da IA ligado." : "Atendimento da IA desligado. Mensagens novas vão para o consultor.");
+    setMudandoIa(false);
   }
 
   useEffect(() => {
@@ -167,6 +174,29 @@ export function InstrucoesAtendimento() {
         <p className="mt-1 text-sm text-texto-suave">
           O bot segue as instruções numeradas, na ordem da lista, e depois o Manual do CRM (como preencher a ficha e usar as ferramentas). Mudou aqui, o bot já atende diferente na próxima mensagem. Só o administrador edita.
         </p>
+        {dados && (
+          <div className={juntar("mt-3 flex flex-wrap items-center justify-between gap-3 rounded-controle border px-4 py-3", dados.iaLigada ? "border-borda bg-superficie-suave/40" : "border-aviso bg-aviso-suave")}>
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-semibold">{dados.iaLigada ? "Atendimento da IA ligado" : "Atendimento da IA desligado"}</p>
+              <p className={dados.iaLigada ? "text-texto-suave" : "text-aviso"}>
+                {dados.iaLigada
+                  ? "O bot responde os clientes que escrevem."
+                  : "O bot não responde ninguém: toda mensagem nova passa direto para o consultor, que atende no lugar. Quem já passou ao consultor continua com ele."}
+              </p>
+            </div>
+            <label className="flex min-h-toque cursor-pointer items-center gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="interruptor"
+                checked={dados.iaLigada}
+                disabled={mudandoIa}
+                aria-label="Atendimento da IA"
+                onChange={(e) => void mudarIa(e.target.checked)}
+              />
+              {dados.iaLigada ? "Ligado" : "Desligado"}
+            </label>
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Botao variante="primario" icone={<Plus className="size-4" aria-hidden />} onClick={() => { setSalvouAgora(false); setEdicao({ id: null, titulo: "", texto: "" }); }}>
             Nova instrução

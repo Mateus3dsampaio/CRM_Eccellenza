@@ -90,7 +90,7 @@ export function montarContratoDoBot(): string {
     "2. `# Instruções de atendimento`: as instruções numeradas **ativas**, em ordem de número, como foram importadas em Configurações > Instruções de atendimento.",
     "3. `# Manual do CRM`: o texto do Manual (seção 5).",
     "",
-    "Sem nenhuma instrução ativa o bot não atende: o cliente vai direto ao consultor.",
+    "Sem nenhuma instrução ativa o bot não atende: o cliente vai direto ao consultor. O admin também tem uma chave geral \"Atendimento da IA\" (Configurações > Instruções de atendimento): desligada, o bot não responde ninguém e todo cliente que escreve vai direto ao consultor.",
     "Tudo o que o bot escreve vai ao cliente exatamente como está (ver a limpeza na seção 4).",
     "",
     "## 2. O que chega a cada mensagem",
